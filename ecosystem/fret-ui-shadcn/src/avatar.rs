@@ -289,6 +289,7 @@ impl AvatarFallback {
                     font: FontId::default(),
                     size: text_px,
                     weight: FontWeight::MEDIUM,
+                    slant: Default::default(),
                     line_height: Some(line_height),
                     letter_spacing_em: None,
                 }),

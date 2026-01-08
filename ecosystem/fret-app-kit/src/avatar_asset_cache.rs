@@ -1,6 +1,6 @@
-use fret_asset_cache::image_asset_cache::{ImageAssetCache, ImageAssetKey};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
+use fret_ui_assets::image_asset_cache::{ImageAssetCache, ImageAssetKey};
 use fret_ui_kit::primitives::avatar::AvatarImageLoadingStatus;
 
 use crate::image_asset_state::{

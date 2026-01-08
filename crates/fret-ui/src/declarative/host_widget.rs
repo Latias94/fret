@@ -19,6 +19,7 @@ struct TextCache {
     prepared_scale_factor_bits: Option<u32>,
     measured_scale_factor_bits: Option<u32>,
     last_text: Option<std::sync::Arc<str>>,
+    last_rich: Option<fret_core::RichText>,
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,
@@ -547,6 +548,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         }
         self.text_cache.prepared_scale_factor_bits = None;
         self.text_cache.metrics = None;
+        self.text_cache.last_text = None;
+        self.text_cache.last_rich = None;
         if let Some(input) = self.text_input.as_mut() {
             input.cleanup_resources(services);
         }

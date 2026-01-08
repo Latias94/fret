@@ -9,15 +9,16 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::transition;
+use fret_ui_kit::primitives::collapsible as radix_collapsible;
 
 use crate::overlay_motion;
 
 #[derive(Clone)]
 pub struct Collapsible {
-    open: Model<bool>,
+    open: Option<Model<bool>>,
+    default_open: bool,
     disabled: bool,
     layout: LayoutRefinement,
     force_mount_content: bool,
@@ -37,11 +38,31 @@ impl std::fmt::Debug for Collapsible {
 impl Collapsible {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            open,
+            open: Some(open),
+            default_open: false,
             disabled: false,
             layout: LayoutRefinement::default(),
             force_mount_content: false,
         }
+    }
+
+    /// Creates an uncontrolled collapsible with the given initial open value (Radix `defaultOpen`).
+    pub fn uncontrolled(default_open: bool) -> Self {
+        Self {
+            open: None,
+            default_open,
+            disabled: false,
+            layout: LayoutRefinement::default(),
+            force_mount_content: false,
+        }
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    ///
+    /// Note: If a controlled `open` model is provided, this value is ignored.
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -68,22 +89,33 @@ impl Collapsible {
         trigger: impl FnOnce(&mut ElementContext<'_, H>, bool) -> AnyElement,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
-        cx.scope(|cx| {
+        self.into_element_with_open_model(cx, |cx, _open, is_open| trigger(cx, is_open), content)
+    }
+
+    pub fn into_element_with_open_model<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let open_root = radix_collapsible::CollapsibleRoot::new()
+            .open(self.open)
+            .default_open(self.default_open);
+        let disabled = self.disabled;
+        let layout = self.layout;
+        let force_mount_content = self.force_mount_content;
+
+        cx.scope(move |cx| {
             let state_id = cx.root_id();
 
-            let is_open = cx
-                .watch_model(&self.open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
+            let open = open_root.use_open_model(cx).model();
+            let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
-            let trigger = trigger(cx, is_open);
-            let force_mount_content = self.force_mount_content;
-            let disabled = self.disabled;
+            let trigger = trigger(cx, open.clone(), is_open);
 
             // Radix/shadcn-like behavior keeps content mounted during close animations. We
             // approximate the height transition by mapping transition progress to a clipped height.
-            let last_height = collapsible_motion::last_measured_height_for(cx, state_id);
+            let last_height = radix_collapsible::last_measured_height_for(cx, state_id);
             let wants_measurement = is_open && last_height.0 <= 0.0;
 
             // Radix measures content size to drive open/close animations. In Fret we first mount a
@@ -98,7 +130,7 @@ impl Collapsible {
             );
 
             let (should_render_content, wrapper) =
-                collapsible_motion::collapsible_height_wrapper_refinement(
+                radix_collapsible::collapsible_height_wrapper_refinement(
                     motion_open,
                     force_mount_content,
                     true,
@@ -107,7 +139,6 @@ impl Collapsible {
                 );
             let should_build_content = wants_measurement || should_render_content;
             let content = should_build_content.then(|| content(cx));
-            let layout = self.layout;
 
             let stack = cx.stack_props(
                 StackProps {
@@ -124,7 +155,7 @@ impl Collapsible {
 
                         let (wrapper_refinement, opacity) = if wants_measurement {
                             (
-                                collapsible_motion::collapsible_measurement_wrapper_refinement(),
+                                radix_collapsible::collapsible_measurement_wrapper_refinement(),
                                 0.0,
                             )
                         } else {
@@ -157,14 +188,14 @@ impl Collapsible {
 
                         if wants_measurement {
                             let _ =
-                                collapsible_motion::update_measured_size_from_element_if_open_for(
+                                radix_collapsible::update_measured_size_from_element_if_open_for(
                                     cx, state_id, wrapper_id, is_open,
                                 );
                         } else {
                             // Update the cached content height once the collapsible is fully open and
                             // not animating. This gives subsequent close/open transitions a stable
                             // target (and supports content changes while open).
-                            let _ = collapsible_motion::update_measured_height_if_open_for(
+                            let _ = radix_collapsible::update_measured_height_if_open_for(
                                 cx,
                                 state_id,
                                 wrapper_id,
@@ -180,7 +211,7 @@ impl Collapsible {
             );
 
             cx.semantics(
-                fret_ui_kit::primitives::collapsible::collapsible_root_semantics(disabled, is_open),
+                radix_collapsible::collapsible_root_semantics(disabled, is_open),
                 move |_cx| vec![stack],
             )
         })
@@ -239,9 +270,7 @@ impl CollapsibleTrigger {
         cx.pressable(
             PressableProps {
                 enabled: !disabled,
-                a11y: fret_ui_kit::primitives::collapsible::collapsible_trigger_a11y(
-                    a11y_label, is_open,
-                ),
+                a11y: radix_collapsible::collapsible_trigger_a11y(a11y_label, is_open),
                 ..Default::default()
             },
             move |cx, _state| {
@@ -305,6 +334,15 @@ pub fn collapsible<H: UiHost>(
     Collapsible::new(open).into_element(cx, trigger, content)
 }
 
+pub fn collapsible_uncontrolled<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    default_open: bool,
+    trigger: impl FnOnce(&mut ElementContext<'_, H>, Model<bool>, bool) -> AnyElement,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    Collapsible::uncontrolled(default_open).into_element_with_open_model(cx, trigger, content)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,7 +404,8 @@ mod tests {
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         bounds: Rect,
-        open: Model<bool>,
+        open: Option<Model<bool>>,
+        default_open: bool,
     ) -> fret_core::NodeId {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
@@ -379,14 +418,22 @@ mod tests {
             bounds,
             "collapsible",
             |cx| {
-                vec![Collapsible::new(open.clone()).into_element(
-                    cx,
-                    |cx, is_open| {
-                        CollapsibleTrigger::new(open.clone(), vec![cx.text("Trigger")])
-                            .into_element(cx, is_open)
-                    },
-                    |cx| CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
-                )]
+                vec![cx.keyed("collapsible-root", |cx| {
+                    let collapsible = if let Some(open) = open.clone() {
+                        Collapsible::new(open)
+                    } else {
+                        Collapsible::uncontrolled(default_open)
+                    };
+
+                    collapsible.into_element_with_open_model(
+                        cx,
+                        |cx, open, is_open| {
+                            CollapsibleTrigger::new(open, vec![cx.text("Trigger")])
+                                .into_element(cx, is_open)
+                        },
+                        |cx| CollapsibleContent::new(vec![cx.text("Content")]).into_element(cx),
+                    )
+                })]
             },
         );
         ui.set_root(root);
@@ -416,7 +463,8 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open.clone(),
+            Some(open.clone()),
+            false,
         );
 
         let focusable = ui
@@ -448,7 +496,8 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open.clone(),
+            Some(open.clone()),
+            false,
         );
 
         let is_open = app.models().get_copied(&open).unwrap_or(false);
@@ -484,7 +533,8 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open.clone(),
+            Some(open.clone()),
+            false,
         );
         assert!(!snapshot_has_label(&ui, "Content"));
 
@@ -498,7 +548,8 @@ mod tests {
                 &mut services,
                 window,
                 bounds,
-                open.clone(),
+                Some(open.clone()),
+                false,
             );
         }
         assert!(snapshot_has_label(&ui, "Content"));
@@ -512,7 +563,8 @@ mod tests {
             &mut services,
             window,
             bounds,
-            open.clone(),
+            Some(open.clone()),
+            false,
         );
         assert!(snapshot_has_label(&ui, "Content"));
 
@@ -524,8 +576,65 @@ mod tests {
                 &mut services,
                 window,
                 bounds,
-                open.clone(),
+                Some(open.clone()),
+                false,
             );
+        }
+        assert!(!snapshot_has_label(&ui, "Content"));
+    }
+
+    #[test]
+    fn collapsible_uncontrolled_applies_default_open_once_and_allows_toggle() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // First render: default_open=true should mount the content subtree.
+        let root = render(&mut ui, &mut app, &mut services, window, bounds, None, true);
+        assert!(snapshot_has_label(&ui, "Content"));
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        // After enough frames for close presence to finish, content should unmount and not reopen
+        // even though default_open stays true on each render.
+        for _ in 0..24 {
+            let _ = render(&mut ui, &mut app, &mut services, window, bounds, None, true);
         }
         assert!(!snapshot_has_label(&ui, "Content"));
     }

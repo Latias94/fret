@@ -195,7 +195,10 @@ impl HoverCard {
                     st.overlay_hovered
                 });
             let focused = cx.is_focused_element(trigger_id);
-            let hovered = radix_hover_card::hover_card_hovered(hovered, overlay_hovered, focused);
+            let keyboard_focused =
+                focused && fret_ui::input_modality::is_keyboard(&mut *cx.app, Some(cx.window));
+            let hovered =
+                radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused);
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
@@ -784,6 +787,17 @@ mod tests {
         let trigger_element = trigger_id.get().expect("trigger element id");
         let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
             .expect("trigger node");
+        // Focus-driven hover cards are a keyboard affordance; mirror the runtime input-modality
+        // signal that Radix would receive via key interaction (e.g. tabbing).
+        let _ = fret_ui::input_modality::update_for_event(
+            &mut app,
+            window,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
         ui.set_focus(Some(trigger_node));
 
         // Frame 2: focus should open the overlay and mount the content.

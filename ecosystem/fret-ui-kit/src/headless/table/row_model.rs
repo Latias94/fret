@@ -159,6 +159,26 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn enable_hiding(mut self, enabled: bool) -> Self {
+        self.options.enable_hiding = enabled;
+        self
+    }
+
+    pub fn enable_column_ordering(mut self, enabled: bool) -> Self {
+        self.options.enable_column_ordering = enabled;
+        self
+    }
+
+    pub fn enable_column_pinning(mut self, enabled: bool) -> Self {
+        self.options.enable_column_pinning = enabled;
+        self
+    }
+
+    pub fn enable_column_resizing(mut self, enabled: bool) -> Self {
+        self.options.enable_column_resizing = enabled;
+        self
+    }
+
     pub fn get_row_key(
         mut self,
         f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
@@ -189,11 +209,18 @@ pub struct Table<'a, TData> {
     options: super::TableOptions,
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
+    grouped_row_model: OnceCell<super::GroupedRowModel>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_paginated_row_model: OnceCell<RowModel<'a, TData>>,
     selected_row_model: OnceCell<RowModel<'a, TData>>,
+    filtered_selected_row_model: OnceCell<RowModel<'a, TData>>,
+    page_selected_row_model: OnceCell<RowModel<'a, TData>>,
+    faceted_row_model_by_column: OnceCell<Vec<OnceCell<RowModel<'a, TData>>>>,
+    faceted_unique_values_by_column: OnceCell<Vec<OnceCell<super::FacetCounts>>>,
+    faceted_unique_labels_by_column: OnceCell<Vec<OnceCell<super::FacetLabels<'a>>>>,
+    faceted_min_max_u64_by_column: OnceCell<Vec<OnceCell<Option<(u64, u64)>>>>,
 }
 
 impl<'a, TData> Table<'a, TData> {
@@ -214,11 +241,18 @@ impl<'a, TData> Table<'a, TData> {
             options: builder.options,
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
+            grouped_row_model: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
             expanded_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
             expanded_paginated_row_model: OnceCell::new(),
             selected_row_model: OnceCell::new(),
+            filtered_selected_row_model: OnceCell::new(),
+            page_selected_row_model: OnceCell::new(),
+            faceted_row_model_by_column: OnceCell::new(),
+            faceted_unique_values_by_column: OnceCell::new(),
+            faceted_unique_labels_by_column: OnceCell::new(),
+            faceted_min_max_u64_by_column: OnceCell::new(),
         }
     }
 
@@ -234,6 +268,28 @@ impl<'a, TData> Table<'a, TData> {
         self.columns.iter().find(|c| c.id.as_ref() == id)
     }
 
+    fn column_index(&self, id: &str) -> Option<usize> {
+        self.columns.iter().position(|c| c.id.as_ref() == id)
+    }
+
+    /// TanStack-aligned: resolve a row by id, optionally searching outside the current paginated
+    /// row model (e.g. pinned rows).
+    pub fn row(&self, row_key: RowKey, search_all: bool) -> Option<&Row<'a, TData>> {
+        let first = if search_all {
+            self.pre_pagination_row_model()
+        } else {
+            self.row_model()
+        };
+
+        first
+            .row_by_key(row_key)
+            .and_then(|i| first.row(i))
+            .or_else(|| {
+                let core = self.core_row_model();
+                core.row_by_key(row_key).and_then(|i| core.row(i))
+            })
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
     }
@@ -242,8 +298,133 @@ impl<'a, TData> Table<'a, TData> {
         self.options
     }
 
+    pub fn column_visibility(&self) -> &super::ColumnVisibilityState {
+        &self.state.column_visibility
+    }
+
+    pub fn is_column_visible(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::is_column_visible(
+            &self.state.column_visibility,
+            &col.id,
+        ))
+    }
+
+    pub fn column_can_hide(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_hiding && col.enable_hiding)
+    }
+
+    pub fn hideable_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        self.ordered_columns()
+            .into_iter()
+            .filter(|c| self.options.enable_hiding && c.enable_hiding)
+            .collect()
+    }
+
+    pub fn is_all_columns_visible(&self) -> bool {
+        self.columns
+            .iter()
+            .all(|c| super::is_column_visible(&self.state.column_visibility, &c.id))
+    }
+
+    pub fn is_some_columns_visible(&self) -> bool {
+        self.columns
+            .iter()
+            .any(|c| super::is_column_visible(&self.state.column_visibility, &c.id))
+    }
+
+    pub fn toggled_column_visibility(
+        &self,
+        column_id: &str,
+        visible: Option<bool>,
+    ) -> Option<super::ColumnVisibilityState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_hiding && col.enable_hiding) {
+            return Some(self.state.column_visibility.clone());
+        }
+        Some(super::toggled_column_visible(
+            &self.state.column_visibility,
+            &col.id,
+            visible,
+        ))
+    }
+
+    pub fn toggled_all_columns_visible(
+        &self,
+        visible: Option<bool>,
+    ) -> super::ColumnVisibilityState {
+        let visible = visible.unwrap_or_else(|| !self.is_all_columns_visible());
+
+        let mut next = self.state.column_visibility.clone();
+        for col in &self.columns {
+            let can_hide = self.options.enable_hiding && col.enable_hiding;
+            if visible {
+                super::set_column_visible(&mut next, &col.id, true);
+            } else {
+                super::set_column_visible(&mut next, &col.id, !can_hide);
+            }
+        }
+        next
+    }
+
     pub fn is_some_rows_expanded(&self) -> bool {
         super::is_some_rows_expanded(&self.state.expanding)
+    }
+
+    pub fn grouping(&self) -> &super::GroupingState {
+        &self.state.grouping
+    }
+
+    pub fn column_can_group(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::column_can_group(self.options, col))
+    }
+
+    pub fn is_column_grouped(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::is_column_grouped(&self.state.grouping, &col.id))
+    }
+
+    pub fn column_grouped_index(&self, column_id: &str) -> Option<usize> {
+        let col = self.column(column_id)?;
+        super::grouped_index(&self.state.grouping, &col.id)
+    }
+
+    pub fn toggled_column_grouping(
+        &self,
+        column_id: &str,
+        grouped: Option<bool>,
+    ) -> Option<super::GroupingState> {
+        let col = self.column(column_id)?;
+        if !super::column_can_group(self.options, col) {
+            return Some(self.state.grouping.clone());
+        }
+        Some(super::toggled_column_grouping_value(
+            &self.state.grouping,
+            &col.id,
+            grouped,
+        ))
+    }
+
+    pub fn pre_grouped_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_row_model()
+    }
+
+    pub fn grouped_row_model(&self) -> &super::GroupedRowModel {
+        if self.options.manual_grouping || self.state.grouping.is_empty() {
+            return self
+                .grouped_row_model
+                .get_or_init(|| super::grouped_row_model_from_leaf(self.pre_grouped_row_model()));
+        }
+
+        self.grouped_row_model.get_or_init(|| {
+            super::group_row_model(
+                self.pre_grouped_row_model(),
+                &self.columns,
+                &self.state.grouping,
+            )
+        })
     }
 
     pub fn is_all_rows_expanded(&self) -> bool {
@@ -346,6 +527,61 @@ impl<'a, TData> Table<'a, TData> {
         super::order_columns(&self.columns, &self.state.column_order)
     }
 
+    pub fn column_order(&self) -> &super::ColumnOrderState {
+        &self.state.column_order
+    }
+
+    pub fn column_pinning(&self) -> &super::ColumnPinningState {
+        &self.state.column_pinning
+    }
+
+    pub fn column_can_order(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_column_ordering && col.enable_ordering)
+    }
+
+    pub fn column_can_pin(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_column_pinning && col.enable_pinning)
+    }
+
+    pub fn column_pin_position(&self, column_id: &str) -> Option<super::ColumnPinPosition> {
+        let col = self.column(column_id)?;
+        super::is_column_pinned(&self.state.column_pinning, &col.id)
+    }
+
+    pub fn toggled_column_order_move(
+        &self,
+        column_id: &str,
+        to_index: usize,
+    ) -> Option<super::ColumnOrderState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_column_ordering && col.enable_ordering) {
+            return Some(self.state.column_order.clone());
+        }
+        Some(super::moved_column(
+            &self.state.column_order,
+            &col.id,
+            to_index,
+        ))
+    }
+
+    pub fn toggled_column_pinning(
+        &self,
+        column_id: &str,
+        position: Option<super::ColumnPinPosition>,
+    ) -> Option<super::ColumnPinningState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_column_pinning && col.enable_pinning) {
+            return Some(self.state.column_pinning.clone());
+        }
+        Some(super::pinned_column(
+            &self.state.column_pinning,
+            &col.id,
+            position,
+        ))
+    }
+
     pub fn visible_columns(&self) -> Vec<&super::ColumnDef<TData>> {
         self.ordered_columns()
             .into_iter()
@@ -366,7 +602,176 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn column_size(&self, id: &str) -> Option<f32> {
         let col = self.column(id)?;
-        super::column_size(&self.state.column_sizing, &col.id)
+        Some(super::resolved_column_size(&self.state.column_sizing, col))
+    }
+
+    pub fn column_sizing(&self) -> &super::ColumnSizingState {
+        &self.state.column_sizing
+    }
+
+    pub fn column_sizing_info(&self) -> &super::ColumnSizingInfoState {
+        &self.state.column_sizing_info
+    }
+
+    pub fn column_can_resize(&self, id: &str) -> Option<bool> {
+        let col = self.column(id)?;
+        Some(super::column_can_resize(self.options, col))
+    }
+
+    pub fn is_column_resizing(&self, id: &str) -> Option<bool> {
+        let col = self.column(id)?;
+        Some(
+            self.state
+                .column_sizing_info
+                .is_resizing_column
+                .as_ref()
+                .is_some_and(|active| active.as_ref() == col.id.as_ref()),
+        )
+    }
+
+    /// TanStack-aligned: remove an override size entry (falls back to column defaults).
+    pub fn reset_column_size(&self, id: &str) -> Option<super::ColumnSizingState> {
+        let col = self.column(id)?;
+        let mut next = self.state.column_sizing.clone();
+        next.remove(&col.id);
+        Some(next)
+    }
+
+    pub fn started_column_resize(
+        &self,
+        id: &str,
+        pointer_x: f32,
+    ) -> Option<super::ColumnSizingInfoState> {
+        let col = self.column(id)?;
+        if !super::column_can_resize(self.options, col) {
+            return Some(self.state.column_sizing_info.clone());
+        }
+
+        let start = super::resolved_column_size(&self.state.column_sizing, col);
+        let mut next = self.state.column_sizing_info.clone();
+        super::begin_column_resize(
+            &mut next,
+            col.id.clone(),
+            pointer_x,
+            vec![(col.id.clone(), start)],
+        );
+        Some(next)
+    }
+
+    pub fn dragged_column_resize(
+        &self,
+        pointer_x: f32,
+    ) -> (super::ColumnSizingState, super::ColumnSizingInfoState) {
+        let mut sizing = self.state.column_sizing.clone();
+        let mut info = self.state.column_sizing_info.clone();
+        super::drag_column_resize(
+            self.options.column_resize_mode,
+            self.options.column_resize_direction,
+            &mut sizing,
+            &mut info,
+            pointer_x,
+        );
+        (sizing, info)
+    }
+
+    pub fn ended_column_resize(
+        &self,
+        pointer_x: Option<f32>,
+    ) -> (super::ColumnSizingState, super::ColumnSizingInfoState) {
+        let mut sizing = self.state.column_sizing.clone();
+        let mut info = self.state.column_sizing_info.clone();
+        super::end_column_resize(
+            self.options.column_resize_mode,
+            self.options.column_resize_direction,
+            &mut sizing,
+            &mut info,
+            pointer_x,
+        );
+        (sizing, info)
+    }
+
+    pub fn total_size(&self) -> f32 {
+        self.visible_columns()
+            .into_iter()
+            .map(|c| super::resolved_column_size(&self.state.column_sizing, c))
+            .sum()
+    }
+
+    pub fn pinned_total_sizes(&self) -> (f32, f32, f32) {
+        let (left, center, right) = self.pinned_visible_columns();
+        let sizing = &self.state.column_sizing;
+
+        let left = left
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+        let center = center
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+        let right = right
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+
+        (left, center, right)
+    }
+
+    pub fn left_total_size(&self) -> f32 {
+        self.pinned_total_sizes().0
+    }
+
+    pub fn center_total_size(&self) -> f32 {
+        self.pinned_total_sizes().1
+    }
+
+    pub fn right_total_size(&self) -> f32 {
+        self.pinned_total_sizes().2
+    }
+
+    /// TanStack-aligned: return the start offset (x) for a column within a pinned region.
+    pub fn column_start(&self, column_id: &str, region: super::ColumnSizingRegion) -> Option<f32> {
+        let col = self.column(column_id)?;
+        let sizing = &self.state.column_sizing;
+
+        let (left, center, right) = self.pinned_visible_columns();
+        let mut offset = 0.0;
+
+        match region {
+            super::ColumnSizingRegion::All => {
+                for c in left.into_iter().chain(center).chain(right) {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Left => {
+                for c in left {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Center => {
+                for c in center {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Right => {
+                for c in right {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+        }
+        None
     }
 
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
@@ -461,6 +866,194 @@ impl<'a, TData> Table<'a, TData> {
     pub fn selected_row_model(&self) -> &RowModel<'a, TData> {
         self.selected_row_model.get_or_init(|| {
             super::select_rows_fn(self.pre_selected_row_model(), &self.state.row_selection)
+        })
+    }
+
+    pub fn filtered_selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_selected_row_model.get_or_init(|| {
+            if self.state.row_selection.is_empty() {
+                return RowModel {
+                    root_rows: Vec::new(),
+                    flat_rows: Vec::new(),
+                    rows_by_key: HashMap::new(),
+                    arena: Vec::new(),
+                };
+            }
+            super::select_rows_fn(self.filtered_row_model(), &self.state.row_selection)
+        })
+    }
+
+    pub fn page_selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.page_selected_row_model.get_or_init(|| {
+            if self.state.row_selection.is_empty() {
+                return RowModel {
+                    root_rows: Vec::new(),
+                    flat_rows: Vec::new(),
+                    rows_by_key: HashMap::new(),
+                    arena: Vec::new(),
+                };
+            }
+            super::select_rows_fn(self.row_model(), &self.state.row_selection)
+        })
+    }
+
+    pub fn row_is_selected(&self, row_key: RowKey) -> bool {
+        super::is_row_selected(row_key, &self.state.row_selection)
+    }
+
+    pub fn row_is_some_selected(&self, row_key: RowKey) -> bool {
+        self.core_row_model().row_by_key(row_key).is_some_and(|i| {
+            super::row_is_some_selected(self.core_row_model(), &self.state.row_selection, i)
+        })
+    }
+
+    pub fn row_is_all_sub_rows_selected(&self, row_key: RowKey) -> bool {
+        self.core_row_model().row_by_key(row_key).is_some_and(|i| {
+            super::row_is_all_sub_rows_selected(self.core_row_model(), &self.state.row_selection, i)
+        })
+    }
+
+    pub fn toggled_row_selected(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> super::RowSelectionState {
+        super::toggle_row_selected(
+            self.core_row_model(),
+            &self.state.row_selection,
+            row_key,
+            value,
+            select_children,
+        )
+    }
+
+    pub fn is_all_rows_selected(&self) -> bool {
+        super::is_all_rows_selected(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_some_rows_selected(&self) -> bool {
+        super::is_some_rows_selected(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_all_page_rows_selected(&self) -> bool {
+        super::is_all_rows_selected(self.row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_some_page_rows_selected(&self) -> bool {
+        if self.is_all_page_rows_selected() {
+            return false;
+        }
+        super::selected_flat_row_count(self.row_model(), &self.state.row_selection) > 0
+    }
+
+    pub fn filtered_row_count(&self) -> usize {
+        self.filtered_row_model().root_rows().len()
+    }
+
+    pub fn filtered_flat_row_count(&self) -> usize {
+        self.filtered_row_model().flat_rows().len()
+    }
+
+    pub fn filtered_selected_row_count(&self) -> usize {
+        super::selected_root_row_count(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn filtered_selected_flat_row_count(&self) -> usize {
+        super::selected_flat_row_count(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        super::toggle_all_rows_selected(self.filtered_row_model(), &self.state.row_selection, value)
+    }
+
+    pub fn toggled_all_page_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        super::toggle_all_page_rows_selected(self.row_model(), &self.state.row_selection, value)
+    }
+
+    pub fn faceted_row_model(&self, column_id: &str) -> Option<&RowModel<'a, TData>> {
+        let column_index = self.column_index(column_id)?;
+
+        if self.options.manual_filtering {
+            return Some(self.pre_filtered_row_model());
+        }
+
+        let caches = self.faceted_row_model_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            super::faceted_row_model_excluding(
+                self.pre_filtered_row_model(),
+                &self.columns,
+                &self.state.column_filters,
+                self.state.global_filter.clone(),
+                Some(column_id),
+            )
+        }))
+    }
+
+    pub fn faceted_unique_values(&self, column_id: &str) -> Option<&super::FacetCounts> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_unique_values_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_unique_values(model, column)
+        }))
+    }
+
+    pub fn faceted_unique_value_labels(&self, column_id: &str) -> Option<&super::FacetLabels<'a>> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_unique_labels_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_unique_value_labels(model, column)
+        }))
+    }
+
+    pub fn faceted_min_max_u64(&self, column_id: &str) -> Option<(u64, u64)> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_min_max_u64_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        *caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_min_max_u64(model, column)
         })
     }
 }
@@ -582,8 +1175,10 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::headless::table::is_column_visible;
     use crate::headless::table::{
-        PaginationState, SortSpec, TableOptions, TableState, create_column_helper,
+        ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, ColumnSizingRegion, PaginationState,
+        SortSpec, TableOptions, TableState, create_column_helper,
     };
     use std::sync::Arc;
 
@@ -1191,6 +1786,370 @@ mod tests {
         assert_eq!(
             table.center_row_keys(),
             vec![RowKey(1), RowKey(2), RowKey(3)]
+        );
+    }
+
+    #[test]
+    fn table_faceting_excludes_own_filter_and_can_return_labels() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status_key: u64,
+            status_label: Arc<str>,
+            role_key: u64,
+            role_label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                status_key: 1,
+                status_label: "A".into(),
+                role_key: 10,
+                role_label: "X".into(),
+            },
+            Item {
+                status_key: 2,
+                status_label: "B".into(),
+                role_key: 10,
+                role_label: "X".into(),
+            },
+            Item {
+                status_key: 1,
+                status_label: "A".into(),
+                role_key: 20,
+                role_label: "Y".into(),
+            },
+        ];
+
+        let status = ColumnDef::new("status")
+            .filter_by(|it: &Item, q| it.status_label.as_ref() == q)
+            .facet_key_by(|it: &Item| it.status_key)
+            .facet_str_by(|it: &Item| it.status_label.as_ref());
+        let role = ColumnDef::new("role")
+            .filter_by(|it: &Item, q| it.role_label.as_ref() == q)
+            .facet_key_by(|it: &Item| it.role_key)
+            .facet_str_by(|it: &Item| it.role_label.as_ref());
+
+        let mut state = TableState::default();
+        state.column_filters = vec![
+            ColumnFilter {
+                column: "status".into(),
+                value: "A".into(),
+            },
+            ColumnFilter {
+                column: "role".into(),
+                value: "X".into(),
+            },
+        ];
+
+        let table = Table::builder(&data)
+            .columns(vec![status, role])
+            .state(state)
+            .build();
+
+        let counts = table.faceted_unique_values("status").unwrap();
+        assert_eq!(counts.get(&1).copied(), Some(1));
+        assert_eq!(counts.get(&2).copied(), Some(1));
+
+        let labels = table.faceted_unique_value_labels("status").unwrap();
+        assert_eq!(labels.get(&1).copied(), Some("A"));
+        assert_eq!(labels.get(&2).copied(), Some("B"));
+
+        assert_eq!(table.faceted_min_max_u64("status"), Some((1, 2)));
+    }
+
+    #[test]
+    fn table_row_selection_page_toggle_and_indeterminate_queries() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..10).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 0,
+            page_size: 3,
+        };
+
+        let table = Table::builder(&data).state(state).build();
+        assert!(!table.is_all_page_rows_selected());
+        assert!(!table.is_some_page_rows_selected());
+
+        let selection = table.toggled_all_page_rows_selected(None);
+        let table2 = Table::builder(&data)
+            .state(TableState {
+                pagination: table.state().pagination,
+                row_selection: selection,
+                ..TableState::default()
+            })
+            .build();
+        assert!(table2.is_all_page_rows_selected());
+        assert!(!table2.is_some_page_rows_selected());
+
+        let selection = table2.toggled_all_page_rows_selected(None);
+        assert!(selection.is_empty());
+    }
+
+    #[test]
+    fn table_row_selection_filtered_selected_counts_match_filtered_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status: Arc<str>,
+        }
+
+        let data = vec![
+            Item { status: "A".into() },
+            Item { status: "B".into() },
+            Item { status: "A".into() },
+        ];
+
+        let status = ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q);
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "status".into(),
+            value: "A".into(),
+        }];
+        state.row_selection = [RowKey::from_index(0)].into_iter().collect();
+
+        let table = Table::builder(&data)
+            .columns(vec![status])
+            .state(state)
+            .build();
+
+        assert_eq!(table.filtered_row_count(), 2);
+        assert_eq!(table.filtered_selected_row_count(), 1);
+        assert_eq!(table.filtered_selected_flat_row_count(), 1);
+        assert!(table.is_some_rows_selected());
+        assert!(!table.is_all_rows_selected());
+
+        let selection = table.toggled_all_rows_selected(Some(true));
+        let table2 = Table::builder(&data)
+            .columns(vec![
+                ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q),
+            ])
+            .state(TableState {
+                column_filters: table.state().column_filters.clone(),
+                row_selection: selection,
+                ..TableState::default()
+            })
+            .build();
+
+        assert!(table2.is_all_rows_selected());
+        assert!(!table2.is_some_rows_selected());
+    }
+
+    #[test]
+    fn table_filtered_selected_row_model_intersects_filtered_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status: Arc<str>,
+        }
+
+        let data = vec![
+            Item { status: "A".into() },
+            Item { status: "B".into() },
+            Item { status: "A".into() },
+        ];
+
+        let status = ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q);
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "status".into(),
+            value: "A".into(),
+        }];
+        state.row_selection = [RowKey::from_index(0), RowKey::from_index(1)]
+            .into_iter()
+            .collect();
+
+        let table = Table::builder(&data)
+            .columns(vec![status])
+            .state(state)
+            .build();
+
+        let selected = table.filtered_selected_row_model();
+        assert_eq!(selected.root_rows().len(), 1);
+        assert!(selected.row_by_key(RowKey::from_index(0)).is_some());
+        assert!(std::ptr::eq(selected, table.filtered_selected_row_model()));
+    }
+
+    #[test]
+    fn table_page_selected_row_model_only_includes_page_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..10).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 1,
+            page_size: 3,
+        };
+        state.row_selection = [RowKey::from_index(0), RowKey::from_index(4)]
+            .into_iter()
+            .collect();
+
+        let table = Table::builder(&data).state(state).build();
+
+        let selected = table.page_selected_row_model();
+        assert_eq!(selected.root_rows().len(), 1);
+        assert!(selected.row_by_key(RowKey::from_index(4)).is_some());
+        assert!(std::ptr::eq(selected, table.page_selected_row_model()));
+    }
+
+    #[test]
+    fn table_column_visibility_toggle_respects_enable_hiding() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_hiding(true),
+            ColumnDef::new("b").enable_hiding(false),
+        ];
+
+        let table = Table::builder(&data).columns(columns).build();
+        assert_eq!(table.column_can_hide("a"), Some(true));
+        assert_eq!(table.column_can_hide("b"), Some(false));
+        assert_eq!(table.is_column_visible("a"), Some(true));
+
+        let next = table.toggled_column_visibility("a", Some(false)).unwrap();
+        assert!(!is_column_visible(&next, &ColumnId::from("a")));
+
+        let next_b = table.toggled_column_visibility("b", Some(false)).unwrap();
+        assert!(is_column_visible(&next_b, &ColumnId::from("b")));
+    }
+
+    #[test]
+    fn table_toggle_all_columns_visible_keeps_non_hideable_visible_when_hiding_all() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_hiding(true),
+            ColumnDef::new("b").enable_hiding(false),
+        ];
+
+        let table = Table::builder(&data).columns(columns).build();
+        let next = table.toggled_all_columns_visible(Some(false));
+
+        assert!(!is_column_visible(&next, &ColumnId::from("a")));
+        assert!(is_column_visible(&next, &ColumnId::from("b")));
+    }
+
+    #[test]
+    fn table_column_order_move_respects_enable_column_ordering() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_ordering(true),
+            ColumnDef::new("b").enable_ordering(false),
+            ColumnDef::new("c").enable_ordering(true),
+        ];
+
+        let mut state = TableState::default();
+        state.column_order = vec!["a".into(), "b".into(), "c".into()];
+        let table = Table::builder(&data).columns(columns).state(state).build();
+
+        let next = table.toggled_column_order_move("a", 2).unwrap();
+        assert_eq!(
+            next.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "c", "a"]
+        );
+
+        let next_b = table.toggled_column_order_move("b", 0).unwrap();
+        assert_eq!(
+            next_b.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c"]
+        );
+    }
+
+    #[test]
+    fn table_column_pinning_respects_enable_column_pinning() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_pinning(true),
+            ColumnDef::new("b").enable_pinning(false),
+        ];
+        let table = Table::builder(&data).columns(columns).build();
+
+        let next = table
+            .toggled_column_pinning("a", Some(ColumnPinPosition::Left))
+            .unwrap();
+        assert_eq!(
+            next.left.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["a"]
+        );
+
+        let next_b = table
+            .toggled_column_pinning("b", Some(ColumnPinPosition::Right))
+            .unwrap();
+        assert!(next_b.left.is_empty());
+        assert!(next_b.right.is_empty());
+    }
+
+    #[test]
+    fn table_column_sizing_totals_and_start_offsets_respect_pinning_and_order() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").size(100.0),
+            ColumnDef::new("b").size(50.0),
+            ColumnDef::new("c").size(25.0),
+        ];
+
+        let mut state = TableState::default();
+        state.column_order = vec!["b".into(), "c".into(), "a".into()];
+        state.column_pinning.left = vec!["b".into()];
+        state.column_pinning.right = vec!["a".into()];
+
+        let table = Table::builder(&data).columns(columns).state(state).build();
+
+        assert_eq!(table.left_total_size(), 50.0);
+        assert_eq!(table.center_total_size(), 25.0);
+        assert_eq!(table.right_total_size(), 100.0);
+        assert_eq!(table.total_size(), 175.0);
+
+        assert_eq!(table.column_start("b", ColumnSizingRegion::All), Some(0.0));
+        assert_eq!(table.column_start("c", ColumnSizingRegion::All), Some(50.0));
+        assert_eq!(table.column_start("a", ColumnSizingRegion::All), Some(75.0));
+
+        assert_eq!(table.column_start("b", ColumnSizingRegion::Left), Some(0.0));
+        assert_eq!(table.column_start("c", ColumnSizingRegion::Left), None);
+        assert_eq!(
+            table.column_start("c", ColumnSizingRegion::Center),
+            Some(0.0)
+        );
+        assert_eq!(
+            table.column_start("a", ColumnSizingRegion::Right),
+            Some(0.0)
         );
     }
 }

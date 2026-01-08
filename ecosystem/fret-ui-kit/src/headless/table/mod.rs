@@ -2,14 +2,19 @@
 //!
 //! This module is feature-gated behind `fret-ui-kit/table`.
 
+mod aggregation;
 mod column;
 mod column_ordering;
 mod column_pinning;
 mod column_sizing;
 mod column_sizing_info;
 mod column_visibility;
+mod faceting;
 mod filtering;
 mod flat_row_order;
+mod grouped_aggregation;
+mod grouped_sorting;
+mod grouping;
 mod memo;
 mod options;
 mod pagination;
@@ -20,17 +25,42 @@ mod row_selection;
 mod sorting;
 mod state;
 
-pub use column::{ColumnDef, ColumnHelper, ColumnId, FilterFn, SortCmpFn, create_column_helper};
+pub use aggregation::{Aggregation, aggregate_u64};
+pub use column::{
+    ColumnDef, ColumnHelper, ColumnId, FilterFn, SortCmpFn, ValueU64Fn, create_column_helper,
+};
 pub use column_ordering::{ColumnOrderState, order_columns};
-pub use column_pinning::{ColumnPinningState, split_pinned_columns};
-pub use column_sizing::{ColumnSizingState, column_size};
+pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
+pub use column_pinning::{
+    ColumnPinPosition, ColumnPinningState, is_column_pinned, pin_column, pinned_column,
+    split_pinned_columns,
+};
+pub use column_sizing::{
+    ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,
+    column_resize_preview_size, drag_column_resize, end_column_resize, resolved_column_size,
+};
+pub use column_sizing::{ColumnSizingRegion, ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
+pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};
+pub use faceting::{
+    FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,
+    faceted_unique_value_labels, faceted_unique_values,
+};
 pub use filtering::{
     ColumnFilter, ColumnFiltersState, GlobalFilterState, contains_ascii_case_insensitive,
     filter_row_model,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
+pub use grouped_aggregation::compute_grouped_u64_aggregations;
+pub use grouped_sorting::sort_grouped_row_indices_in_place;
+pub use grouping::{
+    GroupedColumnMode, GroupedRow, GroupedRowIndex, GroupedRowKind, GroupedRowModel, GroupingState,
+    column_can_group, group_row_model, grouped_index, grouped_row_model_from_leaf,
+    is_column_grouped, order_column_refs_for_grouping, order_columns_for_grouping, set_grouping,
+    toggle_column_grouping, toggle_column_grouping_value, toggled_column_grouping,
+    toggled_column_grouping_value,
+};
 pub use options::TableOptions;
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_expanding::{
@@ -43,7 +73,12 @@ pub use row_pinning::{
     RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
     pin_rows,
 };
-pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
+pub use row_selection::{
+    RowSelectionState, SubRowSelection, is_all_rows_selected, is_row_selected,
+    is_some_rows_selected, is_sub_row_selected, row_is_all_sub_rows_selected, row_is_some_selected,
+    select_rows_fn, selected_flat_row_count, selected_root_row_count,
+    toggle_all_page_rows_selected, toggle_all_rows_selected, toggle_row_selected,
+};
 pub use sorting::{
     SortSpec, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
 };

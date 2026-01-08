@@ -1,23 +1,20 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-    Transform2D,
+    Color, Edges, FontId, FontWeight, Point, Px, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableProps,
-    RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, StackProps, TextProps,
-    VisualTransformProps,
+    RovingFlexProps, RovingFocusProps, RowProps, StackProps, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition;
+use fret_ui_kit::primitives::accordion as radix_accordion;
+use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::overlay_motion;
@@ -42,6 +39,7 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::MEDIUM,
+        slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
     }
@@ -58,11 +56,13 @@ pub use fret_ui_kit::primitives::accordion::AccordionKind;
 #[derive(Clone)]
 enum AccordionModel {
     Single {
-        model: Model<Option<Arc<str>>>,
+        model: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<Arc<str>>,
         collapsible: bool,
     },
     Multiple {
-        model: Model<Vec<Arc<str>>>,
+        model: Option<Model<Vec<Arc<str>>>>,
+        default_value: Vec<Arc<str>>,
     },
 }
 
@@ -121,11 +121,10 @@ impl AccordionTrigger {
     fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        model: AccordionModel,
+        root: &radix_accordion::AccordionRoot,
         value: Arc<str>,
         enabled: bool,
         focusable: bool,
-        is_open: bool,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -144,138 +143,120 @@ impl AccordionTrigger {
         let chrome = self.chrome;
         let children = self.children;
 
-        cx.pressable(
-            PressableProps {
-                layout: pressable_layout,
-                enabled,
-                focusable,
-                focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-                a11y: fret_ui_kit::primitives::accordion::accordion_trigger_a11y(
-                    a11y_label.clone(),
-                    is_open,
-                ),
-                ..Default::default()
-            },
-            move |cx, _state| {
-                match model.clone() {
-                    AccordionModel::Single { model, collapsible } => {
-                        let value = value.clone();
-                        cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-                            let value = value.clone();
-                            let _ = host.models_mut().update(&model, |v| {
-                                let is_same = v.as_deref().is_some_and(|cur| cur == value.as_ref());
-                                if is_same {
-                                    if collapsible {
-                                        *v = None;
-                                    }
-                                } else {
-                                    *v = Some(value);
-                                }
-                            });
-                        }));
-                    }
-                    AccordionModel::Multiple { model } => {
-                        cx.pressable_toggle_vec_arc_str(&model, value.clone());
-                    }
-                }
+        radix_accordion::AccordionTrigger::new(value.clone())
+            .label(a11y_label.clone())
+            .disabled(!enabled)
+            .tab_stop(focusable)
+            .into_element(
+                cx,
+                root,
+                PressableProps {
+                    layout: pressable_layout,
+                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    ..Default::default()
+                },
+                move |cx, is_open| {
+                    let chrome = ChromeRefinement::default()
+                        .px(Space::N0)
+                        .py(Space::N4)
+                        .rounded(Radius::Md)
+                        .merge(chrome.clone());
+                    let mut props = decl_style::container_props(&theme, chrome, Default::default());
+                    props.layout.size = container_layout.size;
+                    props.layout.overflow = container_layout.overflow;
 
-                let chrome = ChromeRefinement::default()
-                    .px(Space::N0)
-                    .py(Space::N4)
-                    .rounded(Radius::Md)
-                    .merge(chrome.clone());
-                let mut props = decl_style::container_props(&theme, chrome, Default::default());
-                props.layout.size = container_layout.size;
-                props.layout.overflow = container_layout.overflow;
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: props.layout,
+                            padding: props.padding,
+                            background: props.background,
+                            shadow: props.shadow,
+                            border: props.border,
+                            border_color: props.border_color,
+                            corner_radii: props.corner_radii,
+                        },
+                        move |cx| {
+                            let chevron_fg = theme
+                                .color_by_key("muted-foreground")
+                                .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                            let chevron_layout = decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(16.0)))
+                                    .h_px(MetricRef::Px(Px(16.0)))
+                                    .flex_shrink_0()
+                                    .mt(Space::N0p5),
+                            );
+                            let mut chevron_center = Point::new(Px(8.0), Px(8.0));
+                            if let (
+                                fret_ui::element::Length::Px(w),
+                                fret_ui::element::Length::Px(h),
+                            ) = (chevron_layout.size.width, chevron_layout.size.height)
+                            {
+                                chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
+                            }
+                            let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                            let chevron_transform = Transform2D::rotation_about_degrees(
+                                chevron_rotation,
+                                chevron_center,
+                            );
+                            let chevron = cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: chevron_layout,
+                                    transform: chevron_transform,
+                                },
+                                move |cx| {
+                                    vec![decl_icon::icon_with(
+                                        cx,
+                                        ids::ui::CHEVRON_DOWN,
+                                        Some(Px(16.0)),
+                                        Some(ColorRef::Color(chevron_fg)),
+                                    )]
+                                },
+                            );
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: props.layout,
-                        padding: props.padding,
-                        background: props.background,
-                        shadow: props.shadow,
-                        border: props.border,
-                        border_color: props.border_color,
-                        corner_radii: props.corner_radii,
-                    },
-                    move |cx| {
-                        let chevron_fg = theme
-                            .color_by_key("muted-foreground")
-                            .unwrap_or_else(|| theme.color_required("muted-foreground"));
-                        let chevron_layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default()
-                                .w_px(MetricRef::Px(Px(16.0)))
-                                .h_px(MetricRef::Px(Px(16.0)))
-                                .flex_shrink_0()
-                                .mt(Space::N0p5),
-                        );
-                        let mut chevron_center = Point::new(Px(8.0), Px(8.0));
-                        if let (fret_ui::element::Length::Px(w), fret_ui::element::Length::Px(h)) =
-                            (chevron_layout.size.width, chevron_layout.size.height)
-                        {
-                            chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
-                        }
-                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
-                        let chevron_transform =
-                            Transform2D::rotation_about_degrees(chevron_rotation, chevron_center);
-                        let chevron = cx.visual_transform_props(
-                            VisualTransformProps {
-                                layout: chevron_layout,
-                                transform: chevron_transform,
-                            },
-                            move |cx| {
-                                vec![decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::CHEVRON_DOWN,
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(chevron_fg)),
-                                )]
-                            },
-                        );
+                            let left_layout = decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().flex_1().min_w_0(),
+                            );
+                            vec![cx.row(
+                                RowProps {
+                                    layout: LayoutStyle::default(),
+                                    gap: trigger_gap(&theme),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::SpaceBetween,
+                                    align: CrossAlign::Start,
+                                },
+                                move |cx| {
+                                    let left_children = if children.is_empty() {
+                                        vec![cx.text_props(TextProps {
+                                            layout: LayoutStyle::default(),
+                                            text: a11y_label.clone(),
+                                            style: Some(text_style),
+                                            color: Some(fg),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Clip,
+                                        })]
+                                    } else {
+                                        children
+                                    };
 
-                        let left_layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().flex_1().min_w_0(),
-                        );
-                        vec![cx.row(
-                            RowProps {
-                                layout: LayoutStyle::default(),
-                                gap: trigger_gap(&theme),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::SpaceBetween,
-                                align: CrossAlign::Start,
-                            },
-                            move |cx| {
-                                let left_children = if children.is_empty() {
-                                    vec![cx.text_props(TextProps {
-                                        layout: LayoutStyle::default(),
-                                        text: a11y_label.clone(),
-                                        style: Some(text_style),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                    })]
-                                } else {
-                                    children
-                                };
-
-                                vec![
-                                    cx.container(
-                                        ContainerProps {
-                                            layout: left_layout,
-                                            ..Default::default()
-                                        },
-                                        |_cx| left_children,
-                                    ),
-                                    chevron,
-                                ]
-                            },
-                        )]
-                    },
-                )]
-            },
-        )
+                                    vec![
+                                        cx.container(
+                                            ContainerProps {
+                                                layout: left_layout,
+                                                ..Default::default()
+                                            },
+                                            |_cx| left_children,
+                                        ),
+                                        chevron,
+                                    ]
+                                },
+                            )]
+                        },
+                    )]
+                },
+            )
     }
 }
 
@@ -409,7 +390,7 @@ pub struct Accordion {
 
 impl std::fmt::Debug for Accordion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let kind = match self.model {
+        let kind = match &self.model {
             AccordionModel::Single { .. } => AccordionKind::Single,
             AccordionModel::Multiple { .. } => AccordionKind::Multiple,
         };
@@ -426,7 +407,22 @@ impl Accordion {
     pub fn single(model: Model<Option<Arc<str>>>) -> Self {
         Self {
             model: AccordionModel::Single {
-                model,
+                model: Some(model),
+                default_value: None,
+                collapsible: false,
+            },
+            items: Vec::new(),
+            disabled: false,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled accordion with an optional initial value (Radix `defaultValue`).
+    pub fn single_uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: AccordionModel::Single {
+                model: None,
+                default_value: default_value.map(Into::into),
                 collapsible: false,
             },
             items: Vec::new(),
@@ -437,7 +433,23 @@ impl Accordion {
 
     pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
         Self {
-            model: AccordionModel::Multiple { model },
+            model: AccordionModel::Multiple {
+                model: Some(model),
+                default_value: Vec::new(),
+            },
+            items: Vec::new(),
+            disabled: false,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled accordion with an initial set of values (Radix `defaultValue`).
+    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+        Self {
+            model: AccordionModel::Multiple {
+                model: None,
+                default_value,
+            },
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
@@ -447,10 +459,15 @@ impl Accordion {
     pub fn collapsible(mut self, collapsible: bool) -> Self {
         if let AccordionModel::Single {
             model,
+            default_value,
             collapsible: _,
         } = self.model
         {
-            self.model = AccordionModel::Single { model, collapsible };
+            self.model = AccordionModel::Single {
+                model,
+                default_value,
+                collapsible,
+            };
         }
         self
     }
@@ -484,37 +501,42 @@ impl Accordion {
             let group_disabled = self.disabled;
             let layout = self.layout;
 
-            let (open_single, open_multi) = match &model {
-                AccordionModel::Single { model, .. } => {
-                    (cx.watch_model(model).layout().cloned().flatten(), None)
+            let root = match &model {
+                AccordionModel::Single {
+                    model,
+                    default_value,
+                    collapsible,
+                } => radix_accordion::AccordionRoot::single_controllable(cx, model.clone(), || {
+                    default_value.clone()
+                })
+                .collapsible(*collapsible),
+                AccordionModel::Multiple {
+                    model,
+                    default_value,
+                } => {
+                    radix_accordion::AccordionRoot::multiple_controllable(cx, model.clone(), || {
+                        default_value.clone()
+                    })
                 }
-                AccordionModel::Multiple { model } => {
-                    (None, cx.watch_model(model).layout().cloned())
-                }
-            };
+            }
+            .disabled(group_disabled)
+            .loop_navigation(true);
 
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
             let disabled_flags: Vec<bool> =
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
-            let tab_stop = match (open_single.as_deref(), open_multi.as_ref()) {
-                (Some(open), _) => fret_ui_kit::primitives::accordion::tab_stop_index_single(
-                    &values,
-                    Some(open),
-                    &disabled_flags,
-                ),
-                (_, Some(open)) => fret_ui_kit::primitives::accordion::tab_stop_index_multiple(
-                    &values,
-                    open,
-                    &disabled_flags,
-                ),
-                _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
-            };
+            let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
+            let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.clone().into_boxed_slice());
+            let list = root.clone().list(values_arc, disabled_arc.clone());
+            let tab_stop = list
+                .tab_stop_index(cx)
+                .or_else(|| fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags));
 
             let roving = RovingFocusProps {
                 enabled: !group_disabled,
                 wrap: true,
-                disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
+                disabled: disabled_arc.clone(),
                 ..Default::default()
             };
 
@@ -529,133 +551,109 @@ impl Accordion {
             let wrapper = decl_style::container_props(&theme, ChromeRefinement::default(), layout);
 
             cx.container(wrapper, move |cx| {
-                vec![cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::List,
-                        disabled: group_disabled,
-                        ..Default::default()
+                vec![list.into_element(
+                    cx,
+                    RovingFlexProps {
+                        flex: fret_ui::element::FlexProps {
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                            ..Default::default()
+                        },
+                        roving,
                     },
                     move |cx| {
-                        vec![cx.roving_flex(
-                            RovingFlexProps {
-                                flex: fret_ui::element::FlexProps {
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                    ..Default::default()
-                                },
-                                roving,
-                            },
-                            move |cx| {
-                                cx.roving_nav_apg();
-                                let mut out = Vec::with_capacity(items.len());
-                                let item_len = items.len();
+                        let mut out = Vec::with_capacity(items.len());
+                        let item_len = items.len();
 
-                                for (idx, item) in items.into_iter().enumerate() {
-                                    let item_disabled =
-                                        disabled_flags.get(idx).copied().unwrap_or(true)
-                                            || item.trigger.disabled;
-                                    let enabled = !item_disabled;
-                                    let focusable = tab_stop.is_some_and(|i| i == idx);
-                                    let is_open = open_single
-                                        .as_deref()
-                                        .is_some_and(|v| v == item.value.as_ref())
-                                        || open_multi.as_ref().is_some_and(|selected| {
-                                            selected
-                                                .iter()
-                                                .any(|v| v.as_ref() == item.value.as_ref())
-                                        });
+                        for (idx, item) in items.into_iter().enumerate() {
+                            let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true)
+                                || item.trigger.disabled;
+                            let enabled = !item_disabled;
+                            let focusable = tab_stop.is_some_and(|i| i == idx);
+                            let is_open = root.is_item_open(cx, item.value.as_ref());
 
-                                    let trigger = item.trigger.into_element(
-                                        cx,
-                                        model.clone(),
-                                        item.value.clone(),
-                                        enabled,
-                                        focusable,
+                            let trigger = item.trigger.into_element(
+                                cx,
+                                &root,
+                                item.value.clone(),
+                                enabled,
+                                focusable,
+                            );
+
+                            let content = item.content;
+                            let theme = theme.clone();
+
+                            let mut props = decl_style::container_props(
+                                &theme,
+                                base_item_chrome.clone().merge(item.chrome),
+                                item.layout.merge(LayoutRefinement::default().w_full()),
+                            );
+                            props.border = Edges {
+                                top: Px(0.0),
+                                right: Px(0.0),
+                                bottom: props.border.bottom,
+                                left: Px(0.0),
+                            };
+                            if idx + 1 == item_len {
+                                props.border.bottom = Px(0.0);
+                            }
+
+                            out.push(cx.container(props, move |cx| {
+                                let mut children = Vec::new();
+                                children.push(trigger);
+
+                                let motion = transition::drive_transition_with_durations_and_easing(
+                                    cx,
+                                    is_open,
+                                    8,
+                                    8,
+                                    overlay_motion::shadcn_ease,
+                                );
+                                let state_id = cx.root_id();
+                                let last_height =
+                                    radix_collapsible::last_measured_height_for(cx, state_id);
+                                let (should_render, wrapper) =
+                                    radix_collapsible::collapsible_height_wrapper_refinement(
                                         is_open,
+                                        false,
+                                        true,
+                                        motion,
+                                        last_height,
                                     );
 
-                                    let content = item.content;
-                                    let theme = theme.clone();
+                                if should_render {
+                                    let wrapper_layout = decl_style::layout_style(&theme, wrapper);
 
-                                    let mut props = decl_style::container_props(
-                                        &theme,
-                                        base_item_chrome.clone().merge(item.chrome),
-                                        item.layout.merge(LayoutRefinement::default().w_full()),
+                                    let content_el = content.clone().into_element(cx);
+                                    let wrapper_el = cx.keyed("accordion-content", |cx| {
+                                        cx.stack_props(
+                                            StackProps {
+                                                layout: wrapper_layout,
+                                            },
+                                            move |_cx| vec![content_el],
+                                        )
+                                    });
+                                    let wrapper_id = wrapper_el.id;
+
+                                    let _ = radix_collapsible::update_measured_height_if_open_for(
+                                        cx,
+                                        state_id,
+                                        wrapper_id,
+                                        is_open,
+                                        motion.animating,
                                     );
-                                    props.border = Edges {
-                                        top: Px(0.0),
-                                        right: Px(0.0),
-                                        bottom: props.border.bottom,
-                                        left: Px(0.0),
-                                    };
-                                    if idx + 1 == item_len {
-                                        props.border.bottom = Px(0.0);
-                                    }
 
-                                    out.push(cx.container(props, move |cx| {
-                                        let mut children = Vec::new();
-                                        children.push(trigger);
-
-                                        let motion =
-                                            transition::drive_transition_with_durations_and_easing(
-                                                cx,
-                                                is_open,
-                                                8,
-                                                8,
-                                                overlay_motion::shadcn_ease,
-                                            );
-                                        let state_id = cx.root_id();
-                                        let last_height =
-                                            collapsible_motion::last_measured_height_for(
-                                                cx, state_id,
-                                            );
-                                        let (should_render, wrapper) =
-                                            collapsible_motion::collapsible_height_wrapper_refinement(
-                                                is_open,
-                                                false,
-                                                true,
-                                                motion,
-                                                last_height,
-                                            );
-
-                                        if should_render {
-                                            let wrapper_layout =
-                                                decl_style::layout_style(&theme, wrapper);
-
-                                            let content_el = content.clone().into_element(cx);
-                                            let wrapper_el =
-                                                cx.keyed("accordion-content", |cx| {
-                                                    cx.stack_props(
-                                                        StackProps {
-                                                            layout: wrapper_layout,
-                                                        },
-                                                        move |_cx| vec![content_el],
-                                                    )
-                                                });
-                                            let wrapper_id = wrapper_el.id;
-
-                                            let _ = collapsible_motion::
-                                                update_measured_height_if_open_for(
-                                                    cx,
-                                                    state_id,
-                                                    wrapper_id,
-                                                    is_open,
-                                                    motion.animating,
-                                                );
-
-                                            children.push(wrapper_el);
-                                        }
-                                        children
-                                    }));
+                                    children.push(wrapper_el);
                                 }
+                                children
+                            }));
+                        }
 
-                                out
-                            },
-                        )]
+                        out
                     },
                 )]
             })
@@ -671,12 +669,32 @@ pub fn accordion_single<H: UiHost>(
     Accordion::single(model).items(f(cx)).into_element(cx)
 }
 
+pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Option<T>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
+) -> AnyElement {
+    Accordion::single_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
+}
+
 pub fn accordion_multiple<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
 ) -> AnyElement {
     Accordion::multiple(model).items(f(cx)).into_element(cx)
+}
+
+pub fn accordion_multiple_uncontrolled<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Vec<Arc<str>>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
+) -> AnyElement {
+    Accordion::multiple_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
 }
 
 #[cfg(test)]
@@ -776,6 +794,41 @@ mod tests {
         ui.set_root(root);
     }
 
+    fn render_accordion_frame_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                let accordion = Accordion::single_uncontrolled(default_value.clone())
+                    .collapsible(collapsible)
+                    .items([item_1, item_2])
+                    .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+    }
+
     fn render_accordion_frame_with_semantics(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -789,6 +842,31 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
 
         render_accordion_frame(ui, app, services, window, bounds, open, collapsible);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_accordion_frame_uncontrolled_with_semantics(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        render_accordion_frame_uncontrolled(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            default_value,
+            collapsible,
+        );
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
     }
@@ -827,6 +905,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -837,6 +916,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -853,6 +933,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -863,6 +944,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_cloned(&open).flatten().as_deref(), None);
@@ -876,6 +958,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -886,6 +969,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -928,6 +1012,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -938,6 +1023,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -954,6 +1040,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -964,6 +1051,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -1095,6 +1183,94 @@ mod tests {
                 true,
             );
         }
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+    }
+
+    #[test]
+    fn accordion_single_uncontrolled_applies_default_value_once_and_does_not_reset() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        render_accordion_frame_uncontrolled_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("item-1")),
+            false,
+        );
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // Click second trigger to open item-2.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Render enough frames for presence to settle and for the previous content to unmount.
+        for _ in 0..24 {
+            render_accordion_frame_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                false,
+            );
+        }
+
+        assert!(snapshot_has_label(&ui, "Content 2"));
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+
+        // The internal model should not reset back to default_value on subsequent renders.
+        for _ in 0..8 {
+            render_accordion_frame_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                false,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 2"));
         assert!(!snapshot_has_label(&ui, "Content 1"));
     }
 }

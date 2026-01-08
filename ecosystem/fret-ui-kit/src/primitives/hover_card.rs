@@ -7,6 +7,7 @@
 //! and hover overlay request wiring. Visual styling, motion, and arrow rendering belong in higher
 //! layers (e.g. shadcn recipes).
 
+use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -16,6 +17,19 @@ use crate::{OverlayController, OverlayRequest};
 /// Stable per-overlay root naming convention for hover cards.
 pub fn hover_card_root_name(id: GlobalElementId) -> String {
     OverlayController::hover_overlay_root_name(id)
+}
+
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// This is a convenience helper for authoring Radix-shaped hover-card roots:
+/// - if `controlled_open` is provided, it is used directly
+/// - otherwise an internal model is created (once) using `default_open` (Radix `defaultOpen`)
+pub fn hover_card_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
 }
 
 /// Builds an overlay request for a Radix-style hover card.
@@ -35,8 +49,18 @@ pub fn request_hover_card<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Ov
 }
 
 /// Computes whether the hover card should be considered "hovered" for intent/visibility decisions.
-pub fn hover_card_hovered(trigger_hovered: bool, overlay_hovered: bool, focused: bool) -> bool {
-    trigger_hovered || overlay_hovered || focused
+///
+/// Notes:
+/// - Pointer hover is level-triggered: `trigger_hovered || overlay_hovered`.
+/// - Keyboard focus should be treated as an "open affordance" for accessibility flows. In Radix,
+///   pointer-driven focus (mouse down) does *not* keep the hover card open after pointer leave.
+///   Call sites should pass `keyboard_focused` (not just `focused`).
+pub fn hover_card_hovered(
+    trigger_hovered: bool,
+    overlay_hovered: bool,
+    keyboard_focused: bool,
+) -> bool {
+    trigger_hovered || overlay_hovered || keyboard_focused
 }
 
 #[cfg(test)]

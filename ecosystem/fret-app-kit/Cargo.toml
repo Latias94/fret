@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-fret-asset-cache = { path = "../fret-asset-cache" }
+fret-ui-assets = { path = "../fret-ui-assets" }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }

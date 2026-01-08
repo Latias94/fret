@@ -102,7 +102,8 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             position: origin_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
-            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -112,7 +113,8 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             position: origin_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
-            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&clicks), Some(0));
@@ -129,7 +131,8 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             position: translated_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
-            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -139,7 +142,8 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
             position: translated_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
-            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&clicks), Some(1));

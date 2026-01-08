@@ -244,7 +244,7 @@ impl AlertDialog {
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
 
-                let mut request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     self.open.clone(),
@@ -252,7 +252,6 @@ impl AlertDialog {
                     options,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
                 radix_dialog::request_modal_dialog(cx, request);
             } else {
                 radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
@@ -440,6 +439,7 @@ impl AlertDialogTitle {
                 font: FontId::default(),
                 size: px,
                 weight: FontWeight::SEMIBOLD,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: Some(-0.02),
             }),
@@ -486,6 +486,7 @@ impl AlertDialogDescription {
                 font: FontId::default(),
                 size: px,
                 weight: FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
             }),
@@ -771,6 +772,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -781,6 +783,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -812,6 +815,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -822,6 +826,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -953,6 +958,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -963,6 +969,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1072,6 +1079,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -1082,6 +1090,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));

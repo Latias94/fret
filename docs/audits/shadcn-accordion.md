@@ -25,6 +25,11 @@ examples in `repo-ref/ui`.
   `AccordionContent` surface mirroring Radix/shadcn.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
+- Pass: Supports uncontrolled `defaultValue` (internal selection model).
+
+Note: A fully composable, Radix-shaped surface exists in the primitives layer for non-shadcn users
+(`fret-ui-kit::primitives::accordion::AccordionRoot` / `AccordionTrigger` / `AccordionContent`),
+while the shadcn wrapper keeps a builder-style ergonomic API.
 
 ### Keyboard & interaction behavior
 
@@ -34,7 +39,7 @@ examples in `repo-ref/ui`.
   implementation.
 - Partial: Content open/close animations use a presence-driven cached-height clip (best-effort; no
   CSS variables yet).
-  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
 
 ### Visual defaults (shadcn parity)
 

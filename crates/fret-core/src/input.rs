@@ -115,12 +115,21 @@ pub enum PointerEvent {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        /// Consecutive click count for this button (1 = single click, 2 = double click, ...).
+        ///
+        /// This count is provided by the platform runner and only increments for "true clicks"
+        /// (press + release without exceeding a small drag threshold).
+        click_count: u8,
         pointer_type: PointerType,
     },
     Up {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        /// Consecutive click count for this button (1 = single click, 2 = double click, ...).
+        ///
+        /// See `PointerEvent::Down.click_count` for the normalization rules.
+        click_count: u8,
         pointer_type: PointerType,
     },
     Wheel {
@@ -296,10 +305,14 @@ pub enum ViewportInputKind {
     PointerDown {
         button: MouseButton,
         modifiers: Modifiers,
+        /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+        click_count: u8,
     },
     PointerUp {
         button: MouseButton,
         modifiers: Modifiers,
+        /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+        click_count: u8,
     },
     Wheel {
         delta: Point,

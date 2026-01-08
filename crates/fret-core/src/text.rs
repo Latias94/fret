@@ -4,6 +4,9 @@ use crate::{
     ids::FontId,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+use crate::scene::Color;
 
 /// Overrides for the default font family selection used by the text system.
 ///
@@ -81,10 +84,19 @@ pub struct TextStyle {
     pub font: FontId,
     pub size: Px,
     pub weight: FontWeight,
+    pub slant: TextSlant,
     /// Optional line height override, in logical px.
     pub line_height: Option<Px>,
     /// Optional tracking (letter spacing) override, in EM.
     pub letter_spacing_em: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TextSlant {
+    #[default]
+    Normal,
+    Italic,
+    Oblique,
 }
 
 impl Default for TextStyle {
@@ -93,6 +105,7 @@ impl Default for TextStyle {
             font: FontId::default(),
             size: Px(13.0),
             weight: FontWeight::NORMAL,
+            slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
         }
@@ -117,6 +130,33 @@ pub struct HitTestResult {
     pub affinity: CaretAffinity,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextRun {
+    /// Run length in UTF-8 bytes.
+    pub len: usize,
+    /// Optional per-run paint color override.
+    pub color: Option<Color>,
+    /// Optional per-run weight override (shaping-affecting).
+    pub weight: Option<FontWeight>,
+    /// Optional per-run slant override (shaping-affecting).
+    pub slant: Option<TextSlant>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RichText {
+    pub text: Arc<str>,
+    pub runs: Arc<[TextRun]>,
+}
+
+impl RichText {
+    pub fn new(text: impl Into<Arc<str>>, runs: impl Into<Arc<[TextRun]>>) -> Self {
+        Self {
+            text: text.into(),
+            runs: runs.into(),
+        }
+    }
+}
+
 pub trait TextService {
     fn prepare(
         &mut self,
@@ -125,6 +165,15 @@ pub trait TextService {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics);
 
+    fn prepare_rich(
+        &mut self,
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        self.prepare(rich.text.as_ref(), base_style, constraints)
+    }
+
     fn measure(
         &mut self,
         text: &str,
@@ -132,6 +181,17 @@ pub trait TextService {
         constraints: TextConstraints,
     ) -> TextMetrics {
         let (blob, metrics) = self.prepare(text, style, constraints);
+        self.release(blob);
+        metrics
+    }
+
+    fn measure_rich(
+        &mut self,
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        let (blob, metrics) = self.prepare_rich(rich, base_style, constraints);
         self.release(blob);
         metrics
     }

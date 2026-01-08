@@ -265,6 +265,89 @@ impl ElementHostWidget {
                     color,
                 });
             }
+            ElementInstance::StyledText(props) => {
+                let theme_revision = cx.theme().revision();
+                cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+                let font_stack_key = cx
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let font_size = cx
+                    .theme()
+                    .metric_by_key("font.size")
+                    .unwrap_or(cx.theme().metrics.font_size);
+                let style = props.style.unwrap_or(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    line_height: Some(
+                        cx.theme()
+                            .metric_by_key("font.line_height")
+                            .unwrap_or(cx.theme().metrics.font_line_height),
+                    ),
+                    ..Default::default()
+                });
+                let color = props
+                    .color
+                    .or_else(|| cx.theme().color_by_key("foreground"))
+                    .unwrap_or(cx.theme().colors.text_primary);
+                let constraints = TextConstraints {
+                    max_width: Some(cx.bounds.size.width),
+                    wrap: props.wrap,
+                    overflow: props.overflow,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let scale_bits = cx.scale_factor.to_bits();
+                let needs_prepare = self.text_cache.blob.is_none()
+                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
+                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
+                    || self.text_cache.last_style.as_ref() != Some(&style)
+                    || self.text_cache.last_wrap != Some(props.wrap)
+                    || self.text_cache.last_overflow != Some(props.overflow)
+                    || self.text_cache.last_width != Some(cx.bounds.size.width)
+                    || self.text_cache.last_theme_revision != Some(theme_revision)
+                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+
+                if needs_prepare {
+                    if let Some(blob) = self.text_cache.blob.take() {
+                        cx.services.text().release(blob);
+                    }
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare_rich(&props.rich, &style, constraints);
+                    self.text_cache.blob = Some(blob);
+                    self.text_cache.metrics = Some(metrics);
+                    self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                    self.text_cache.last_text = None;
+                    self.text_cache.last_rich = Some(props.rich.clone());
+                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_wrap = Some(props.wrap);
+                    self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_theme_revision = Some(theme_revision);
+                    self.text_cache.last_font_stack_key = Some(font_stack_key);
+                }
+
+                let Some(blob) = self.text_cache.blob else {
+                    return;
+                };
+                let Some(metrics) = self.text_cache.metrics else {
+                    return;
+                };
+
+                let origin = fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    cx.bounds.origin.y + metrics.baseline,
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(0),
+                    origin,
+                    text: blob,
+                    color,
+                });
+            }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
                 let model_id = model.id();

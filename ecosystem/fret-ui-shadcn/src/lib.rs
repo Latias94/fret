@@ -69,7 +69,8 @@ pub mod tooltip;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
-    accordion_multiple, accordion_single,
+    accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
+    accordion_single_uncontrolled,
 };
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
@@ -86,7 +87,9 @@ pub use button_group::{
 };
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
-pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
+pub use collapsible::{
+    Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
+};
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
@@ -148,7 +151,7 @@ pub use popover::{
     PopoverSide, PopoverTitle, PopoverTrigger,
 };
 pub use progress::{Progress, progress};
-pub use radio_group::{RadioGroup, RadioGroupItem, radio_group};
+pub use radio_group::{RadioGroup, RadioGroupItem, radio_group, radio_group_uncontrolled};
 pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
@@ -176,11 +179,12 @@ pub use switch::{Switch, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
-pub use tabs::{Tabs, TabsItem, tabs};
+pub use tabs::{Tabs, TabsItem, tabs, tabs_uncontrolled};
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
+pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
 pub use toggle_group::{
-    ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
+    ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
+    toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,
 };
 pub use tooltip::{
     Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,

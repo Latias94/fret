@@ -237,6 +237,16 @@ impl WinitAppDriver for TableStressDriver {
         Self::build_ui(app, window)
     }
 
+    fn hot_reload_window(
+        &mut self,
+        app: &mut App,
+        _services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    }
+
     fn handle_model_changes(
         &mut self,
         context: WinitWindowContext<'_, Self::WindowState>,
@@ -493,6 +503,8 @@ impl WinitAppDriver for TableStressDriver {
                                                     &|row: &DemoRow, _i| RowKey(row.id as u64),
                                                     fret_ui_kit::declarative::table::TableViewProps {
                                                         overscan: 8,
+                                                        column_resize_mode:
+                                                            fret_ui_kit::headless::table::ColumnResizeMode::OnEnd,
                                                         ..Default::default()
                                                     },
                                                     |_row| None,

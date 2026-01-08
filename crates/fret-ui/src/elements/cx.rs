@@ -17,9 +17,9 @@ use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps, PointerRegionProps,
     PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
-    ScrollbarProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextAreaProps,
-    TextInputProps, TextProps, VirtualListOptions, VirtualListProps, VirtualListState,
-    VisualTransformProps,
+    ScrollbarProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps,
+    TextAreaProps, TextInputProps, TextProps, VirtualListOptions, VirtualListProps,
+    VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -1066,6 +1066,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Text(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn styled_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(
+                id,
+                ElementKind::StyledText(StyledTextProps::new(rich)),
+                Vec::new(),
+            )
+        })
+    }
+
+    #[track_caller]
+    pub fn styled_text_props(&mut self, props: StyledTextProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::StyledText(props), Vec::new())
         })
     }
 

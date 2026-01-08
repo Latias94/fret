@@ -19,6 +19,9 @@ This document tracks how `fret-ui-kit::primitives` maps to upstream Radix UI Pri
 Radix packages listed here are the "UI-ish" subset (excluding low-level React hooks like `use-*`,
 and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 
+Note: Even though low-level `use-*` packages are excluded from the main mapping list, Fret provides
+a small `controllable_state` helper because it is a common contract shared by many primitives.
+
 ### Implemented (direct)
 
 - `accordion` -> `ecosystem/fret-ui-kit/src/primitives/accordion.rs`

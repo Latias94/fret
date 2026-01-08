@@ -30,6 +30,8 @@ Fret models Radix checkbox outcomes as:
 - Pass: Keyboard activation matches Radix outcomes: Space toggles, Enter is consumed (does not toggle).
 - Pass: Optional boolean bindings (`Option<bool>`) can be mapped/toggled via primitives helpers
   (`checked_state_from_optional_bool`, `toggle_optional_bool`), keeping recipes thin.
+- Pass: Controlled/uncontrolled checked state (`checked` / `defaultChecked`) can be modeled via
+  `checkbox_use_checked_model(...)`.
 - Note: Fret currently does not model DOM-style `name`/form submission semantics.
 
 ## Follow-ups (recommended)

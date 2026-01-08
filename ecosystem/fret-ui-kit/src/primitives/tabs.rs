@@ -9,6 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps,
@@ -17,6 +18,16 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
+
+/// Returns a selected-value model that behaves like Radix `useControllableState` (`value` /
+/// `defaultValue`).
+pub fn tabs_use_value_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -178,7 +189,7 @@ pub fn tab_panel_with_gate<H: UiHost>(
 /// small Rust builders that thread the shared models and option values through closures.
 #[derive(Debug, Clone)]
 pub struct TabsRoot {
-    model: fret_runtime::Model<Option<Arc<str>>>,
+    model: Model<Option<Arc<str>>>,
     disabled: bool,
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
@@ -186,7 +197,7 @@ pub struct TabsRoot {
 }
 
 impl TabsRoot {
-    pub fn new(model: fret_runtime::Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
         Self {
             model,
             disabled: false,
@@ -196,8 +207,23 @@ impl TabsRoot {
         }
     }
 
-    pub fn model(&self) -> fret_runtime::Model<Option<Arc<str>>> {
+    pub fn model(&self) -> Model<Option<Arc<str>>> {
         self.model.clone()
+    }
+
+    /// Creates a tabs root with a controlled/uncontrolled selection model (Radix `value` /
+    /// `defaultValue`).
+    ///
+    /// Notes:
+    /// - The internal model (uncontrolled mode) is stored in element state at the call site.
+    /// - Call this from a stable subtree (key the root node if you need state to survive reordering).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controlled: Option<Model<Option<Arc<str>>>>,
+        default_value: impl FnOnce() -> Option<Arc<str>>,
+    ) -> Self {
+        let model = tabs_use_value_model(cx, controlled, default_value).model();
+        Self::new(model)
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -477,6 +503,39 @@ impl TabsContent {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::cell::Cell;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn tabs_use_value_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(Some(Arc::from("a")));
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = tabs_use_value_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                None
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
+    }
 
     #[test]
     fn tabs_trigger_pointer_down_selects_on_left_mouse_down() {

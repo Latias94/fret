@@ -8,8 +8,70 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
+use fret_core::{Px, SemanticsRole, Size};
+use fret_runtime::Model;
 use fret_ui::element::{PressableA11y, SemanticsProps};
+use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, UiHost};
+
+use crate::declarative::ModelWatchExt;
+
+/// Returns an open-state model that behaves like Radix `useControllableState` (`open` /
+/// `defaultOpen`).
+pub fn collapsible_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
+/// A Radix-shaped `Collapsible` root configuration surface.
+///
+/// Upstream supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In Fret this
+/// maps to either:
+/// - a caller-provided `Model<bool>` (controlled), or
+/// - an internal `Model<bool>` stored in element state (uncontrolled).
+#[derive(Debug, Clone, Default)]
+pub struct CollapsibleRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+}
+
+impl CollapsibleRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        collapsible_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.use_open_model(cx).model();
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
+}
 
 /// Semantics wrapper props for a collapsible root container.
 pub fn collapsible_root_semantics(disabled: bool, open: bool) -> SemanticsProps {
@@ -28,5 +90,117 @@ pub fn collapsible_trigger_a11y(label: Option<Arc<str>>, open: bool) -> Pressabl
         label,
         expanded: Some(open),
         ..Default::default()
+    }
+}
+
+/// Read the last cached open height for a collapsible content subtree.
+///
+/// This is a Radix-aligned outcome for Collapsible/Accordion height animations: Radix measures the
+/// content and exposes it to styling via CSS variables. Fret caches the value in per-element state.
+pub fn last_measured_height_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state_id: GlobalElementId,
+) -> Px {
+    crate::declarative::collapsible_motion::last_measured_height_for(cx, state_id)
+}
+
+/// Read the last cached open size for a collapsible content subtree.
+pub fn last_measured_size_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state_id: GlobalElementId,
+) -> Size {
+    crate::declarative::collapsible_motion::last_measured_size_for(cx, state_id)
+}
+
+/// Update the cached open height from the previously-laid-out bounds of `wrapper_element_id`.
+pub fn update_measured_height_if_open_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state_id: GlobalElementId,
+    wrapper_element_id: GlobalElementId,
+    open: bool,
+    animating: bool,
+) -> Px {
+    crate::declarative::collapsible_motion::update_measured_height_if_open_for(
+        cx,
+        state_id,
+        wrapper_element_id,
+        open,
+        animating,
+    )
+}
+
+/// Update the cached open size from a "measurement element" that is laid out off-flow.
+pub fn update_measured_size_from_element_if_open_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state_id: GlobalElementId,
+    measure_element_id: GlobalElementId,
+    open: bool,
+) -> Size {
+    crate::declarative::collapsible_motion::update_measured_size_from_element_if_open_for(
+        cx,
+        state_id,
+        measure_element_id,
+        open,
+    )
+}
+
+/// Layout refinement for an off-flow measurement wrapper.
+pub fn collapsible_measurement_wrapper_refinement() -> crate::LayoutRefinement {
+    crate::declarative::collapsible_motion::collapsible_measurement_wrapper_refinement()
+}
+
+/// Compute wrapper mounting and layout patches for a collapsible content subtree.
+#[allow(clippy::too_many_arguments)]
+pub fn collapsible_height_wrapper_refinement(
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    transition: crate::headless::transition::TransitionOutput,
+    measured_height: Px,
+) -> (bool, crate::LayoutRefinement) {
+    crate::declarative::collapsible_motion::collapsible_height_wrapper_refinement(
+        open,
+        force_mount,
+        require_measurement_for_close,
+        transition,
+        measured_height,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::cell::Cell;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn collapsible_use_open_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = collapsible_use_open_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                false
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
     }
 }

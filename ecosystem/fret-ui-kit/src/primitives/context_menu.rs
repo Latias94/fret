@@ -32,7 +32,7 @@ pub use crate::primitives::menu::trigger::wire_open_on_shift_f10 as wire_context
 pub fn context_menu_pointer_down_policy(open: Model<bool>) -> OnPointerDown {
     Arc::new(
         move |host: &mut dyn UiPointerActionHost,
-              _cx: fret_ui::action::ActionCx,
+              cx: fret_ui::action::ActionCx,
               down: PointerDownCx| {
             let is_right_click = down.button == MouseButton::Right;
             let is_macos_ctrl_click = cfg!(target_os = "macos")
@@ -44,6 +44,7 @@ pub fn context_menu_pointer_down_policy(open: Model<bool>) -> OnPointerDown {
             }
 
             let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(cx.window);
             true
         },
     )

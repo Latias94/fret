@@ -8,6 +8,7 @@ use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use std::cell::Cell;
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::declarative::action_hooks::ActionHooksExt;
@@ -17,8 +18,12 @@ use crate::declarative::stack;
 use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, FlatRowOrderCache, FlatRowOrderDeps, Row, RowKey, SortSpec, TableState,
-    column_size, is_column_visible, is_row_selected, order_columns, split_pinned_columns,
+    Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
+    FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind, Row, RowKey, SortSpec,
+    Table, TableState, begin_column_resize, column_size, compute_grouped_u64_aggregations,
+    drag_column_resize, end_column_resize, is_column_visible, is_row_expanded, is_row_selected,
+    order_column_refs_for_grouping, order_columns, sort_grouped_row_indices_in_place,
+    split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -49,6 +54,13 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .or_else(|| theme.color_by_key("accent"))
         .unwrap_or_else(|| theme.color_required("accent"));
     (table_bg, border, header_bg, row_hover, row_active)
+}
+
+fn emphasize_border(border: Color, min_alpha: f32) -> Color {
+    Color {
+        a: border.a.max(min_alpha),
+        ..border
+    }
 }
 
 fn resolve_row_height(theme: &Theme, size: Size) -> Px {
@@ -82,6 +94,23 @@ fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
     }
 }
 
+fn clamp_column_width<TData>(col: &ColumnDef<TData>, props: &TableViewProps, width: f32) -> Px {
+    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
+    let max_w = col.max_size.max(min_w);
+    Px(width.clamp(min_w, max_w))
+}
+
+fn resolve_column_width<TData>(
+    col: &ColumnDef<TData>,
+    state: &TableState,
+    props: &TableViewProps,
+) -> Px {
+    let base = column_size(&state.column_sizing, &col.id).unwrap_or(props.default_column_width.0);
+    let base = clamp_column_width(col, props, base);
+
+    base
+}
+
 #[derive(Debug, Clone)]
 pub struct TableViewProps {
     pub size: Size,
@@ -90,6 +119,10 @@ pub struct TableViewProps {
     pub default_column_width: Px,
     pub min_column_width: Px,
     pub enable_column_resizing: bool,
+    pub column_resize_mode: ColumnResizeMode,
+    pub column_resize_direction: ColumnResizeDirection,
+    pub enable_column_grouping: bool,
+    pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
 }
@@ -103,10 +136,109 @@ impl Default for TableViewProps {
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
             enable_column_resizing: true,
+            column_resize_mode: ColumnResizeMode::OnEnd,
+            column_resize_direction: ColumnResizeDirection::Ltr,
+            enable_column_grouping: true,
+            grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+enum DisplayRow {
+    Leaf {
+        data_index: usize,
+        row_key: RowKey,
+        depth: usize,
+    },
+    Group {
+        grouping_column: ColumnId,
+        row_key: RowKey,
+        depth: usize,
+        label: Arc<str>,
+        expanded: bool,
+        aggregations: Arc<[(ColumnId, Arc<str>)]>,
+    },
+}
+
+impl DisplayRow {
+    fn row_key(&self) -> RowKey {
+        match self {
+            DisplayRow::Leaf { row_key, .. } | DisplayRow::Group { row_key, .. } => *row_key,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GroupedBaseDeps {
+    items_revision: u64,
+    data_len: usize,
+    columns_fingerprint: u64,
+    grouping: Vec<ColumnId>,
+    column_filters: crate::headless::table::ColumnFiltersState,
+    global_filter: crate::headless::table::GlobalFilterState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GroupedDisplayDeps {
+    base: GroupedBaseDeps,
+    sorting: crate::headless::table::SortingState,
+    expanding: ExpandingState,
+    page_index: usize,
+    page_size: usize,
+}
+
+#[derive(Debug, Default)]
+struct GroupedDisplayCache {
+    base_deps: Option<GroupedBaseDeps>,
+    grouped: crate::headless::table::GroupedRowModel,
+    row_index_by_key: std::collections::HashMap<RowKey, usize>,
+    group_labels: std::collections::HashMap<RowKey, Arc<str>>,
+    group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+    group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+
+    deps: Option<GroupedDisplayDeps>,
+    page_rows: Vec<DisplayRow>,
+}
+
+fn fnv1a64_bytes(bytes: &[u8]) -> u64 {
+    const OFFSET: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x00000100000001B3;
+
+    let mut h = OFFSET;
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(PRIME);
+    }
+    h
+}
+
+fn columns_fingerprint<TData>(columns: &[ColumnDef<TData>]) -> u64 {
+    let mut h = fnv1a64_bytes(b"fret.table.columns.v1");
+    for c in columns {
+        h ^= fnv1a64_bytes(c.id.as_bytes());
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= c.enable_grouping as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= c.facet_key_fn.is_some() as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= c.facet_str_fn.is_some() as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= c.value_u64_fn.is_some() as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= match c.aggregation {
+            Aggregation::None => 0,
+            Aggregation::Count => 1,
+            Aggregation::SumU64 => 2,
+            Aggregation::MinU64 => 3,
+            Aggregation::MaxU64 => 4,
+            Aggregation::MeanU64 => 5,
+        };
+        h = h.wrapping_mul(0x00000100000001B3);
+    }
+    h
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -136,6 +268,8 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
+    let resize_grip = emphasize_border(border, 0.35);
+    let resize_preview = emphasize_border(border, 0.75);
     let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
@@ -146,7 +280,18 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 
-    let ordered_columns = order_columns(&columns, &state_value.column_order);
+    let grouping = if props.enable_column_grouping {
+        state_value.grouping.as_slice()
+    } else {
+        &[]
+    };
+
+    let ordered_columns = order_columns(columns, &state_value.column_order);
+    let ordered_columns = order_column_refs_for_grouping(
+        ordered_columns.as_slice(),
+        grouping,
+        props.grouped_column_mode,
+    );
     let visible_columns = ordered_columns
         .into_iter()
         .filter(|c| is_column_visible(&state_value.column_visibility, &c.id))
@@ -154,7 +299,11 @@ pub fn table_virtualized<H: UiHost, TData>(
     let (left_cols, center_cols, right_cols) =
         split_pinned_columns(visible_columns.as_slice(), &state_value.column_pinning);
 
-    let sorting_key = state_value.sorting.clone();
+    let sorting_key = if grouping.is_empty() {
+        state_value.sorting.clone()
+    } else {
+        Vec::new()
+    };
 
     let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
         let deps = FlatRowOrderDeps {
@@ -184,13 +333,346 @@ pub fn table_virtualized<H: UiHost, TData>(
     let page_size = state_value.pagination.page_size;
     let page_start = state_value.pagination.page_index.saturating_mul(page_size);
     let page_end = page_start.saturating_add(page_size);
-    let page_rows: &[usize] = if page_size == 0 {
-        &[]
+
+    let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
+        let page_rows: &[usize] = if page_size == 0 {
+            &[]
+        } else {
+            row_order.get(page_start..page_end).unwrap_or_default()
+        };
+        page_rows
+            .iter()
+            .map(|&data_index| DisplayRow::Leaf {
+                data_index,
+                row_key: row_key_at(&data[data_index], data_index),
+                depth: 0,
+            })
+            .collect()
     } else {
-        row_order.get(page_start..page_end).unwrap_or_default()
+        let deps = GroupedDisplayDeps {
+            base: GroupedBaseDeps {
+                items_revision,
+                data_len: data.len(),
+                columns_fingerprint: columns_fingerprint(columns),
+                grouping: grouping.to_vec(),
+                column_filters: state_value.column_filters.clone(),
+                global_filter: state_value.global_filter.clone(),
+            },
+            sorting: state_value.sorting.clone(),
+            expanding: state_value.expanding.clone(),
+            page_index: state_value.pagination.page_index,
+            page_size,
+        };
+
+        cx.with_state(GroupedDisplayCache::default, |cache| {
+            if cache.deps.as_ref() == Some(&deps) {
+                return cache.page_rows.clone();
+            }
+
+            if cache.base_deps.as_ref() == Some(&deps.base) {
+                let grouped = &cache.grouped;
+                let row_index_by_key = &cache.row_index_by_key;
+                let group_labels = &cache.group_labels;
+                let group_aggs_text = &cache.group_aggs_text;
+                let group_aggs_u64 = &cache.group_aggs_u64;
+
+                let mut visible: Vec<DisplayRow> = Vec::new();
+                let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
+                    grouped.root_rows().to_vec();
+                sort_grouped_row_indices_in_place(
+                    grouped,
+                    &mut roots,
+                    deps.sorting.as_slice(),
+                    columns,
+                    data,
+                    row_index_by_key,
+                    group_aggs_u64,
+                );
+
+                for root in roots {
+                    push_visible(
+                        grouped,
+                        root,
+                        row_index_by_key,
+                        group_labels,
+                        group_aggs_text,
+                        group_aggs_u64,
+                        deps.sorting.as_slice(),
+                        columns,
+                        data,
+                        &deps.expanding,
+                        &mut visible,
+                    );
+                }
+
+                let page_start = deps.page_index.saturating_mul(deps.page_size);
+                let page_end = page_start.saturating_add(deps.page_size);
+                let page_rows: Vec<DisplayRow> = if deps.page_size == 0 {
+                    Vec::new()
+                } else {
+                    visible
+                        .get(page_start..page_end)
+                        .unwrap_or_default()
+                        .to_vec()
+                };
+
+                cache.deps = Some(deps.clone());
+                cache.page_rows = page_rows.clone();
+                return page_rows;
+            }
+
+            let mut row_index_by_key: std::collections::HashMap<RowKey, usize> =
+                std::collections::HashMap::with_capacity(data.len());
+            for (i, item) in data.iter().enumerate() {
+                let key = row_key_at(item, i);
+                row_index_by_key.entry(key).or_insert(i);
+            }
+
+            let col_by_id: std::collections::HashMap<&str, &ColumnDef<TData>> =
+                columns.iter().map(|c| (c.id.as_ref(), c)).collect();
+
+            let agg_columns: Vec<&ColumnDef<TData>> = columns
+                .iter()
+                .filter(|c| c.aggregation != Aggregation::None)
+                .collect();
+
+            let mut options = crate::headless::table::TableOptions::default();
+            options.manual_sorting = true;
+            options.manual_pagination = true;
+            options.manual_expanding = true;
+
+            let mut state_for_grouping = state_value.clone();
+            state_for_grouping.sorting.clear();
+            state_for_grouping.pagination = Default::default();
+
+            let table = Table::builder(data)
+                .columns(columns.to_vec())
+                .state(state_for_grouping)
+                .options(options)
+                .get_row_key(|row, index, _parent| row_key_at(row, index))
+                .build();
+
+            let grouped = table.grouped_row_model().clone();
+            fn compute_group_aggregations<TData>(
+                model: &crate::headless::table::GroupedRowModel,
+                data: &[TData],
+                row_index_by_key: &std::collections::HashMap<RowKey, usize>,
+                agg_columns: &[&ColumnDef<TData>],
+            ) -> (
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+            ) {
+                if agg_columns.is_empty() {
+                    return (Default::default(), Default::default());
+                }
+                let out_u64 =
+                    compute_grouped_u64_aggregations(model, data, row_index_by_key, agg_columns);
+
+                let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
+                    Default::default();
+                for (&row_key, entries) in &out_u64 {
+                    let mut text_values: Vec<(ColumnId, Arc<str>)> =
+                        Vec::with_capacity(entries.len());
+                    for (col_id, v) in entries.iter() {
+                        text_values.push((col_id.clone(), Arc::from(v.to_string())));
+                    }
+                    out_text.insert(row_key, Arc::from(text_values.into_boxed_slice()));
+                }
+
+                (out_u64, out_text)
+            }
+
+            fn group_label_for_key<TData>(
+                kind: &GroupedRowKind,
+                data: &[TData],
+                row_index_by_key: &std::collections::HashMap<RowKey, usize>,
+                col_by_id: &std::collections::HashMap<&str, &ColumnDef<TData>>,
+            ) -> Arc<str> {
+                let GroupedRowKind::Group {
+                    grouping_column,
+                    grouping_value,
+                    first_leaf_row_key,
+                    leaf_row_count,
+                } = kind
+                else {
+                    return Arc::from("");
+                };
+
+                let mut value: Arc<str> = Arc::from(format!("{:x}", grouping_value));
+                if let Some(column) = col_by_id.get(grouping_column.as_ref()).copied()
+                    && let Some(f) = column.facet_str_fn.as_ref()
+                    && let Some(&i) = row_index_by_key.get(first_leaf_row_key)
+                {
+                    value = Arc::from(f(&data[i]));
+                }
+
+                Arc::from(format!("{value} ({leaf_row_count})"))
+            }
+
+            fn push_visible<'a, TData>(
+                model: &'a crate::headless::table::GroupedRowModel,
+                index: crate::headless::table::GroupedRowIndex,
+                row_index_by_key: &std::collections::HashMap<RowKey, usize>,
+                group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
+                group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+                group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                sorting: &[SortSpec],
+                columns: &[ColumnDef<TData>],
+                data: &[TData],
+                expanded: &ExpandingState,
+                out: &mut Vec<DisplayRow>,
+            ) {
+                let Some(row) = model.row(index) else {
+                    return;
+                };
+
+                match &row.kind {
+                    GroupedRowKind::Group {
+                        grouping_column, ..
+                    } => {
+                        let expanded_here = is_row_expanded(row.key, expanded);
+                        let grouping_column = grouping_column.clone();
+                        let aggregations = group_aggs_text
+                            .get(&row.key)
+                            .cloned()
+                            .unwrap_or_else(|| Arc::from([]));
+                        out.push(DisplayRow::Group {
+                            grouping_column,
+                            row_key: row.key,
+                            depth: row.depth,
+                            label: group_labels
+                                .get(&row.key)
+                                .cloned()
+                                .unwrap_or_else(|| Arc::from("")),
+                            expanded: expanded_here,
+                            aggregations,
+                        });
+
+                        if expanded_here {
+                            let mut children: Option<Vec<crate::headless::table::GroupedRowIndex>> =
+                                None;
+
+                            if let Some(spec) = sorting.first() {
+                                let mut owned = row.sub_rows.clone();
+                                sort_grouped_row_indices_in_place(
+                                    model,
+                                    &mut owned,
+                                    std::slice::from_ref(spec),
+                                    columns,
+                                    data,
+                                    row_index_by_key,
+                                    group_aggs_u64,
+                                );
+                                children = Some(owned);
+                            }
+
+                            let child_iter: Box<
+                                dyn Iterator<Item = crate::headless::table::GroupedRowIndex>,
+                            > = if let Some(children) = children {
+                                Box::new(children.into_iter())
+                            } else {
+                                Box::new(row.sub_rows.iter().copied())
+                            };
+
+                            for child in child_iter {
+                                push_visible(
+                                    model,
+                                    child,
+                                    row_index_by_key,
+                                    group_labels,
+                                    group_aggs_text,
+                                    group_aggs_u64,
+                                    sorting,
+                                    columns,
+                                    data,
+                                    expanded,
+                                    out,
+                                );
+                            }
+                        }
+                    }
+                    GroupedRowKind::Leaf { row_key } => {
+                        let Some(&data_index) = row_index_by_key.get(row_key) else {
+                            return;
+                        };
+                        out.push(DisplayRow::Leaf {
+                            data_index,
+                            row_key: *row_key,
+                            depth: row.depth,
+                        });
+                    }
+                }
+            }
+
+            let (group_aggs_u64, group_aggs_text) =
+                compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
+
+            let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
+            for &node in grouped.flat_rows() {
+                let Some(row) = grouped.row(node) else {
+                    continue;
+                };
+                if matches!(row.kind, GroupedRowKind::Group { .. }) {
+                    group_labels.insert(
+                        row.key,
+                        group_label_for_key(&row.kind, data, &row_index_by_key, &col_by_id),
+                    );
+                }
+            }
+
+            let mut visible: Vec<DisplayRow> = Vec::new();
+            let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
+                grouped.root_rows().to_vec();
+            sort_grouped_row_indices_in_place(
+                &grouped,
+                &mut roots,
+                deps.sorting.as_slice(),
+                columns,
+                data,
+                &row_index_by_key,
+                &group_aggs_u64,
+            );
+
+            for root in roots {
+                push_visible(
+                    &grouped,
+                    root,
+                    &row_index_by_key,
+                    &group_labels,
+                    &group_aggs_text,
+                    &group_aggs_u64,
+                    deps.sorting.as_slice(),
+                    columns,
+                    data,
+                    &state_value.expanding,
+                    &mut visible,
+                );
+            }
+
+            let page_start = deps.page_index.saturating_mul(deps.page_size);
+            let page_end = page_start.saturating_add(deps.page_size);
+            let page_rows: Vec<DisplayRow> = if deps.page_size == 0 {
+                Vec::new()
+            } else {
+                visible
+                    .get(page_start..page_end)
+                    .unwrap_or_default()
+                    .to_vec()
+            };
+
+            cache.base_deps = Some(deps.base.clone());
+            cache.grouped = grouped;
+            cache.row_index_by_key = row_index_by_key;
+            cache.group_labels = group_labels;
+            cache.group_aggs_u64 = group_aggs_u64;
+            cache.group_aggs_text = group_aggs_text;
+            cache.deps = Some(deps.clone());
+            cache.page_rows = page_rows.clone();
+            page_rows
+        })
     };
 
-    let set_size = page_rows.len();
+    let set_size = page_display_rows.len();
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
@@ -260,22 +742,32 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                             .justify(Justify::Start)
                                                             .items(Items::Center),
                                                         |cx| {
-                                                            cols.iter()
+                                                            let out: Vec<AnyElement> = cols.iter()
                                                                 .map(|col| {
                                                                     let sort_state = sort_for_column(
                                                                         &state_value.sorting,
                                                                         &col.id,
                                                                     );
 
-                                                                    let col_w = column_size(
-                                                                        &state_value.column_sizing,
-                                                                        &col.id,
-                                                                    )
-                                                                    .map(|w| Px(w.max(0.0)))
-                                                                    .unwrap_or(props.default_column_width);
+                                                                    let col_w = resolve_column_width(
+                                                                        col,
+                                                                        &state_value,
+                                                                        &props,
+                                                                    );
 
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)),
+                                                                        border: Edges {
+                                                                            right: if props.enable_column_resizing
+                                                                                && col.enable_resizing
+                                                                            {
+                                                                                Px(0.0)
+                                                                            } else {
+                                                                                Px(1.0)
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        border_color: Some(border),
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Px(col_w),
@@ -296,6 +788,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         out.push(stack::hstack(
                                                                             cx,
                                                                             stack::HStackProps::default()
+                                                                                .layout(
+                                                                                    LayoutRefinement::default()
+                                                                                        .size_full()
+                                                                                        .relative(),
+                                                                                )
                                                                                 .gap_x(Space::N0)
                                                                                 .justify(Justify::Start)
                                                                                 .items(Items::Center),
@@ -310,6 +807,15 @@ pub fn table_virtualized<H: UiHost, TData>(
 
                                                                                 pieces.push(cx.pressable(
                                                                                     PressableProps {
+                                                                                        layout: {
+                                                                                            let mut layout = LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout.size.height = Length::Fill;
+                                                                                            layout.flex.grow = 1.0;
+                                                                                            layout.flex.shrink = 1.0;
+                                                                                            layout.flex.basis = Length::Px(Px(0.0));
+                                                                                            layout
+                                                                                        },
                                                                                         enabled,
                                                                                         a11y: PressableA11y {
                                                                                             role: Some(
@@ -338,29 +844,103 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                         let mut cell =
                                                                                             render_header_cell(cx, col, sort_state);
                                                                                         if let Some(desc) = sort_state {
-                                                                                            cell.push(cx.text(if desc { "↓" } else { "↑" }));
+                                                                                            cell.push(cx.text(if desc {
+                                                                                                " ▼"
+                                                                                            } else {
+                                                                                                " ▲"
+                                                                                            }));
                                                                                         }
-                                                                                        cell
+                                                                                        vec![cx.container(
+                                                                                            ContainerProps {
+                                                                                                padding: Edges::symmetric(
+                                                                                                    cell_px, cell_py,
+                                                                                                ),
+                                                                                                layout: {
+                                                                                                    let mut layout =
+                                                                                                        LayoutStyle::default();
+                                                                                                    layout.size.width =
+                                                                                                        Length::Fill;
+                                                                                                    layout.size.height =
+                                                                                                        Length::Fill;
+                                                                                                    layout
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            |_cx| cell,
+                                                                                        )]
                                                                                     },
                                                                                 ));
 
-                                                                                if props.enable_column_resizing {
+                                                                                if props.enable_column_resizing
+                                                                                    && col.enable_resizing
+                                                                                {
                                                                                     let col_id = col.id.clone();
                                                                                     let state_model = state.clone();
-                                                                                    let min_w = props.min_column_width;
                                                                                     let default_w = props.default_column_width;
+                                                                                    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
+                                                                                    let max_w = col.max_size.max(min_w);
+                                                                                    let resize_mode = props.column_resize_mode;
+                                                                                    let resize_direction = props.column_resize_direction;
+                                                                                    let grip_color = resize_grip;
+
+                                                                                    if props.enable_column_resizing
+                                                                                        && props.column_resize_mode
+                                                                                            == ColumnResizeMode::OnEnd
+                                                                                        && state_value
+                                                                                            .column_sizing_info
+                                                                                            .is_resizing_column
+                                                                                            .as_ref()
+                                                                                            .is_some_and(|active| {
+                                                                                                active.as_ref()
+                                                                                                    == col_id.as_ref()
+                                                                                            })
+                                                                                    {
+                                                                                        let delta = state_value
+                                                                                            .column_sizing_info
+                                                                                            .delta_offset
+                                                                                            .unwrap_or(0.0);
+                                                                                        pieces.push(cx.container(
+                                                                                            ContainerProps {
+                                                                                                background: Some(
+                                                                                                    resize_preview,
+                                                                                                ),
+                                                                                                layout: LayoutStyle {
+                                                                                                    size:
+                                                                                                        fret_ui::element::SizeStyle {
+                                                                                                            width: Length::Px(Px(2.0)),
+                                                                                                            height: Length::Fill,
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                    position: fret_ui::element::PositionStyle::Absolute,
+                                                                                                    inset: fret_ui::element::InsetStyle {
+                                                                                                        top: Some(Px(0.0)),
+                                                                                                        right: Some(Px(-delta - 1.0)),
+                                                                                                        bottom: Some(Px(0.0)),
+                                                                                                        left: None,
+                                                                                                    },
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            |_| Vec::new(),
+                                                                                        ));
+                                                                                    }
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
                                                                                             layout: LayoutStyle {
                                                                                                 size: fret_ui::element::SizeStyle {
-                                                                                                    width: Length::Px(Px(6.0)),
+                                                                                                    width: Length::Px(Px(12.0)),
                                                                                                     height: Length::Fill,
                                                                                                     ..Default::default()
                                                                                                 },
-                                                                                                flex: fret_ui::element::FlexItemStyle {
-                                                                                                    shrink: 0.0,
-                                                                                                    ..Default::default()
+                                                                                                position:
+                                                                                                    fret_ui::element::PositionStyle::Absolute,
+                                                                                                inset: fret_ui::element::InsetStyle {
+                                                                                                    top: Some(Px(0.0)),
+                                                                                                    right: Some(Px(0.0)),
+                                                                                                    bottom: Some(Px(0.0)),
+                                                                                                    left: None,
                                                                                                 },
                                                                                                 ..Default::default()
                                                                                             },
@@ -386,11 +966,15 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             .column_sizing
                                                                                                             .get(&col_id_down)
                                                                                                             .copied()
-                                                                                                            .unwrap_or(default_w.0);
+                                                                                                            .unwrap_or(default_w.0)
+                                                                                                            .clamp(min_w, max_w);
                                                                                                         st.column_sizing.insert(col_id_down.clone(), start);
-                                                                                                        st.column_sizing_info.is_resizing_column = Some(col_id_down.clone());
-                                                                                                        st.column_sizing_info.start_pointer_x = down.position.x.0;
-                                                                                                        st.column_sizing_info.start_size = start;
+                                                                                                        begin_column_resize(
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            col_id_down.clone(),
+                                                                                                            down.position.x.0,
+                                                                                                            vec![(col_id_down.clone(), start)],
+                                                                                                        );
                                                                                                     });
                                                                                                     true
                                                                                                 }),
@@ -404,9 +988,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     let _ = host.models_mut().update(&state_model_move, |st| {
                                                                                                         let Some(active) = &st.column_sizing_info.is_resizing_column else { return; };
                                                                                                         if active.as_ref() != col_id_move.as_ref() { return; }
-                                                                                                        let dx = mv.position.x.0 - st.column_sizing_info.start_pointer_x;
-                                                                                                        let next = (st.column_sizing_info.start_size + dx).max(min_w.0);
-                                                                                                        st.column_sizing.insert(col_id_move.clone(), next);
+                                                                                                        drag_column_resize(
+                                                                                                            resize_mode,
+                                                                                                            resize_direction,
+                                                                                                            &mut st.column_sizing,
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            mv.position.x.0,
+                                                                                                        );
+                                                                                                        if let Some(next) = st.column_sizing.get(&col_id_move).copied() {
+                                                                                                            st.column_sizing.insert(col_id_move.clone(), next.clamp(min_w, max_w));
+                                                                                                        }
                                                                                                     });
                                                                                                     true
                                                                                                 }),
@@ -418,19 +1009,56 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     }
                                                                                                     host.release_pointer_capture();
                                                                                                     let _ = host.models_mut().update(&state_model_up, |st| {
-                                                                                                        if st
+                                                                                                        if !st
                                                                                                             .column_sizing_info
                                                                                                             .is_resizing_column
                                                                                                             .as_ref()
                                                                                                             .is_some_and(|a| a.as_ref() == col_id_up.as_ref())
                                                                                                         {
-                                                                                                            st.column_sizing_info.is_resizing_column = None;
+                                                                                                            return;
+                                                                                                        }
+                                                                                                        end_column_resize(
+                                                                                                            resize_mode,
+                                                                                                            resize_direction,
+                                                                                                            &mut st.column_sizing,
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            Some(up.position.x.0),
+                                                                                                        );
+                                                                                                        if let Some(next) = st.column_sizing.get(&col_id_up).copied() {
+                                                                                                            st.column_sizing.insert(col_id_up.clone(), next.clamp(min_w, max_w));
                                                                                                         }
                                                                                                     });
                                                                                                     true
                                                                                                 }),
                                                                                             );
-                                                                                            Vec::new()
+                                                                                            vec![stack::hstack(
+                                                                                                cx,
+                                                                                                stack::HStackProps::default()
+                                                                                                    .gap_x(Space::N0)
+                                                                                                    .justify(Justify::End)
+                                                                                                    .items(Items::Stretch),
+                                                                                                |cx| {
+                                                                                                    vec![cx.container(
+                                                                                                        ContainerProps {
+                                                                                                            background: Some(grip_color),
+                                                                                                            layout: LayoutStyle {
+                                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                                    width: Length::Px(Px(1.0)),
+                                                                                                                    height: Length::Fill,
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                flex: fret_ui::element::FlexItemStyle {
+                                                                                                                    shrink: 0.0,
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        |_| Vec::new(),
+                                                                                                    )]
+                                                                                                },
+                                                                                            )]
                                                                                         },
                                                                                     ));
                                                                                 }
@@ -442,7 +1070,9 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         out
                                                                     })
                                                                 })
-                                                                .collect()
+                                                                .collect();
+
+                                                            out
                                                         },
                                                     );
 
@@ -451,6 +1081,20 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     ScrollProps {
                                                                         axis: ScrollAxis::X,
                                                                         scroll_handle: Some(scroll_x),
+                                                                        layout: LayoutStyle {
+                                                                            size: fret_ui::element::SizeStyle {
+                                                                                width: Length::Fill,
+                                                                                height: Length::Fill,
+                                                                                ..Default::default()
+                                                                            },
+                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                grow: 1.0,
+                                                                                shrink: 1.0,
+                                                                                basis: Length::Px(Px(0.0)),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
                                                                         ..Default::default()
                                                                     },
                                                                     |_| vec![row],
@@ -493,18 +1137,287 @@ pub fn table_virtualized<H: UiHost, TData>(
                                         set_size,
                                         list_options,
                                         vertical_scroll,
-                                        |i| {
-                                            row_key_at(&data[page_rows[i]], page_rows[i]).0
-                                        },
+                                        |i| page_display_rows[i].row_key().0,
                                         |cx, i| {
                                             rendered_rows.set(rendered_rows.get().saturating_add(1));
-                                            let data_index = page_rows[i];
-                                            let row_key = row_key_at(&data[data_index], data_index);
+                                            let (data_index, row_key, depth) =
+                                                match &page_display_rows[i] {
+                                                    DisplayRow::Leaf {
+                                                        data_index,
+                                                        row_key,
+                                                        depth,
+                                                    } => (
+                                                        *data_index,
+                                                        *row_key,
+                                                        u16::try_from(*depth).unwrap_or(u16::MAX),
+                                                    ),
+                                                    DisplayRow::Group {
+                                                        grouping_column,
+                                                        row_key,
+                                                        depth,
+                                                        label,
+                                                        expanded,
+                                                        aggregations,
+                                                    } => {
+                                                        let row_key = *row_key;
+                                                        let depth = *depth;
+                                                        let expanded = *expanded;
+                                                        let label = label.clone();
+                                                        let grouping_column = grouping_column.clone();
+                                                        let aggregations = aggregations.clone();
+
+                                                        let label_target: ColumnId = if left_cols
+                                                            .iter()
+                                                            .chain(center_cols.iter())
+                                                            .chain(right_cols.iter())
+                                                            .any(|c| c.id.as_ref() == grouping_column.as_ref())
+                                                        {
+                                                            grouping_column.clone()
+                                                        } else {
+                                                            left_cols
+                                                                .first()
+                                                                .or_else(|| center_cols.first())
+                                                                .or_else(|| right_cols.first())
+                                                                .map(|c| c.id.clone())
+                                                                .unwrap_or_else(|| grouping_column.clone())
+                                                        };
+
+                                                        let enabled = true;
+                                                        return cx.pressable(
+                                                            PressableProps {
+                                                                enabled,
+                                                                a11y: PressableA11y {
+                                                                    role: Some(
+                                                                        SemanticsRole::ListItem,
+                                                                    ),
+                                                                    expanded: Some(expanded),
+                                                                    ..Default::default()
+                                                                }
+                                                                .with_collection_position(i, set_size),
+                                                                ..Default::default()
+                                                            },
+                                                            |cx, st| {
+                                                                let state_model = state.clone();
+                                                                cx.pressable_update_model(
+                                                                    &state_model,
+                                                                    move |st| match &mut st.expanding
+                                                                    {
+                                                                        ExpandingState::All => {
+                                                                            st.expanding =
+                                                                                ExpandingState::default();
+                                                                        }
+                                                                        ExpandingState::Keys(keys) => {
+                                                                            if keys.contains(&row_key)
+                                                                            {
+                                                                                keys.remove(&row_key);
+                                                                            } else {
+                                                                                keys.insert(row_key);
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                );
+
+                                                                let bg = if st.pressed {
+                                                                    Some(row_active)
+                                                                } else if st.hovered {
+                                                                    Some(row_hover)
+                                                                } else {
+                                                                    None
+                                                                };
+
+                                                                let indent_step = 12.0_f32;
+                                                                let indent_px =
+                                                                    Px((depth as f32) * indent_step);
+                                                                let glyph: Arc<str> = if expanded {
+                                                                    Arc::from("v")
+                                                                } else {
+                                                                    Arc::from(">")
+                                                                };
+                                                                let text: Arc<str> = Arc::from(
+                                                                    format!("{glyph} {label}"),
+                                                                );
+
+                                                                vec![cx.container(
+                                                                    ContainerProps {
+                                                                        background: bg,
+                                                                        layout: LayoutStyle {
+                                                                            size:
+                                                                                fret_ui::element::SizeStyle {
+                                                                                    height: Length::Px(row_h),
+                                                                                    ..Default::default()
+                                                                                },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |cx| {
+                                                                        let render_group =
+                                                                            |cx: &mut ElementContext<
+                                                                                '_,
+                                                                                H,
+                                                                            >,
+                                                                             cols: &[&ColumnDef<
+                                                                                TData,
+                                                                            >],
+                                                                             scroll_x: Option<
+                                                                                ScrollHandle,
+                                                                            >| {
+                                                                                let row =
+                                                                                    stack::hstack(
+                                                                                        cx,
+                                                                                        stack::HStackProps::default()
+                                                                                            .gap_x(Space::N0)
+                                                                                            .justify(Justify::Start)
+                                                                                            .items(Items::Center),
+                                                                                        |cx| {
+                                                                                            cols.iter()
+                                                                                                .map(|col| {
+                                                                                                    let col_w = resolve_column_width(
+                                                                                                        col,
+                                                                                                        &state_value,
+                                                                                                        &props,
+                                                                                                    );
+
+                                                                                                    let is_label_target =
+                                                                                                        col.id.as_ref()
+                                                                                                            == label_target.as_ref();
+                                                                                                    let is_placeholder = !is_label_target
+                                                                                                        && grouping.iter().any(|id| {
+                                                                                                            id.as_ref() == col.id.as_ref()
+                                                                                                        });
+
+                                                                                                    let padding = if is_label_target {
+                                                                                                        Edges {
+                                                                                                            left: Px(
+                                                                                                                cell_px.0
+                                                                                                                    + indent_px.0,
+                                                                                                            ),
+                                                                                                            right: cell_px,
+                                                                                                            top: cell_py,
+                                                                                                            bottom: cell_py,
+                                                                                                        }
+                                                                                                    } else {
+                                                                                                        Edges::symmetric(
+                                                                                                            cell_px,
+                                                                                                            cell_py,
+                                                                                                        )
+                                                                                                    };
+
+                                                                                                    cx.container(
+                                                                                                        ContainerProps {
+                                                                                                            padding,
+                                                                                                            border: Edges {
+                                                                                                                right: Px(1.0),
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            border_color: Some(border),
+                                                                                                            layout: LayoutStyle {
+                                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                                    width: Length::Px(col_w),
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                flex: fret_ui::element::FlexItemStyle {
+                                                                                                                    shrink: 0.0,
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        |cx| {
+                                                                                                            if is_placeholder {
+                                                                                                                return Vec::new();
+                                                                                                            }
+                                                                                                            if is_label_target {
+                                                                                                                vec![cx.text(text.clone())]
+                                                                                                            } else {
+                                                                                                                let v = aggregations
+                                                                                                                    .iter()
+                                                                                                                    .find(|entry| {
+                                                                                                                        entry.0.as_ref()
+                                                                                                                            == col
+                                                                                                                                .id
+                                                                                                                                .as_ref()
+                                                                                                                    })
+                                                                                                                    .map(|entry| entry.1.clone());
+                                                                                                                v.map(|v| vec![cx.text(v)])
+                                                                                                                    .unwrap_or_default()
+                                                                                                            }
+                                                                                                        },
+                                                                                                    )
+                                                                                                })
+                                                                                                .collect()
+                                                                                        },
+                                                                                    );
+
+                                                                                if let Some(scroll_x) =
+                                                                                    scroll_x
+                                                                                {
+                                                                                    cx.scroll(
+                                                                                        ScrollProps {
+                                                                                            axis: ScrollAxis::X,
+                                                                                            scroll_handle: Some(scroll_x),
+                                                                                            layout: LayoutStyle {
+                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                    width: Length::Fill,
+                                                                                                    height: Length::Fill,
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                flex: fret_ui::element::FlexItemStyle {
+                                                                                                    grow: 1.0,
+                                                                                                    shrink: 1.0,
+                                                                                                    basis: Length::Px(Px(0.0)),
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        |_| vec![row],
+                                                                                    )
+                                                                                } else {
+                                                                                    row
+                                                                                }
+                                                                            };
+
+                                                                        vec![stack::hstack(
+                                                                            cx,
+                                                                            stack::HStackProps::default()
+                                                                                .gap_x(Space::N0)
+                                                                                .justify(Justify::Start)
+                                                                                .items(Items::Stretch),
+                                                                            |cx| {
+                                                                                vec![
+                                                                                    render_group(
+                                                                                        cx,
+                                                                                        &left_cols,
+                                                                                        None,
+                                                                                    ),
+                                                                                    render_group(
+                                                                                        cx,
+                                                                                        &center_cols,
+                                                                                        Some(scroll_x.clone()),
+                                                                                    ),
+                                                                                    render_group(
+                                                                                        cx,
+                                                                                        &right_cols,
+                                                                                        None,
+                                                                                    ),
+                                                                                ]
+                                                                            },
+                                                                        )]
+                                                                    },
+                                                                )]
+                                                            },
+                                                        );
+                                                    }
+                                                };
+
                                             let data_row = Row {
                                                 key: row_key,
                                                 original: &data[data_index],
                                                 index: data_index,
-                                                depth: 0,
+                                                depth,
                                                 parent: None,
                                                 parent_key: None,
                                                 sub_rows: Vec::new(),
@@ -579,19 +1492,21 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         |cx| {
                                                                             cols.iter()
                                                                                 .map(|col| {
-                                                                                    let col_w = column_size(
-                                                                                        &state_value.column_sizing,
-                                                                                        &col.id,
-                                                                                    )
-                                                                                    .map(|w| Px(w.max(0.0)))
-                                                                                    .unwrap_or(
-                                                                                        props.default_column_width,
+                                                                                    let col_w = resolve_column_width(
+                                                                                        col,
+                                                                                        &state_value,
+                                                                                        &props,
                                                                                     );
                                                                                     cx.container(
                                                                                         ContainerProps {
                                                                                             padding: Edges::symmetric(
                                                                                                 cell_px, cell_py,
                                                                                             ),
+                                                                                            border: Edges {
+                                                                                                right: Px(1.0),
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            border_color: Some(border),
                                                                                             layout: LayoutStyle {
                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                     width: Length::Px(col_w),
@@ -619,6 +1534,20 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                             ScrollProps {
                                                                                 axis: ScrollAxis::X,
                                                                                 scroll_handle: Some(scroll_x),
+                                                                                layout: LayoutStyle {
+                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                        width: Length::Fill,
+                                                                                        height: Length::Fill,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    flex: fret_ui::element::FlexItemStyle {
+                                                                                        grow: 1.0,
+                                                                                        shrink: 1.0,
+                                                                                        basis: Length::Px(Px(0.0)),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
                                                                                 ..Default::default()
                                                                             },
                                                                             |_| vec![row],

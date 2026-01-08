@@ -23,14 +23,19 @@ Fret does not use React context or CSS variables. Collapsible outcomes are compo
 - Mechanism layer (runtime): `crates/fret-ui` (`Pressable`, focus, event dispatch).
 - Declarative helpers: `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs`
 - Radix-named primitive facades: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
+  - Height animation substrate: `primitives::collapsible::{last_measured_height_for, collapsible_height_wrapper_refinement, ...}`
 
 ## Current parity notes
 
+- Pass: Root supports controlled/uncontrolled `open` state (`open` + `defaultOpen`) via
+  `CollapsibleRoot` (recommended) or `collapsible_use_open_model(...)` (thin helper), backed by the
+  shared controllable-state substrate.
 - Pass: Trigger exposes an "expanded" a11y outcome (mapped to `PressableA11y.expanded`).
 - Note: Fret does not currently model `aria-controls` wiring (content id references).
 - Pass: Dimension-driven collapse animations are modeled via a cached height clip driven by a
   deterministic transition timeline (no CSS variables).
-  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - Shared helper (primitives surface): `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
+  - Backing implementation: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
   - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
   - Backing primitive: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
   - First-open behavior: when no cached measurement exists, Fret mounts an off-flow measurement

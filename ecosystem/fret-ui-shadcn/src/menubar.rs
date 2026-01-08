@@ -211,6 +211,7 @@ impl MenubarShortcut {
                 font: FontId::default(),
                 size: font_size,
                 weight: FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(font_line_height),
                 letter_spacing_em: Some(0.12),
             }),
@@ -920,6 +921,7 @@ impl MenubarMenuEntries {
                 font: FontId::default(),
                 size: font_size,
                 weight: FontWeight::MEDIUM,
+                slant: Default::default(),
                 line_height: Some(font_line_height),
                 letter_spacing_em: None,
             };
@@ -1235,6 +1237,7 @@ impl MenubarMenuEntries {
                                                                             font: FontId::default(),
                                                                             size: font_size,
                                                                             weight: FontWeight::MEDIUM,
+                                                                            slant: Default::default(),
                                                                             line_height: Some(
                                                                                 font_line_height,
                                                                             ),
@@ -2053,6 +2056,7 @@ impl MenubarMenuEntries {
                                                                                         font: FontId::default(),
                                                                                         size: font_size,
                                                                                         weight: FontWeight::MEDIUM,
+                                                                                        slant: Default::default(),
                                                                                         line_height: Some(font_line_height),
                                                                                         letter_spacing_em: None,
                                                                                     }),
@@ -2752,6 +2756,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2762,6 +2767,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -2918,6 +2924,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2928,6 +2935,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -2980,6 +2988,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2990,6 +2999,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -3041,6 +3051,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -3051,6 +3062,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 

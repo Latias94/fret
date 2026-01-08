@@ -27,6 +27,8 @@ Fret does not use React context. Instead, tabs behavior is composed via:
 ## Current parity notes
 
 - Pass: Controlled selection via `Model<Option<Arc<str>>>` (Radix `value`).
+- Pass: Uncontrolled `defaultValue` is supported via `TabsRoot::new_controllable(...)` and
+  `tabs_use_value_model(...)` (thin helper), backed by the shared controllable-state substrate.
 - Pass: `orientation` and `activationMode` outcomes are modeled as enums.
 - Pass: Active index derivation skips disabled items (roving focus parity).
 - Pass: `TabsTrigger` selects on left mouse down and suppresses focus for other mouse downs

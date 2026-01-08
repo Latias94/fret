@@ -26,6 +26,7 @@ use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::headless::roving_focus;
 pub use crate::headless::select_item_aligned::{
     SELECT_ITEM_ALIGNED_CONTENT_MARGIN, SelectItemAlignedInputs, SelectItemAlignedOutputs,
@@ -37,6 +38,94 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 /// Stable per-overlay root naming convention for select overlays.
 pub fn select_root_name(id: GlobalElementId) -> String {
     OverlayController::modal_root_name(id)
+}
+
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// This is a convenience helper for authoring Radix-shaped select roots:
+/// - if `controlled_open` is provided, it is used directly
+/// - otherwise an internal model is created (once) using `default_open` (Radix `defaultOpen`)
+pub fn select_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
+/// Returns a `Model<Option<Arc<str>>>` that behaves like Radix `useControllableState` for `value`.
+///
+/// Radix models Select values as strings. Fret uses `Arc<str>` for stable, cheap-to-clone keys.
+pub fn select_use_value_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_value: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(
+        cx,
+        controlled_value,
+        default_value,
+    )
+}
+
+/// A Radix-shaped `Select` root configuration surface (open state only).
+///
+/// Upstream Select owns both `open` and `value` state. Fret's select primitive facade focuses on
+/// input and overlay wiring; recipes typically own the selection model. This root helper exists to
+/// standardize the controlled/uncontrolled open modeling (`open` / `defaultOpen`).
+#[derive(Debug, Clone, Default)]
+pub struct SelectRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+}
+
+impl SelectRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        select_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub fn modal_request<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        children: Vec<AnyElement>,
+    ) -> OverlayRequest {
+        modal_select_request(id, trigger, self.open_model(cx), presence, children)
+    }
 }
 
 /// Stamps Radix-like trigger semantics:
@@ -541,6 +630,8 @@ pub fn request_select<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Overla
 mod tests {
     use super::*;
 
+    use std::cell::Cell;
+
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
@@ -552,6 +643,43 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[test]
+    fn select_root_open_model_uses_controlled_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = SelectRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
+
+    #[test]
+    fn select_use_value_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(Some(Arc::from("a")));
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = select_use_value_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                None
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
     }
 
     struct PointerHost<'a> {

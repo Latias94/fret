@@ -8,6 +8,53 @@ use super::{ColumnDef, ColumnId};
 /// are appended to the end.
 pub type ColumnOrderState = Vec<ColumnId>;
 
+pub fn set_column_order(order: &mut ColumnOrderState, ids: impl IntoIterator<Item = ColumnId>) {
+    order.clear();
+    for id in ids {
+        if order
+            .iter()
+            .any(|existing| existing.as_ref() == id.as_ref())
+        {
+            continue;
+        }
+        order.push(id);
+    }
+}
+
+pub fn set_column_order_for<'a>(
+    order: &mut ColumnOrderState,
+    ids: impl IntoIterator<Item = &'a str>,
+) {
+    set_column_order(order, ids.into_iter().map(ColumnId::from));
+}
+
+pub fn move_column(order: &mut ColumnOrderState, id: &ColumnId, to_index: usize) {
+    if order.is_empty() {
+        order.push(id.clone());
+        return;
+    }
+
+    let from = order.iter().position(|c| c.as_ref() == id.as_ref());
+    let mut next: Vec<ColumnId> = Vec::with_capacity(order.len() + 1);
+
+    for (idx, c) in order.iter().enumerate() {
+        if Some(idx) == from {
+            continue;
+        }
+        next.push(c.clone());
+    }
+
+    let insert_at = to_index.min(next.len());
+    next.insert(insert_at, id.clone());
+    *order = next;
+}
+
+pub fn moved_column(order: &ColumnOrderState, id: &ColumnId, to_index: usize) -> ColumnOrderState {
+    let mut next = order.clone();
+    move_column(&mut next, id, to_index);
+    next
+}
+
 pub fn order_columns<'c, TData>(
     columns: &'c [ColumnDef<TData>],
     order: &[ColumnId],
@@ -69,5 +116,31 @@ mod tests {
 
         let ids = out.iter().map(|c| c.id.as_ref()).collect::<Vec<_>>();
         assert_eq!(ids, vec!["b", "a"]);
+    }
+
+    #[test]
+    fn set_column_order_dedupes_preserves_first() {
+        let mut order: ColumnOrderState = vec!["a".into()];
+        set_column_order_for(&mut order, ["b", "a", "b"]);
+        assert_eq!(
+            order.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "a"]
+        );
+    }
+
+    #[test]
+    fn move_column_inserts_when_missing_and_reorders_when_present() {
+        let mut order: ColumnOrderState = vec!["a".into(), "b".into(), "c".into()];
+        move_column(&mut order, &ColumnId::from("b"), 0);
+        assert_eq!(
+            order.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "a", "c"]
+        );
+
+        move_column(&mut order, &ColumnId::from("x"), 1);
+        assert_eq!(
+            order.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "x", "a", "c"]
+        );
     }
 }

@@ -7,10 +7,11 @@ use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Space,
+    Radius, Space,
 };
 use std::sync::Arc;
 
@@ -95,6 +96,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
         font: fret_core::FontId::default(),
         size: px,
         weight: fret_core::FontWeight::NORMAL,
+        slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
     }
@@ -496,7 +498,7 @@ impl Tooltip {
             }
 
             let tooltip_id = cx.root_id();
-            let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
+            let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.progress;
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
@@ -619,8 +621,7 @@ impl Tooltip {
             });
 
             let mut request =
-                OverlayRequest::tooltip(tooltip_id, overlay_presence, overlay_children);
-            request.root_name = Some(overlay_root_name);
+                radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
             if !disable_hoverable_content {
                 let last_pointer = last_pointer.clone();
                 request.dismissible_on_pointer_move = Some(Arc::new(
@@ -632,7 +633,7 @@ impl Tooltip {
                     },
                 ));
             }
-            OverlayController::request(cx, request);
+            radix_tooltip::request_tooltip(cx, request);
 
             out
         })

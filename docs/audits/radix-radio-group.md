@@ -27,9 +27,10 @@ Key upstream concepts:
 - Pass: Roving focus navigation is wired via `RovingFlex` + `cx.roving_nav_apg()`.
 - Pass: Arrow navigation commits selection via `cx.roving_select_option_arc_str(...)`.
 - Pass: Enter key presses are consumed; Space activates the focused item (Radix/WAI-ARIA parity).
+- Pass: Controlled/uncontrolled selection (`value` / `defaultValue`) is supported via
+  `ecosystem/fret-ui-kit/src/primitives/controllable_state.rs`.
 
 ## Follow-ups (recommended)
 
 - If strict parity is required, consider modeling form submission (`name`, `required`) semantics
   for radio groups. Fret currently focuses on interaction outcomes rather than DOM forms.
-

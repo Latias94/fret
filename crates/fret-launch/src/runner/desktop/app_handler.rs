@@ -888,6 +888,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             });
         }
 
+        #[cfg(feature = "hotpatch-subsecond")]
+        if let Some(trigger) = self.hotpatch.as_ref() {
+            next_deadline = Some(match next_deadline {
+                Some(cur) => cur.min(trigger.next_poll_at),
+                None => trigger.next_poll_at,
+            });
+        }
+
         let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;

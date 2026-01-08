@@ -27,5 +27,8 @@ Key upstream concepts:
 - Pass: Headless multi-thumb modeling is available (`closest_value_index`, sorting, minimum steps
   between thumbs).
 - Pass: Multi-thumb pointer wiring is available (start + move update return `value_index_to_change`).
+- Pass: shadcn `Slider` exposes `min_steps_between_thumbs` (Radix `minStepsBetweenThumbs`) and enforces it.
+- Pass: Controlled/uncontrolled values (`value` / `defaultValue`) can be modeled via
+  `slider_use_values_model(...)`.
 - Partial: Semantics are still root-level; Radix exposes `role="slider"` per thumb (a11y alignment
   deferred).

@@ -11,8 +11,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::switch::{
-    switch_a11y, switch_checked_from_optional_bool, toggle_optional_bool,
+    switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
 };
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
@@ -111,6 +112,33 @@ impl Switch {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Creates a switch with a controlled/uncontrolled checked model (Radix `checked` /
+    /// `defaultChecked`).
+    ///
+    /// Note: If `checked` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<bool>>,
+        default_checked: bool,
+    ) -> Self {
+        let model = switch_use_checked_model(cx, checked, || default_checked).model();
+        Self::new(model)
+    }
+
+    /// Creates a switch with a controlled/uncontrolled optional-bool model.
+    ///
+    /// This is shadcn-friendly ergonomics (treats `None` as unchecked).
+    pub fn new_opt_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<Option<bool>>>,
+        default_checked: Option<bool>,
+    ) -> Self {
+        let model =
+            controllable_state::use_controllable_model(cx, checked, || default_checked).model();
+        Self::new_opt(model)
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -391,6 +419,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -401,6 +430,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -463,6 +493,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -473,6 +504,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 

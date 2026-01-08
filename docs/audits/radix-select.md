@@ -31,6 +31,8 @@ Fret models Radix Select outcomes by composing:
 
 ## Current parity notes
 
+- Pass: Controlled/uncontrolled open modeling is available via `SelectRoot` (recommended) or
+  `select_use_open_model(...)` (thin helper), backed by the shared controllable-state substrate.
 - Pass: Select can be rendered in a modal overlay layer to block underlay interaction, matching the
   Radix "disable outside pointer events" outcome.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
@@ -38,6 +40,8 @@ Fret models Radix Select outcomes by composing:
 - Pass: Trigger open keys + closed-state typeahead policy is exposed via the Radix-named facade.
 - Pass: Content open-state key policy (Escape/Home/End/Arrow keys/Enter/Space + typeahead) is
   implemented in `ecosystem/fret-ui-kit/src/primitives/select.rs` and consumed by the shadcn select.
+- Pass: Controlled/uncontrolled selection (`value` / `defaultValue`) can be modeled via
+  `select_use_value_model(...)`.
 - Pass: Pointer modality details are mapped: mouse opens on `pointerdown`, touch/pen open on
   click-like pointer up (movement threshold) to avoid scroll-to-open.
 - Pass: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is implemented as reusable

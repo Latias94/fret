@@ -288,7 +288,7 @@ impl Sheet {
                     )]
                 });
 
-                let mut request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     open,
@@ -296,7 +296,6 @@ impl Sheet {
                     dialog_options,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
                 radix_dialog::request_modal_dialog(cx, request);
             }
 
@@ -461,6 +460,7 @@ impl SheetTitle {
                 font: FontId::default(),
                 size: px,
                 weight: FontWeight::SEMIBOLD,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: Some(-0.02),
             }),
@@ -505,6 +505,7 @@ impl SheetDescription {
                 font: FontId::default(),
                 size: px,
                 weight: FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
             }),
@@ -694,6 +695,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -704,6 +706,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -733,6 +736,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -743,6 +747,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -756,6 +761,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -766,6 +772,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -810,6 +817,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -820,6 +828,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -912,6 +921,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -922,6 +932,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));

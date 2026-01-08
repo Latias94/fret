@@ -5,8 +5,224 @@ use super::{RowIndex, RowKey, RowModel};
 /// Selected rows keyed by [`RowKey`].
 pub type RowSelectionState = HashSet<RowKey>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubRowSelection {
+    None,
+    Some,
+    All,
+}
+
 pub fn is_row_selected(row_key: RowKey, selection: &RowSelectionState) -> bool {
     selection.contains(&row_key)
+}
+
+pub fn is_sub_row_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    row: RowIndex,
+) -> SubRowSelection {
+    let Some(row) = row_model.row(row) else {
+        return SubRowSelection::None;
+    };
+    if row.sub_rows.is_empty() {
+        return SubRowSelection::None;
+    }
+
+    let mut all_children_selected = true;
+    let mut some_selected = false;
+
+    for &child in &row.sub_rows {
+        if some_selected && !all_children_selected {
+            break;
+        }
+
+        let Some(child_row) = row_model.row(child) else {
+            all_children_selected = false;
+            continue;
+        };
+
+        if is_row_selected(child_row.key, selection) {
+            some_selected = true;
+        } else {
+            all_children_selected = false;
+        }
+
+        if !child_row.sub_rows.is_empty() {
+            match is_sub_row_selected(row_model, selection, child) {
+                SubRowSelection::All => {
+                    some_selected = true;
+                }
+                SubRowSelection::Some => {
+                    some_selected = true;
+                    all_children_selected = false;
+                }
+                SubRowSelection::None => {
+                    all_children_selected = false;
+                }
+            }
+        }
+    }
+
+    if all_children_selected {
+        SubRowSelection::All
+    } else if some_selected {
+        SubRowSelection::Some
+    } else {
+        SubRowSelection::None
+    }
+}
+
+pub fn row_is_some_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    row: RowIndex,
+) -> bool {
+    is_sub_row_selected(row_model, selection, row) == SubRowSelection::Some
+}
+
+pub fn row_is_all_sub_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    row: RowIndex,
+) -> bool {
+    is_sub_row_selected(row_model, selection, row) == SubRowSelection::All
+}
+
+pub fn selected_flat_row_count<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> usize {
+    row_model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .filter(|k| is_row_selected(*k, selection))
+        .count()
+}
+
+pub fn selected_root_row_count<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> usize {
+    row_model
+        .root_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .filter(|k| is_row_selected(*k, selection))
+        .count()
+}
+
+pub fn is_all_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> bool {
+    if row_model.flat_rows().is_empty() {
+        return false;
+    }
+    if selection.is_empty() {
+        return false;
+    }
+    row_model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .all(|k| is_row_selected(k, selection))
+}
+
+pub fn is_some_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> bool {
+    let total = row_model.flat_rows().len();
+    if total == 0 {
+        return false;
+    }
+    let selected = selected_flat_row_count(row_model, selection);
+    selected > 0 && selected < total
+}
+
+pub fn toggle_all_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    value: Option<bool>,
+) -> RowSelectionState {
+    let mut next = selection.clone();
+    let value = value.unwrap_or_else(|| !is_all_rows_selected(row_model, selection));
+
+    if value {
+        for &i in row_model.flat_rows() {
+            let Some(row) = row_model.row(i) else {
+                continue;
+            };
+            next.insert(row.key);
+        }
+    } else {
+        for &i in row_model.flat_rows() {
+            let Some(row) = row_model.row(i) else {
+                continue;
+            };
+            next.remove(&row.key);
+        }
+    }
+
+    next
+}
+
+pub fn toggle_all_page_rows_selected<'a, TData>(
+    page_row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    value: Option<bool>,
+) -> RowSelectionState {
+    toggle_all_rows_selected(page_row_model, selection, value)
+}
+
+pub fn toggle_row_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    row_key: RowKey,
+    value: Option<bool>,
+    select_children: bool,
+) -> RowSelectionState {
+    let mut next = selection.clone();
+
+    let current = is_row_selected(row_key, selection);
+    let value = value.unwrap_or(!current);
+
+    if value {
+        next.insert(row_key);
+    } else {
+        next.remove(&row_key);
+    }
+
+    if !select_children {
+        return next;
+    }
+
+    let Some(row_index) = row_model.row_by_key(row_key) else {
+        return next;
+    };
+
+    let mut stack: Vec<RowIndex> = Vec::new();
+    stack.push(row_index);
+
+    while let Some(i) = stack.pop() {
+        let Some(r) = row_model.row(i) else {
+            continue;
+        };
+        for &child in &r.sub_rows {
+            let Some(child_row) = row_model.row(child) else {
+                continue;
+            };
+            if value {
+                next.insert(child_row.key);
+            } else {
+                next.remove(&child_row.key);
+            }
+            stack.push(child);
+        }
+    }
+
+    next
 }
 
 /// TanStack-compatible `selectRowsFn`: returns a [`RowModel`] containing only selected rows in the
@@ -195,5 +411,80 @@ mod tests {
         assert_eq!(selected.flat_rows().len(), 0);
         assert_eq!(selected.arena().len(), 0);
         assert!(selected.rows_by_key().is_empty());
+    }
+
+    #[test]
+    fn toggle_all_rows_selected_selects_and_deselects_flat_rows() {
+        let data = make_people(5, 0);
+        let table = Table::builder(&data).build();
+        let model = table.core_row_model();
+
+        let selection = RowSelectionState::default();
+        let selection = toggle_all_rows_selected(model, &selection, Some(true));
+        assert!(is_all_rows_selected(model, &selection));
+
+        let selection = toggle_all_rows_selected(model, &selection, Some(false));
+        assert!(selection.is_empty());
+        assert!(!is_some_rows_selected(model, &selection));
+    }
+
+    #[test]
+    fn sub_row_selection_reports_some_and_all() {
+        let data = make_people(2, 2);
+        let table = Table::builder(&data)
+            .get_sub_rows(|p, _| p.sub_rows.as_deref())
+            .build();
+        let model = table.core_row_model();
+
+        let root = model.root_rows()[0];
+        let root_key = model.row(root).unwrap().key;
+        let child0 = model.row(root).unwrap().sub_rows[0];
+        let child1 = model.row(root).unwrap().sub_rows[1];
+        let child0_key = model.row(child0).unwrap().key;
+        let child1_key = model.row(child1).unwrap().key;
+
+        let selection: RowSelectionState = [child0_key].into_iter().collect();
+        assert_eq!(
+            is_sub_row_selected(model, &selection, root),
+            SubRowSelection::Some
+        );
+        assert!(row_is_some_selected(model, &selection, root));
+        assert!(!row_is_all_sub_rows_selected(model, &selection, root));
+        assert!(!is_row_selected(root_key, &selection));
+
+        let selection: RowSelectionState = [child0_key, child1_key].into_iter().collect();
+        assert_eq!(
+            is_sub_row_selected(model, &selection, root),
+            SubRowSelection::All
+        );
+        assert!(!row_is_some_selected(model, &selection, root));
+        assert!(row_is_all_sub_rows_selected(model, &selection, root));
+    }
+
+    #[test]
+    fn toggle_row_selected_can_select_children() {
+        let data = make_people(1, 2);
+        let table = Table::builder(&data)
+            .get_sub_rows(|p, _| p.sub_rows.as_deref())
+            .build();
+        let model = table.core_row_model();
+
+        let root = model.root_rows()[0];
+        let root_key = model.row(root).unwrap().key;
+        let child0 = model.row(root).unwrap().sub_rows[0];
+        let child1 = model.row(root).unwrap().sub_rows[1];
+        let child0_key = model.row(child0).unwrap().key;
+        let child1_key = model.row(child1).unwrap().key;
+
+        let selection = RowSelectionState::default();
+        let selection = toggle_row_selected(model, &selection, root_key, Some(true), true);
+        assert!(is_row_selected(root_key, &selection));
+        assert!(is_row_selected(child0_key, &selection));
+        assert!(is_row_selected(child1_key, &selection));
+
+        let selection = toggle_row_selected(model, &selection, root_key, Some(false), true);
+        assert!(!is_row_selected(root_key, &selection));
+        assert!(!is_row_selected(child0_key, &selection));
+        assert!(!is_row_selected(child1_key, &selection));
     }
 }

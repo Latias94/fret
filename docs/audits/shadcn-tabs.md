@@ -23,6 +23,7 @@ examples in `repo-ref/ui`.
 - Partial: Fret exposes a `Tabs` builder with `TabsItem` entries (label + content) rather than a
   fully composable `TabsList` / `TabsTrigger` / `TabsContent` surface like Radix/shadcn.
 - Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
+- Pass: Supports uncontrolled `defaultValue` (internal selection model).
 - Pass: Supports Radix `TabsContent forceMount` semantics via `Tabs::force_mount_content(true)`
   (keeps inactive panels mounted while gating layout/paint/semantics and interactivity).
 

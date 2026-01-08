@@ -461,6 +461,7 @@ impl DropdownMenuShortcut {
                 // new-york-v4: `text-xs`.
                 size: font_size,
                 weight: FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(font_line_height),
                 // new-york-v4: `tracking-widest`.
                 letter_spacing_em: Some(0.10),
@@ -1125,6 +1126,7 @@ impl DropdownMenu {
                                                         font: fret_core::FontId::default(),
                                                         size: font_size,
                                                         weight: fret_core::FontWeight::NORMAL,
+                                                        slant: Default::default(),
                                                         line_height: Some(font_line_height),
                                                         letter_spacing_em: None,
                                                     };
@@ -1159,6 +1161,7 @@ impl DropdownMenu {
                                                                         font: FontId::default(),
                                                                         size: font_size,
                                                                         weight: FontWeight::MEDIUM,
+                                                                        slant: Default::default(),
                                                                         line_height: Some(
                                                                             font_line_height,
                                                                         ),
@@ -1796,6 +1799,7 @@ impl DropdownMenu {
                                                 font: FontId::default(),
                                                 size: font_size,
                                                 weight: FontWeight::NORMAL,
+                                                slant: Default::default(),
                                                 line_height: Some(font_line_height),
                                                 letter_spacing_em: None,
                                             };
@@ -1883,6 +1887,7 @@ impl DropdownMenu {
                                                                                 font: FontId::default(),
                                                                                 size: font_size,
                                                                                 weight: FontWeight::MEDIUM,
+                                                                                slant: Default::default(),
                                                                                 line_height: Some(font_line_height),
                                                                                 letter_spacing_em: None,
                                                                             }),
@@ -3159,6 +3164,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -3169,6 +3175,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3277,6 +3284,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -3287,6 +3295,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3359,6 +3368,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         let _ = app.models_mut().update(&open, |v| *v = true);

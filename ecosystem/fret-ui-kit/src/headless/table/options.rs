@@ -1,3 +1,5 @@
+use super::{ColumnResizeDirection, ColumnResizeMode};
+
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
 #[derive(Debug, Clone, Copy)]
 pub struct TableOptions {
@@ -24,6 +26,25 @@ pub struct TableOptions {
     /// If true, pinned rows can remain visible even if they are outside the current
     /// filtered/sorted/paginated row set (TanStack `keepPinnedRows`).
     pub keep_pinned_rows: bool,
+    /// Whether to allow column hiding at the table level (TanStack `enableHiding`).
+    pub enable_hiding: bool,
+    /// Whether to allow column ordering at the table level (TanStack `enableColumnOrdering`).
+    pub enable_column_ordering: bool,
+    /// Whether to allow column pinning at the table level (TanStack `enablePinning`).
+    pub enable_column_pinning: bool,
+    /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
+    pub enable_column_resizing: bool,
+    /// Enables/disables grouping for the table (TanStack `enableGrouping`).
+    pub enable_grouping: bool,
+    /// If enabled, grouping is assumed to be done externally (e.g. server-side).
+    ///
+    /// When `true`, `grouped_row_model()` returns `pre_grouped_row_model()`.
+    pub manual_grouping: bool,
+    /// Determines when `column_sizing` updates during a resize interaction (TanStack
+    /// `columnResizeMode`).
+    pub column_resize_mode: ColumnResizeMode,
+    /// Column resize direction for RTL layouts (TanStack `columnResizeDirection`).
+    pub column_resize_direction: ColumnResizeDirection,
 }
 
 impl Default for TableOptions {
@@ -35,6 +56,14 @@ impl Default for TableOptions {
             manual_expanding: false,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
+            enable_hiding: true,
+            enable_column_ordering: true,
+            enable_column_pinning: true,
+            enable_column_resizing: true,
+            enable_grouping: true,
+            manual_grouping: false,
+            column_resize_mode: ColumnResizeMode::OnEnd,
+            column_resize_direction: ColumnResizeDirection::Ltr,
         }
     }
 }

@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -55,6 +56,105 @@ impl DialogOptions {
 /// Stable per-overlay root naming convention for dialog-like modal overlays.
 pub fn dialog_root_name(id: GlobalElementId) -> String {
     OverlayController::modal_root_name(id)
+}
+
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// This is a convenience helper for authoring Radix-shaped dialog roots:
+/// - if `controlled_open` is provided, it is used directly
+/// - otherwise an internal model is created (once) using `default_open` (Radix `defaultOpen`)
+pub fn dialog_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
+/// A Radix-shaped `Dialog` root configuration surface.
+///
+/// Upstream supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In Fret this
+/// maps to either:
+/// - a caller-provided `Model<bool>` (controlled), or
+/// - an internal `Model<bool>` stored in element state (uncontrolled).
+#[derive(Debug, Clone, Default)]
+pub struct DialogRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+    options: DialogOptions,
+}
+
+impl DialogRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    pub fn dismiss_on_overlay_press(mut self, dismiss_on_overlay_press: bool) -> Self {
+        self.options = self
+            .options
+            .dismiss_on_overlay_press(dismiss_on_overlay_press);
+        self
+    }
+
+    pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
+        self.options = self.options.initial_focus(initial_focus);
+        self
+    }
+
+    pub fn options(&self) -> DialogOptions {
+        self.options
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        dialog_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub fn modal_request<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        children: Vec<AnyElement>,
+    ) -> OverlayRequest {
+        modal_dialog_request_with_options(
+            id,
+            trigger,
+            self.open_model(cx),
+            presence,
+            self.options,
+            children,
+        )
+    }
 }
 
 /// Stamps Radix-like trigger semantics:
@@ -203,6 +303,32 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[test]
+    fn dialog_root_open_model_uses_controlled_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = DialogRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
+
+    #[test]
+    fn dialog_root_options_builder_updates_options() {
+        let root = DialogRoot::new()
+            .dismiss_on_overlay_press(false)
+            .initial_focus(Some(GlobalElementId(0xbeef)));
+        let options = root.options();
+        assert!(!options.dismiss_on_overlay_press);
+        assert_eq!(options.initial_focus, Some(GlobalElementId(0xbeef)));
     }
 
     #[test]

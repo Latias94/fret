@@ -94,6 +94,7 @@ fn modal_barrier_clears_focus_and_capture_in_underlay() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

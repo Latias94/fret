@@ -20,8 +20,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
-- Pass: Uses a controlled open state (`Model<bool>`).
-- Note: Upstream supports uncontrolled `defaultOpen`; Fret currently does not model it.
+- Pass: Supports a controlled open state (`Model<bool>`).
+- Pass: Supports uncontrolled `defaultOpen` (internal open model).
 
 ### A11y behavior
 
@@ -33,7 +33,7 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Partial: Upstream uses `Presence` + measured content dimensions for height animations.
 - Partial: Fret keeps content mounted while closing (presence-style) and approximates the height
   animation by caching the last measured content height and clipping with an eased 0..1 progress.
-  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
   - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
   - Backing helper: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
   - Note: Fret does not expose Radix's `--radix-collapsible-content-height/width` variables; the

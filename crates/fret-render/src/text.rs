@@ -1,11 +1,11 @@
 use cosmic_text::SwashContent;
 use cosmic_text::{
     Attrs, AttrsList, CacheKey, Family, FontSystem, Hinting, Metrics, ShapeBuffer, ShapeLine,
-    Shaping, SwashCache, Weight,
+    Shaping, Style as CosmicStyle, SwashCache, Weight,
 };
 use fret_core::{
-    CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
-    TextOverflow, TextStyle, TextWrap, geometry::Px,
+    CaretAffinity, HitTestResult, Point, Rect, RichText, Size, TextBlobId, TextConstraints,
+    TextMetrics, TextOverflow, TextRun, TextSlant, TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -210,6 +210,8 @@ pub struct GlyphQuad {
     /// Normalized UV rect in the atlas: (u0, v0, u1, v1).
     pub uv: [f32; 4],
     pub kind: GlyphQuadKind,
+    #[allow(dead_code)]
+    pub color: Option<fret_core::Color>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -240,10 +242,12 @@ pub struct TextLine {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct TextBlobKey {
     text: Arc<str>,
+    runs_key: u64,
     font: fret_core::FontId,
     font_stack_key: u64,
     size_bits: u32,
     weight: u16,
+    slant: u8,
     line_height_bits: Option<u32>,
     letter_spacing_bits: Option<u32>,
     max_width_bits: Option<u32>,
@@ -262,10 +266,16 @@ impl TextBlobKey {
         let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
         Self {
             text: Arc::<str>::from(text),
+            runs_key: 0,
             font: style.font.clone(),
             font_stack_key,
             size_bits: style.size.0.to_bits(),
             weight: style.weight.0,
+            slant: match style.slant {
+                TextSlant::Normal => 0,
+                TextSlant::Italic => 1,
+                TextSlant::Oblique => 2,
+            },
             line_height_bits: style.line_height.map(|px| px.0.to_bits()),
             letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
@@ -273,6 +283,17 @@ impl TextBlobKey {
             overflow: constraints.overflow,
             scale_bits: constraints.scale_factor.to_bits(),
         }
+    }
+
+    fn new_rich(
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+        font_stack_key: u64,
+    ) -> Self {
+        let mut out = Self::new(rich.text.as_ref(), base_style, constraints, font_stack_key);
+        out.runs_key = runs_fingerprint(&rich.runs);
+        out
     }
 }
 
@@ -421,6 +442,7 @@ struct TextMeasureKey {
     font_stack_key: u64,
     size_bits: u32,
     weight: u16,
+    slant: u8,
     line_height_bits: Option<u32>,
     letter_spacing_bits: Option<u32>,
     max_width_bits: Option<u32>,
@@ -437,6 +459,11 @@ impl TextMeasureKey {
             font_stack_key,
             size_bits: style.size.0.to_bits(),
             weight: style.weight.0,
+            slant: match style.slant {
+                TextSlant::Normal => 0,
+                TextSlant::Italic => 1,
+                TextSlant::Oblique => 2,
+            },
             line_height_bits: style.line_height.map(|px| px.0.to_bits()),
             letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
             max_width_bits,
@@ -450,7 +477,9 @@ impl TextMeasureKey {
 #[derive(Debug, Clone)]
 struct TextMeasureEntry {
     text_hash: u64,
+    runs_hash: u64,
     text: Arc<str>,
+    runs: Option<Arc<[TextRun]>>,
     metrics: TextMetrics,
 }
 
@@ -458,6 +487,45 @@ fn hash_text(text: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     text.hash(&mut hasher);
     hasher.finish()
+}
+
+fn runs_fingerprint(runs: &[TextRun]) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    "fret.text.runs.v0".hash(&mut hasher);
+    for r in runs {
+        r.len.hash(&mut hasher);
+        match r.color {
+            None => 0u8.hash(&mut hasher),
+            Some(c) => {
+                1u8.hash(&mut hasher);
+                c.r.to_bits().hash(&mut hasher);
+                c.g.to_bits().hash(&mut hasher);
+                c.b.to_bits().hash(&mut hasher);
+                c.a.to_bits().hash(&mut hasher);
+            }
+        }
+        r.weight.hash(&mut hasher);
+        r.slant.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+fn fret_color_to_cosmic(color: fret_core::Color) -> cosmic_text::Color {
+    let r = (color.r.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let g = (color.g.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let b = (color.b.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let a = (color.a.clamp(0.0, 1.0) * 255.0).round() as u8;
+    cosmic_text::Color::rgba(r, g, b, a)
+}
+
+fn cosmic_color_to_fret(color: cosmic_text::Color) -> fret_core::Color {
+    let (r, g, b, a) = color.as_rgba_tuple();
+    fret_core::Color {
+        r: (r as f32) / 255.0,
+        g: (g as f32) / 255.0,
+        b: (b as f32) / 255.0,
+        a: (a as f32) / 255.0,
+    }
 }
 
 pub struct TextSystem {
@@ -828,6 +896,27 @@ impl TextSystem {
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
         let key = TextBlobKey::new(text, style, constraints, self.font_stack_key);
+        self.prepare_with_key(key, style, None, constraints)
+    }
+
+    pub fn prepare_rich(
+        &mut self,
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        let key = TextBlobKey::new_rich(rich, base_style, constraints, self.font_stack_key);
+        self.prepare_with_key(key, base_style, Some(&rich.runs), constraints)
+    }
+
+    fn prepare_with_key(
+        &mut self,
+        key: TextBlobKey,
+        style: &TextStyle,
+        runs: Option<&[TextRun]>,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        let text = key.text.clone();
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
                 blob.ref_count = blob.ref_count.saturating_add(1);
@@ -843,6 +932,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
+        attrs = match style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
             && letter_spacing_em.is_finite()
@@ -858,8 +952,9 @@ impl TextSystem {
         let (layout, line_starts) = layout_text(
             &mut self.font_system,
             &mut self.scratch,
-            text,
+            text.as_ref(),
             &attrs,
+            runs,
             font_size_px,
             constraints,
             scale,
@@ -881,6 +976,12 @@ impl TextSystem {
                 .max(0.0);
 
             let y_top_px = layout.line_tops_px[i];
+
+            let ascent_px = l.max_ascent.max(0.0);
+            let descent_px = l.max_descent.max(0.0);
+            let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+            let line_baseline_px = y_top_px + padding_top_px + ascent_px;
+            let line_offset_px = line_baseline_px - first_ascent_px;
 
             let local_start = layout.local_starts[i];
             let local_end = layout.local_ends[i];
@@ -915,15 +1016,23 @@ impl TextSystem {
             });
 
             for g in &l.glyphs {
-                if g.glyph_id == 0 {
-                    continue;
-                }
-
-                let (cache_key, _, _) = CacheKey::new(
+                // Cosmic's glyph cache key bins fractional positions into 1/4px buckets and
+                // returns the integer component (`x`, `y`) that must be used for placement to
+                // match the cached raster.
+                //
+                // If we ignore the returned integer coordinates and place glyph quads at the
+                // original float positions, the cached subpixel variant can mismatch the quad
+                // placement (visible as softer/blurry text under non-integer scale factors).
+                //
+                // We also clamp Y to integer pixels (matching cosmic-text's `LayoutGlyph::physical`
+                // behavior) to keep vertical alignment stable.
+                let pos_x = g.x;
+                let pos_y = (line_offset_px + g.y).trunc();
+                let (cache_key, x, y) = CacheKey::new(
                     g.font_id,
                     g.glyph_id,
                     g.font_size,
-                    (g.x, g.y),
+                    (pos_x, pos_y),
                     g.font_weight,
                     g.cache_key_flags,
                 );
@@ -981,13 +1090,8 @@ impl TextSystem {
                     }
                 };
 
-                let ascent_px = l.max_ascent.max(0.0);
-                let descent_px = l.max_descent.max(0.0);
-                let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
-                let line_baseline_px = y_top_px + padding_top_px + ascent_px;
-                let line_offset_px = line_baseline_px - first_ascent_px;
-                let x0_px = g.x + image.placement.left as f32;
-                let y0_px = (line_offset_px + g.y) - image.placement.top as f32;
+                let x0_px = x as f32 + image.placement.left as f32;
+                let y0_px = y as f32 - image.placement.top as f32;
                 let w_px = image.placement.width as f32;
                 let h_px = image.placement.height as f32;
 
@@ -1000,6 +1104,7 @@ impl TextSystem {
                     rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
                     uv: [u0, v0, u1, v1],
                     kind,
+                    color: g.color_opt.map(cosmic_color_to_fret),
                 });
             }
         }
@@ -1034,7 +1139,7 @@ impl TextSystem {
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket
                 .iter()
-                .find(|e| e.text_hash == text_hash && e.text.as_ref() == text)
+                .find(|e| e.text_hash == text_hash && e.runs_hash == 0 && e.text.as_ref() == text)
         {
             return hit.metrics;
         }
@@ -1044,6 +1149,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
+        attrs = match style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
             && letter_spacing_em.is_finite()
@@ -1061,6 +1171,7 @@ impl TextSystem {
             &mut self.scratch,
             text,
             &attrs,
+            None,
             font_size_px,
             constraints,
             scale,
@@ -1071,7 +1182,85 @@ impl TextSystem {
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
             text_hash,
+            runs_hash: 0,
             text: Arc::<str>::from(text),
+            runs: None,
+            metrics,
+        });
+        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+            bucket.pop_front();
+        }
+
+        metrics
+    }
+
+    pub fn measure_rich(
+        &mut self,
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+
+        let key = TextMeasureKey::new(base_style, constraints, self.font_stack_key);
+        let text_hash = hash_text(rich.text.as_ref());
+        let runs_hash = runs_fingerprint(rich.runs.as_ref());
+
+        if let Some(bucket) = self.measure_cache.get_mut(&key)
+            && let Some(hit) = bucket.iter().find(|e| {
+                e.text_hash == text_hash
+                    && e.runs_hash == runs_hash
+                    && e.text.as_ref() == rich.text.as_ref()
+                    && e.runs.as_ref().is_some_and(|r| {
+                        Arc::ptr_eq(r, &rich.runs) || r.as_ref() == rich.runs.as_ref()
+                    })
+            })
+        {
+            return hit.metrics;
+        }
+
+        let scale = constraints.scale_factor.max(1.0);
+        let font_size_px = (base_style.size.0 * scale).max(1.0);
+
+        let mut attrs = Attrs::new().family(family_for_font_id(&base_style.font));
+        attrs = attrs.weight(Weight(base_style.weight.0));
+        attrs = match base_style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
+        if let Some(letter_spacing_em) = base_style.letter_spacing_em
+            && letter_spacing_em != 0.0
+            && letter_spacing_em.is_finite()
+        {
+            attrs = attrs.letter_spacing(letter_spacing_em);
+        }
+        if let Some(line_height) = base_style.line_height {
+            let line_height_px = (line_height.0 * scale).max(font_size_px);
+            if line_height_px.is_finite() {
+                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
+            }
+        }
+
+        let metrics = layout_text(
+            &mut self.font_system,
+            &mut self.scratch,
+            rich.text.as_ref(),
+            &attrs,
+            Some(rich.runs.as_ref()),
+            font_size_px,
+            constraints,
+            scale,
+        )
+        .0
+        .metrics;
+
+        let bucket = self.measure_cache.entry(key).or_default();
+        bucket.push_back(TextMeasureEntry {
+            text_hash,
+            runs_hash,
+            text: rich.text.clone(),
+            runs: Some(rich.runs.clone()),
             metrics,
         });
         while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
@@ -1199,6 +1388,7 @@ fn layout_text(
     scratch: &mut ShapeBuffer,
     text: &str,
     attrs: &Attrs,
+    runs: Option<&[TextRun]>,
     font_size_px: f32,
     constraints: TextConstraints,
     scale: f32,
@@ -1224,9 +1414,80 @@ fn layout_text(
     let mut total_h_px = 0.0_f32;
     let mut first_ascent_px: Option<f32> = None;
 
+    #[derive(Clone, Debug)]
+    struct ResolvedRun {
+        start: usize,
+        end: usize,
+        color: Option<fret_core::Color>,
+        weight: Option<fret_core::FontWeight>,
+        slant: Option<TextSlant>,
+    }
+
+    let resolved_runs: Option<Vec<ResolvedRun>> = runs.and_then(|runs| {
+        if runs.is_empty() {
+            return None;
+        }
+
+        let mut out: Vec<ResolvedRun> = Vec::with_capacity(runs.len());
+        let mut offset: usize = 0;
+        for run in runs {
+            let end = offset.saturating_add(run.len);
+            if end > text.len() {
+                return None;
+            }
+            if !text.is_char_boundary(offset) || !text.is_char_boundary(end) {
+                return None;
+            }
+            if run.len != 0 {
+                out.push(ResolvedRun {
+                    start: offset,
+                    end,
+                    color: run.color,
+                    weight: run.weight,
+                    slant: run.slant,
+                });
+            }
+            offset = end;
+        }
+        if offset != text.len() {
+            return None;
+        }
+        Some(out)
+    });
+
     let mut push_slice = |base_offset: usize, slice: &str, paragraph_end: usize| {
         let mut attrs_list = AttrsList::new(attrs);
         attrs_list.add_span(0..slice.len(), attrs);
+
+        if let Some(runs) = resolved_runs.as_ref() {
+            for run in runs {
+                if run.end <= base_offset || run.start >= paragraph_end {
+                    continue;
+                }
+
+                let start = run.start.max(base_offset) - base_offset;
+                let end = run.end.min(paragraph_end) - base_offset;
+                if start >= end || end > slice.len() {
+                    continue;
+                }
+
+                let mut span_attrs = attrs.clone();
+                if let Some(weight) = run.weight {
+                    span_attrs = span_attrs.weight(Weight(weight.0));
+                }
+                if let Some(slant) = run.slant {
+                    span_attrs = match slant {
+                        TextSlant::Normal => span_attrs.style(CosmicStyle::Normal),
+                        TextSlant::Italic => span_attrs.style(CosmicStyle::Italic),
+                        TextSlant::Oblique => span_attrs.style(CosmicStyle::Oblique),
+                    };
+                }
+                if let Some(color) = run.color {
+                    span_attrs = span_attrs.color(fret_color_to_cosmic(color));
+                }
+                attrs_list.add_span(start..end, &span_attrs);
+            }
+        }
 
         let shape_line = ShapeLine::new(font_system, slice, &attrs_list, Shaping::Advanced, 4);
         let mut layout_lines: Vec<cosmic_text::LayoutLine> = Vec::new();
@@ -1283,9 +1544,6 @@ fn layout_text(
             let available_w = (max_w - ellipsis_w).max(0.0);
             let mut cut_end = 0usize;
             for g in &line.glyphs {
-                if g.glyph_id == 0 {
-                    continue;
-                }
                 let right = (g.x + g.w).max(0.0);
                 if right <= available_w + 0.5 {
                     cut_end = cut_end.max(g.end.min(slice.len()));
@@ -1724,6 +1982,7 @@ mod tests {
             &mut scratch,
             text,
             &attrs,
+            None,
             13.0,
             constraints,
             1.0,

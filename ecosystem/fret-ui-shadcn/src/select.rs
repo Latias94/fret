@@ -225,7 +225,6 @@ fn select_scroll_with_buttons<H: UiHost>(
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Fill;
                                         layout
                                     },
                                     // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
@@ -435,6 +434,33 @@ impl Select {
             arrow_size_override: None,
             arrow_padding_override: None,
         }
+    }
+
+    /// Creates a Select with controlled/uncontrolled `value` + `open` models (Radix `value` /
+    /// `defaultValue` and `open` / `defaultOpen`).
+    ///
+    /// Notes:
+    /// - When a controlled model is `None`, an internal model is created and stored in element state
+    ///   at the call site.
+    /// - Call this from a stable subtree (key the parent node if you need state to survive
+    ///   reordering).
+    pub fn new_controllable<H: UiHost, T: Into<Arc<str>>>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<T>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let default_value: Option<Arc<str>> = default_value.map(Into::into);
+        let model =
+            radix_select::select_use_value_model(cx, value, || default_value.clone()).model();
+
+        let open = radix_select::SelectRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+
+        Self::new(model, open)
     }
 
     pub fn item(mut self, item: SelectItem) -> Self {
@@ -677,6 +703,7 @@ fn select_impl<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::NORMAL,
+            slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_required("font.line_height"))),
@@ -1295,6 +1322,7 @@ fn select_impl<H: UiHost>(
                                                                                             font: FontId::default(),
                                                                                             size: label_text_px,
                                                                                             weight: FontWeight::NORMAL,
+                                                                                            slant: Default::default(),
                                                                                             line_height: Some(
                                                                                                 label_line_height,
                                                                                             ),
@@ -1894,6 +1922,50 @@ mod tests {
     use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 
+    #[test]
+    fn select_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let controlled_value = app.models_mut().insert(Some(Arc::from("alpha")));
+        let controlled_open = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(
+                cx,
+                Some(controlled_value.clone()),
+                Some("beta"),
+                Some(controlled_open.clone()),
+                false,
+            );
+            assert_eq!(select.model, controlled_value);
+            assert_eq!(select.open, controlled_open);
+        });
+    }
+
+    #[test]
+    fn select_new_controllable_applies_default_value_and_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, Some("alpha"), None, true);
+            let value = cx.watch_model(&select.model).cloned().unwrap_or_default();
+            let open = cx.watch_model(&select.open).copied().unwrap_or(false);
+
+            assert_eq!(value.as_deref(), Some("alpha"));
+            assert!(open);
+        });
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -2489,6 +2561,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2499,6 +2572,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -2651,6 +2725,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2661,6 +2736,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -2769,6 +2845,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2779,6 +2856,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -2800,6 +2878,132 @@ mod tests {
                 n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
             }),
             "expected scroll up to appear after scrolling down"
+        );
+    }
+
+    #[test]
+    fn select_wheel_scroll_clamps_to_last_item_without_blank_space() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node");
+        let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+        let wheel_pos = Point::new(
+            Px(list_bounds.origin.x.0 + list_bounds.size.width.0 * 0.5),
+            Px(list_bounds.origin.y.0 + list_bounds.size.height.0 * 0.5),
+        );
+
+        // Simulate repeated wheel scrolling (large delta) and ensure we clamp to the bottom.
+        for _ in 0..40 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node after wheel");
+        let last = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Item 59")
+            })
+            .expect("last item node after wheel");
+
+        let list_bounds = ui
+            .debug_node_bounds(list.id)
+            .expect("list bounds after wheel");
+        let last_bounds = ui
+            .debug_node_bounds(last.id)
+            .expect("last item bounds after wheel");
+        let list_top = list_bounds.origin.y.0;
+        let list_bottom = list_bounds.origin.y.0 + list_bounds.size.height.0;
+        let last_top = last_bounds.origin.y.0;
+        let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
+
+        assert!(
+            last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
+            "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
         );
     }
 }

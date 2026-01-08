@@ -7,6 +7,9 @@ edition.workspace = true
 # Some upstream macros (`objc`'s `msg_send!`) include `cfg(feature = "cargo-clippy")`.
 # Declaring it avoids `unexpected_cfgs` warnings under Rust's check-cfg.
 cargo-clippy = []
+# Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
+# into normal builds. See ADR 0107.
+hotpatch-subsecond = []
 
 [dependencies]
 fret-app = { path = "../fret-app" }

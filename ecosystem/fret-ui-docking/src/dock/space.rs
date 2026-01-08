@@ -602,6 +602,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         position,
                         button,
                         modifiers,
+                        click_count,
                         ..
                     } => {
                         // Arbitration: while a dock drag session is active (or viewport capture is
@@ -787,6 +788,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 ViewportInputKind::PointerDown {
                                     button: *button,
                                     modifiers: *modifiers,
+                                    click_count: *click_count,
                                 },
                             ) {
                                 pending_effects.push(Effect::ViewportInput(e));
@@ -1091,6 +1093,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         position,
                         button,
                         modifiers,
+                        click_count,
                         ..
                     } => {
                         let mut handled = false;
@@ -1232,6 +1235,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     ViewportInputKind::PointerUp {
                                         button: *button,
                                         modifiers: *modifiers,
+                                        click_count: *click_count,
                                     },
                                 );
                                 pending_effects.push(Effect::ViewportInput(e));
@@ -1317,6 +1321,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         ViewportInputKind::PointerUp {
                                             button: *button,
                                             modifiers: *modifiers,
+                                            click_count: *click_count,
                                         },
                                     ) {
                                         pending_effects.push(Effect::ViewportInput(e));

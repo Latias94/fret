@@ -1113,11 +1113,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret-app",
- "fret-asset-cache",
  "fret-core",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
+ "fret-ui-assets",
  "fret-ui-kit",
  "slotmap",
  "tracing",
@@ -1133,10 +1133,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-icons",
+ "fret-launch",
+ "fret-render",
+ "fret-ui-kit",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "fret-syntax",
  "fret-ui",
  "fret-ui-kit",
@@ -1179,12 +1193,14 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-app-kit",
+ "fret-bootstrap",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
- "fret-node",
+ "fret-plot",
+ "fret-plot3d",
  "fret-render",
  "fret-runtime",
  "fret-ui",
@@ -1193,10 +1209,10 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "image",
- "serde_json",
  "tracing",
  "tracing-subscriber",
  "ureq",
+ "wgpu",
  "winit",
 ]
 
@@ -1261,20 +1277,7 @@ dependencies = [
  "mathjax_svg",
  "mdstream",
  "pulldown-cmark",
-]
-
-[[package]]
-name = "fret-node"
-version = "0.1.0"
-dependencies = [
- "fret-core",
- "fret-runtime",
- "fret-ui",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -1305,6 +1308,25 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "fret-plot"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+]
+
+[[package]]
+name = "fret-plot3d"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]
@@ -1441,6 +1463,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-assets"
+version = "0.1.0"
+dependencies = [
+ "fret-asset-cache",
+]
+
+[[package]]
 name = "fret-ui-docking"
 version = "0.1.0"
 dependencies = [
@@ -1476,6 +1505,10 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "fretboard"
+version = "0.1.0"
 
 [[package]]
 name = "fslock"
@@ -3232,12 +3265,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha1_smol"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
-
-[[package]]
 name = "sha2"
 version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4251,10 +4278,8 @@ version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2e054861b4bd027cd373e18e8d8d8e6548085000e41290d95ce0c373a654b4a"
 dependencies = [
- "getrandom 0.3.4",
  "js-sys",
  "serde_core",
- "sha1_smol",
  "wasm-bindgen",
 ]
 

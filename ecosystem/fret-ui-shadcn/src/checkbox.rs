@@ -13,8 +13,10 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::checkbox::{
-    CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
+    CheckedState, checkbox_a11y, checkbox_use_checked_model, checked_state_from_optional_bool,
+    toggle_optional_bool,
 };
+use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -105,6 +107,48 @@ impl Checkbox {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Creates a checkbox with a controlled/uncontrolled bool model (Radix `checked` /
+    /// `defaultChecked` as a boolean).
+    ///
+    /// Note: If `checked` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<bool>>,
+        default_checked: bool,
+    ) -> Self {
+        let model =
+            controllable_state::use_controllable_model(cx, checked, || default_checked).model();
+        Self::new(model)
+    }
+
+    /// Creates a checkbox with a controlled/uncontrolled optional-bool model.
+    ///
+    /// This is shadcn-friendly ergonomics for representing an "unset/indeterminate" value.
+    pub fn new_optional_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<Option<bool>>>,
+        default_checked: Option<bool>,
+    ) -> Self {
+        let model =
+            controllable_state::use_controllable_model(cx, checked, || default_checked).model();
+        Self::new_optional(model)
+    }
+
+    /// Creates a checkbox with a controlled/uncontrolled tri-state model (Radix
+    /// `boolean | "indeterminate"` via [`CheckedState`]).
+    ///
+    /// Note: If `checked` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_tristate_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        checked: Option<Model<CheckedState>>,
+        default_checked: CheckedState,
+    ) -> Self {
+        let model = checkbox_use_checked_model(cx, checked, || default_checked).model();
+        Self::new_tristate(model)
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -398,6 +442,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -408,6 +453,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -462,6 +508,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -472,6 +519,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -531,6 +579,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -541,6 +590,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 

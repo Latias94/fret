@@ -17,8 +17,108 @@ use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::dialog::DialogOptions;
+use crate::{OverlayPresence, OverlayRequest};
+
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// AlertDialog itself is a constrained Dialog variant. This helper exists to standardize how
+/// recipes derive the open model (`open` / `defaultOpen`) before applying alert-dialog-specific
+/// focus preferences.
+pub fn alert_dialog_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
+/// A Radix-shaped `AlertDialog` root configuration surface.
+///
+/// Upstream AlertDialog is a constrained Dialog variant: always modal, and prefers focusing the
+/// cancel action by default. This root helper standardizes:
+/// - controlled/uncontrolled open modeling (`open` / `defaultOpen`)
+/// - initial focus preference (`PreferCancel` by default)
+#[derive(Debug, Clone, Default)]
+pub struct AlertDialogRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+    options: AlertDialogOptions,
+}
+
+impl AlertDialogRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    pub fn initial_focus(mut self, initial_focus: AlertDialogInitialFocus) -> Self {
+        self.options = self.options.initial_focus(initial_focus);
+        self
+    }
+
+    pub fn options(&self) -> AlertDialogOptions {
+        self.options
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        alert_dialog_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    pub fn open_id<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> ModelId {
+        self.open_model(cx).id()
+    }
+
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub fn dialog_options<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> DialogOptions {
+        let open_id = self.open_id(cx);
+        dialog_options_for_alert_dialog(cx, open_id, self.options)
+    }
+
+    pub fn modal_request<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        children: Vec<AnyElement>,
+    ) -> OverlayRequest {
+        let open = self.open_model(cx);
+        let options = self.dialog_options(cx);
+
+        dialog_prim::modal_dialog_request_with_options(
+            id, trigger, open, presence, options, children,
+        )
+    }
+}
 
 #[derive(Default)]
 struct AlertDialogCancelRegistry {
@@ -123,6 +223,32 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[test]
+    fn alert_dialog_root_open_model_uses_controlled_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = AlertDialogRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
+
+    #[test]
+    fn alert_dialog_root_options_builder_updates_options() {
+        let root = AlertDialogRoot::new().initial_focus(AlertDialogInitialFocus::None);
+        let options = root.options();
+        assert!(matches!(
+            options.initial_focus,
+            AlertDialogInitialFocus::None
+        ));
     }
 
     #[test]

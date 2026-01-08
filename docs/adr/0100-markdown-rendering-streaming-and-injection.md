@@ -19,6 +19,8 @@ Key constraints and requirements:
 4) **Injection points**: Apps must be able to render certain nodes with their own components (callouts, code block actions, custom links/images).
 5) **Syntax highlighting**: Code fences should support tree-sitter highlighting with language injections.
 6) **Security posture**: Markdown rendering must not execute content or perform I/O by default.
+7) **Selection & copy** (expected): Rich content surfaces should support mouse selection and
+   clipboard extraction without coupling selection semantics to the element tree structure (see ADR 0110).
 
 We reference:
 
@@ -99,6 +101,12 @@ We standardize a streaming-friendly document model:
 - **Committed blocks**: append-only and immutable once committed.
 - **Pending block**: may be updated on each new chunk; only this block is expected to change frequently.
 
+Footnotes and reference definitions are inherently cross-block features. Until mdstream’s invalidation
+support is fully realized, its default configuration may choose stability over block splitting.
+For UI rendering in Fret, `ecosystem/fret-markdown` intentionally configures mdstream to keep blocks
+(`FootnotesMode::Invalidate`) so headings, lists, code fences, and math blocks remain independently
+layoutable and key-stable.
+
 To avoid O(n²) and preserve stable UI subtrees:
 
 - Each committed block must have a stable `BlockId` used as the keyed identity in the UI tree.
@@ -116,6 +124,9 @@ Recommended integration:
 
 - static mode (single parse),
 - streaming mode (render from a `DocumentState` / `(committed, pending)` view).
+
+For static mode, finalize the stream once so the trailing pending block becomes committed (so block
+classification like `MathBlock` is reliable).
 
 ### 6) Security posture and HTML handling
 
@@ -156,4 +167,3 @@ Trade-offs:
 - Add a streaming renderer entry point that consumes `mdstream::DocumentState` and renders keyed committed blocks.
 - Add a demo: a chat-like “streaming markdown” panel in `apps/fret-examples`.
 - Add basic tests for fence language parsing and block key stability (where feasible).
-

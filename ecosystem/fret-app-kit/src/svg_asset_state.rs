@@ -1,6 +1,6 @@
-use fret_asset_cache::svg_asset_cache::{SvgAssetCache, SvgAssetKey, SvgAssetStats};
 use fret_core::{SvgId, UiServices};
 use fret_runtime::{GlobalsHost, TimeHost};
+use fret_ui_assets::svg_asset_cache::{SvgAssetCache, SvgAssetKey, SvgAssetStats};
 
 /// Convenience wrapper around `SvgAssetCache::use_svg_bytes`.
 pub fn use_svg_bytes_cached<H: GlobalsHost + TimeHost>(
@@ -8,7 +8,7 @@ pub fn use_svg_bytes_cached<H: GlobalsHost + TimeHost>(
     services: &mut dyn UiServices,
     bytes: &[u8],
 ) -> (SvgAssetKey, SvgId) {
-    use fret_asset_cache::svg_asset_cache::SvgAssetCacheHostExt as _;
+    use fret_ui_assets::svg_asset_cache::SvgAssetCacheHostExt as _;
 
     host.with_svg_asset_cache(|cache, host| cache.use_svg_bytes(host, services, bytes))
 }
@@ -19,7 +19,7 @@ pub fn use_svg_bytes_cached_with_stats<H: GlobalsHost + TimeHost>(
     services: &mut dyn UiServices,
     bytes: &[u8],
 ) -> (SvgAssetKey, SvgId, SvgAssetStats) {
-    use fret_asset_cache::svg_asset_cache::SvgAssetCacheHostExt as _;
+    use fret_ui_assets::svg_asset_cache::SvgAssetCacheHostExt as _;
 
     host.with_svg_asset_cache(|cache, host| {
         let (key, svg) = cache.use_svg_bytes(host, services, bytes);
@@ -35,7 +35,7 @@ pub fn use_svg_bytes_keyed_cached_with_stats<H: GlobalsHost + TimeHost>(
     key: SvgAssetKey,
     bytes: &[u8],
 ) -> (SvgId, SvgAssetStats) {
-    use fret_asset_cache::svg_asset_cache::SvgAssetCacheHostExt as _;
+    use fret_ui_assets::svg_asset_cache::SvgAssetCacheHostExt as _;
 
     host.with_svg_asset_cache(|cache, host| {
         let svg = cache.use_svg_bytes_keyed(host, services, key, bytes);
@@ -51,7 +51,7 @@ pub fn svg_from_asset_cache(cache: &SvgAssetCache, key: SvgAssetKey) -> Option<S
 
 /// Returns stats for the global `SvgAssetCache`.
 pub fn svg_asset_cache_stats<H: GlobalsHost>(host: &mut H) -> SvgAssetStats {
-    use fret_asset_cache::svg_asset_cache::SvgAssetCacheHostExt as _;
+    use fret_ui_assets::svg_asset_cache::SvgAssetCacheHostExt as _;
 
     host.with_svg_asset_cache(|cache, _host| cache.stats())
 }

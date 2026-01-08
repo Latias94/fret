@@ -3,13 +3,14 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Edges, FontId, FontWeight, Px, RichText, SemanticsRole, TextOverflow, TextRun, TextSlant,
+    TextStyle, TextWrap,
 };
 use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, ScrollAxis, ScrollProps, TextProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, StyledTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -118,8 +119,11 @@ impl MarkdownTheme {
         let math_block_padding = metric(theme, "math.block.padding")
             .unwrap_or_else(|| theme.metric_required("metric.padding.md"));
         #[cfg(feature = "mathjax-svg")]
-        let math_block_height = metric(theme, "math.block.height")
-            .unwrap_or_else(|| Px(theme.metric_required("metric.font.line_height").0 * 2.0));
+        let math_block_height = metric(theme, "math.block.height").unwrap_or_else(|| {
+            let font_size = theme.metric_required("metric.font.size").0;
+            let line_height = theme.metric_required("metric.font.line_height").0;
+            Px((line_height * 3.25).max(font_size * 4.0))
+        });
 
         Self {
             link,
@@ -190,11 +194,12 @@ pub fn markdown_with<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
     let markdown_theme = MarkdownTheme::resolve(&theme);
 
-    let mut stream = mdstream::MdStream::default();
+    let mut stream = mdstream::MdStream::new(mdstream_options_for_markdown());
     let update = stream.append(source);
 
     let mut state = MarkdownPulldownState::new();
     state.apply_update(update);
+    state.apply_update(stream.finalize());
 
     markdown_mdstream_pulldown_with(
         cx,
@@ -204,6 +209,16 @@ pub fn markdown_with<H: UiHost>(
         &state.adapter,
         components,
     )
+}
+
+pub fn mdstream_options_for_markdown() -> mdstream::Options {
+    // mdstream defaults to `FootnotesMode::SingleBlock`, which intentionally collapses documents
+    // with footnotes into one block (stability-first). For UI rendering we prefer keeping blocks
+    // so headings, lists, math blocks, etc can be laid out independently.
+    mdstream::Options {
+        footnotes: mdstream::FootnotesMode::Invalidate,
+        ..Default::default()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,6 +293,95 @@ enum MathJaxSvgEntry {
     Loading,
     Ready(MathJaxSvgReady),
     Error(Arc<str>),
+}
+
+#[cfg(feature = "mathjax-svg")]
+struct MathJaxWorker {
+    tx: std::sync::mpsc::Sender<MathJaxWorkItem>,
+}
+
+#[cfg(feature = "mathjax-svg")]
+struct MathJaxWorkItem {
+    map: Arc<std::sync::Mutex<std::collections::HashMap<MathJaxKey, MathJaxSvgEntry>>>,
+    key: MathJaxKey,
+}
+
+#[cfg(feature = "mathjax-svg")]
+static MATHJAX_WORKER: std::sync::OnceLock<MathJaxWorker> = std::sync::OnceLock::new();
+
+#[cfg(feature = "mathjax-svg")]
+fn mathjax_worker() -> &'static MathJaxWorker {
+    MATHJAX_WORKER.get_or_init(|| {
+        let (tx, rx) = std::sync::mpsc::channel::<MathJaxWorkItem>();
+        std::thread::spawn(move || {
+            for item in rx {
+                let key = item.key;
+                let latex = key.latex.clone();
+                tracing::debug!(
+                    target: "fret_markdown::math",
+                    mode = ?key.mode,
+                    latex_len = latex.len(),
+                    "mathjax svg: convert queued"
+                );
+
+                let result = std::panic::catch_unwind(|| match key.mode {
+                    MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
+                    MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
+                });
+
+                let mut map_guard = item.map.lock().expect("mathjax svg cache lock");
+                match result {
+                    Ok(Ok(svg)) => {
+                        let has_current_color =
+                            svg.contains("currentColor") || svg.contains("currentcolor");
+                        let svg = if has_current_color {
+                            svg.replace("currentColor", "#000000")
+                                .replace("currentcolor", "#000000")
+                        } else {
+                            svg
+                        };
+
+                        tracing::debug!(
+                            target: "fret_markdown::math",
+                            mode = ?key.mode,
+                            latex_len = latex.len(),
+                            has_current_color,
+                            "mathjax svg: converted"
+                        );
+
+                        let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Ready(MathJaxSvgReady {
+                                svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
+                                aspect_ratio,
+                            }),
+                        );
+                    }
+                    Ok(Err(err)) => {
+                        tracing::warn!(
+                            target: "fret_markdown::math",
+                            mode = ?key.mode,
+                            latex_len = latex.len(),
+                            error = %err,
+                            "mathjax svg: convert failed"
+                        );
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
+                        );
+                    }
+                    Err(_) => {
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg: panic")),
+                        );
+                    }
+                }
+            }
+        });
+        MathJaxWorker { tx }
+    })
 }
 
 #[cfg(feature = "mathjax-svg")]
@@ -491,7 +595,13 @@ fn render_code_block<H: UiHost>(
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
-    let code_view = fret_code_view::code_block(cx, &info.code, info.language.as_deref(), false);
+    let mut block = fret_code_view::CodeBlock::new(info.code.clone())
+        .show_copy_button(true)
+        .copy_button_on_hover(true);
+    if let Some(lang) = info.language.clone() {
+        block = block.language(lang);
+    }
+    let code_view = block.show_line_numbers(false).into_element(cx);
 
     let Some(render_actions) = &components.code_block_actions else {
         return code_view;
@@ -757,6 +867,50 @@ impl Default for MarkdownPulldownState {
     }
 }
 
+#[derive(Debug)]
+pub struct MarkdownStreamState {
+    opts: mdstream::Options,
+    stream: mdstream::MdStream,
+    state: MarkdownPulldownState,
+}
+
+impl MarkdownStreamState {
+    pub fn new() -> Self {
+        Self::new_with_options(mdstream_options_for_markdown())
+    }
+
+    pub fn new_with_options(opts: mdstream::Options) -> Self {
+        Self {
+            stream: mdstream::MdStream::new(opts.clone()),
+            opts,
+            state: MarkdownPulldownState::new(),
+        }
+    }
+
+    pub fn state(&self) -> &MarkdownPulldownState {
+        &self.state
+    }
+
+    pub fn clear(&mut self) {
+        self.stream = mdstream::MdStream::new(self.opts.clone());
+        self.state.clear();
+    }
+
+    pub fn append(&mut self, chunk: &str) -> mdstream::AppliedUpdate {
+        self.state.apply_update(self.stream.append(chunk))
+    }
+
+    pub fn finalize(&mut self) -> mdstream::AppliedUpdate {
+        self.state.apply_update(self.stream.finalize())
+    }
+}
+
+impl Default for MarkdownStreamState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn markdown_streaming_pulldown<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     state: &MarkdownPulldownState,
@@ -791,6 +945,63 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
 ) -> AnyElement {
     let committed = doc.committed();
     let pending = doc.pending();
+
+    let log_once = cx.with_state(
+        || false,
+        |logged| {
+            if *logged {
+                false
+            } else {
+                *logged = true;
+                true
+            }
+        },
+    );
+    if log_once {
+        let mut lines: Vec<String> = Vec::new();
+        for block in committed.iter().take(32) {
+            let raw = block.display_or_raw();
+            let raw_one_line = raw
+                .lines()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(80)
+                .collect::<String>();
+            let has_dollars = raw.contains("$$");
+            let has_adapter_events = adapter.committed_events(block.id).is_some();
+            lines.push(format!(
+                "{:?} id={:?} adapter_events={} has_$$={} raw0={:?}",
+                block.kind, block.id, has_adapter_events, has_dollars, raw_one_line
+            ));
+        }
+        if let Some(p) = pending {
+            let raw = p.display_or_raw();
+            let raw_one_line = raw
+                .lines()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(80)
+                .collect::<String>();
+            let has_dollars = raw.contains("$$");
+            let has_adapter_events = adapter.parse_pending(p).iter().any(|_| true);
+            lines.push(format!(
+                "PENDING {:?} id={:?} adapter_events={} has_$$={} raw0={:?}",
+                p.kind, p.id, has_adapter_events, has_dollars, raw_one_line
+            ));
+        }
+
+        tracing::debug!(
+            target: "fret_markdown::mdstream",
+            committed = committed.len(),
+            pending = pending.is_some(),
+            "mdstream blocks:\n{}",
+            lines.join("\n")
+        );
+    }
 
     stack::vstack(
         cx,
@@ -867,6 +1078,25 @@ fn render_mdstream_block_with_events<H: UiHost>(
             }
         }
         mdstream::BlockKind::Paragraph => {
+            if is_display_math_block_text(block.display_or_raw()) {
+                let latex = parse_math_block_body(block.display_or_raw());
+                tracing::debug!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    latex_len = latex.len(),
+                    "render paragraph as display math (by raw)"
+                );
+                return render_math_block(cx, theme, markdown_theme, components, latex);
+            }
+            if let Some(latex) = display_math_only_events(events) {
+                tracing::debug!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    latex_len = latex.len(),
+                    "render paragraph as display math"
+                );
+                return render_math_block(cx, theme, markdown_theme, components, latex);
+            }
             let info = ParagraphInfo {
                 text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
             };
@@ -924,7 +1154,45 @@ fn render_mdstream_block_with_events<H: UiHost>(
             }
         }
         mdstream::BlockKind::MathBlock => {
-            render_pulldown_events_root(cx, theme, markdown_theme, components, events)
+            // mdstream already classifies the block as MathBlock; don't rely on pulldown to
+            // re-discover `Event::DisplayMath` because the adapter may have stripped delimiters.
+            let mut latex = parse_math_block_body(block.display_or_raw());
+            let latex_from_events = latex_from_pulldown_math_events(events);
+            if latex.trim().is_empty() {
+                if let Some(from_events) = latex_from_events.clone() {
+                    latex = from_events;
+                }
+            }
+            let log_once = cx.with_state(
+                || false,
+                |logged| {
+                    if *logged {
+                        false
+                    } else {
+                        *logged = true;
+                        true
+                    }
+                },
+            );
+            if log_once {
+                let has_display_math_event = events.iter().any(|e| {
+                    matches!(
+                        e,
+                        pulldown_cmark::Event::DisplayMath(_)
+                            | pulldown_cmark::Event::InlineMath(_)
+                    )
+                });
+                tracing::debug!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    raw = %block.display_or_raw().replace('\n', "\\n"),
+                    latex_len = latex.len(),
+                    latex_from_events_len = latex_from_events.as_ref().map(|s| s.len()),
+                    has_math_event = has_display_math_event,
+                    "render mdstream math block"
+                );
+            }
+            render_math_block(cx, theme, markdown_theme, components, latex)
         }
         mdstream::BlockKind::HtmlBlock
         | mdstream::BlockKind::FootnoteDefinition
@@ -950,6 +1218,92 @@ fn raw_block_kind_from_mdstream(kind: mdstream::BlockKind) -> RawBlockKind {
         mdstream::BlockKind::Unknown => RawBlockKind::Unknown,
         _ => RawBlockKind::Unknown,
     }
+}
+
+fn is_display_math_block_text(text: &str) -> bool {
+    let s = text.trim();
+    if s.is_empty() {
+        return false;
+    }
+
+    (s.starts_with("$$") && s.ends_with("$$")) || (s.starts_with("\\[") && s.ends_with("\\]"))
+}
+
+fn parse_math_block_body(text: &str) -> Arc<str> {
+    let s = text.trim();
+    if s.is_empty() {
+        return Arc::<str>::from("");
+    }
+
+    // Support common delimiters. mdstream may already have stripped them, so we fall back to `s`.
+    if let Some(rest) = s.strip_prefix("$$") {
+        let rest = rest.strip_suffix("$$").unwrap_or(rest);
+        return Arc::<str>::from(rest.trim().to_string());
+    }
+    if let Some(rest) = s.strip_prefix("\\[") {
+        let rest = rest.strip_suffix("\\]").unwrap_or(rest);
+        return Arc::<str>::from(rest.trim().to_string());
+    }
+
+    Arc::<str>::from(s.to_string())
+}
+
+fn latex_from_pulldown_math_events(events: &[pulldown_cmark::Event<'static>]) -> Option<Arc<str>> {
+    use pulldown_cmark::Event;
+
+    for e in events {
+        if let Event::DisplayMath(latex) = e {
+            return Some(Arc::<str>::from(latex.to_string()));
+        }
+    }
+
+    let mut buf = String::new();
+    for e in events {
+        match e {
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) | Event::DisplayMath(t) => {
+                buf.push_str(t.as_ref())
+            }
+            Event::SoftBreak | Event::HardBreak => buf.push('\n'),
+            _ => {}
+        }
+    }
+
+    let trimmed = buf.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    Some(Arc::<str>::from(trimmed.to_string()))
+}
+
+fn display_math_only_events(events: &[pulldown_cmark::Event<'static>]) -> Option<Arc<str>> {
+    use pulldown_cmark::Event;
+
+    let mut display_latex: Option<Arc<str>> = None;
+    let mut has_other = false;
+
+    for e in events {
+        match e {
+            Event::DisplayMath(latex) => {
+                if display_latex.is_some() {
+                    return None;
+                }
+                display_latex = Some(Arc::<str>::from(latex.to_string()));
+            }
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) => {
+                if !t.trim().is_empty() {
+                    has_other = true;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if has_other {
+        return None;
+    }
+
+    display_latex
 }
 
 fn render_heading_inline<H: UiHost>(
@@ -978,8 +1332,8 @@ fn render_heading_inline<H: UiHost>(
         color: fg,
     };
 
-    let pieces = inline_pieces_from_events(events);
-    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
+    let pieces = inline_pieces_maybe_unwrapped(events);
+    render_inline_flow_or_rich(cx, theme, markdown_theme, components, base, &pieces)
 }
 
 fn render_paragraph_inline<H: UiHost>(
@@ -1000,8 +1354,115 @@ fn render_paragraph_inline<H: UiHost>(
         color: fg,
     };
 
-    let pieces = inline_pieces_from_events(events);
-    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
+    let pieces = inline_pieces_maybe_unwrapped(events);
+    render_inline_flow_or_rich(cx, theme, markdown_theme, components, base, &pieces)
+}
+
+fn render_inline_flow_or_rich<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    base: InlineBaseStyle,
+    pieces: &[InlinePiece],
+) -> AnyElement {
+    if let Some(el) = render_rich_text_inline(cx, markdown_theme, components, &base, pieces) {
+        return el;
+    }
+    render_inline_flow(cx, theme, markdown_theme, components, base, pieces)
+}
+
+fn render_rich_text_inline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    base: &InlineBaseStyle,
+    pieces: &[InlinePiece],
+) -> Option<AnyElement> {
+    let allow_link_color_only = components.link.is_none() && components.on_link_activate.is_none();
+
+    if pieces.iter().any(|p| match &p.kind {
+        InlinePieceKind::Text(_) => p.style.code || p.style.strikethrough,
+        InlinePieceKind::Image(_) | InlinePieceKind::InlineMath(_) => true,
+    }) {
+        return None;
+    }
+
+    if !allow_link_color_only && pieces.iter().any(|p| p.style.link.is_some()) {
+        return None;
+    }
+
+    let mut text = String::new();
+    let mut runs: Vec<TextRun> = Vec::new();
+    for p in pieces {
+        let InlinePieceKind::Text(t) = &p.kind else {
+            continue;
+        };
+        if t.is_empty() {
+            continue;
+        }
+        text.push_str(t);
+
+        let run_weight = if p.style.strong {
+            Some(FontWeight::SEMIBOLD)
+        } else {
+            None
+        };
+        let run_slant = if p.style.emphasis {
+            Some(TextSlant::Italic)
+        } else {
+            None
+        };
+        let run_color = if p.style.link.is_some() {
+            Some(markdown_theme.link)
+        } else {
+            None
+        };
+
+        runs.push(TextRun {
+            len: t.len(),
+            color: run_color,
+            weight: run_weight,
+            slant: run_slant,
+        });
+    }
+
+    if text.is_empty() {
+        return None;
+    }
+
+    let rich = RichText::new(Arc::<str>::from(text), runs);
+
+    let mut props = StyledTextProps::new(rich);
+    props.layout.size.width = Length::Fill;
+    props.style = Some(TextStyle {
+        font: base.font.clone(),
+        size: base.size,
+        weight: base.weight,
+        slant: TextSlant::Normal,
+        line_height: base.line_height,
+        letter_spacing_em: None,
+    });
+    props.color = Some(base.color);
+    props.wrap = TextWrap::Word;
+    props.overflow = TextOverflow::Clip;
+
+    Some(cx.styled_text_props(props))
+}
+
+fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
+    use pulldown_cmark::{Event, Tag};
+
+    let has_wrapper = events.iter().any(|e| match e {
+        Event::Start(Tag::Paragraph) | Event::Start(Tag::Heading { .. }) => true,
+        _ => false,
+    });
+
+    if has_wrapper {
+        inline_pieces_from_events(events)
+    } else {
+        inline_pieces_from_events_unwrapped(events)
+    }
 }
 
 fn render_pulldown_events_root<H: UiHost>(
@@ -1394,17 +1855,35 @@ fn render_math_block<H: UiHost>(
     components: &MarkdownComponents<H>,
     latex: Arc<str>,
 ) -> AnyElement {
+    let latex = Arc::<str>::from(latex.trim().to_string());
+
     if let Some(render) = &components.math_block {
         return render(cx, MathBlockInfo { latex });
     }
 
-    #[cfg(feature = "mathjax-svg")]
-    {
-        return render_math_block_mathjax_svg(cx, theme, markdown_theme, latex);
-    }
+    render_math_block_builtin(cx, theme, markdown_theme, latex)
+}
 
+#[cfg(feature = "mathjax-svg")]
+fn render_math_block_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    latex: Arc<str>,
+) -> AnyElement {
+    render_math_block_mathjax_svg(cx, theme, markdown_theme, latex)
+}
+
+#[cfg(not(feature = "mathjax-svg"))]
+fn render_math_block_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    latex: Arc<str>,
+) -> AnyElement {
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
+    scroll_props.layout.size.width = Length::Fill;
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
@@ -1413,8 +1892,8 @@ fn render_math_block<H: UiHost>(
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
-    cx.scroll(scroll_props, |cx| {
-        vec![cx.container(container, |cx| {
+    cx.container(container, |cx| {
+        vec![cx.scroll(scroll_props, |cx| {
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: latex,
@@ -1422,6 +1901,7 @@ fn render_math_block<H: UiHost>(
                     font: FontId::monospace(),
                     size: theme.metric_required("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
                     line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                     letter_spacing_em: None,
                 }),
@@ -1444,6 +1924,7 @@ fn render_math_block_mathjax_svg<H: UiHost>(
 
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
+    scroll_props.layout.size.width = Length::Fill;
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
@@ -1452,8 +1933,8 @@ fn render_math_block_mathjax_svg<H: UiHost>(
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
-    cx.scroll(scroll_props, |cx| {
-        vec![cx.container(container, |cx| match entry {
+    cx.container(container, |cx| {
+        vec![cx.scroll(scroll_props, |cx| match entry {
             MathJaxSvgEntry::Ready(ready) => {
                 let mut icon = SvgIconProps::new(SvgSource::Bytes(ready.svg_bytes));
                 icon.fit = SvgFit::Contain;
@@ -1462,22 +1943,36 @@ fn render_math_block_mathjax_svg<H: UiHost>(
                 icon.layout.aspect_ratio = ready.aspect_ratio;
                 vec![cx.svg_icon_props(icon)]
             }
-            MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
-                vec![cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: latex.clone(),
-                    style: Some(TextStyle {
-                        font: FontId::monospace(),
-                        size: theme.metric_required("metric.font.mono_size"),
-                        weight: FontWeight::NORMAL,
-                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(markdown_theme.math_block_fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
-            }
+            MathJaxSvgEntry::Loading => vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: latex.clone(),
+                style: Some(TextStyle {
+                    font: FontId::monospace(),
+                    size: theme.metric_required("metric.font.mono_size"),
+                    weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
+                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.math_block_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })],
+            MathJaxSvgEntry::Error(err) => vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from(format!("{latex} (mathjax error: {err})")),
+                style: Some(TextStyle {
+                    font: FontId::monospace(),
+                    size: theme.metric_required("metric.font.mono_size"),
+                    weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
+                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.math_block_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })],
         })]
     })
 }
@@ -1767,6 +2262,7 @@ fn render_task_list_marker<H: UiHost>(
             font: FontId::default(),
             size: theme.metric_required("metric.font.size"),
             weight: FontWeight::NORMAL,
+            slant: TextSlant::Normal,
             line_height: Some(theme.metric_required("metric.font.line_height")),
             letter_spacing_em: None,
         }),
@@ -2267,10 +2763,14 @@ fn render_inline_token<H: UiHost>(
 
     let weight = if style.strong {
         FontWeight::SEMIBOLD
-    } else if style.emphasis {
-        FontWeight::MEDIUM
     } else {
         base.weight
+    };
+
+    let slant = if style.emphasis {
+        TextSlant::Italic
+    } else {
+        TextSlant::Normal
     };
 
     let color = if style.link.is_some() {
@@ -2299,6 +2799,7 @@ fn render_inline_token<H: UiHost>(
                     font,
                     size,
                     weight,
+                    slant: TextSlant::Normal,
                     line_height,
                     letter_spacing_em: None,
                 }),
@@ -2350,6 +2851,7 @@ fn render_inline_token<H: UiHost>(
                     font,
                     size,
                     weight,
+                    slant,
                     line_height,
                     color,
                     style.strikethrough,
@@ -2364,6 +2866,7 @@ fn render_inline_token<H: UiHost>(
         font,
         size,
         weight,
+        slant,
         line_height,
         color,
         style.strikethrough,
@@ -2376,6 +2879,7 @@ fn render_inline_text_token<H: UiHost>(
     font: FontId,
     size: Px,
     weight: FontWeight,
+    slant: TextSlant,
     line_height: Option<Px>,
     color: fret_core::Color,
     strikethrough: bool,
@@ -2389,6 +2893,7 @@ fn render_inline_text_token<H: UiHost>(
                 font,
                 size,
                 weight,
+                slant,
                 line_height,
                 letter_spacing_em: None,
             }),
@@ -2414,6 +2919,7 @@ fn render_inline_text_token<H: UiHost>(
                 font,
                 size,
                 weight,
+                slant,
                 line_height,
                 letter_spacing_em: None,
             }),
@@ -2500,6 +3006,7 @@ fn render_image_placeholder<H: UiHost>(
                     font: FontId::default(),
                     size: theme.metric_required("metric.font.size"),
                     weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
                     line_height: Some(theme.metric_required("metric.font.line_height")),
                     letter_spacing_em: None,
                 }),
@@ -2517,6 +3024,7 @@ fn render_image_placeholder<H: UiHost>(
             font: FontId::default(),
             size: theme.metric_required("metric.font.size"),
             weight: FontWeight::NORMAL,
+            slant: TextSlant::Normal,
             line_height: Some(theme.metric_required("metric.font.line_height")),
             letter_spacing_em: None,
         }),
@@ -2532,11 +3040,30 @@ fn render_inline_math_default<H: UiHost>(
     markdown_theme: MarkdownTheme,
     info: InlineMathInfo,
 ) -> AnyElement {
-    #[cfg(feature = "mathjax-svg")]
-    {
-        return render_inline_math_mathjax_svg(cx, theme, markdown_theme, info);
-    }
+    let info = InlineMathInfo {
+        latex: Arc::<str>::from(info.latex.trim().to_string()),
+    };
 
+    render_inline_math_builtin(cx, theme, markdown_theme, info)
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_inline_math_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
+    render_inline_math_mathjax_svg(cx, theme, markdown_theme, info)
+}
+
+#[cfg(not(feature = "mathjax-svg"))]
+fn render_inline_math_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
     let mut props = ContainerProps::default();
     props.padding = Edges {
         top: markdown_theme.inline_math_padding_y,
@@ -2556,6 +3083,7 @@ fn render_inline_math_default<H: UiHost>(
                 font: FontId::monospace(),
                 size: theme.metric_required("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
+                slant: TextSlant::Normal,
                 line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
@@ -2582,9 +3110,15 @@ fn render_inline_math_mathjax_svg<H: UiHost>(
             ready.svg_bytes,
             ready.aspect_ratio,
         ),
-        MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
-            render_inline_math_source(cx, theme, markdown_theme, info)
-        }
+        MathJaxSvgEntry::Loading => render_inline_math_source(cx, theme, markdown_theme, info),
+        MathJaxSvgEntry::Error(err) => render_inline_math_source(
+            cx,
+            theme,
+            markdown_theme,
+            InlineMathInfo {
+                latex: Arc::<str>::from(format!("{} (mathjax error: {err})", info.latex)),
+            },
+        ),
     }
 }
 
@@ -2638,11 +3172,12 @@ fn render_inline_math_source<H: UiHost>(
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
             layout: Default::default(),
-            text: info.latex,
+            text: Arc::<str>::from(info.latex.trim().to_string()),
             style: Some(TextStyle {
                 font: FontId::monospace(),
                 size: theme.metric_required("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
+                slant: TextSlant::Normal,
                 line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
@@ -2659,6 +3194,11 @@ fn mathjax_svg_entry<H: UiHost>(
     mode: MathJaxMode,
     latex: &str,
 ) -> MathJaxSvgEntry {
+    let latex = latex.trim();
+    if latex.is_empty() {
+        return MathJaxSvgEntry::Error(Arc::<str>::from("empty latex"));
+    }
+
     let key = MathJaxKey {
         mode,
         latex: latex.to_string(),
@@ -2691,33 +3231,17 @@ fn mathjax_svg_entry<H: UiHost>(
         });
 
     if let Some((map, key)) = spawn {
-        std::thread::spawn(move || {
-            let latex = key.latex.clone();
-            let result = match key.mode {
-                MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
-                MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
-            };
-
+        let work = MathJaxWorkItem {
+            map: map.clone(),
+            key: key.clone(),
+        };
+        if let Err(_err) = mathjax_worker().tx.send(work) {
             let mut map_guard = map.lock().expect("mathjax svg cache lock");
-            match result {
-                Ok(svg) => {
-                    let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
-                    map_guard.insert(
-                        key,
-                        MathJaxSvgEntry::Ready(MathJaxSvgReady {
-                            svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
-                            aspect_ratio,
-                        }),
-                    );
-                }
-                Err(err) => {
-                    map_guard.insert(
-                        key,
-                        MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
-                    );
-                }
-            }
-        });
+            map_guard.insert(
+                key,
+                MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg worker unavailable")),
+            );
+        }
     }
 
     entry
@@ -2948,6 +3472,37 @@ mod tests {
     }
 
     #[test]
+    fn markdown_stream_state_keeps_blocks_with_footnotes() {
+        let source = r#"# A
+
+Footnotes are supported.[^note]
+
+[^note]: This is a footnote definition.
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+"#;
+
+        let mut st = MarkdownStreamState::new();
+        st.append(source);
+        st.finalize();
+
+        let committed = st.state().doc().committed();
+        assert!(committed.len() > 1);
+        assert!(
+            committed
+                .iter()
+                .any(|b| b.kind == mdstream::BlockKind::FootnoteDefinition)
+        );
+        assert!(
+            committed
+                .iter()
+                .any(|b| b.kind == mdstream::BlockKind::MathBlock)
+        );
+    }
+
+    #[test]
     fn parses_list_items() {
         let info = parse_list_info("- a\n- b\n  c\n");
         assert!(!info.ordered);
@@ -3087,6 +3642,39 @@ mod tests {
         use pulldown_cmark::Event;
         let events = parse_events("$$x^2$$\n");
         assert!(events.iter().any(|e| matches!(e, Event::DisplayMath(_))));
+    }
+
+    #[test]
+    fn pulldown_parses_multiline_display_math_when_enabled() {
+        use pulldown_cmark::Event;
+        let events = parse_events("$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$\n");
+        assert!(events.iter().any(|e| matches!(e, Event::DisplayMath(_))));
+    }
+
+    #[test]
+    fn mdstream_math_block_body_strips_common_delimiters() {
+        let mut stream = mdstream::MdStream::default();
+        let update = stream.append("$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$\n");
+
+        let mut state = MarkdownPulldownState::new();
+        state.apply_update(update);
+
+        let blocks = state.doc().committed();
+        let math = blocks
+            .iter()
+            .find(|b| matches!(b.kind, mdstream::BlockKind::MathBlock))
+            .expect("math block exists");
+
+        let body = parse_math_block_body(math.display_or_raw());
+        assert!(body.contains("\\int_0^1"));
+    }
+
+    #[test]
+    fn detects_display_math_only_events() {
+        let events = parse_events("$$x^2$$\n");
+        let latex = display_math_only_events(&events);
+        assert!(latex.is_some());
+        assert_eq!(latex.unwrap().as_ref(), "x^2");
     }
 
     #[test]

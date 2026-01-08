@@ -318,13 +318,19 @@ impl ElementHostWidget {
         }
 
         let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+        // Scroll containers should not under-report their scrollable extent due to fractional
+        // layout rounding. Match DOM behavior by rounding the scrollable axis up to the next
+        // whole pixel (tolerating tiny floating point noise).
+        const ROUND_EPSILON: f32 = 0.001;
         let content_w = if props.axis.scroll_x() {
-            Px(max_child.width.0.max(0.0))
+            Px((max_child.width.0.max(0.0) - ROUND_EPSILON).ceil().max(0.0))
         } else {
             desired.width
         };
         let content_h = if props.axis.scroll_y() {
-            Px(max_child.height.0.max(0.0))
+            Px((max_child.height.0.max(0.0) - ROUND_EPSILON)
+                .ceil()
+                .max(0.0))
         } else {
             desired.height
         };

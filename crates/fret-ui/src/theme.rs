@@ -304,7 +304,9 @@ impl ThemeSnapshot {
             "color.viewport.drag_line.orbit" => self.colors.viewport_drag_line_orbit,
             "color.viewport.gizmo.x" => self.colors.viewport_gizmo_x,
             "color.viewport.gizmo.y" => self.colors.viewport_gizmo_y,
-            "color.viewport.gizmo.handle.background" => self.colors.viewport_gizmo_handle_background,
+            "color.viewport.gizmo.handle.background" => {
+                self.colors.viewport_gizmo_handle_background
+            }
             "color.viewport.gizmo.handle.border" => self.colors.viewport_gizmo_handle_border,
             "color.viewport.rotate_gizmo" => self.colors.viewport_rotate_gizmo,
 
