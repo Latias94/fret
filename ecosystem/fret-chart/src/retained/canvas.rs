@@ -1843,7 +1843,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         if let Some(axis_pointer) = axis_pointer.as_ref() {
             let pos = axis_pointer.crosshair_px;
-            let hit = axis_pointer.hit;
             let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
             let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
 
@@ -1882,18 +1881,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 corner_radii: Corners::all(Px(0.0)),
             });
 
-            let r = self.style.hover_point_size.0.max(1.0);
-            cx.scene.push(SceneOp::Quad {
-                order: point_order,
-                rect: Rect::new(
-                    Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
-                    Size::new(Px(2.0 * r), Px(2.0 * r)),
-                ),
-                background: self.style.hover_point_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(0.0)),
-            });
+            if let Some(hit) = axis_pointer.hit {
+                let r = self.style.hover_point_size.0.max(1.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: point_order,
+                    rect: Rect::new(
+                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                        Size::new(Px(2.0 * r), Px(2.0 * r)),
+                    ),
+                    background: self.style.hover_point_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
         }
 
         self.draw_legend(cx);
@@ -1916,96 +1917,96 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         cx.scene.push(SceneOp::PopClip);
 
         if let Some(axis_pointer) = axis_pointer {
-            let hit = axis_pointer.hit;
+            let tooltip_lines = &axis_pointer.tooltip.lines;
+            if tooltip_lines.is_empty() {
+                self.draw_axes(cx);
+                return;
+            }
 
-            if hit.x_value.is_finite() && hit.y_value.is_finite() {
-                let tooltip_lines = &axis_pointer.tooltip.lines;
-                if tooltip_lines.is_empty() {
-                    self.draw_axes(cx);
-                    return;
-                }
+            let text_style = TextStyle {
+                size: Px(12.0),
+                weight: FontWeight::NORMAL,
+                ..TextStyle::default()
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
+            let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
+            for line in tooltip_lines {
+                let text = format!("{}: {}", line.label, line.value);
+                let (blob, metrics) = cx.services.text().prepare(&text, &text_style, constraints);
+                line_blobs.push(blob);
+                line_metrics.push(metrics);
+            }
 
-                let text_style = TextStyle {
-                    size: Px(12.0),
-                    weight: FontWeight::NORMAL,
-                    ..TextStyle::default()
-                };
-                let constraints = TextConstraints {
-                    max_width: None,
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    scale_factor: cx.scale_factor,
-                };
-                let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
-                let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
-                for line in tooltip_lines {
-                    let text = format!("{}: {}", line.label, line.value);
-                    let (blob, metrics) =
-                        cx.services.text().prepare(&text, &text_style, constraints);
-                    line_blobs.push(blob);
-                    line_metrics.push(metrics);
-                }
+            let pad = self.style.tooltip_padding;
+            let mut w = 1.0f32;
+            let mut h = 0.0f32;
+            for metrics in &line_metrics {
+                w = w.max(metrics.size.width.0);
+                h += metrics.size.height.0.max(1.0);
+            }
+            w = (w + pad.left.0 + pad.right.0).max(1.0);
+            h = (h + pad.top.0 + pad.bottom.0).max(1.0);
 
-                let pad = self.style.tooltip_padding;
-                let mut w = 1.0f32;
-                let mut h = 0.0f32;
-                for metrics in &line_metrics {
-                    w = w.max(metrics.size.width.0);
-                    h += metrics.size.height.0.max(1.0);
-                }
-                w = (w + pad.left.0 + pad.right.0).max(1.0);
-                h = (h + pad.top.0 + pad.bottom.0).max(1.0);
+            let bounds = self.last_layout.bounds;
+            let x0 = bounds.origin.x.0;
+            let y0 = bounds.origin.y.0;
+            let x1 = x0 + bounds.size.width.0;
+            let y1 = y0 + bounds.size.height.0;
 
-                let bounds = self.last_layout.bounds;
-                let x0 = bounds.origin.x.0;
-                let y0 = bounds.origin.y.0;
-                let x1 = x0 + bounds.size.width.0;
-                let y1 = y0 + bounds.size.height.0;
+            let anchor = axis_pointer
+                .hit
+                .map(|h| h.point_px)
+                .unwrap_or(axis_pointer.crosshair_px);
 
-                let offset = 10.0f32;
-                let mut tip_x = hit.point_px.x.0 + offset;
-                let mut tip_y = hit.point_px.y.0 - h - offset;
+            let offset = 10.0f32;
+            let mut tip_x = anchor.x.0 + offset;
+            let mut tip_y = anchor.y.0 - h - offset;
 
-                if tip_x + w > x1 {
-                    tip_x = hit.point_px.x.0 - w - offset;
-                }
-                if tip_y < y0 {
-                    tip_y = hit.point_px.y.0 + offset;
-                }
+            if tip_x + w > x1 {
+                tip_x = anchor.x.0 - w - offset;
+            }
+            if tip_y < y0 {
+                tip_y = anchor.y.0 + offset;
+            }
 
-                if w < bounds.size.width.0 {
-                    tip_x = tip_x.clamp(x0, x1 - w);
-                } else {
-                    tip_x = x0;
-                }
-                if h < bounds.size.height.0 {
-                    tip_y = tip_y.clamp(y0, y1 - h);
-                } else {
-                    tip_y = y0;
-                }
+            if w < bounds.size.width.0 {
+                tip_x = tip_x.clamp(x0, x1 - w);
+            } else {
+                tip_x = x0;
+            }
+            if h < bounds.size.height.0 {
+                tip_y = tip_y.clamp(y0, y1 - h);
+            } else {
+                tip_y = y0;
+            }
 
-                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
-                cx.scene.push(SceneOp::Quad {
-                    order: tooltip_order,
-                    rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                    background: self.style.tooltip_background,
-                    border: Edges::all(self.style.tooltip_border_width),
-                    border_color: self.style.tooltip_border_color,
-                    corner_radii: Corners::all(self.style.tooltip_corner_radius),
+            let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
+            cx.scene.push(SceneOp::Quad {
+                order: tooltip_order,
+                rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
+                background: self.style.tooltip_background,
+                border: Edges::all(self.style.tooltip_border_width),
+                border_color: self.style.tooltip_border_color,
+                corner_radii: Corners::all(self.style.tooltip_corner_radius),
+            });
+
+            let mut y = tip_y + pad.top.0;
+            for (i, (blob, metrics)) in line_blobs.into_iter().zip(line_metrics).enumerate() {
+                let order = DrawOrder(tooltip_order.0.saturating_add(1 + i as u32));
+                cx.scene.push(SceneOp::Text {
+                    order,
+                    origin: Point::new(Px(tip_x + pad.left.0), Px(y)),
+                    text: blob,
+                    color: self.style.tooltip_text_color,
                 });
-
-                let mut y = tip_y + pad.top.0;
-                for (i, (blob, metrics)) in line_blobs.into_iter().zip(line_metrics).enumerate() {
-                    let order = DrawOrder(tooltip_order.0.saturating_add(1 + i as u32));
-                    cx.scene.push(SceneOp::Text {
-                        order,
-                        origin: Point::new(Px(tip_x + pad.left.0), Px(y)),
-                        text: blob,
-                        color: self.style.tooltip_text_color,
-                    });
-                    y += metrics.size.height.0.max(1.0);
-                    self.tooltip_text.push(blob);
-                }
+                y += metrics.size.height.0.max(1.0);
+                self.tooltip_text.push(blob);
             }
         }
 

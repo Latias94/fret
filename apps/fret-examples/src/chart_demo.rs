@@ -80,7 +80,13 @@ impl ChartDemoDriver {
                 },
             ],
             data_zoom_x: vec![],
-            axis_pointer: None,
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: delinea::AxisPointerTrigger::Axis,
+                snap: false,
+                trigger_distance_px: 12.0,
+                throttle_px: 0.75,
+            }),
             series: vec![SeriesSpec {
                 id: series_id,
                 name: Some("Band".to_string()),

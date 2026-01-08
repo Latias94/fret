@@ -9,6 +9,7 @@ use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
+use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use crate::tooltip::{TooltipLine, TooltipOutput};
@@ -63,7 +64,7 @@ pub struct ChartOutput {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerOutput {
     pub crosshair_px: Point,
-    pub hit: HoverHit,
+    pub hit: Option<HoverHit>,
     pub tooltip: TooltipOutput,
 }
 
@@ -112,6 +113,7 @@ struct AxisPointerCache {
     last_hover_px: Option<Point>,
     last_marks_rev: Revision,
     hit: Option<HoverHit>,
+    output: Option<AxisPointerOutput>,
 }
 
 impl ChartEngine {
@@ -377,6 +379,7 @@ impl ChartEngine {
             self.axis_pointer_cache.last_marks_rev = marks_rev;
             self.axis_pointer_cache.last_hover_px = None;
             self.axis_pointer_cache.hit = None;
+            self.axis_pointer_cache.output = None;
         }
 
         let axis_pointer = self.model.axis_pointer.filter(|p| p.enabled);
@@ -391,104 +394,60 @@ impl ChartEngine {
             });
             if should_recompute {
                 self.axis_pointer_cache.last_hover_px = Some(hover_px);
-                self.axis_pointer_cache.hit = hit_test::hover_hit_test(
-                    &self.model,
-                    &self.datasets,
-                    &self.output.marks,
-                    hover_px,
-                );
+                self.axis_pointer_cache.hit = None;
+                self.axis_pointer_cache.output = None;
+
+                if let Some(spec) = axis_pointer {
+                    let viewport = self.output.viewport.unwrap_or_default();
+                    if rect_contains_point(viewport, hover_px) {
+                        match spec.trigger {
+                            AxisPointerTrigger::Item => {
+                                let hit = hit_test::hover_hit_test(
+                                    &self.model,
+                                    &self.datasets,
+                                    &self.output.marks,
+                                    hover_px,
+                                );
+                                self.axis_pointer_cache.hit = hit;
+                                self.axis_pointer_cache.output = compute_item_axis_pointer_output(
+                                    &self.model,
+                                    &self.output.axis_windows,
+                                    hover_px,
+                                    hit,
+                                    spec,
+                                );
+                            }
+                            AxisPointerTrigger::Axis => {
+                                let hit = hit_test::hover_hit_test(
+                                    &self.model,
+                                    &self.datasets,
+                                    &self.output.marks,
+                                    hover_px,
+                                );
+                                self.axis_pointer_cache.hit = hit;
+                                self.axis_pointer_cache.output = compute_axis_axis_pointer_output(
+                                    &self.model,
+                                    &self.datasets,
+                                    &self.view,
+                                    &self.output.axis_windows,
+                                    viewport,
+                                    hover_px,
+                                    hit,
+                                    spec,
+                                );
+                            }
+                        }
+                    }
+                }
             }
         } else {
             self.axis_pointer_cache.last_hover_px = None;
             self.axis_pointer_cache.hit = None;
+            self.axis_pointer_cache.output = None;
         }
 
         self.output.hover = self.axis_pointer_cache.hit;
-
-        let next_axis_pointer = if let (Some(p), Some(hover_px), Some(hit)) =
-            (axis_pointer, hover_px, self.output.hover)
-        {
-            let viewport = self.output.viewport.unwrap_or_default();
-            if rect_contains_point(viewport, hover_px) {
-                let trigger2 = p.trigger_distance_px.max(0.0) * p.trigger_distance_px.max(0.0);
-                if hit.dist2_px <= trigger2 {
-                    let crosshair_px = if p.snap { hit.point_px } else { hover_px };
-                    Some((crosshair_px, hit))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some((crosshair_px, hit)) = next_axis_pointer {
-            let series = self.model.series.get(&hit.series);
-            let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
-
-            let series_value = series
-                .and_then(|s| s.name.as_deref())
-                .map(|n| n.to_string())
-                .unwrap_or_else(|| hit.series.0.to_string());
-
-            let x_axis_label = self
-                .model
-                .axes
-                .get(&x_axis)
-                .and_then(|a| a.name.as_deref())
-                .map(|n| format!("x ({n})"))
-                .unwrap_or_else(|| "x".to_string());
-            let y_axis_label = self
-                .model
-                .axes
-                .get(&y_axis)
-                .and_then(|a| a.name.as_deref())
-                .map(|n| format!("y ({n})"))
-                .unwrap_or_else(|| "y".to_string());
-
-            let x_window = self
-                .output
-                .axis_windows
-                .get(&x_axis)
-                .copied()
-                .unwrap_or_default();
-            let y_window = self
-                .output
-                .axis_windows
-                .get(&y_axis)
-                .copied()
-                .unwrap_or_default();
-            let x_value = crate::format::format_tick_value(x_window, hit.x_value);
-            let y_value = crate::format::format_tick_value(y_window, hit.y_value);
-
-            let mut tooltip = TooltipOutput::default();
-            tooltip.lines.reserve(3);
-            tooltip.lines.push(TooltipLine {
-                label: "series".to_string(),
-                value: series_value,
-            });
-            tooltip.lines.push(TooltipLine {
-                label: x_axis_label,
-                value: x_value,
-            });
-            tooltip.lines.push(TooltipLine {
-                label: y_axis_label,
-                value: y_value,
-            });
-
-            let next = AxisPointerOutput {
-                crosshair_px,
-                hit,
-                tooltip,
-            };
-            if self.output.axis_pointer.as_ref() != Some(&next) {
-                self.output.axis_pointer = Some(next);
-            }
-        } else {
-            self.output.axis_pointer = None;
-        }
+        self.output.axis_pointer = self.axis_pointer_cache.output.clone();
 
         self.output.revision.bump();
         Ok(StepResult { unfinished })
@@ -512,4 +471,284 @@ fn should_recompute_hover(prev: Option<Point>, next: Point, throttle_px: f32) ->
     let dist2 = dx * dx + dy * dy;
     let t = throttle_px.max(0.0);
     dist2 >= t * t
+}
+
+fn compute_item_axis_pointer_output(
+    model: &ChartModel,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    hover_px: Point,
+    hit: Option<HoverHit>,
+    spec: crate::engine::model::AxisPointerModel,
+) -> Option<AxisPointerOutput> {
+    let hit = hit?;
+    let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
+    if hit.dist2_px > trigger2 {
+        return None;
+    }
+
+    let crosshair_px = if spec.snap { hit.point_px } else { hover_px };
+
+    let series = model.series.get(&hit.series);
+    let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
+
+    let series_value = series
+        .and_then(|s| s.name.as_deref())
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| hit.series.0.to_string());
+
+    let x_axis_label = model
+        .axes
+        .get(&x_axis)
+        .and_then(|a| a.name.as_deref())
+        .map(|n| format!("x ({n})"))
+        .unwrap_or_else(|| "x".to_string());
+    let y_axis_label = model
+        .axes
+        .get(&y_axis)
+        .and_then(|a| a.name.as_deref())
+        .map(|n| format!("y ({n})"))
+        .unwrap_or_else(|| "y".to_string());
+
+    let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
+    let y_window = axis_windows.get(&y_axis).copied().unwrap_or_default();
+    let x_value = crate::format::format_tick_value(x_window, hit.x_value);
+    let y_value = crate::format::format_tick_value(y_window, hit.y_value);
+
+    let mut tooltip = TooltipOutput::default();
+    tooltip.lines.reserve(3);
+    tooltip.lines.push(TooltipLine {
+        label: "series".to_string(),
+        value: series_value,
+    });
+    tooltip.lines.push(TooltipLine {
+        label: x_axis_label,
+        value: x_value,
+    });
+    tooltip.lines.push(TooltipLine {
+        label: y_axis_label,
+        value: y_value,
+    });
+
+    Some(AxisPointerOutput {
+        crosshair_px,
+        hit: Some(hit),
+        tooltip,
+    })
+}
+
+fn compute_axis_axis_pointer_output(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    hover_px: Point,
+    hit: Option<HoverHit>,
+    spec: crate::engine::model::AxisPointerModel,
+) -> Option<AxisPointerOutput> {
+    let primary = model.series_in_order().find(|s| s.visible)?;
+    let x_axis = primary.x_axis;
+
+    let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
+    let x_value = data_at_x_px(x_window, hover_px.x.0, viewport);
+    if !x_value.is_finite() {
+        return None;
+    }
+
+    let crosshair_px = hover_px;
+
+    let mut tooltip = TooltipOutput::default();
+
+    let x_label = model
+        .axes
+        .get(&x_axis)
+        .and_then(|a| a.name.as_deref())
+        .map(|n| format!("x ({n})"))
+        .unwrap_or_else(|| "x".to_string());
+    tooltip.lines.push(TooltipLine {
+        label: x_label,
+        value: crate::format::format_tick_value(x_window, x_value),
+    });
+
+    for series in model.series_in_order() {
+        if !series.visible || series.x_axis != x_axis {
+            continue;
+        }
+
+        let Some(table) = datasets
+            .datasets
+            .iter()
+            .find_map(|(id, t)| (*id == series.dataset).then_some(t))
+        else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            continue;
+        };
+        let Some(y0_col) = dataset.fields.get(&series.encode.y).copied() else {
+            continue;
+        };
+
+        let Some(x) = table.column_f64(x_col) else {
+            continue;
+        };
+        let Some(y0) = table.column_f64(y0_col) else {
+            continue;
+        };
+
+        let y1 = if series.kind == crate::spec::SeriesKind::Band {
+            if let Some(y2_field) = series.encode.y2
+                && let Some(y2_col) = dataset.fields.get(&y2_field).copied()
+                && let Some(y1) = table.column_f64(y2_col)
+            {
+                Some(y1)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let selection = view
+            .series_view(series.id)
+            .map(|v| v.selection)
+            .unwrap_or_default();
+        let row_range = selection.as_range(table.row_count);
+
+        let Some(sample) = sample_series_at_x(x_value, x, y0, y1, row_range) else {
+            continue;
+        };
+
+        let label = series
+            .name
+            .as_deref()
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| format!("Series {}", series.id.0));
+
+        let y_window = axis_windows
+            .get(&series.y_axis)
+            .copied()
+            .unwrap_or_default();
+        let value = if let Some(y1) = sample.y1 {
+            let a = crate::format::format_tick_value(y_window, sample.y0);
+            let b = crate::format::format_tick_value(y_window, y1);
+            format!("{a} .. {b}")
+        } else {
+            crate::format::format_tick_value(y_window, sample.y0)
+        };
+
+        tooltip.lines.push(TooltipLine { label, value });
+    }
+
+    let mut hit_for_marker = None;
+    if let Some(hit) = hit {
+        let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
+        if hit.dist2_px <= trigger2 {
+            hit_for_marker = Some(hit);
+        }
+    }
+
+    Some(AxisPointerOutput {
+        crosshair_px,
+        hit: hit_for_marker,
+        tooltip,
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SampledSeriesValue {
+    y0: f64,
+    y1: Option<f64>,
+}
+
+fn sample_series_at_x(
+    x_value: f64,
+    x: &[f64],
+    y0: &[f64],
+    y1: Option<&[f64]>,
+    row_range: core::ops::Range<usize>,
+) -> Option<SampledSeriesValue> {
+    let len = x.len().min(y0.len());
+    if len == 0 {
+        return None;
+    }
+    let start = row_range.start.min(len);
+    let end = row_range.end.min(len);
+    if end <= start {
+        return None;
+    }
+
+    let xs = &x[start..end];
+    if xs.len() == 1 {
+        return Some(SampledSeriesValue {
+            y0: y0[start],
+            y1: y1.and_then(|s| s.get(start).copied()),
+        });
+    }
+
+    let idx = lower_bound(xs, x_value);
+    let i1 = (start + idx).min(end - 1);
+    let i0 = i1.saturating_sub(1).max(start);
+
+    let x0 = x[i0];
+    let x1v = x[i1];
+    if !x0.is_finite() || !x1v.is_finite() || x1v <= x0 {
+        return None;
+    }
+
+    let t = ((x_value - x0) / (x1v - x0)).clamp(0.0, 1.0);
+    let y0a = y0.get(i0).copied()?;
+    let y0b = y0.get(i1).copied()?;
+    if !y0a.is_finite() || !y0b.is_finite() {
+        return None;
+    }
+    let y = y0a + t * (y0b - y0a);
+
+    let y1_out = if let Some(y1) = y1 {
+        let y1a = y1.get(i0).copied()?;
+        let y1b = y1.get(i1).copied()?;
+        if !y1a.is_finite() || !y1b.is_finite() {
+            return None;
+        }
+        Some(y1a + t * (y1b - y1a))
+    } else {
+        None
+    };
+
+    Some(SampledSeriesValue { y0: y, y1: y1_out })
+}
+
+fn lower_bound(xs: &[f64], value: f64) -> usize {
+    let mut lo = 0usize;
+    let mut hi = xs.len();
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        if xs[mid] < value {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    lo
+}
+
+fn data_at_x_px(window: window::DataWindow, x_px: f32, viewport: Rect) -> f64 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 {
+        return window.min;
+    }
+
+    let x0 = viewport.origin.x.0;
+    let w = viewport.size.width.0;
+    if !w.is_finite() || w <= 0.0 {
+        return window.min;
+    }
+
+    let t = ((x_px - x0) / w).clamp(0.0, 1.0) as f64;
+    window.min + t * span
 }

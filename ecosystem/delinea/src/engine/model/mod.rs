@@ -8,7 +8,9 @@ use fret_core::Rect;
 use thiserror::Error;
 
 use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId};
-use crate::spec::{AreaBaseline, AxisKind, AxisRange, FilterMode, SeriesEncode, SeriesKind};
+use crate::spec::{
+    AreaBaseline, AxisKind, AxisPointerTrigger, AxisRange, FilterMode, SeriesEncode, SeriesKind,
+};
 
 pub use patch::*;
 
@@ -182,6 +184,7 @@ impl ChartModel {
             p.throttle_px = sanitize_px(p.throttle_px, 0.75);
             AxisPointerModel {
                 enabled: p.enabled,
+                trigger: p.trigger,
                 snap: p.snap,
                 trigger_distance_px: p.trigger_distance_px,
                 throttle_px: p.throttle_px,
@@ -299,6 +302,7 @@ pub struct DataZoomXModel {
 #[derive(Debug, Clone, Copy)]
 pub struct AxisPointerModel {
     pub enabled: bool,
+    pub trigger: AxisPointerTrigger,
     pub snap: bool,
     pub trigger_distance_px: f32,
     pub throttle_px: f32,

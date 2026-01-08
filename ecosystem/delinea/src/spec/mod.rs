@@ -152,6 +152,7 @@ impl Default for DataZoomXSpec {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerSpec {
     pub enabled: bool,
+    pub trigger: AxisPointerTrigger,
     /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
     pub snap: bool,
     /// Maximum distance (in pixels) to activate the pointer/tooltip.
@@ -160,10 +161,21 @@ pub struct AxisPointerSpec {
     pub throttle_px: f32,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AxisPointerTrigger {
+    /// Similar to ECharts tooltip trigger="item": show details for a single series hit.
+    #[default]
+    Item,
+    /// Similar to ECharts tooltip trigger="axis": show values for all visible series at the same X.
+    Axis,
+}
+
 impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
+            trigger: AxisPointerTrigger::Item,
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,
