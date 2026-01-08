@@ -2,6 +2,15 @@
 
 Status: Accepted (incremental rollout; steps 1–3 implemented)
 
+Update (2026-01-08):
+
+- ADR 0115 introduces constraint-correct `AvailableSpace` and a non-reentrant intrinsic measurement path, so Taffy
+  measure callbacks must not re-enter subtree layout.
+- ADR 0116 proposes evolving from “container-owned Taffy islands” to a window-scoped layout engine with per-viewport
+  roots (for multi-viewport docking).
+- This ADR remains the accepted performance hardening guidance for the **container-owned** integration shape, and its
+  incremental-update and caching principles still apply to the window-scoped engine end-state.
+
 ## Context
 
 Fret's declarative layout semantics are defined in:
@@ -32,7 +41,15 @@ We want the "clean state" end goal:
 
 ## Decision
 
-We adopt **Scheme C** as the long-term implementation strategy for declarative Flex/Grid layout:
+We adopt **Scheme C** as the long-term implementation strategy for declarative Flex/Grid layout in the container-owned
+integration shape, while allowing a later evolution toward a window-scoped engine (ADR 0116):
+
+Note: ADR 0115 refines the measurement surface by introducing an explicit `AvailableSpace`
+(Definite/MinContent/MaxContent) model and a non-reentrant intrinsic measurement path.
+ADR 0116 proposes a later evolution that generalizes these persistence/incremental-update principles
+into a window-scoped layout engine + viewport roots model for multi-viewport docking.
+ADR 0076 remains the accepted near-term performance hardening strategy and the current implementation
+shape for `crates/fret-ui`.
 
 ### C1) Persistent container-owned Taffy trees (stable identity)
 

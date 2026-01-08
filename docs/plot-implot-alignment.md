@@ -32,7 +32,10 @@ This contract is documented in ADR 0099.
 - [x] Query selection (Alt + drag) stored in `PlotState.query`
 - [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
-- [x] Mouse position readout (overlay or tooltip) when cursor is inside plot
+- [x] Mouse position readout (overlay or tooltip) when cursor is inside plot (overlay uses a tooltip-styled background by default)
+- [x] Hover affordance: hovered series is emphasized (others dim), and the nearest point shows a series-colored marker
+- [x] Tooltip priority: pinned series suppresses hover tooltip (so cursor-readout tooltip stays stable)
+- [x] Nearest-at-cursor affordance: draw a series-colored marker at the selected readout point even when not hovering
 - [x] Series value readout (cursor X -> per-series Y; sorted-by-x interpolation, else view-sampled/budgeted fallback)
 - [x] Tooltip/readout uses axis formatters (consistent units/time)
 - [x] Legend interaction: hide/solo/pin (basic)
@@ -41,6 +44,8 @@ This contract is documented in ADR 0099.
 - [x] Linked cursor readout supports pinned/hover filtering
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [x] Line hover uses nearest segment distance (not just sampled points)
+- [x] Hover hit threshold scales with stroke width (thick strokes are easier to pick)
+- [x] Plot-space images (`PlotImage`) rendered in data coordinates (underlay/overlay relative to the grid)
 - [x] Infinite reference lines (InfLines overlays, caller-owned)
 - [~] Keyboard shortcuts matrix (documented; partially aligned with ImPlot defaults)
 
@@ -94,6 +99,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 - [x] Shaded band (fill between upper/lower series)
 - [x] Stairs / Step
 - [x] Heatmap (quad-based, portable)
+- [x] 2D histogram (binning into a grid + colormap)
 - [x] Error bars
 - [x] Candlesticks / OHLC
 
@@ -114,6 +120,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 
 - [x] Theme-derived defaults
 - [x] Token-driven plot color resolution (`docs/plot-theme-tokens.md`)
+- [x] Heatmap colormap selection (`ColorMapId`) + in-plot colorbar
 - [~] Per-series style overrides beyond color (stroke width; scatter marker radius/shape; error bars marker shape)
 - [ ] Dashes / joins / caps (likely requires renderer/path contract follow-up)
 

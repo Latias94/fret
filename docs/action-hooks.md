@@ -119,7 +119,7 @@ callback is intentionally responsible for keeping the model alive.
 Prefer capturing `WeakModel<T>` and upgrading opportunistically, e.g. via:
 
 - `fret_ui::action::UiActionHostExt::update_weak_model(...)`
-- `ActionHooksExt::*_weak(...)` helpers in `crates/fret-components-ui`
+- `ActionHooksExt::*_weak(...)` helpers in `ecosystem/fret-ui-kit` (`fret_ui_kit::declarative::action_hooks`)
 
 ## Transitional APIs
 

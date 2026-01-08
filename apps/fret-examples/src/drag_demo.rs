@@ -2,8 +2,6 @@
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
@@ -256,7 +254,8 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo drag_demo (DragLineX/DragLineY/DragPoint/DragRect)"
+        main_window_title:
+            "fret-demo drag_demo (DragLineX/DragLineY/DragPoint/DragRect; Shift constrain, Alt snap)"
             .to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
@@ -282,9 +281,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_driver();
 
-    run_app(config, app, driver)
-        .context("run drag_demo app")
-        .map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, driver).context("run drag_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

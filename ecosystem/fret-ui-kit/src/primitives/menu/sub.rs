@@ -29,6 +29,9 @@ pub struct MenuSubmenuGeometry {
     pub floating: Rect,
 }
 
+/// Radix Menu clears `pointerGraceIntentRef` after 300ms.
+pub const DEFAULT_POINTER_GRACE_TIMEOUT: Duration = Duration::from_millis(300);
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MenuSubmenuConfig {
     pub safe_hover_buffer: Px,
@@ -38,6 +41,8 @@ pub struct MenuSubmenuConfig {
     pub open_delay: Duration,
     pub close_delay: Duration,
     pub focus_delay: Duration,
+    /// How long a submenu "pointer grace" corridor stays armed after the pointer exits the trigger.
+    pub pointer_grace_timeout: Duration,
 }
 
 impl MenuSubmenuConfig {
@@ -52,7 +57,13 @@ impl MenuSubmenuConfig {
             open_delay,
             close_delay,
             focus_delay,
+            pointer_grace_timeout: DEFAULT_POINTER_GRACE_TIMEOUT,
         }
+    }
+
+    pub fn pointer_grace_timeout(mut self, timeout: Duration) -> Self {
+        self.pointer_grace_timeout = timeout;
+        self
     }
 }
 
@@ -63,6 +74,7 @@ impl Default for MenuSubmenuConfig {
             open_delay: Duration::from_millis(100),
             close_delay: Duration::from_millis(120),
             focus_delay: Duration::from_millis(0),
+            pointer_grace_timeout: DEFAULT_POINTER_GRACE_TIMEOUT,
         }
     }
 }
@@ -781,7 +793,7 @@ pub fn handle_dismissible_pointer_move(
                     host.push_effect(Effect::SetTimer {
                         window: Some(acx.window),
                         token,
-                        after: Duration::from_millis(300),
+                        after: cfg.pointer_grace_timeout,
                         repeat: None,
                     });
                     let _ = host
@@ -1216,4 +1228,28 @@ pub fn focus_first_available_on_open<H: UiHost>(
         return;
     }
     let _ = set_focus_target_if_none(cx, &models.focus_target, item_id);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_pointer_grace_timeout_matches_radix() {
+        assert_eq!(
+            MenuSubmenuConfig::default().pointer_grace_timeout,
+            DEFAULT_POINTER_GRACE_TIMEOUT
+        );
+    }
+
+    #[test]
+    fn new_uses_default_pointer_grace_timeout() {
+        let cfg = MenuSubmenuConfig::new(
+            Px(1.0),
+            Duration::from_millis(1),
+            Duration::from_millis(2),
+            Duration::from_millis(3),
+        );
+        assert_eq!(cfg.pointer_grace_timeout, DEFAULT_POINTER_GRACE_TIMEOUT);
+    }
 }

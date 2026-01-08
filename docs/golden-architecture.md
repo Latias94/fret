@@ -324,7 +324,7 @@ Pinned references are documented in `docs/repo-ref.md`. The typical mapping is:
 - GPUI/Zed substrate patterns: `repo-ref/zed`, `repo-ref/gpui-component`
 - shadcn/Radix outcomes: `repo-ref/ui`, Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`)
 - placement vocabulary: `repo-ref/floating-ui`
-- virtualization vocabulary: `repo-ref/virtual` (TanStack) + `repo-ref/virtualizer` (Rust engine)
+- virtualization vocabulary: `repo-ref/virtualizer` (Rust engine; primary); see `docs/repo-ref.md`
 - docking UX vocabulary: `repo-ref/imgui`, `repo-ref/dear-imgui-rs`
 
 ---

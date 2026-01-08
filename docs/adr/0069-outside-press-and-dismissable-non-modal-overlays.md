@@ -39,6 +39,15 @@ We classify overlays into two runtime categories:
    - do not block underlay input/semantics,
    - can dismiss on outside press via a runtime observer pass.
 
+Additionally, some **non-modal** overlays (notably Radix-style menus) need an extra outcome:
+
+- **Disable outside pointer events while open** (Radix `disableOutsidePointerEvents`):
+  - underlay widgets must not receive *any* pointer interaction while the overlay is open, not just
+    the initial pointer-down.
+  - this is **not** a full modal barrier (no focus trap requirement; no a11y "hide others" in this
+    ADR), but it does require a runtime input-scoping mechanism beyond the pointer-down observer
+    pass.
+
 ### Outside press observer pass
 
 The runtime provides opt-in per-layer flags:
@@ -59,8 +68,8 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
 - When `consume_pointer_down_outside_events = true` and the observer pass dispatches an outside
   press event for that layer, the runtime suppresses the normal hit-tested **pointer-down**
   dispatch for the same input event.
-  - This matches the common “menus are not click-through” behavior in native UI stacks (Unity,
-    Godot, desktop toolkits) and Radix `DismissableLayer` with `disableOutsidePointerEvents`.
+  - This matches the common “menus are not click-through on pointer down” behavior in native UI
+    stacks (Unity, Godot, desktop toolkits).
   - This suppression is scoped to the observer-triggering layer only (topmost in paint order) and
     respects branches (see below).
 - The observer pass must be **side-effect free** for input routing:
@@ -71,6 +80,35 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
+
+### Disable outside pointer events (Radix `disableOutsidePointerEvents`)
+
+Radix `DismissableLayer` has a stronger option than "consume outside pointer down": it can prevent
+pointer events outside the surface from reaching the underlay while the surface is open.
+
+This differs materially from `consume_pointer_down_outside_events`:
+
+- `consume_pointer_down_outside_events` only suppresses the normal hit-tested **pointer-down**
+  dispatch for the same input event that triggered the outside-press observer.
+- `disableOutsidePointerEvents` must also prevent underlay hover/move/wheel interactions while the
+  overlay remains open.
+
+To express that outcome in Fret without turning menus into full modal barriers, the overlay
+substrate supports an additional per-overlay flag:
+
+- `disable_outside_pointer_events` (component/policy level; see `OverlayRequest` in
+  `ecosystem/fret-ui-kit`)
+
+Runtime mechanism:
+
+- While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller
+  installs a **non-hit-testable input barrier layer** (no rendering; no hit target) that scopes
+  the active input layer stack so the underlay is not considered for pointer routing.
+- Outside-press dismissal still uses the observer pass described above (the overlay can close on
+  outside press even though the underlay is inert).
+
+This ADR intentionally does **not** define the accessibility / "hide others" outcome for menus.
+That is handled separately by the semantics/a11y architecture ADRs.
 
 ### Dismissable branches (Radix `DismissableLayerBranch`)
 
@@ -143,17 +181,17 @@ This ADR defines the **mechanism**. Default behaviors are chosen in the componen
 
 The current shadcn-aligned defaults in this repo:
 
-| Component | Overlay kind | `blocks_underlay_input` | Outside-press observer | Consume outside pointer-down | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `Popover` | Non-modal | `false` | Yes | No (click-through) | Outside press closes; underlay click can focus/activate |
-| `Combobox` | Non-modal | `false` | Yes | No (click-through) | Popover + Command recipe; outside press closes; underlay click can focus/activate |
-| `HoverCard` | Hover overlay | `false` | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
-| `Tooltip` | Tooltip overlay | `false` | No | No | Pointer-move observed; click-through |
-| `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Outside press closes without activating underlay |
-| `ContextMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Same as dropdown menu; open model is component-owned |
-| `Menubar` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Same as dropdown menu; supports nested submenus |
-| `Select` | Non-modal listbox-like menu | `false` | Yes | Yes (non-click-through) | Outside press closes without activating underlay |
-| `Dialog` / `Sheet` | Modal | `true` | N/A | N/A | Barrier-backed; underlay is inert while present |
+| Component | Overlay kind | `blocks_underlay_input` | Outside-press observer | Consume outside pointer-down | Disable outside pointer events | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Popover` | Non-modal | `false` | Yes | No (click-through) | No | Outside press closes; underlay click can focus/activate |
+| `Combobox` | Non-modal | `false` | Yes | No (click-through) | No | Popover + Command recipe; outside press closes; underlay click can focus/activate |
+| `HoverCard` | Hover overlay | `false` | No | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
+| `Tooltip` | Tooltip overlay | `false` | No | No | No | Pointer-move observed; click-through |
+| `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Outside press closes without activating underlay; underlay pointer is inert while open |
+| `ContextMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Same as dropdown menu; open model is component-owned |
+| `Menubar` | Non-modal menu | `false` | Yes | No (click-through) | No (Radix `modal=false`) | Outside press closes and allows underlay activation |
+| `Select` | Non-modal listbox-like menu | `false` | Yes | Yes (non-click-through) | Yes (Radix `modal=true`) | Outside press closes without activating underlay; underlay pointer is inert while open |
+| `Dialog` / `Sheet` | Modal | `true` | N/A | N/A | N/A | Barrier-backed; underlay is inert while present |
 
 ## References
 

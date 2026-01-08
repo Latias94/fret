@@ -1,0 +1,3695 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "menubar-example",
+  "primitive": "menubar",
+  "scenario": "open-navigate-close",
+  "url": "http://localhost:4020/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/menubar-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "BasicFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With SubmenuFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    }
+                                  ],
+                                  "text": "ViewFormat"
+                                }
+                              ],
+                              "text": "ViewFormat"
+                            }
+                          ],
+                          "text": "With CheckboxesViewFormat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Profiles"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Theme"
+                                    }
+                                  ],
+                                  "text": "ProfilesTheme"
+                                }
+                              ],
+                              "text": "ProfilesTheme"
+                            }
+                          ],
+                          "text": "With RadioProfilesTheme"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "More"
+                                    }
+                                  ],
+                                  "text": "FileMore"
+                                }
+                              ],
+                              "text": "FileMore"
+                            }
+                          ],
+                          "text": "With IconsFileMore"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With ShortcutsFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    }
+                                  ],
+                                  "text": "FormatView"
+                                }
+                              ],
+                              "text": "FormatView"
+                            }
+                          ],
+                          "text": "FormatFormatView"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Insert"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Tools"
+                                    }
+                                  ],
+                                  "text": "InsertTools"
+                                }
+                              ],
+                              "text": "InsertTools"
+                            }
+                          ],
+                          "text": "InsertInsertTools"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Account"
+                                    }
+                                  ],
+                                  "text": "FileAccount"
+                                }
+                              ],
+                              "text": "FileAccount"
+                            }
+                          ],
+                          "text": "DestructiveFileAccount"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_4j_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                    }
+                  ],
+                  "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "menubar-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Profiles",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Theme",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "More",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Format"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Insert"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Insert",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Tools",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Destructive"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Account",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "menubar-item[0]"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "div",
+          "path": [
+            27,
+            0
+          ],
+          "attrs": {
+            "data-side": "bottom",
+            "data-align": "start",
+            "role": "menu",
+            "aria-orientation": "vertical",
+            "data-state": "open",
+            "aria-labelledby": "radix-_r_2c_",
+            "tabindex": "-1",
+            "data-orientation": "vertical"
+          },
+          "text": "New Tab ⌘TNew Window ⌘NNew Incognito WindowPrint... ⌘P"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "true",
+                                        "data-state": "open",
+                                        "tabindex": "0",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": "",
+                                        "aria-controls": "radix-_r_2d_"
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "BasicFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With SubmenuFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    }
+                                  ],
+                                  "text": "ViewFormat"
+                                }
+                              ],
+                              "text": "ViewFormat"
+                            }
+                          ],
+                          "text": "With CheckboxesViewFormat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Profiles"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Theme"
+                                    }
+                                  ],
+                                  "text": "ProfilesTheme"
+                                }
+                              ],
+                              "text": "ProfilesTheme"
+                            }
+                          ],
+                          "text": "With RadioProfilesTheme"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "More"
+                                    }
+                                  ],
+                                  "text": "FileMore"
+                                }
+                              ],
+                              "text": "FileMore"
+                            }
+                          ],
+                          "text": "With IconsFileMore"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With ShortcutsFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    }
+                                  ],
+                                  "text": "FormatView"
+                                }
+                              ],
+                              "text": "FormatView"
+                            }
+                          ],
+                          "text": "FormatFormatView"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Insert"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Tools"
+                                    }
+                                  ],
+                                  "text": "InsertTools"
+                                }
+                              ],
+                              "text": "InsertTools"
+                            }
+                          ],
+                          "text": "InsertInsertTools"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Account"
+                                    }
+                                  ],
+                                  "text": "FileAccount"
+                                }
+                              ],
+                              "text": "FileAccount"
+                            }
+                          ],
+                          "text": "DestructiveFileAccount"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_4j_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                    }
+                  ],
+                  "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                27
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    27,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "role": "menu",
+                    "aria-orientation": "vertical",
+                    "data-state": "open",
+                    "aria-labelledby": "radix-_r_2c_",
+                    "tabindex": "-1",
+                    "data-orientation": "vertical"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        27,
+                        0,
+                        0
+                      ],
+                      "attrs": {
+                        "role": "group"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "New Tab ⌘T"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "New Window ⌘N"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "aria-disabled": "true",
+                            "data-disabled": "",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "New Incognito Window"
+                        }
+                      ],
+                      "text": "New Tab ⌘TNew Window ⌘NNew Incognito Window"
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        27,
+                        0,
+                        1
+                      ],
+                      "attrs": {
+                        "role": "separator",
+                        "aria-orientation": "horizontal"
+                      },
+                      "children": []
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        27,
+                        0,
+                        2
+                      ],
+                      "attrs": {
+                        "role": "group"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            2,
+                            0
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "Print... ⌘P"
+                        }
+                      ],
+                      "text": "Print... ⌘P"
+                    }
+                  ],
+                  "text": "New Tab ⌘TNew Window ⌘NNew Incognito WindowPrint... ⌘P"
+                }
+              ],
+              "text": "New Tab ⌘TNew Window ⌘NNew Incognito WindowPrint... ⌘P"
+            },
+            {
+              "tag": "span",
+              "path": [
+                28
+              ],
+              "attrs": {
+                "tabindex": "0"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "menubar-example - shadcn/ui",
+          "children": [
+            {
+              "role": "generic",
+              "name": ""
+            },
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "expanded": true,
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Profiles",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Theme",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "More",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Format"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Insert"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Insert",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Tools",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Destructive"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Account",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "menu",
+              "name": "File",
+              "focused": true,
+              "orientation": "vertical",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "New Tab ⌘T"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "New Window ⌘N"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "New Incognito Window",
+                  "disabled": true
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Print... ⌘P"
+                }
+              ]
+            },
+            {
+              "role": "generic",
+              "name": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "ArrowDown,Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "attrs": {
+            "role": "menuitem",
+            "aria-haspopup": "menu",
+            "aria-expanded": "false",
+            "data-state": "closed",
+            "tabindex": "0",
+            "data-orientation": "horizontal",
+            "data-radix-collection-item": "",
+            "data-highlighted": ""
+          },
+          "text": "File"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "0",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": "",
+                                        "data-highlighted": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "BasicFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With SubmenuFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    }
+                                  ],
+                                  "text": "ViewFormat"
+                                }
+                              ],
+                              "text": "ViewFormat"
+                            }
+                          ],
+                          "text": "With CheckboxesViewFormat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Profiles"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Theme"
+                                    }
+                                  ],
+                                  "text": "ProfilesTheme"
+                                }
+                              ],
+                              "text": "ProfilesTheme"
+                            }
+                          ],
+                          "text": "With RadioProfilesTheme"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "More"
+                                    }
+                                  ],
+                                  "text": "FileMore"
+                                }
+                              ],
+                              "text": "FileMore"
+                            }
+                          ],
+                          "text": "With IconsFileMore"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Edit"
+                                    }
+                                  ],
+                                  "text": "FileEdit"
+                                }
+                              ],
+                              "text": "FileEdit"
+                            }
+                          ],
+                          "text": "With ShortcutsFileEdit"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Format"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "View"
+                                    }
+                                  ],
+                                  "text": "FormatView"
+                                }
+                              ],
+                              "text": "FormatView"
+                            }
+                          ],
+                          "text": "FormatFormatView"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Insert"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Tools"
+                                    }
+                                  ],
+                                  "text": "InsertTools"
+                                }
+                              ],
+                              "text": "InsertTools"
+                            }
+                          ],
+                          "text": "InsertInsertTools"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "menubar",
+                                    "tabindex": "0",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "File"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        8,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "menuitem",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
+                                        "tabindex": "-1",
+                                        "data-orientation": "horizontal",
+                                        "data-radix-collection-item": ""
+                                      },
+                                      "children": [],
+                                      "text": "Account"
+                                    }
+                                  ],
+                                  "text": "FileAccount"
+                                }
+                              ],
+                              "text": "FileAccount"
+                            }
+                          ],
+                          "text": "DestructiveFileAccount"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_4j_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                    }
+                  ],
+                  "text": "BasicFileEditWith SubmenuFileEditWith CheckboxesViewFormatWith RadioProfilesThemeWith IconsFileMoreWith ShortcutsFileEdi…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "menubar-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "focused": true,
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Profiles",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Theme",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "More",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Edit",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Format"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Format",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "View",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Insert"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Insert",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Tools",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Destructive"
+            },
+            {
+              "role": "menubar",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "File",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Account",
+                  "haspopup": "menu"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

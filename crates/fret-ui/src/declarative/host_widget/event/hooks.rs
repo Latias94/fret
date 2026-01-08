@@ -23,6 +23,7 @@ pub(super) fn handle_timer_event<H: UiHost>(
         struct TimerHookHost<'a, H: UiHost> {
             app: &'a mut H,
             window: AppWindowId,
+            element: crate::GlobalElementId,
             requested_focus: &'a mut Option<NodeId>,
         }
 
@@ -32,6 +33,24 @@ pub(super) fn handle_timer_event<H: UiHost>(
             }
 
             fn push_effect(&mut self, effect: Effect) {
+                match effect {
+                    Effect::SetTimer {
+                        window: Some(window),
+                        token,
+                        ..
+                    } if window == self.window => {
+                        crate::elements::record_timer_target(
+                            &mut *self.app,
+                            window,
+                            token,
+                            self.element,
+                        );
+                    }
+                    Effect::CancelTimer { token } => {
+                        crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                    }
+                    _ => {}
+                }
                 self.app.push_effect(effect);
             }
 
@@ -60,6 +79,7 @@ pub(super) fn handle_timer_event<H: UiHost>(
         let mut host = TimerHookHost {
             app: &mut *cx.app,
             window,
+            element: this.element,
             requested_focus: &mut cx.requested_focus,
         };
         let handled = h(
@@ -101,6 +121,7 @@ pub(super) fn try_key_hook<H: UiHost>(
         struct KeyHookHost<'a, H: UiHost> {
             app: &'a mut H,
             window: AppWindowId,
+            element: crate::GlobalElementId,
             requested_focus: &'a mut Option<NodeId>,
         }
 
@@ -110,6 +131,24 @@ pub(super) fn try_key_hook<H: UiHost>(
             }
 
             fn push_effect(&mut self, effect: Effect) {
+                match effect {
+                    Effect::SetTimer {
+                        window: Some(window),
+                        token,
+                        ..
+                    } if window == self.window => {
+                        crate::elements::record_timer_target(
+                            &mut *self.app,
+                            window,
+                            token,
+                            self.element,
+                        );
+                    }
+                    Effect::CancelTimer { token } => {
+                        crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                    }
+                    _ => {}
+                }
                 self.app.push_effect(effect);
             }
 
@@ -138,6 +177,7 @@ pub(super) fn try_key_hook<H: UiHost>(
         let mut host = KeyHookHost {
             app: &mut *cx.app,
             window,
+            element: this.element,
             requested_focus: &mut cx.requested_focus,
         };
         let handled = h(

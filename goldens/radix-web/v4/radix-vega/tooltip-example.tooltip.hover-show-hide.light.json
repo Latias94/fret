@@ -1,0 +1,1946 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "tooltip-example",
+  "primitive": "tooltip",
+  "scenario": "hover-show-hide",
+  "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/tooltip-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "BasicShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Info"
+                                }
+                              ],
+                              "text": "Info"
+                            }
+                          ],
+                          "text": "With IconInfo"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "Long ContentShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "button"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    }
+                                  ],
+                                  "text": "Disabled"
+                                }
+                              ],
+                              "text": "Disabled"
+                            }
+                          ],
+                          "text": "DisabledDisabled"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "With Keyboard Shortcut"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "a",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [],
+                                  "text": "Learn more"
+                                }
+                              ],
+                              "text": "Learn more"
+                            }
+                          ],
+                          "text": "On LinkLearn more"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Status"
+                                }
+                              ],
+                              "text": "Status"
+                            }
+                          ],
+                          "text": "Formatted ContentStatus"
+                        }
+                      ],
+                      "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                    }
+                  ],
+                  "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "tooltip-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip"
+            },
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icon"
+            },
+            {
+              "role": "button",
+              "name": "Info"
+            },
+            {
+              "role": "StaticText",
+              "name": "Long Content"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "button",
+              "name": "Disabled",
+              "disabled": true
+            },
+            {
+              "role": "StaticText",
+              "name": "With Keyboard Shortcut"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "StaticText",
+              "name": "On Link"
+            },
+            {
+              "role": "link",
+              "name": "Learn more"
+            },
+            {
+              "role": "StaticText",
+              "name": "Formatted Content"
+            },
+            {
+              "role": "button",
+              "name": "Status"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "hover",
+        "target": "tooltip-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "delayed-open",
+                                    "aria-describedby": "radix-_r_d_"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "BasicShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Info"
+                                }
+                              ],
+                              "text": "Info"
+                            }
+                          ],
+                          "text": "With IconInfo"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "Long ContentShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "button"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    }
+                                  ],
+                                  "text": "Disabled"
+                                }
+                              ],
+                              "text": "Disabled"
+                            }
+                          ],
+                          "text": "DisabledDisabled"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "With Keyboard Shortcut"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "a",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [],
+                                  "text": "Learn more"
+                                }
+                              ],
+                              "text": "Learn more"
+                            }
+                          ],
+                          "text": "On LinkLearn more"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Status"
+                                }
+                              ],
+                              "text": "Status"
+                            }
+                          ],
+                          "text": "Formatted ContentStatus"
+                        }
+                      ],
+                      "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                    }
+                  ],
+                  "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                26
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    26,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "top",
+                    "data-align": "center",
+                    "data-state": "delayed-open",
+                    "data-slot": "tooltip-content"
+                  },
+                  "children": [
+                    {
+                      "tag": "span",
+                      "path": [
+                        26,
+                        0,
+                        2
+                      ],
+                      "attrs": {
+                        "role": "tooltip"
+                      },
+                      "children": [],
+                      "text": "Add to library"
+                    }
+                  ],
+                  "text": "Add to libraryAdd to library"
+                }
+              ],
+              "text": "Add to libraryAdd to library"
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "tooltip-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip",
+              "description": "Add to library"
+            },
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icon"
+            },
+            {
+              "role": "button",
+              "name": "Info"
+            },
+            {
+              "role": "StaticText",
+              "name": "Long Content"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "button",
+              "name": "Disabled",
+              "disabled": true
+            },
+            {
+              "role": "StaticText",
+              "name": "With Keyboard Shortcut"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "StaticText",
+              "name": "On Link"
+            },
+            {
+              "role": "link",
+              "name": "Learn more"
+            },
+            {
+              "role": "StaticText",
+              "name": "Formatted Content"
+            },
+            {
+              "role": "button",
+              "name": "Status"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "StaticText",
+              "name": "Add to library"
+            },
+            {
+              "role": "StaticText",
+              "name": "Add to library"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "BasicShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "tooltip-trigger",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Info"
+                                }
+                              ],
+                              "text": "Info"
+                            }
+                          ],
+                          "text": "With IconInfo"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Show Tooltip"
+                                }
+                              ],
+                              "text": "Show Tooltip"
+                            }
+                          ],
+                          "text": "Long ContentShow Tooltip"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "button"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    }
+                                  ],
+                                  "text": "Disabled"
+                                }
+                              ],
+                              "text": "Disabled"
+                            }
+                          ],
+                          "text": "DisabledDisabled"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "With Keyboard Shortcut"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "a",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed",
+                                    "data-slot": "tooltip-trigger"
+                                  },
+                                  "children": [],
+                                  "text": "Learn more"
+                                }
+                              ],
+                              "text": "Learn more"
+                            }
+                          ],
+                          "text": "On LinkLearn more"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "tooltip-trigger",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Status"
+                                }
+                              ],
+                              "text": "Status"
+                            }
+                          ],
+                          "text": "Formatted ContentStatus"
+                        }
+                      ],
+                      "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                    }
+                  ],
+                  "text": "BasicShow TooltipSidestoprightbottomleftWith IconInfoLong ContentShow TooltipDisabledDisabledWith Keyboard ShortcutOn Li…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "tooltip-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip"
+            },
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icon"
+            },
+            {
+              "role": "button",
+              "name": "Info"
+            },
+            {
+              "role": "StaticText",
+              "name": "Long Content"
+            },
+            {
+              "role": "button",
+              "name": "Show Tooltip"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "button",
+              "name": "Disabled",
+              "disabled": true
+            },
+            {
+              "role": "StaticText",
+              "name": "With Keyboard Shortcut"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "StaticText",
+              "name": "On Link"
+            },
+            {
+              "role": "link",
+              "name": "Learn more"
+            },
+            {
+              "role": "StaticText",
+              "name": "Formatted Content"
+            },
+            {
+              "role": "button",
+              "name": "Status"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

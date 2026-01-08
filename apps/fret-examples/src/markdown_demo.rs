@@ -1,27 +1,34 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
-use fret_app_kit::{image_asset_state, svg_asset_state};
 use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, SvgId, UiServices};
 use fret_launch::{
-    WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_markdown as markdown;
+use fret_runtime::Model;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, ImageProps, LayoutStyle, Length, MainAlign,
     PressableProps, SvgIconProps, TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
+use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::{LayoutRefinement, MetricRef};
-use std::collections::HashMap;
+use fret_ui_shadcn as shadcn;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::mpsc;
+
+const CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX: &str = "markdown_demo.code_block.toggle_expand:";
 
 struct MarkdownDemoWindowState {
     ui: UiTree<App>,
     markdown: Arc<str>,
+    wrap_code: Model<bool>,
+    cap_code_height: Model<bool>,
+    expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
 }
 
 #[derive(Debug, Clone)]
@@ -196,6 +203,10 @@ impl MarkdownDemoDriver {
         let mut ui = UiTree::new();
         ui.set_window(window);
 
+        let wrap_code = app.models_mut().insert(false);
+        let cap_code_height = app.models_mut().insert(true);
+        let expanded_code_blocks = app.models_mut().insert(HashSet::new());
+
         let markdown: Arc<str> = Arc::from(
             r##"# Markdown Demo
 
@@ -232,9 +243,11 @@ Rust (highlight enabled when `fret-markdown` is built with `syntax-rust`):
 ```rust
 fn main() {
     let answer = 42;
-    println!("answer={answer}");
-    // Long line to verify horizontal scrolling inside code blocks:
-    println!("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+println!("answer={answer}");
+// Long line to verify horizontal scrolling inside code blocks:
+println!("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+// Word-wrap test (only wraps at whitespace today):
+println!("word wrap test: a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a");
 }
 ```
 
@@ -287,7 +300,13 @@ $$
  "##,
         );
 
-        MarkdownDemoWindowState { ui, markdown }
+        MarkdownDemoWindowState {
+            ui,
+            markdown,
+            wrap_code,
+            cap_code_height,
+            expanded_code_blocks,
+        }
     }
 
     fn render(
@@ -297,6 +316,9 @@ $$
         window: AppWindowId,
         bounds: Rect,
         markdown_source: Arc<str>,
+        wrap_code: Model<bool>,
+        cap_code_height: Model<bool>,
+        expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
     ) {
         let cache_changed = app.with_global_mut(RemoteImageCache::default, |cache, app| {
             let mut changed = cache.poll_completed();
@@ -313,7 +335,59 @@ $$
 
         let checker_rgba = Arc::new(checkerboard_rgba8(96, 96));
 
+        let wrap_enabled = app.models().get_copied(&wrap_code).unwrap_or(false);
+        let cap_enabled = app.models().get_copied(&cap_code_height).unwrap_or(true);
+
         let mut components = markdown::MarkdownComponents::<App>::default().with_open_url();
+        components.code_block_ui.wrap = if wrap_enabled {
+            fret_code_view::CodeBlockWrap::Word
+        } else {
+            fret_code_view::CodeBlockWrap::ScrollX
+        };
+        components.code_block_max_height_from_theme = cap_enabled;
+        components.code_block_ui.show_scrollbar_y = cap_enabled;
+        components.code_block_ui.scrollbar_y_on_hover = true;
+
+        if cap_enabled {
+            let expanded_for_resolver = expanded_code_blocks.clone();
+            components.code_block_ui_resolver = Some(Arc::new(move |cx, info, options| {
+                cx.observe_model(&expanded_for_resolver, Invalidation::Layout);
+                let expanded = cx
+                    .app
+                    .models()
+                    .read(&expanded_for_resolver, |set| set.contains(&info.id))
+                    .ok()
+                    .unwrap_or(false);
+                if expanded {
+                    options.max_height = None;
+                    options.show_scrollbar_y = false;
+                }
+            }));
+
+            let expanded_for_actions = expanded_code_blocks.clone();
+            components.code_block_actions = Some(Arc::new(move |cx, info| {
+                cx.observe_model(&expanded_for_actions, Invalidation::Layout);
+                let expanded = cx
+                    .app
+                    .models()
+                    .read(&expanded_for_actions, |set| set.contains(&info.id))
+                    .ok()
+                    .unwrap_or(false);
+
+                let label = if expanded { "Collapse" } else { "Expand" };
+                let cmd = CommandId::new(format!(
+                    "{CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX}{}",
+                    info.id.0
+                ));
+
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(cmd)
+                    .into_element(cx)
+            }));
+        }
+
         let on_link_activate = components.on_link_activate.clone();
 
         components.image = Some(Arc::new(move |cx, info| {
@@ -497,6 +571,52 @@ $$
                                         cx.text(
                                             "Scrollable markdown preview (links open via platform shell).",
                                         ),
+                                        cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(12.0),
+                                                padding: fret_core::Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: fret_ui::element::CrossAlign::Center,
+                                                wrap: true,
+                                            },
+                                            |cx| {
+                                                cx.observe_model(&wrap_code, Invalidation::Layout);
+                                                let enabled = cx
+                                                    .app
+                                                    .models()
+                                                    .get_copied(&wrap_code)
+                                                    .unwrap_or(false);
+
+                                                cx.observe_model(
+                                                    &cap_code_height,
+                                                    Invalidation::Layout,
+                                                );
+                                                let cap_enabled = cx
+                                                    .app
+                                                    .models()
+                                                    .get_copied(&cap_code_height)
+                                                    .unwrap_or(true);
+
+                                                vec![
+                                                    cx.text(format!(
+                                                        "wrap code: {}",
+                                                        if enabled { "on" } else { "off" }
+                                                    )),
+                                                    shadcn::Switch::new(wrap_code.clone())
+                                                        .a11y_label("Wrap code blocks")
+                                                        .into_element(cx),
+                                                    cx.text(format!(
+                                                        "cap code height: {}",
+                                                        if cap_enabled { "on" } else { "off" }
+                                                    )),
+                                                    shadcn::Switch::new(cap_code_height.clone())
+                                                        .a11y_label("Cap code block height")
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        ),
                                         decl_scroll::overflow_scroll_content(
                                             cx,
                                             LayoutRefinement::default()
@@ -654,6 +774,23 @@ impl WinitAppDriver for MarkdownDemoDriver {
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX)
+        {
+            if let Ok(id) = id.parse::<u64>() {
+                let id = markdown::BlockId(id);
+                let _ = app.models_mut().update(&state.expanded_code_blocks, |set| {
+                    if set.contains(&id) {
+                        set.remove(&id);
+                    } else {
+                        set.insert(id);
+                    }
+                });
+                app.push_effect(Effect::Redraw(window));
+            }
+            return;
+        }
         if command.as_str() == "window.close" {
             app.push_effect(Effect::Window(fret_app::WindowRequest::Close(window)));
         }
@@ -691,6 +828,9 @@ impl WinitAppDriver for MarkdownDemoDriver {
             window,
             bounds,
             state.markdown.clone(),
+            state.wrap_code.clone(),
+            state.cap_code_height.clone(),
+            state.expanded_code_blocks.clone(),
         );
 
         state.ui.request_semantics_snapshot();
@@ -758,12 +898,14 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    WinitAppBuilder::new(App::new(), MarkdownDemoDriver::default())
-        .configure(|config| {
-            config.main_window_title = "markdown_demo".to_string();
-            config.main_window_size = winit::dpi::LogicalSize::new(920.0, 720.0);
-        })
-        .run()
-        .map_err(anyhow::Error::from)
-        .context("run markdown_demo")
+    crate::run_native_demo(
+        WinitRunnerConfig {
+            main_window_title: "markdown_demo".to_string(),
+            main_window_size: winit::dpi::LogicalSize::new(920.0, 720.0),
+            ..Default::default()
+        },
+        App::new(),
+        MarkdownDemoDriver::default(),
+    )
+    .context("run markdown_demo")
 }

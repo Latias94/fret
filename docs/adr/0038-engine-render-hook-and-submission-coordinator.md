@@ -200,6 +200,7 @@ Rationale:
 ## References
 
 - Vello architecture overview (Scene → Encoding → Recording → Engine):
+  - optional checkout at `repo-ref/vello` (see `docs/repo-ref.md`)
   - `repo-ref/vello/doc/ARCHITECTURE.md`
 - Vello `Recording` command list (engine-facing execution plan):
   - `repo-ref/vello/vello/src/recording.rs`

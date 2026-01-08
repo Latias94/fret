@@ -7,11 +7,11 @@ use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
 };
 use std::sync::Arc;
 
@@ -27,20 +27,10 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
 
-fn apply_tooltip_described_by(
-    mut trigger: AnyElement,
-    tooltip_element: fret_ui::elements::GlobalElementId,
-) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(props) => {
-            props.a11y.described_by_element = Some(tooltip_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.described_by_element = Some(tooltip_element.0);
-        }
-        _ => {}
-    }
-    trigger
+fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
 
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
@@ -332,9 +322,9 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
-        let trigger = apply_tooltip_described_by(self.trigger, self.content.id);
+        let base_trigger = self.trigger;
         let content = self.content;
-        let trigger_id = trigger.id;
+        let trigger_id = base_trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
@@ -479,12 +469,20 @@ impl Tooltip {
                 tooltip_provider::note_closed(cx, now);
             }
 
+            let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
+                base_trigger.clone(),
+                update.open,
+                content_id,
+            );
+
             let opening = update.open;
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 opening,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
@@ -499,7 +497,8 @@ impl Tooltip {
 
             let tooltip_id = cx.root_id();
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
-            let opacity = motion.progress;
+            let opacity = motion.opacity;
+            let scale = motion.scale;
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -586,7 +585,7 @@ impl Tooltip {
                     arrow.then_some(arrow_size),
                 );
 
-                let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                let zoom = shadcn_zoom_transform(origin, scale);
                 let slide = if opening {
                     overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                 } else {
@@ -767,6 +766,7 @@ mod tests {
     };
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
 
     #[derive(Default)]
     struct FakeServices;

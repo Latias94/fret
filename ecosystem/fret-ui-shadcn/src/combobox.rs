@@ -14,6 +14,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
@@ -85,6 +87,27 @@ impl Combobox {
             // (ADR 0069)
             consume_outside_pointer_events: false,
         }
+    }
+
+    /// Creates a combobox with controlled/uncontrolled models:
+    /// - `value` / `default_value` (selected item value)
+    /// - `open` / `default_open` (popover visibility)
+    ///
+    /// This matches the Radix-style controlled vs uncontrolled contract (but note that upstream
+    /// shadcn Combobox is a recipe, not a dedicated Radix primitive).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<Arc<str>>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_popover::PopoverRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        let value = controllable_state::use_controllable_model(cx, value, || default_value).model();
+        Self::new(value, open)
     }
 
     /// When set, applies a fixed width to both the trigger and the popover content (shadcn demo
@@ -522,6 +545,8 @@ pub fn combobox<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::cell::{Cell, RefCell};
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextBlobId,
@@ -604,6 +629,158 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn combobox_new_controllable_creates_internal_models_and_applies_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let model_id_out = Cell::new(None);
+        let open_id_out = Cell::new(None);
+        let model_out: RefCell<Option<Model<Option<Arc<str>>>>> = RefCell::new(None);
+        let open_out: RefCell<Option<Model<bool>>> = RefCell::new(None);
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+        ];
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices,
+                      model_id_out: &Cell<Option<fret_runtime::ModelId>>,
+                      open_id_out: &Cell<Option<fret_runtime::ModelId>>,
+                      model_out: &RefCell<Option<Model<Option<Arc<str>>>>>,
+                      open_out: &RefCell<Option<Model<bool>>>| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "combobox-controllable",
+                |cx| {
+                    vec![cx.keyed("combobox", |cx| {
+                        let combobox = Combobox::new_controllable(
+                            cx,
+                            None,
+                            Some(Arc::from("beta")),
+                            None,
+                            false,
+                        )
+                        .items(items.clone());
+                        model_id_out.set(Some(combobox.model.id()));
+                        open_id_out.set(Some(combobox.open.id()));
+                        *model_out.borrow_mut() = Some(combobox.model.clone());
+                        *open_out.borrow_mut() = Some(combobox.open.clone());
+                        combobox.into_element(cx)
+                    })]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            &model_id_out,
+            &open_id_out,
+            &model_out,
+            &open_out,
+        );
+        let first_model = model_id_out.get().expect("value model id");
+        let first_open = open_id_out.get().expect("open model id");
+        let value = model_out
+            .borrow()
+            .as_ref()
+            .expect("value model")
+            .read_ref(&app, |v| v.clone())
+            .expect("read value");
+        assert_eq!(value.as_deref(), Some("beta"));
+        let is_open = open_out
+            .borrow()
+            .as_ref()
+            .expect("open model")
+            .read_ref(&app, |v| *v)
+            .expect("read open");
+        assert!(!is_open);
+
+        render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            &model_id_out,
+            &open_id_out,
+            &model_out,
+            &open_out,
+        );
+        let second_model = model_id_out.get().expect("value model id (second render)");
+        let second_open = open_id_out.get().expect("open model id (second render)");
+        assert_eq!(first_model, second_model);
+        assert_eq!(first_open, second_open);
+    }
+
+    #[test]
+    fn combobox_new_controllable_prefers_controlled_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let value = app.models_mut().insert(Some(Arc::from("alpha")));
+        let open = app.models_mut().insert(true);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let seen = Cell::new(false);
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "combobox-controlled",
+            |cx| {
+                vec![cx.keyed("combobox", |cx| {
+                    let combobox = Combobox::new_controllable(
+                        cx,
+                        Some(value.clone()),
+                        Some(Arc::from("beta")),
+                        Some(open.clone()),
+                        false,
+                    );
+                    assert_eq!(combobox.model, value);
+                    assert_eq!(combobox.open, open);
+                    seen.set(true);
+                    combobox.into_element(cx)
+                })]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert!(seen.get());
     }
 
     #[test]

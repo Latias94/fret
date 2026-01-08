@@ -44,7 +44,7 @@ We mirror this split in Fret.
   - Eviction API: `clear/remove_alpha_mask/remove_rgba`
 - Demo wiring (cache stored as App global resource)
   - Runner hook: `crates/fret-launch/src/runner/mod.rs` (`gpu_frame_prepare`)
-  - Demo usage: `crates/fret-demo/src/bin/shadcn_gallery.rs`
+  - Demo usage: `apps/fret-demo/src/bin/components_gallery.rs`
 
 ## Design Boundary (Renderer vs Plot/Components)
 

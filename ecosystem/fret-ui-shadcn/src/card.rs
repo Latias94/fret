@@ -47,7 +47,9 @@ impl Card {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let chrome = card_chrome(&theme).merge(self.chrome);
-        let props = decl_style::container_props(&theme, chrome, self.layout);
+        let mut props = decl_style::container_props(&theme, chrome, self.layout);
+        let radius = props.corner_radii.top_left;
+        props.shadow = Some(decl_style::shadow_sm(&theme, radius));
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }

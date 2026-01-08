@@ -30,14 +30,13 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ### Content mount/unmount
 
-- Partial: Upstream uses `Presence` + measured content dimensions for height animations.
-- Partial: Fret keeps content mounted while closing (presence-style) and approximates the height
-  animation by caching the last measured content height and clipping with an eased 0..1 progress.
+- Pass: Upstream uses `Presence` + measured content dimensions for height animations; Fret models
+  the same outcome by caching the measured content height in per-element state and driving a clipped
+  wrapper height using an eased 0..1 progress value.
   - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
   - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
-  - Backing helper: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
-  - Note: Fret does not expose Radix's `--radix-collapsible-content-height/width` variables; the
-    cached height is stored in per-element state.
+  - Note: Fret does not expose Radix's `--radix-collapsible-content-height/width` CSS variables; the
+    cached size is stored in element state.
 
 ## Validation
 

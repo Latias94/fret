@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
-use fret_ui::element::{PressableA11y, SemanticsProps};
+use fret_ui::element::{AnyElement, ElementKind, PressableA11y, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -93,6 +93,28 @@ pub fn collapsible_trigger_a11y(label: Option<Arc<str>>, open: bool) -> Pressabl
     }
 }
 
+/// Stamps Radix-like trigger relationships:
+/// - `controls_element` mirrors `aria-controls` (by element id).
+///
+/// In Radix Collapsible, the trigger points at the content by id. In Fret we model this via a
+/// portable element-id relationship that resolves into `SemanticsNode.controls` when the content
+/// is mounted.
+pub fn apply_collapsible_trigger_controls(
+    mut trigger: AnyElement,
+    content_element: GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.a11y.controls_element = Some(content_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.controls_element = Some(content_element.0);
+        }
+        _ => {}
+    }
+    trigger
+}
+
 /// Read the last cached open height for a collapsible content subtree.
 ///
 /// This is a Radix-aligned outcome for Collapsible/Accordion height animations: Radix measures the
@@ -167,6 +189,46 @@ pub fn collapsible_height_wrapper_refinement(
     )
 }
 
+pub use crate::declarative::collapsible_motion::MeasuredHeightMotionOutput;
+
+/// Computes a measured-height motion plan for the current element root.
+///
+/// This is a Radix-aligned outcome for components that animate open/close using measured content
+/// height (Collapsible, Accordion items, etc.).
+#[allow(clippy::too_many_arguments)]
+pub fn measured_height_motion_for_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+) -> MeasuredHeightMotionOutput {
+    crate::declarative::collapsible_motion::measured_height_motion_for_root(
+        cx,
+        open,
+        force_mount,
+        require_measurement_for_close,
+        open_ticks,
+        close_ticks,
+        ease,
+    )
+}
+
+/// Updates cached measured size/height for a motion plan based on the wrapper element id.
+pub fn update_measured_for_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    motion: MeasuredHeightMotionOutput,
+    wrapper_element_id: GlobalElementId,
+) -> Size {
+    crate::declarative::collapsible_motion::update_measured_for_motion(
+        cx,
+        motion,
+        wrapper_element_id,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,6 +237,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -202,5 +265,30 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn apply_collapsible_trigger_controls_sets_controls_on_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let content = GlobalElementId(0xbeef);
+            let trigger = apply_collapsible_trigger_controls(trigger, content);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.controls_element, Some(content.0));
+        });
     }
 }

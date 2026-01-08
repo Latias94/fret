@@ -132,6 +132,293 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
 use fret_ui_kit::primitives::tabs as radix_tabs;
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
+/// shadcn/ui `TabsTrigger` (v4).
+///
+/// This is a "spec" type consumed by [`TabsList`] and [`TabsRoot`]. It mirrors the Radix/shadcn
+/// authoring shape while letting Fret drive the underlying semantics and interaction wiring.
+#[derive(Debug, Clone)]
+pub struct TabsTrigger {
+    value: Arc<str>,
+    label: Arc<str>,
+    children: Option<Vec<AnyElement>>,
+    disabled: bool,
+}
+
+impl TabsTrigger {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            children: None,
+            disabled: false,
+        }
+    }
+
+    /// Overrides the default trigger contents (the label text) to match shadcn usage patterns where
+    /// triggers can include icons/badges.
+    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
+        self.children = Some(children);
+        self
+    }
+
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children = Some(vec![child]);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
+/// shadcn/ui `TabsList` (v4).
+#[derive(Debug, Clone, Default)]
+pub struct TabsList {
+    triggers: Vec<TabsTrigger>,
+}
+
+impl TabsList {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn trigger(mut self, trigger: TabsTrigger) -> Self {
+        self.triggers.push(trigger);
+        self
+    }
+
+    pub fn triggers(mut self, triggers: impl IntoIterator<Item = TabsTrigger>) -> Self {
+        self.triggers.extend(triggers);
+        self
+    }
+}
+
+/// shadcn/ui `TabsContent` (v4).
+///
+/// Notes:
+/// - Fret currently provides "force mount all panels" via [`TabsRoot::force_mount_content`], which
+///   approximates Radix `TabsContent forceMount` semantics.
+#[derive(Debug, Clone)]
+pub struct TabsContent {
+    value: Arc<str>,
+    children: Vec<AnyElement>,
+}
+
+impl TabsContent {
+    pub fn new(value: impl Into<Arc<str>>, children: Vec<AnyElement>) -> Self {
+        Self {
+            value: value.into(),
+            children,
+        }
+    }
+}
+
+/// A composable, Radix/shadcn-shaped tabs surface (`TabsRoot` / `TabsList` / `TabsTrigger` /
+/// `TabsContent`).
+///
+/// This is the recommended authoring surface when translating upstream shadcn/ui examples.
+#[derive(Clone)]
+pub struct TabsRoot {
+    model: Option<Model<Option<Arc<str>>>>,
+    default_value: Option<Arc<str>>,
+    list: TabsList,
+    contents: Vec<TabsContent>,
+    disabled: bool,
+    orientation: TabsOrientation,
+    activation_mode: TabsActivationMode,
+    loop_navigation: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    force_mount_content: bool,
+    list_full_width: bool,
+    content_fill_remaining: bool,
+}
+
+impl std::fmt::Debug for TabsRoot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TabsRoot")
+            .field("model", &"<model>")
+            .field("list_triggers_len", &self.list.triggers.len())
+            .field("contents_len", &self.contents.len())
+            .field("disabled", &self.disabled)
+            .field("orientation", &self.orientation)
+            .field("activation_mode", &self.activation_mode)
+            .field("loop_navigation", &self.loop_navigation)
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .field("force_mount_content", &self.force_mount_content)
+            .finish()
+    }
+}
+
+impl TabsRoot {
+    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            model: Some(model),
+            default_value: None,
+            list: TabsList::default(),
+            contents: Vec::new(),
+            disabled: false,
+            orientation: TabsOrientation::default(),
+            activation_mode: TabsActivationMode::default(),
+            loop_navigation: true,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            force_mount_content: false,
+            list_full_width: false,
+            content_fill_remaining: false,
+        }
+    }
+
+    /// Creates an uncontrolled tabs root with an optional initial value (Radix `defaultValue`).
+    pub fn uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: None,
+            default_value: default_value.map(Into::into),
+            list: TabsList::default(),
+            contents: Vec::new(),
+            disabled: false,
+            orientation: TabsOrientation::default(),
+            activation_mode: TabsActivationMode::default(),
+            loop_navigation: true,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            force_mount_content: false,
+            list_full_width: false,
+            content_fill_remaining: false,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Sets the uncontrolled initial selection value (Radix `defaultValue`).
+    ///
+    /// Note: If a controlled `model` is provided, this value is ignored.
+    pub fn default_value<T: Into<Arc<str>>>(mut self, default_value: Option<T>) -> Self {
+        self.default_value = default_value.map(Into::into);
+        self
+    }
+
+    pub fn orientation(mut self, orientation: TabsOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn activation_mode(mut self, activation_mode: TabsActivationMode) -> Self {
+        self.activation_mode = activation_mode;
+        self
+    }
+
+    /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn list(mut self, list: TabsList) -> Self {
+        self.list = list;
+        self
+    }
+
+    pub fn content(mut self, content: TabsContent) -> Self {
+        self.contents.push(content);
+        self
+    }
+
+    pub fn contents(mut self, contents: impl IntoIterator<Item = TabsContent>) -> Self {
+        self.contents.extend(contents);
+        self
+    }
+
+    /// When `true`, all tab panel subtrees remain mounted even when inactive.
+    ///
+    /// This approximates Radix `TabsContent forceMount` by keeping each panel subtree in the
+    /// declarative element tree while gating layout/paint/semantics and interactivity via
+    /// `InteractivityGate`.
+    pub fn force_mount_content(mut self, force_mount_content: bool) -> Self {
+        self.force_mount_content = force_mount_content;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// When `true`, the tab list stretches to the full available width (new-york-v4 default is
+    /// `w-fit`).
+    pub fn list_full_width(mut self, full_width: bool) -> Self {
+        self.list_full_width = full_width;
+        self
+    }
+
+    /// When `true`, `TabsContent` tries to fill the remaining main-axis space within the root
+    /// flex container (Tailwind-like `flex-1`).
+    ///
+    /// Notes:
+    /// - This should only be used when the parent layout provides a definite main-axis size.
+    /// - In auto-sized compositions, forcing `flex: 1` can trigger very deep layout recursion.
+    pub fn content_fill_remaining(mut self, fill: bool) -> Self {
+        self.content_fill_remaining = fill;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let list = self.list.clone();
+        let contents = self.contents.clone();
+
+        let mut content_by_value: std::collections::HashMap<Arc<str>, Vec<AnyElement>> =
+            std::collections::HashMap::new();
+        for content in contents {
+            content_by_value.insert(content.value.clone(), content.children);
+        }
+
+        let items: Vec<TabsItem> = list
+            .triggers
+            .iter()
+            .cloned()
+            .map(|trigger| {
+                TabsItem::new(
+                    trigger.value.clone(),
+                    trigger.label.clone(),
+                    content_by_value
+                        .remove(trigger.value.as_ref())
+                        .unwrap_or_default(),
+                )
+                .trigger_children(trigger.children.clone().unwrap_or_else(|| Vec::new()))
+                .disabled(trigger.disabled)
+            })
+            .collect();
+
+        let tabs = if let Some(model) = self.model.clone() {
+            Tabs::new(model)
+        } else {
+            Tabs::uncontrolled(self.default_value.clone())
+        };
+
+        tabs.disabled(self.disabled)
+            .orientation(self.orientation)
+            .activation_mode(self.activation_mode)
+            .loop_navigation(self.loop_navigation)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .force_mount_content(self.force_mount_content)
+            .list_full_width(self.list_full_width)
+            .content_fill_remaining(self.content_fill_remaining)
+            .items(items)
+            .into_element(cx)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TabsItem {
     value: Arc<str>,
@@ -157,7 +444,11 @@ impl TabsItem {
     }
 
     pub fn trigger_children(mut self, children: Vec<AnyElement>) -> Self {
-        self.trigger = Some(children);
+        if children.is_empty() {
+            self.trigger = None;
+        } else {
+            self.trigger = Some(children);
+        }
         self
     }
 
@@ -184,6 +475,8 @@ pub struct Tabs {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
+    list_full_width: bool,
+    content_fill_remaining: bool,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -215,6 +508,8 @@ impl Tabs {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
+            list_full_width: false,
+            content_fill_remaining: false,
         }
     }
 
@@ -231,6 +526,8 @@ impl Tabs {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
+            list_full_width: false,
+            content_fill_remaining: false,
         }
     }
 
@@ -293,6 +590,24 @@ impl Tabs {
         self
     }
 
+    /// When `true`, the tab list stretches to the full available width (new-york-v4 default is
+    /// `w-fit`).
+    pub fn list_full_width(mut self, full_width: bool) -> Self {
+        self.list_full_width = full_width;
+        self
+    }
+
+    /// When `true`, `TabsContent` tries to fill the remaining main-axis space within the root
+    /// flex container (Tailwind-like `flex-1`).
+    ///
+    /// Notes:
+    /// - This should only be used when the parent layout provides a definite main-axis size.
+    /// - In auto-sized compositions, forcing `flex: 1` can trigger very deep layout recursion.
+    pub fn content_fill_remaining(mut self, fill: bool) -> Self {
+        self.content_fill_remaining = fill;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -304,6 +619,8 @@ impl Tabs {
         let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
+        let list_full_width = self.list_full_width;
+        let content_fill_remaining = self.content_fill_remaining;
 
         let model =
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
@@ -344,12 +661,20 @@ impl Tabs {
             LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
         );
         list_props.padding = Edges::all(list_padding);
-        // new-york-v4: `TabsList` uses `w-fit` (do not stretch to full width).
-        // If the parent container happens to be a flex with `align-items: stretch`, opt out.
-        list_props.layout.flex.align_self = Some(CrossAlign::Start);
-        // new-york-v4: `TabsContent` uses `flex-1` to occupy the remaining space.
-        let tab_panel_layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1());
+        if list_full_width {
+            list_props.layout.size.width = Length::Fill;
+            list_props.layout.flex.align_self = Some(CrossAlign::Stretch);
+        } else {
+            // new-york-v4: `TabsList` uses `w-fit` (do not stretch to full width).
+            // If the parent container happens to be a flex with `align-items: stretch`, opt out.
+            list_props.layout.flex.align_self = Some(CrossAlign::Start);
+        }
+        let tab_panel_layout = decl_style::layout_style(
+            &theme,
+            content_fill_remaining
+                .then_some(LayoutRefinement::default().flex_1())
+                .unwrap_or_default(),
+        );
 
         let active_label = active_idx
             .and_then(|active| items.get(active))
@@ -659,6 +984,7 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_runtime::{FrameId, TickId};
+    use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
 
@@ -771,9 +1097,107 @@ mod tests {
         root
     }
 
+    fn render_composable(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        activation_mode: TabsActivationMode,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "tabs-composable",
+            |cx| {
+                let list = TabsList::new()
+                    .trigger(TabsTrigger::new("alpha", "Alpha"))
+                    .trigger(TabsTrigger::new("beta", "Beta"))
+                    .trigger(TabsTrigger::new("gamma", "Gamma"));
+                let contents = vec![
+                    TabsContent::new("alpha", vec![]),
+                    TabsContent::new("beta", vec![]),
+                    TabsContent::new("gamma", vec![]),
+                ];
+                vec![
+                    TabsRoot::new(model)
+                        .activation_mode(activation_mode)
+                        .list(list)
+                        .contents(contents)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn tabs_layout_regression_does_not_stack_overflow_in_auto_sized_column() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(560.0), Px(520.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-layout-regression",
+            |cx| {
+                let mut page = ContainerProps::default();
+                page.layout.size.width = Length::Fill;
+                page.layout.size.height = Length::Fill;
+                page.padding = Edges::all(Px(16.0));
+
+                vec![cx.container(page, |cx| {
+                    let items = vec![
+                        TabsItem::new("alpha", "Alpha", vec![cx.text("Panel")]),
+                        TabsItem::new("beta", "Beta", vec![cx.text("Panel")]),
+                        TabsItem::new("gamma", "Gamma", vec![cx.text("Panel")]),
+                    ];
+
+                    let mut col = ColumnProps::default();
+                    col.layout.size.width = Length::Fill;
+                    col.layout.size.height = Length::Auto;
+                    col.gap = Px(16.0);
+
+                    vec![cx.column(col, |cx| {
+                        vec![
+                            cx.text("Header"),
+                            Tabs::new(model.clone())
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    })]
+                })]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
     }
 
     #[test]
@@ -792,6 +1216,59 @@ mod tests {
         let mut services = FakeServices::default();
 
         let _root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            TabsActivationMode::Manual,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn tabs_root_composable_selects_on_left_click() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _root = render_composable(
             &mut ui,
             &mut app,
             &mut services,

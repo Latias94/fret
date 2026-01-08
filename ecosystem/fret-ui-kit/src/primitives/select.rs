@@ -22,7 +22,7 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
+use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -33,6 +33,8 @@ pub use crate::headless::select_item_aligned::{
     select_item_aligned_position,
 };
 use crate::headless::typeahead;
+use crate::primitives::dialog;
+use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for select overlays.
@@ -133,30 +135,18 @@ impl SelectRoot {
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id).
 pub fn apply_select_trigger_a11y(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     expanded: bool,
     label: Option<Arc<str>>,
     listbox_element: Option<GlobalElementId>,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            *a11y = PressableA11y {
-                role: Some(fret_core::SemanticsRole::ComboBox),
-                label,
-                expanded: Some(expanded),
-                controls_element: listbox_element.map(|id| id.0),
-                ..a11y.clone()
-            };
-        }
-        ElementKind::Semantics(props) => {
-            props.role = fret_core::SemanticsRole::ComboBox;
-            props.label = label;
-            props.expanded = Some(expanded);
-            props.controls_element = listbox_element.map(|id| id.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_semantics(
+        trigger,
+        Some(fret_core::SemanticsRole::ComboBox),
+        label,
+        Some(expanded),
+        listbox_element,
+    )
 }
 
 /// Radix Select trigger "open keys" (`OPEN_KEYS`).
@@ -176,6 +166,16 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 ///
 /// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
 pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
+
+/// Returns `true` when a mouse pointer-up should be treated as part of the original trigger click.
+///
+/// Upstream Radix installs a one-shot "pointer up guard" after opening on mouse `pointerdown` to
+/// avoid immediately selecting an item or dismissing when the pointer is released without moving.
+pub fn select_mouse_open_is_within_click_slop(down: Point, up: Point) -> bool {
+    let dx = (down.x.0 - up.x.0).abs();
+    let dy = (down.y.0 - up.y.0).abs();
+    dx <= SELECT_TRIGGER_CLICK_SLOP_PX && dy <= SELECT_TRIGGER_CLICK_SLOP_PX
+}
 
 /// Radix-like select typeahead clear timeout (in milliseconds).
 ///
@@ -347,6 +347,33 @@ impl SelectTriggerKeyState {
         }
 
         true
+    }
+}
+
+/// One-shot pointer-up guard used when a select is opened via mouse `pointerdown`.
+///
+/// This mirrors Radix Select's behavior: the pointer-up that completes the click should not
+/// immediately select an item nor dismiss the content.
+#[derive(Debug, Default)]
+pub struct SelectMouseOpenGuardState {
+    mouse_open_down_pos: Option<Point>,
+}
+
+impl SelectMouseOpenGuardState {
+    pub fn clear(&mut self) {
+        self.mouse_open_down_pos = None;
+    }
+
+    pub fn record_if_opened(&mut self, was_open: bool, now_open: bool, down_pos: Point) {
+        if !was_open && now_open {
+            self.mouse_open_down_pos = Some(down_pos);
+        } else {
+            self.mouse_open_down_pos = None;
+        }
+    }
+
+    pub fn take(&mut self) -> Option<Point> {
+        self.mouse_open_down_pos.take()
     }
 }
 
@@ -604,6 +631,41 @@ impl SelectContentKeyState {
     }
 }
 
+/// Layout used for a Radix-like select modal barrier element.
+///
+/// This is a re-export of the shared modal barrier layout from `primitives::dialog`.
+pub fn select_modal_barrier_layout() -> LayoutStyle {
+    dialog::modal_barrier_layout()
+}
+
+/// Builds a full-window modal barrier for Radix-like select overlays.
+///
+/// This is a thin wrapper over `primitives::dialog::modal_barrier` so non-shadcn users can reuse
+/// the same "disable outside pointer events" outcome without depending on dialog primitives.
+pub fn select_modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    dialog::modal_barrier(cx, open, dismiss_on_press, children)
+}
+
+/// Convenience helper to assemble select modal overlay children in a Radix-like order: barrier then
+/// content.
+pub fn select_modal_layer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
+        content,
+    ]
+}
+
 /// Builds an overlay request for a Radix-style select content overlay.
 ///
 /// This uses a modal overlay layer to approximate Radix Select's outside interaction blocking.
@@ -635,7 +697,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
-    use fret_ui::element::{LayoutStyle, PressableProps};
+    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
     use std::time::Duration;
 
     fn bounds() -> Rect {

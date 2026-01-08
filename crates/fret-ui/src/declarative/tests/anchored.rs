@@ -53,6 +53,7 @@ fn anchored_places_child_via_render_transform_and_updates_layout_out() {
                 |cx| {
                     vec![cx.pressable(PressableProps::default(), move |cx, _st| {
                         let clicks = clicks.clone();
+                        #[allow(clippy::arc_with_non_send_sync)]
                         cx.pressable_add_on_activate(Arc::new(move |host, _action_cx, _reason| {
                             let _ = host
                                 .models_mut()

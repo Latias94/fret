@@ -76,7 +76,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
   - `docs/adr/0070-virtualization-contract.md`
 - **Reference(s):**
-  - TanStack Virtual: `repo-ref/virtual` (contract vocabulary + behaviors)
+  - virtualizer (Rust): `repo-ref/virtualizer` (primary)
   - gpui-component virtual list patterns: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
 
 ### Rendering substrate (scene ops, clipping, shadows)

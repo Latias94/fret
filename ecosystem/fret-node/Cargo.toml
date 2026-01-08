@@ -1,0 +1,34 @@
+[package]
+name = "fret-node"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime", optional = true }
+fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+
+[features]
+default = ["fret-ui", "kit"]
+
+# Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
+fret-ui = ["dep:fret-ui", "dep:fret-runtime"]
+
+# Convenience surfaces (profiles + common recipes) built on top of the substrate.
+#
+# This is headless-safe: it must not depend on `fret-ui`.
+kit = []
+
+# Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
+headless = []

@@ -129,9 +129,9 @@ To align with ADR 0042 (future variable-height items), the data source contract 
 
 For MVP 13, we can ship **fixed row height** only, but we must not paint ourselves into a corner.
 
-### 5) TanStack Virtual vocabulary alignment
+### 5) virtualizer vocabulary alignment
 
-Fret’s runtime virtualization vocabulary aligns with TanStack Virtual (see `repo-ref/virtual`):
+Fret’s runtime virtualization vocabulary aligns with `virtualizer` (see `repo-ref/virtualizer`):
 
 - `VirtualItem { key, index, start, end, size }` (vertical axis in P0)
 - `gap` between items

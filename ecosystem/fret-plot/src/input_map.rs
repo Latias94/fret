@@ -1,4 +1,4 @@
-use fret_core::{Modifiers, MouseButton};
+use fret_core::{KeyCode, Modifiers, MouseButton};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct ModifiersMask {
@@ -107,6 +107,14 @@ impl PointerChord {
         }
     }
 
+    pub const fn new_allow_extra(button: MouseButton, modifiers: ModifiersMask) -> Self {
+        Self {
+            button,
+            modifiers,
+            allow_extra_modifiers: true,
+        }
+    }
+
     pub fn matches(self, button: MouseButton, modifiers: Modifiers) -> bool {
         if self.button != button {
             return false;
@@ -117,6 +125,39 @@ impl PointerChord {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyChord {
+    pub key: KeyCode,
+    pub modifiers: ModifiersMask,
+    pub allow_extra_modifiers: bool,
+}
+
+impl KeyChord {
+    pub const fn new(key: KeyCode, modifiers: ModifiersMask) -> Self {
+        Self {
+            key,
+            modifiers,
+            allow_extra_modifiers: false,
+        }
+    }
+
+    pub const fn new_allow_extra(key: KeyCode, modifiers: ModifiersMask) -> Self {
+        Self {
+            key,
+            modifiers,
+            allow_extra_modifiers: true,
+        }
+    }
+
+    pub fn matches(self, key: KeyCode, modifiers: Modifiers) -> bool {
+        if self.key != key {
+            return false;
+        }
+        self.modifiers
+            .matches(modifiers, self.allow_extra_modifiers)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotInputMap {
     pub pan: PointerChord,
     pub fit: PointerChord,
@@ -127,6 +168,17 @@ pub struct PlotInputMap {
     pub box_zoom_expand_y: Option<ModifierKey>,
     pub query_drag: Option<PointerChord>,
     pub wheel_zoom_mod: Option<ModifierKey>,
+    /// Wheel zoom speed in log2 zoom units per wheel delta Y pixel.
+    ///
+    /// The wheel zoom factor is computed as `2^(delta_y * wheel_zoom_log2_per_px)` before it is
+    /// clamped by plot zoom constraints.
+    pub wheel_zoom_log2_per_px: f32,
+    pub wheel_zoom_x_only_mod: Option<ModifierKey>,
+    pub wheel_zoom_y_only_mod: Option<ModifierKey>,
+    pub axis_lock_click: Option<PointerChord>,
+    pub axis_lock_toggle: Option<KeyChord>,
+    pub axis_pan_lock_toggle: Option<KeyChord>,
+    pub axis_zoom_lock_toggle: Option<KeyChord>,
 }
 
 impl Default for PlotInputMap {
@@ -155,6 +207,31 @@ impl Default for PlotInputMap {
                 },
             )),
             wheel_zoom_mod: None,
+            wheel_zoom_log2_per_px: 0.0025,
+            wheel_zoom_x_only_mod: Some(ModifierKey::Shift),
+            wheel_zoom_y_only_mod: Some(ModifierKey::Ctrl),
+            axis_lock_click: Some(PointerChord::new_allow_extra(
+                MouseButton::Left,
+                ModifiersMask {
+                    ctrl: true,
+                    ..ModifiersMask::NONE
+                },
+            )),
+            axis_lock_toggle: Some(KeyChord::new(KeyCode::KeyL, ModifiersMask::NONE)),
+            axis_pan_lock_toggle: Some(KeyChord::new(
+                KeyCode::KeyL,
+                ModifiersMask {
+                    shift: true,
+                    ..ModifiersMask::NONE
+                },
+            )),
+            axis_zoom_lock_toggle: Some(KeyChord::new(
+                KeyCode::KeyL,
+                ModifiersMask {
+                    ctrl: true,
+                    ..ModifiersMask::NONE
+                },
+            )),
         }
     }
 }
@@ -176,5 +253,42 @@ mod tests {
         };
         assert!(!required.matches(mods, false));
         assert!(required.matches(mods, true));
+    }
+
+    #[test]
+    fn key_chord_matches_key_and_mods() {
+        let chord = KeyChord::new(
+            KeyCode::KeyL,
+            ModifiersMask {
+                shift: true,
+                ..ModifiersMask::NONE
+            },
+        );
+        let mods = Modifiers {
+            shift: true,
+            ..Modifiers::default()
+        };
+        assert!(chord.matches(KeyCode::KeyL, mods));
+        assert!(!chord.matches(KeyCode::KeyR, mods));
+        assert!(!chord.matches(KeyCode::KeyL, Modifiers::default()));
+    }
+
+    #[test]
+    fn default_wheel_axis_only_modifiers_match_docs() {
+        let map = PlotInputMap::default();
+        assert_eq!(map.wheel_zoom_x_only_mod, Some(ModifierKey::Shift));
+        assert_eq!(map.wheel_zoom_y_only_mod, Some(ModifierKey::Ctrl));
+    }
+
+    #[test]
+    fn wheel_zoom_mod_is_none_by_default() {
+        let map = PlotInputMap::default();
+        assert_eq!(map.wheel_zoom_mod, None);
+    }
+
+    #[test]
+    fn default_wheel_zoom_speed_matches_previous_constant() {
+        let map = PlotInputMap::default();
+        assert!((map.wheel_zoom_log2_per_px - 0.0025).abs() < f32::EPSILON);
     }
 }

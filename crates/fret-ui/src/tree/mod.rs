@@ -399,6 +399,12 @@ pub struct UiTree<H: UiHost> {
     observed_in_paint: ObservationIndex,
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
+    measure_stack: Vec<MeasureStackKey>,
+
+    #[cfg(feature = "layout-engine-v2")]
+    layout_engine: crate::layout_engine::TaffyLayoutEngine,
+    #[cfg(feature = "layout-engine-v2")]
+    viewport_roots: Vec<(NodeId, Rect)>,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
@@ -432,6 +438,11 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_in_paint: ObservationIndex::default(),
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
+            measure_stack: Vec::new(),
+            #[cfg(feature = "layout-engine-v2")]
+            layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
+            #[cfg(feature = "layout-engine-v2")]
+            viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             paint_cache_policy: PaintCachePolicy::Auto,
@@ -443,6 +454,16 @@ impl<H: UiHost> Default for UiTree<H> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MeasureStackKey {
+    node: NodeId,
+    known_w_bits: Option<u32>,
+    known_h_bits: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+    scale_bits: u32,
+}
+
 impl<H: UiHost> UiTree<H> {
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
@@ -452,6 +473,27 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(node) {
             n.element = element;
         }
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
+        std::mem::take(&mut self.layout_engine)
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn put_layout_engine(&mut self, engine: crate::layout_engine::TaffyLayoutEngine) {
+        self.layout_engine = engine;
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn register_viewport_root(&mut self, root: NodeId, bounds: Rect) {
+        self.viewport_roots.push((root, bounds));
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    #[allow(dead_code)]
+    pub(crate) fn viewport_roots(&self) -> &[(NodeId, Rect)] {
+        &self.viewport_roots
     }
 
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
@@ -552,6 +594,16 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn layout_engine_child_local_rect(
+        &self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> Option<Rect> {
+        self.layout_engine
+            .child_layout_rect_if_solved(parent, child)
     }
 
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
@@ -725,6 +777,10 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .map(|n| n.children.clone())
             .unwrap_or_default()
+    }
+
+    pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
+        self.nodes.get(node).and_then(|n| n.parent)
     }
 
     pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {
@@ -1413,11 +1469,7 @@ impl<H: UiHost> UiTree<H> {
                     if !derive {
                         continue;
                     }
-                    if !nodes[controller_idx]
-                        .controls
-                        .iter()
-                        .any(|id| *id == controlled)
-                    {
+                    if !nodes[controller_idx].controls.contains(&controlled) {
                         nodes[controller_idx].controls.push(controlled);
                     }
                 }

@@ -67,12 +67,15 @@ These tokens are interpreted as pixel values (the `ThemeConfig.metrics` map stor
 - `fret.plot.axis_gap` (fallback: `LinePlotStyle::default().axis_gap`)
 - `fret.plot.stroke_width` (fallback: `LinePlotStyle::default().stroke_width`)
 - `fret.plot.hover_threshold` (fallback: `LinePlotStyle::default().hover_threshold`)
+- `fret.plot.heatmap.colorbar.width` (fallback: `LinePlotStyle::default().heatmap_colorbar_width`)
+- `fret.plot.heatmap.colorbar.padding` (fallback: `LinePlotStyle::default().heatmap_colorbar_padding`)
 - `fret.plot.annotation.padding` (fallback: `metric.padding.sm`)
 - `fret.plot.annotation.radius` (fallback: `metric.radius.sm`)
 
 Compatibility keys:
 
 - `plot.border_width`, `plot.padding`, `plot.axis_gap`, `plot.stroke_width`, `plot.hover_threshold`
+- `plot.heatmap.colorbar.width`, `plot.heatmap.colorbar.padding`
 - `plot.annotation.padding`, `plot.annotation.radius`
 
 ## Example Theme Config Snippet

@@ -11,8 +11,22 @@ use std::sync::Arc;
 use fret_core::KeyCode;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
+use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+
+use crate::primitives::trigger_a11y;
+
+/// Stamps Radix-like trigger relationships:
+/// - `expanded` mirrors `aria-expanded`
+/// - `controls_element` mirrors `aria-controls` (by element id)
+pub fn apply_menu_trigger_a11y(
+    trigger: AnyElement,
+    expanded: bool,
+    content_element: Option<GlobalElementId>,
+) -> AnyElement {
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(expanded), content_element)
+}
 
 /// Wire “menu button opens on ArrowDown/ArrowUp” behavior onto an existing trigger element.
 ///

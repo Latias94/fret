@@ -17,6 +17,57 @@ use crate::primitives::menu::content_panel;
 use crate::primitives::menu::sub;
 use crate::primitives::menu::{content, content::RovingFlexProps, content::TypeaheadPolicy};
 
+fn with_submenu_value_scope<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    open_value: &Arc<str>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    cx.keyed(open_value.clone(), f)
+}
+
+fn submenu_content_semantics_id_in_scope<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open_value: &Arc<str>,
+) -> GlobalElementId {
+    with_submenu_value_scope(cx, open_value, |cx| {
+        // Compute the id via the same call path used by the actual mounted submenu panel
+        // (`submenu_panel_for_value_at` -> `submenu_panel_at` -> `menu_panel_at`), so callsite-based
+        // element ids stay aligned.
+        content_panel::menu_panel_at::<H>(
+            cx,
+            Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            ),
+            |layout| ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+        .id
+    })
+}
+
+/// Returns the stable semantics element id for a submenu content panel keyed by its trigger value.
+///
+/// This mirrors Radix `MenuSubTrigger` / `MenuSubContent` behavior where the trigger advertises a
+/// `controls` relationship (`aria-controls`) to the submenu content.
+///
+/// Callers should use this root-name-scoped helper rather than trying to compute the id inline
+/// while rendering menu items: id computation must not advance the current frame's element id
+/// counters, otherwise it will desync from the actual mounted submenu content element.
+#[track_caller]
+pub fn submenu_content_semantics_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    overlay_root_name: &str,
+    open_value: &Arc<str>,
+) -> GlobalElementId {
+    cx.with_root_name(overlay_root_name, |cx| {
+        submenu_content_semantics_id_in_scope::<H>(cx, open_value)
+    })
+}
+
 /// Render a submenu content panel anchored at the submenu geometry's floating rect.
 ///
 /// This keeps wrappers from duplicating the "role=menu + absolute positioned panel container"
@@ -29,6 +80,22 @@ pub fn submenu_panel_at<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     content_panel::menu_panel_at(cx, placed, build_container, f)
+}
+
+/// Render a submenu panel and scope its element ids by the submenu trigger value.
+///
+/// This ensures the submenu content element id is stable and can be referenced by the trigger via
+/// `submenu_content_semantics_id`.
+pub fn submenu_panel_for_value_at<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open_value: Arc<str>,
+    placed: Rect,
+    build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    with_submenu_value_scope(cx, &open_value, |cx| {
+        submenu_panel_at(cx, placed, build_container, f)
+    })
 }
 
 /// Render a submenu roving group with APG-aligned keyboard navigation and prefix typeahead.

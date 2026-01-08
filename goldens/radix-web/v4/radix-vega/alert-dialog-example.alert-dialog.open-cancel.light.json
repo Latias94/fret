@@ -1,0 +1,1400 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "alert-dialog-example",
+  "primitive": "alert-dialog",
+  "scenario": "open-cancel",
+  "url": "http://localhost:4020/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/alert-dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Default"
+                                }
+                              ],
+                              "text": "Default"
+                            }
+                          ],
+                          "text": "BasicDefault"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small"
+                                }
+                              ],
+                              "text": "Small"
+                            }
+                          ],
+                          "text": "SmallSmall"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Default (Media)"
+                                }
+                              ],
+                              "text": "Default (Media)"
+                            }
+                          ],
+                          "text": "With MediaDefault (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small (Media)"
+                                }
+                              ],
+                              "text": "Small (Media)"
+                            }
+                          ],
+                          "text": "Small With MediaSmall (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_u_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Delete Chat"
+                                }
+                              ],
+                              "text": "Delete Chat"
+                            }
+                          ],
+                          "text": "DestructiveDelete Chat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_11_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "alert-dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Default",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Small"
+            },
+            {
+              "role": "button",
+              "name": "Small",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Media"
+            },
+            {
+              "role": "button",
+              "name": "Default (Media)",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Small With Media"
+            },
+            {
+              "role": "button",
+              "name": "Small (Media)",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Destructive"
+            },
+            {
+              "role": "button",
+              "name": "Delete Chat",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "alert-dialog-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            49,
+            1,
+            0
+          ],
+          "attrs": {},
+          "text": "Cancel"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                1
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "true",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "open"
+                                  },
+                                  "children": [],
+                                  "text": "Default"
+                                }
+                              ],
+                              "text": "Default"
+                            }
+                          ],
+                          "text": "BasicDefault"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small"
+                                }
+                              ],
+                              "text": "Small"
+                            }
+                          ],
+                          "text": "SmallSmall"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Default (Media)"
+                                }
+                              ],
+                              "text": "Default (Media)"
+                            }
+                          ],
+                          "text": "With MediaDefault (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small (Media)"
+                                }
+                              ],
+                              "text": "Small (Media)"
+                            }
+                          ],
+                          "text": "Small With MediaSmall (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_u_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Delete Chat"
+                                }
+                              ],
+                              "text": "Delete Chat"
+                            }
+                          ],
+                          "text": "DestructiveDelete Chat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_11_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "next-route-announcer",
+              "path": [
+                47
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                48
+              ],
+              "attrs": {
+                "data-state": "open",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                49
+              ],
+              "attrs": {
+                "role": "alertdialog",
+                "aria-describedby": "radix-_r_k_",
+                "aria-labelledby": "radix-_r_j_",
+                "data-state": "open",
+                "tabindex": "-1"
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    49,
+                    1
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "button",
+                      "path": [
+                        49,
+                        1,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Cancel"
+                    },
+                    {
+                      "tag": "button",
+                      "path": [
+                        49,
+                        1,
+                        1
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Continue"
+                    }
+                  ],
+                  "text": "CancelContinue"
+                }
+              ],
+              "text": "Are you absolutely sure?This action cannot be undone. This will permanently delete your account and remove your data fro…"
+            },
+            {
+              "tag": "span",
+              "path": [
+                50
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "alert-dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "alertdialog",
+              "name": "Are you absolutely sure?",
+              "description": "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+              "children": [
+                {
+                  "role": "heading",
+                  "name": "Are you absolutely sure?",
+                  "level": 2
+                },
+                {
+                  "role": "StaticText",
+                  "name": "This action cannot be undone. This will permanently delete your account and remove your data from our servers."
+                },
+                {
+                  "role": "button",
+                  "name": "Cancel",
+                  "focused": true
+                },
+                {
+                  "role": "button",
+                  "name": "Continue"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            49,
+            1,
+            0
+          ],
+          "attrs": {},
+          "text": "Cancel"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                1
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Default"
+                                }
+                              ],
+                              "text": "Default"
+                            }
+                          ],
+                          "text": "BasicDefault"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small"
+                                }
+                              ],
+                              "text": "Small"
+                            }
+                          ],
+                          "text": "SmallSmall"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Default (Media)"
+                                }
+                              ],
+                              "text": "Default (Media)"
+                            }
+                          ],
+                          "text": "With MediaDefault (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Small (Media)"
+                                }
+                              ],
+                              "text": "Small (Media)"
+                            }
+                          ],
+                          "text": "Small With MediaSmall (Media)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_u_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Delete Chat"
+                                }
+                              ],
+                              "text": "Delete Chat"
+                            }
+                          ],
+                          "text": "DestructiveDelete Chat"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_11_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicDefaultSmallSmallWith MediaDefault (Media)Small With MediaSmall (Media)DestructiveDelete ChatIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "next-route-announcer",
+              "path": [
+                47
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                48
+              ],
+              "attrs": {
+                "data-state": "closed",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                49
+              ],
+              "attrs": {
+                "role": "alertdialog",
+                "aria-describedby": "radix-_r_k_",
+                "aria-labelledby": "radix-_r_j_",
+                "data-state": "closed",
+                "tabindex": "-1"
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    49,
+                    1
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "button",
+                      "path": [
+                        49,
+                        1,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Cancel"
+                    },
+                    {
+                      "tag": "button",
+                      "path": [
+                        49,
+                        1,
+                        1
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Continue"
+                    }
+                  ],
+                  "text": "CancelContinue"
+                }
+              ],
+              "text": "Are you absolutely sure?This action cannot be undone. This will permanently delete your account and remove your data fro…"
+            },
+            {
+              "tag": "span",
+              "path": [
+                50
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "alert-dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "alertdialog",
+              "name": "Are you absolutely sure?",
+              "description": "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+              "children": [
+                {
+                  "role": "heading",
+                  "name": "Are you absolutely sure?",
+                  "level": 2
+                },
+                {
+                  "role": "StaticText",
+                  "name": "This action cannot be undone. This will permanently delete your account and remove your data from our servers."
+                },
+                {
+                  "role": "button",
+                  "name": "Cancel",
+                  "focused": true
+                },
+                {
+                  "role": "button",
+                  "name": "Continue"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

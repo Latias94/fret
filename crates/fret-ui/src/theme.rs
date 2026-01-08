@@ -1,6 +1,9 @@
 use fret_core::{Color, Px};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::OnceLock};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::OnceLock,
+};
 
 use crate::UiHost;
 use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
@@ -175,6 +178,17 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
     out.insert(
         "mono_font.line_height".to_string(),
         metrics.mono_font_line_height,
+    );
+
+    // `fret-markdown` canonical metrics.
+    //
+    // Keep this value derived from baseline mono font metrics so it tracks theme typography.
+    // This is intended as a "reasonable default" (roughly 16 lines) rather than a hard rule.
+    let code_block_max_height =
+        Px((metrics.mono_font_line_height.0 * 16.0).max(metrics.mono_font_size.0 * 18.0));
+    out.insert(
+        "fret.markdown.code_block.max_height".to_string(),
+        code_block_max_height,
     );
 
     out
@@ -408,6 +422,8 @@ pub struct Theme {
     pub metrics: ThemeMetrics,
     extra_colors: HashMap<String, Color>,
     extra_metrics: HashMap<String, Px>,
+    configured_colors: HashSet<String>,
+    configured_metrics: HashSet<String>,
     revision: u64,
 }
 
@@ -444,6 +460,14 @@ impl Theme {
     pub fn metric_required(&self, key: &str) -> Px {
         self.metric_by_key(key)
             .unwrap_or_else(|| panic!("missing theme metric token {key}"))
+    }
+
+    pub fn color_key_configured(&self, key: &str) -> bool {
+        self.configured_colors.contains(key.trim())
+    }
+
+    pub fn metric_key_configured(&self, key: &str) -> bool {
+        self.configured_metrics.contains(key.trim())
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
@@ -786,6 +810,17 @@ impl Theme {
             next_metrics.insert(k.clone(), Px(*v));
         }
 
+        let next_configured_colors: HashSet<String> = cfg.colors.keys().cloned().collect();
+        if self.configured_colors != next_configured_colors {
+            self.configured_colors = next_configured_colors;
+            changed = true;
+        }
+        let next_configured_metrics: HashSet<String> = cfg.metrics.keys().cloned().collect();
+        if self.configured_metrics != next_configured_metrics {
+            self.configured_metrics = next_configured_metrics;
+            changed = true;
+        }
+
         if self.extra_colors != next_colors {
             self.extra_colors = next_colors;
             changed = true;
@@ -860,6 +895,8 @@ fn default_theme() -> &'static Theme {
             colors,
             extra_colors: default_color_tokens(colors),
             extra_metrics: default_metric_tokens(metrics),
+            configured_colors: HashSet::new(),
+            configured_metrics: HashSet::new(),
         }
     })
 }
@@ -985,6 +1022,7 @@ fn hsl_to_srgb(h: f32, s: f32, l: f32) -> (f32, f32, f32) {
     )
 }
 
+#[allow(clippy::excessive_precision)]
 fn parse_oklch_to_linear(s: &str) -> Option<Color> {
     let s = s.trim();
     let inner = s.strip_prefix("oklch(")?.strip_suffix(')')?.trim();

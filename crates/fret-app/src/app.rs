@@ -318,6 +318,150 @@ fn default_keymap_service() -> KeymapService {
                         key: "Tab".into(),
                     },
                 },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyA".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.copy".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into()],
+                        key: "KeyC".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.cut".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into()],
+                        key: "KeyX".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.paste".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into()],
+                        key: "KeyV".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("text.select_all".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into()],
+                        key: "KeyA".into(),
+                    },
+                },
             ],
         })
         .expect("default keymap must be valid"),

@@ -119,6 +119,7 @@ pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    roving_focus: bool,
     orientation: ToggleGroupOrientation,
     loop_navigation: bool,
     variant: ToggleVariant,
@@ -138,6 +139,7 @@ impl std::fmt::Debug for ToggleGroup {
             .field("kind", &kind)
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
+            .field("roving_focus", &self.roving_focus)
             .field("orientation", &self.orientation)
             .field("loop_navigation", &self.loop_navigation)
             .field("variant", &self.variant)
@@ -158,6 +160,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
             variant: ToggleVariant::default(),
@@ -178,6 +181,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
             variant: ToggleVariant::default(),
@@ -196,6 +200,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
             variant: ToggleVariant::default(),
@@ -216,6 +221,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
             variant: ToggleVariant::default(),
@@ -228,6 +234,12 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// When `true` (default), installs roving focus behavior (Radix `rovingFocus`).
+    pub fn roving_focus(mut self, roving_focus: bool) -> Self {
+        self.roving_focus = roving_focus;
         self
     }
 
@@ -281,6 +293,7 @@ impl ToggleGroup {
         let model = self.model;
         let items = self.items;
         let group_disabled = self.disabled;
+        let roving_focus = self.roving_focus;
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
         let variant = self.variant;
@@ -324,18 +337,26 @@ impl ToggleGroup {
         let disabled_flags: Vec<bool> =
             items.iter().map(|i| group_disabled || i.disabled).collect();
 
-        let tab_stop = match (selected_single.as_deref(), selected_multi.as_ref()) {
-            (Some(selected), _) => fret_ui_kit::primitives::toggle_group::tab_stop_index_single(
-                &values,
-                Some(selected),
-                &disabled_flags,
-            ),
-            (_, Some(selected)) => fret_ui_kit::primitives::toggle_group::tab_stop_index_multiple(
-                &values,
-                selected,
-                &disabled_flags,
-            ),
-            _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
+        let tab_stop = if roving_focus {
+            match (selected_single.as_deref(), selected_multi.as_ref()) {
+                (Some(selected), _) => {
+                    fret_ui_kit::primitives::toggle_group::tab_stop_index_single(
+                        &values,
+                        Some(selected),
+                        &disabled_flags,
+                    )
+                }
+                (_, Some(selected)) => {
+                    fret_ui_kit::primitives::toggle_group::tab_stop_index_multiple(
+                        &values,
+                        selected,
+                        &disabled_flags,
+                    )
+                }
+                _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
+            }
+        } else {
+            None
         };
 
         let gap = MetricRef::space(spacing).resolve(&theme);
@@ -374,189 +395,197 @@ impl ToggleGroup {
         };
 
         let roving = RovingFocusProps {
-            enabled: !group_disabled,
+            enabled: roving_focus && !group_disabled,
             wrap: loop_navigation,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
             ..Default::default()
         };
 
         cx.container(group_props, move |cx| {
-            vec![cx.roving_flex(
-                RovingFlexProps {
-                    flex: FlexProps {
-                        direction: match orientation {
-                            ToggleGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
-                            ToggleGroupOrientation::Vertical => fret_core::Axis::Vertical,
-                        },
-                        gap,
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                        ..Default::default()
-                    },
-                    roving,
+            let flex = FlexProps {
+                direction: match orientation {
+                    ToggleGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                    ToggleGroupOrientation::Vertical => fret_core::Axis::Vertical,
                 },
-                move |cx| {
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+                ..Default::default()
+            };
+
+            let render_items = move |cx: &mut ElementContext<'_, H>| {
+                if roving_focus {
                     cx.roving_nav_apg();
-                    let n = items.len();
-                    let mut out = Vec::with_capacity(n);
+                }
+                let n = items.len();
+                let mut out = Vec::with_capacity(n);
 
-                    for (idx, item) in items.into_iter().enumerate() {
-                        let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true);
-                        let enabled = !item_disabled;
-                        let focusable = tab_stop.is_some_and(|i| i == idx);
-                        let on = selected_single
-                            .as_deref()
-                            .is_some_and(|v| v == item.value.as_ref())
-                            || selected_multi.as_ref().is_some_and(|selected| {
-                                selected.iter().any(|v| v.as_ref() == item.value.as_ref())
-                            });
+                for (idx, item) in items.into_iter().enumerate() {
+                    let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true);
+                    let enabled = !item_disabled;
+                    let focusable = if roving_focus {
+                        tab_stop.is_some_and(|i| i == idx)
+                    } else {
+                        enabled
+                    };
+                    let on = selected_single
+                        .as_deref()
+                        .is_some_and(|v| v == item.value.as_ref())
+                        || selected_multi.as_ref().is_some_and(|selected| {
+                            selected.iter().any(|v| v.as_ref() == item.value.as_ref())
+                        });
 
-                        let corners = if gap.0 <= 0.0 {
-                            let first = idx == 0;
-                            let last = idx + 1 == n;
-                            match orientation {
-                                ToggleGroupOrientation::Horizontal => Corners {
-                                    top_left: if first { radius } else { Px(0.0) },
-                                    bottom_left: if first { radius } else { Px(0.0) },
-                                    top_right: if last { radius } else { Px(0.0) },
-                                    bottom_right: if last { radius } else { Px(0.0) },
-                                },
-                                ToggleGroupOrientation::Vertical => Corners {
-                                    top_left: if first { radius } else { Px(0.0) },
-                                    top_right: if first { radius } else { Px(0.0) },
-                                    bottom_left: if last { radius } else { Px(0.0) },
-                                    bottom_right: if last { radius } else { Px(0.0) },
-                                },
+                    let corners = if gap.0 <= 0.0 {
+                        let first = idx == 0;
+                        let last = idx + 1 == n;
+                        match orientation {
+                            ToggleGroupOrientation::Horizontal => Corners {
+                                top_left: if first { radius } else { Px(0.0) },
+                                bottom_left: if first { radius } else { Px(0.0) },
+                                top_right: if last { radius } else { Px(0.0) },
+                                bottom_right: if last { radius } else { Px(0.0) },
+                            },
+                            ToggleGroupOrientation::Vertical => Corners {
+                                top_left: if first { radius } else { Px(0.0) },
+                                top_right: if first { radius } else { Px(0.0) },
+                                bottom_left: if last { radius } else { Px(0.0) },
+                                bottom_right: if last { radius } else { Px(0.0) },
+                            },
+                        }
+                    } else {
+                        Corners::all(radius)
+                    };
+
+                    let mut base_props = decl_style::container_props(
+                        &theme,
+                        base_chrome.clone(),
+                        LayoutRefinement::default(),
+                    );
+                    base_props.padding = Edges {
+                        top: pad_y,
+                        right: pad_x,
+                        bottom: pad_y,
+                        left: pad_x,
+                    };
+                    base_props.corner_radii = corners;
+
+                    if gap.0 <= 0.0
+                        && variant == ToggleVariant::Outline
+                        && idx > 0
+                        && (base_props.border.left.0 > 0.0 || base_props.border.top.0 > 0.0)
+                    {
+                        match orientation {
+                            ToggleGroupOrientation::Horizontal => {
+                                base_props.border.left = Px(0.0);
                             }
-                        } else {
-                            Corners::all(radius)
-                        };
-
-                        let mut base_props = decl_style::container_props(
-                            &theme,
-                            base_chrome.clone(),
-                            LayoutRefinement::default(),
-                        );
-                        base_props.padding = Edges {
-                            top: pad_y,
-                            right: pad_x,
-                            bottom: pad_y,
-                            left: pad_x,
-                        };
-                        base_props.corner_radii = corners;
-
-                        if gap.0 <= 0.0
-                            && variant == ToggleVariant::Outline
-                            && idx > 0
-                            && (base_props.border.left.0 > 0.0 || base_props.border.top.0 > 0.0)
-                        {
-                            match orientation {
-                                ToggleGroupOrientation::Horizontal => {
-                                    base_props.border.left = Px(0.0);
-                                }
-                                ToggleGroupOrientation::Vertical => {
-                                    base_props.border.top = Px(0.0);
-                                }
+                            ToggleGroupOrientation::Vertical => {
+                                base_props.border.top = Px(0.0);
                             }
                         }
-
-                        let value = item.value.clone();
-                        let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
-                        let a11y = if model_single.is_some() {
-                            fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
-                                a11y_label.clone(),
-                                on,
-                            )
-                        } else {
-                            fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_multiple(
-                                a11y_label.clone(),
-                                on,
-                            )
-                        };
-                        let children = item.children;
-                        let model_single = model_single.clone();
-                        let model_multi = model_multi.clone();
-                        let pressable_layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default()
-                                .min_h(MetricRef::Px(item_h))
-                                .min_w_0()
-                                .flex_none(),
-                        );
-
-                        out.push(cx.pressable(
-                            PressableProps {
-                                layout: pressable_layout,
-                                enabled,
-                                focusable,
-                                focus_ring: Some(ring),
-                                a11y,
-                                ..Default::default()
-                            },
-                            move |cx, state| {
-                                if let Some(m) = model_single.as_ref() {
-                                    let model = m.clone();
-                                    let value = value.clone();
-                                    cx.pressable_add_on_activate(Arc::new(
-                                        move |host, _action_cx, _reason| {
-                                            let current =
-                                                host.models_mut().get_cloned(&model).flatten();
-                                            let next = if current
-                                                .as_ref()
-                                                .is_some_and(|cur| cur.as_ref() == value.as_ref())
-                                            {
-                                                None
-                                            } else {
-                                                Some(value.clone())
-                                            };
-                                            let _ = host.models_mut().update(&model, |v| *v = next);
-                                        },
-                                    ));
-                                }
-                                if let Some(m) = model_multi.as_ref() {
-                                    cx.pressable_toggle_vec_arc_str(m, value.clone());
-                                }
-
-                                let hovered = state.hovered && !state.pressed;
-                                let pressed = state.pressed;
-
-                                let hover_bg = match variant {
-                                    ToggleVariant::Default => bg_hover_muted,
-                                    ToggleVariant::Outline => bg_on,
-                                };
-
-                                let bg = if on && !item_disabled {
-                                    Some(bg_on)
-                                } else if (hovered || pressed) && !item_disabled {
-                                    Some(hover_bg)
-                                } else {
-                                    None
-                                };
-
-                                let mut props = base_props;
-                                if bg.is_some() {
-                                    props.background = bg;
-                                }
-                                if state.focused {
-                                    props.border_color = Some(ring_border);
-                                }
-                                props.layout.size = pressable_layout.size;
-
-                                vec![shadcn_layout::container_hstack_centered(
-                                    cx,
-                                    props,
-                                    Space::N1,
-                                    children,
-                                )]
-                            },
-                        ));
                     }
 
-                    out
-                },
-            )]
+                    let value = item.value.clone();
+                    let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
+                    let a11y = if model_single.is_some() {
+                        fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
+                            a11y_label.clone(),
+                            on,
+                        )
+                    } else {
+                        fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_multiple(
+                            a11y_label.clone(),
+                            on,
+                        )
+                    };
+                    let children = item.children;
+                    let model_single = model_single.clone();
+                    let model_multi = model_multi.clone();
+                    let pressable_layout = decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default()
+                            .min_h(MetricRef::Px(item_h))
+                            .min_w_0()
+                            .flex_none(),
+                    );
+
+                    out.push(cx.pressable(
+                        PressableProps {
+                            layout: pressable_layout,
+                            enabled,
+                            focusable,
+                            focus_ring: Some(ring),
+                            a11y,
+                            ..Default::default()
+                        },
+                        move |cx, state| {
+                            if let Some(m) = model_single.as_ref() {
+                                let model = m.clone();
+                                let value = value.clone();
+                                cx.pressable_add_on_activate(Arc::new(
+                                    move |host, _action_cx, _reason| {
+                                        let current =
+                                            host.models_mut().get_cloned(&model).flatten();
+                                        let next = if current
+                                            .as_ref()
+                                            .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                        {
+                                            None
+                                        } else {
+                                            Some(value.clone())
+                                        };
+                                        let _ = host.models_mut().update(&model, |v| *v = next);
+                                    },
+                                ));
+                            }
+                            if let Some(m) = model_multi.as_ref() {
+                                cx.pressable_toggle_vec_arc_str(m, value.clone());
+                            }
+
+                            let hovered = state.hovered && !state.pressed;
+                            let pressed = state.pressed;
+
+                            let hover_bg = match variant {
+                                ToggleVariant::Default => bg_hover_muted,
+                                ToggleVariant::Outline => bg_on,
+                            };
+
+                            let bg = if on && !item_disabled {
+                                Some(bg_on)
+                            } else if (hovered || pressed) && !item_disabled {
+                                Some(hover_bg)
+                            } else {
+                                None
+                            };
+
+                            let mut props = base_props;
+                            if bg.is_some() {
+                                props.background = bg;
+                            }
+                            if state.focused {
+                                props.border_color = Some(ring_border);
+                            }
+                            props.layout.size = pressable_layout.size;
+
+                            vec![shadcn_layout::container_hstack_centered(
+                                cx,
+                                props,
+                                Space::N1,
+                                children,
+                            )]
+                        },
+                    ));
+                }
+
+                out
+            };
+
+            if roving_focus {
+                vec![cx.roving_flex(RovingFlexProps { flex, roving }, render_items)]
+            } else {
+                vec![cx.flex(flex, render_items)]
+            }
         })
     }
 }
@@ -675,6 +704,41 @@ mod tests {
                     ToggleGroupItem::new("gamma", vec![]),
                 ];
                 vec![ToggleGroup::single(model).items(items).into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_single_without_roving_focus(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "toggle-group-single-no-roving",
+            |cx| {
+                let items = vec![
+                    ToggleGroupItem::new("alpha", vec![]),
+                    ToggleGroupItem::new("beta", vec![]),
+                    ToggleGroupItem::new("gamma", vec![]),
+                ];
+                vec![
+                    ToggleGroup::single(model)
+                        .roving_focus(false)
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -871,6 +935,67 @@ mod tests {
             .expect("focused node");
         assert_eq!(focused_node.role, SemanticsRole::RadioButton);
         assert_eq!(focused_node.label.as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn toggle_group_single_without_roving_focus_does_not_move_focus_on_arrow() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_single_without_roving_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_single_without_roving_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.label.as_deref(), Some("alpha"));
     }
 
     #[test]

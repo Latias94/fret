@@ -58,9 +58,11 @@ Fret does not have CSS animation events. Motion is composed from:
 - Pass: Popover/Tooltip/HoverCard use fade + zoom + side-based slide-in keyed off popper `Side`.
 - Pass: Sheet-like modal panels can slide in/out via `shadcn_modal_slide_transform`.
 - Pass: Motion progress is driven by a shared transition timeline with shadcn-aligned easing.
+- Pass: NavigationMenu directional content switching matches shadcn's `data-motion` semantics via
+  `navigation_menu_content_transition(...)` + `navigation_menu_content_switch(...)`.
 - Intentional difference: Fret's presence driver is deterministic and tick-based; it does not inspect
   CSS `animation-name` nor listen to animation lifecycle events (Radix DOM behavior).
 
 ## Follow-ups (future)
 
-- Extend motion taxonomy coverage to remaining overlay-ish components as they are added (e.g. NavigationMenu).
+- Extend motion taxonomy coverage to remaining overlay-ish components as they are added.

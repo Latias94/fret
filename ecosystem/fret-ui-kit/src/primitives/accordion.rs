@@ -11,9 +11,10 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, StackProps,
+    AnyElement, ElementKind, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps,
+    RovingFocusProps, SemanticsProps, StackProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
@@ -34,6 +35,28 @@ pub fn accordion_trigger_a11y(label: Arc<str>, open: bool) -> PressableA11y {
         expanded: Some(open),
         ..Default::default()
     }
+}
+
+/// Stamps Radix-like trigger relationships:
+/// - `controls_element` mirrors `aria-controls` (by element id).
+///
+/// In Radix Accordion, the trigger points at its content by id. In Fret we model this via a
+/// portable element-id relationship that resolves into `SemanticsNode.controls` when the content
+/// is mounted.
+pub fn apply_accordion_trigger_controls(
+    mut trigger: AnyElement,
+    content_element: GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.a11y.controls_element = Some(content_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.controls_element = Some(content_element.0);
+        }
+        _ => {}
+    }
+    trigger
 }
 
 /// Derive the "tab stop" index for a single-select accordion:
@@ -228,6 +251,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, PressableProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -276,6 +300,31 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn apply_accordion_trigger_controls_sets_controls_on_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let content = GlobalElementId(0xbeef);
+            let trigger = apply_accordion_trigger_controls(trigger, content);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.controls_element, Some(content.0));
+        });
     }
 }
 

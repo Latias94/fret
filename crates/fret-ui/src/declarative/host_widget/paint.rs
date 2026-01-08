@@ -348,6 +348,287 @@ impl ElementHostWidget {
                     color,
                 });
             }
+            ElementInstance::SelectableText(props) => {
+                let theme_revision = cx.theme().revision();
+                cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+                let font_stack_key = cx
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let font_size = cx
+                    .theme()
+                    .metric_by_key("font.size")
+                    .unwrap_or(cx.theme().metrics.font_size);
+                let style = props.style.unwrap_or(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    line_height: Some(
+                        cx.theme()
+                            .metric_by_key("font.line_height")
+                            .unwrap_or(cx.theme().metrics.font_line_height),
+                    ),
+                    ..Default::default()
+                });
+                let color = props
+                    .color
+                    .or_else(|| cx.theme().color_by_key("foreground"))
+                    .unwrap_or(cx.theme().colors.text_primary);
+                let constraints = TextConstraints {
+                    max_width: Some(cx.bounds.size.width),
+                    wrap: props.wrap,
+                    overflow: props.overflow,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let scale_bits = cx.scale_factor.to_bits();
+                let needs_prepare = self.text_cache.blob.is_none()
+                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
+                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
+                    || self.text_cache.last_style.as_ref() != Some(&style)
+                    || self.text_cache.last_wrap != Some(props.wrap)
+                    || self.text_cache.last_overflow != Some(props.overflow)
+                    || self.text_cache.last_width != Some(cx.bounds.size.width)
+                    || self.text_cache.last_theme_revision != Some(theme_revision)
+                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+
+                if needs_prepare {
+                    if let Some(blob) = self.text_cache.blob.take() {
+                        cx.services.text().release(blob);
+                    }
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare_rich(&props.rich, &style, constraints);
+                    self.text_cache.blob = Some(blob);
+                    self.text_cache.metrics = Some(metrics);
+                    self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+                    self.text_cache.last_text = None;
+                    self.text_cache.last_rich = Some(props.rich.clone());
+                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_wrap = Some(props.wrap);
+                    self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_theme_revision = Some(theme_revision);
+                    self.text_cache.last_font_stack_key = Some(font_stack_key);
+                }
+
+                let Some(blob) = self.text_cache.blob else {
+                    return;
+                };
+                let Some(metrics) = self.text_cache.metrics else {
+                    return;
+                };
+
+                let focused = cx.focus == Some(cx.node);
+                let (dragging, last_pointer_pos) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.dragging, state.last_pointer_pos),
+                );
+                if focused
+                    && dragging
+                    && let Some(pointer_pos) = last_pointer_pos
+                {
+                    let local = fret_core::Point::new(
+                        fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
+                        fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
+                    );
+                    let hit = cx.services.hit_test_point(blob, local);
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.caret = hit.index;
+                            state.affinity = hit.affinity;
+                        },
+                    );
+                }
+                if focused {
+                    let (anchor, caret) = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::SelectableTextState::default,
+                        |state| (state.selection_anchor, state.caret),
+                    );
+                    let start = anchor.min(caret);
+                    let end = anchor.max(caret);
+                    if start < end {
+                        let mut rects: Vec<fret_core::Rect> = Vec::new();
+                        cx.services.selection_rects(blob, (start, end), &mut rects);
+                        let sel_color = cx.theme().color_required("selection.background");
+                        for r in rects {
+                            let rect = fret_core::Rect::new(
+                                fret_core::Point::new(
+                                    fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
+                                    fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
+                                ),
+                                r.size,
+                            );
+                            cx.scene.push(SceneOp::Quad {
+                                order: DrawOrder(0),
+                                rect,
+                                background: sel_color,
+                                border: fret_core::Edges::all(fret_core::Px(0.0)),
+                                border_color: Color::TRANSPARENT,
+                                corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                            });
+                        }
+                    }
+                }
+
+                let origin = fret_core::Point::new(
+                    cx.bounds.origin.x,
+                    cx.bounds.origin.y + metrics.baseline,
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(0),
+                    origin,
+                    text: blob,
+                    color,
+                });
+
+                if dragging
+                    && let Some(pointer_pos) = last_pointer_pos
+                    && let Some(window) = cx.window
+                {
+                    const EDGE_MARGIN: Px = Px(24.0);
+                    const MAX_STEP: Px = Px(16.0);
+
+                    let mut node = cx.node;
+                    while let Some(parent) = cx.tree.node_parent(node) {
+                        node = parent;
+                        let Some(record) = crate::declarative::frame::element_record_for_node(
+                            cx.app, window, node,
+                        ) else {
+                            continue;
+                        };
+
+                        let (handle, handle_key, scroll_x, scroll_y) = match record.instance {
+                            ElementInstance::Scroll(props) => {
+                                let handle = if let Some(handle) = props.scroll_handle.as_ref() {
+                                    handle.clone()
+                                } else {
+                                    crate::elements::with_element_state(
+                                        &mut *cx.app,
+                                        window,
+                                        record.element,
+                                        crate::element::ScrollState::default,
+                                        |state| state.scroll_handle.clone(),
+                                    )
+                                };
+                                let key = props.scroll_handle.as_ref().map(|h| h.binding_key());
+                                (handle, key, props.axis.scroll_x(), props.axis.scroll_y())
+                            }
+                            ElementInstance::VirtualList(props) => {
+                                if props.axis == fret_core::Axis::Vertical {
+                                    (
+                                        props.scroll_handle.base_handle().clone(),
+                                        Some(props.scroll_handle.base_handle().binding_key()),
+                                        false,
+                                        true,
+                                    )
+                                } else {
+                                    continue;
+                                }
+                            }
+                            _ => continue,
+                        };
+
+                        if !scroll_x && !scroll_y {
+                            continue;
+                        }
+
+                        let Some(scroll_bounds) = cx.tree.node_bounds(node) else {
+                            break;
+                        };
+                        let left = scroll_bounds.origin.x;
+                        let right =
+                            fret_core::Px(scroll_bounds.origin.x.0 + scroll_bounds.size.width.0);
+                        let top = scroll_bounds.origin.y;
+                        let bottom =
+                            fret_core::Px(scroll_bounds.origin.y.0 + scroll_bounds.size.height.0);
+
+                        let mut step_x = Px(0.0);
+                        if scroll_x {
+                            if pointer_pos.x.0 < left.0 + EDGE_MARGIN.0 {
+                                let t = ((left.0 + EDGE_MARGIN.0 - pointer_pos.x.0)
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_x = Px(-MAX_STEP.0 * t);
+                            } else if pointer_pos.x.0 > right.0 - EDGE_MARGIN.0 {
+                                let t = ((pointer_pos.x.0 - (right.0 - EDGE_MARGIN.0))
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_x = Px(MAX_STEP.0 * t);
+                            }
+                        }
+
+                        let mut step_y = Px(0.0);
+                        if scroll_y {
+                            if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
+                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0) / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_y = Px(-MAX_STEP.0 * t);
+                            } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
+                                let t = ((pointer_pos.y.0 - (bottom.0 - EDGE_MARGIN.0))
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_y = Px(MAX_STEP.0 * t);
+                            }
+                        }
+
+                        if step_x.0.abs() < 0.01 && step_y.0.abs() < 0.01 {
+                            break;
+                        }
+
+                        let prev = handle.offset();
+                        handle.set_offset(fret_core::Point::new(
+                            Px(prev.x.0 + step_x.0),
+                            Px(prev.y.0 + step_y.0),
+                        ));
+                        let next = handle.offset();
+                        let did_scroll = (next.y.0 - prev.y.0).abs() > 0.01
+                            || (next.x.0 - prev.x.0).abs() > 0.01;
+
+                        if did_scroll {
+                            if let Some(handle_key) = handle_key {
+                                let bound =
+                                    crate::declarative::frame::bound_elements_for_scroll_handle(
+                                        cx.app, window, handle_key,
+                                    );
+                                let mut unique =
+                                    std::collections::HashSet::with_capacity(bound.len());
+                                for element in bound {
+                                    if !unique.insert(element) {
+                                        continue;
+                                    }
+                                    let Some(node) =
+                                        crate::declarative::mount::node_for_element_in_window_frame(
+                                            cx.app, window, element,
+                                        )
+                                    else {
+                                        continue;
+                                    };
+                                    cx.tree.invalidate(node, Invalidation::Layout);
+                                    cx.tree.invalidate(node, Invalidation::Paint);
+                                }
+                            }
+
+                            cx.tree.invalidate(node, Invalidation::HitTest);
+                            cx.app.request_redraw(window);
+                            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+                        }
+
+                        break;
+                    }
+                }
+            }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
                 let model_id = model.id();

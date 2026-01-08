@@ -3,17 +3,18 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    OpacityProps, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    OpacityProps, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -22,8 +23,10 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
@@ -32,6 +35,44 @@ use crate::overlay_motion;
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
+    fret_core::Transform2D::translation(origin)
+        * fret_core::Transform2D::scale_uniform(scale)
+        * fret_core::Transform2D::translation(fret_core::Point::new(
+            fret_core::Px(-origin.x.0),
+            fret_core::Px(-origin.y.0),
+        ))
+}
+
+fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y: Px) -> Size {
+    let item_line = font_line_height.0.max(16.0);
+    let row_height = Px(item_line + pad_y.0 * 2.0);
+
+    // The panel uses `padding: 6px` on all sides.
+    let mut height = Px(12.0);
+
+    for entry in entries {
+        match entry {
+            MenubarEntry::Separator => {
+                // `Separator`: 1px line + `my-1` (4px top + 4px bottom).
+                height.0 += 9.0;
+            }
+            MenubarEntry::Label(_) => {
+                height.0 += row_height.0;
+            }
+            MenubarEntry::Item(_)
+            | MenubarEntry::CheckboxItem(_)
+            | MenubarEntry::RadioItem(_)
+            | MenubarEntry::Submenu(_) => {
+                height.0 += row_height.0;
+            }
+            MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {}
+        }
+    }
+
+    Size::new(Px(240.0), height)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -830,7 +871,7 @@ impl MenubarMenu {
             label: label.into(),
             disabled: false,
             window_margin: Px(8.0),
-            side_offset: Px(4.0),
+            side_offset: Px(8.0),
             typeahead_timeout_ticks: 30,
         }
     }
@@ -962,19 +1003,25 @@ impl MenubarMenuEntries {
                 ));
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-                let motion = OverlayController::transition_with_durations_and_easing(
+                let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                     cx,
                     is_open,
                     overlay_motion::SHADCN_MOTION_TICKS_100,
                     overlay_motion::SHADCN_MOTION_TICKS_100,
+                    0.95,
+                    1.0,
                     overlay_motion::shadcn_ease,
                 );
                 let overlay_presence = OverlayPresence {
                     present: motion.present,
                     interactive: is_open,
                 };
-                let opacity = motion.progress;
-                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+                let opacity = motion.opacity;
+                let scale = motion.scale;
+                let overlay_root_name = menu::menubar_root_name(trigger_id);
+                let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
+                let content_id_for_trigger =
+                    menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
@@ -996,6 +1043,7 @@ impl MenubarMenuEntries {
                         role: Some(SemanticsRole::MenuItem),
                         label: Some(label.clone()),
                         expanded: Some(is_open),
+                        controls_element: Some(content_id_for_trigger.0),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -1024,32 +1072,34 @@ impl MenubarMenuEntries {
                             return (Vec::new(), None);
                         };
                         let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-                        let estimated = fret_core::Size::new(Px(240.0), Px(220.0));
-
-                        let placed = anchored_panel_bounds_sized(
-                            outer,
-                            anchor,
-                            estimated,
-                            side_offset,
-                            Side::Bottom,
-                            Align::Start,
-                        );
-                        let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
-                            anchor,
-                            placed,
-                            Side::Bottom,
-                        );
-                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
-                        let slide = overlay_motion::shadcn_enter_slide_transform(
-                            Side::Bottom,
-                            opacity,
-                            true,
-                        );
-                        let transform = slide * zoom;
 
                         let mut flat: Vec<MenubarEntry> = Vec::new();
                         flatten_entries(&mut flat, entries.iter().cloned().collect());
                         let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
+
+                        let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                        let font_line_height = theme.metric_required("font.line_height");
+                        let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
+                        desired.width.0 = desired.width.0.max(anchor.size.width.0);
+
+                        let layout = popper::popper_content_layout_sized(
+                            outer,
+                            anchor,
+                            desired,
+                            popper::PopperContentPlacement::new(
+                                LayoutDirection::Ltr,
+                                Side::Bottom,
+                                Align::Start,
+                                side_offset,
+                            )
+                            .with_align_offset(Px(-4.0)),
+                        );
+                        let placed = layout.rect;
+                        let origin = popper::popper_content_transform_origin(&layout, anchor, None);
+                        let zoom = shadcn_zoom_transform(origin, scale);
+                        let slide =
+                            overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, true);
+                        let transform = slide * zoom;
                         let reserve_leading_slot = align_leading_icons
                             && entries.iter().any(|e| match e {
                                 MenubarEntry::Item(item) => item.leading.is_some(),
@@ -1113,9 +1163,7 @@ impl MenubarMenuEntries {
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                        let pad_y = MetricRef::space(Space::N2).resolve(&theme);
                         let font_size = theme.metric_required("font.size");
-                        let font_line_height = theme.metric_required("font.line_height");
                         let destructive_fg = theme.color_required("destructive");
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
                         let panel_bg = theme.color_required("popover");
@@ -1133,52 +1181,50 @@ impl MenubarMenuEntries {
                             trigger_registry_for_overlay.clone();
 
                         let theme_for_content = theme.clone();
-                        let content = cx.semantics(
-                            SemanticsProps {
-                                layout: LayoutStyle::default(),
-                                role: SemanticsRole::Menu,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let theme = theme_for_content.clone();
-                                vec![menu::content_panel::menu_panel_container_at(
-                                    cx,
-                                    placed,
-                                    move |layout| ContainerProps {
-                                        layout,
-                                        padding: Edges::all(Px(6.0)),
-                                        background: Some(panel_bg),
-                                        shadow: Some(shadow),
-                                        border: Edges::all(Px(1.0)),
-                                        border_color: Some(border),
-                                        corner_radii: Corners::all(radius_sm),
-                                    },
-                                    move |cx| {
-                                        let content_focus_id_for_panel =
-                                            content_focus_id_for_children_for_content.clone();
-                                        let group_active_for_switch =
-                                            group_active_for_content.clone();
-                                        let trigger_registry_for_switch =
-                                            trigger_registry_for_overlay_for_content.clone();
-                                        let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
-                                            cx,
-                                            RovingFlexProps {
-                                                flex: FlexProps {
-                                                    layout: LayoutStyle::default(),
-                                                    direction: fret_core::Axis::Vertical,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Stretch,
-                                                    wrap: false,
+                        let (_content_id, content) =
+                            menu::content_panel::menu_content_semantics_with_id(
+                                cx,
+                                LayoutStyle::default(),
+                                move |cx| {
+                                    let theme = theme_for_content.clone();
+                                    vec![menu::content_panel::menu_panel_container_at(
+                                        cx,
+                                        placed,
+                                        move |layout| ContainerProps {
+                                            layout,
+                                            padding: Edges::all(Px(6.0)),
+                                            background: Some(panel_bg),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(border),
+                                            corner_radii: Corners::all(radius_sm),
+                                        },
+                                        move |cx| {
+                                            let content_focus_id_for_panel =
+                                                content_focus_id_for_children_for_content.clone();
+                                            let group_active_for_switch =
+                                                group_active_for_content.clone();
+                                            let trigger_registry_for_switch =
+                                                trigger_registry_for_overlay_for_content.clone();
+                                            let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                cx,
+                                                RovingFlexProps {
+                                                    flex: FlexProps {
+                                                        layout: LayoutStyle::default(),
+                                                        direction: fret_core::Axis::Vertical,
+                                                        gap: Px(0.0),
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Start,
+                                                        align: CrossAlign::Stretch,
+                                                        wrap: false,
+                                                    },
+                                                    roving,
                                                 },
-                                                roving,
-                                            },
-                                            labels_arc.clone(),
-                                            typeahead_timeout_ticks,
-                                            move |cx| {
-                                                let mut out: Vec<AnyElement> =
-                                                    Vec::with_capacity(entries_for_content.len());
+                                                labels_arc.clone(),
+                                                typeahead_timeout_ticks,
+                                                move |cx| {
+                                                    let mut out: Vec<AnyElement> =
+                                                        Vec::with_capacity(entries_for_content.len());
 
                                                 let mut item_ix: usize = 0;
 
@@ -1554,11 +1600,13 @@ impl MenubarMenuEntries {
                                                               let trigger_registry =
                                                                   trigger_registry_for_overlay_for_content.clone();
                                                              let value = item.value.clone();
-                                                             let pad_left =
-                                                                 if item.inset { pad_x_inset } else { pad_x };
-                                                             let theme = theme.clone();
-                                                             out.push(cx.keyed(value.clone(), move |cx| {
-                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                              let pad_left =
+                                                                  if item.inset { pad_x_inset } else { pad_x };
+                                                              let theme = theme.clone();
+                                                              let overlay_root_name_for_controls =
+                                                                  overlay_root_name_for_controls.clone();
+                                                              out.push(cx.keyed(value.clone(), move |cx| {
+                                                                  cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = has_submenu.then_some(
                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                             outer,
@@ -1645,16 +1693,30 @@ impl MenubarMenuEntries {
                                                                         enabled: item_enabled,
                                                                         focusable,
                                                                         focus_ring: Some(item_ring),
-                                                                        a11y: menu::item::menu_item_a11y(
-                                                                            a11y_label.or_else(|| {
-                                                                                Some(label.clone())
-                                                                            }),
-                                                                            expanded,
-                                                                        )
-                                                                        .with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
+                                                                        a11y: {
+                                                                            let mut a11y =
+                                                                                menu::item::menu_item_a11y(
+                                                                                    a11y_label.or_else(|| {
+                                                                                        Some(label.clone())
+                                                                                    }),
+                                                                                    expanded,
+                                                                                );
+                                                                            if has_submenu {
+                                                                                a11y.controls_element = Some(
+                                                                                    menu::sub_content::submenu_content_semantics_id(
+                                                                                        cx,
+                                                                                        overlay_root_name_for_controls
+                                                                                            .as_ref(),
+                                                                                        &value,
+                                                                                    )
+                                                                                    .0,
+                                                                                );
+                                                                            }
+                                                                            a11y.with_collection_position(
+                                                                                collection_index,
+                                                                                item_count,
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -1786,7 +1848,24 @@ impl MenubarMenuEntries {
                                         if content_focus_id_for_panel.get().is_none() {
                                             content_focus_id_for_panel.set(Some(roving.id));
                                         }
-                                        vec![roving]
+
+                                        let scroll_layout = LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            overflow: fret_ui::element::Overflow::Clip,
+                                            ..Default::default()
+                                        };
+                                        vec![cx.scroll(
+                                            ScrollProps {
+                                                layout: scroll_layout,
+                                                axis: ScrollAxis::Y,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![roving],
+                                        )]
                                     },
                                 )]
                             },
@@ -1820,21 +1899,45 @@ impl MenubarMenuEntries {
                             menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                         let mut children = vec![content];
-                        let desired = fret_core::Size::new(Px(240.0), Px(1.0e9));
                         let submenu_open_value = cx
                             .app
                             .models_mut()
                             .read(&submenu_for_panel.open_value, |v| v.clone())
                             .ok()
                             .flatten();
+                        let desired = submenu_open_value
+                            .as_deref()
+                            .and_then(|open_value| {
+                                entries_for_submenu.iter().find_map(|entry| {
+                                    let MenubarEntry::Submenu(submenu) = entry else {
+                                        return None;
+                                    };
+                                    (submenu.trigger.value.as_ref() == open_value)
+                                        .then_some(submenu.entries.clone())
+                                })
+                            })
+                            .map(|submenu_entries| {
+                                let mut flat: Vec<MenubarEntry> = Vec::new();
+                                flatten_entries(
+                                    &mut flat,
+                                    submenu_entries.iter().cloned().collect::<Vec<_>>(),
+                                );
+                                menu_panel_desired_size(&flat, font_line_height, pad_y)
+                            })
+                            .unwrap_or_else(|| menu_panel_desired_size(&[], font_line_height, pad_y));
                         let submenu_is_open = submenu_open_value.is_some();
-                        let submenu_motion = OverlayController::transition_with_durations_and_easing(
-                            cx,
-                            submenu_is_open,
-                            overlay_motion::SHADCN_MOTION_TICKS_100,
-                            overlay_motion::SHADCN_MOTION_TICKS_100,
-                            overlay_motion::shadcn_ease,
-                        );
+                        let submenu_motion =
+                            radix_presence::scale_fade_presence_with_durations_and_easing(
+                                cx,
+                                submenu_is_open,
+                                overlay_motion::SHADCN_MOTION_TICKS_100,
+                                overlay_motion::SHADCN_MOTION_TICKS_100,
+                                0.95,
+                                1.0,
+                                overlay_motion::shadcn_ease,
+                            );
+                        let submenu_opacity = submenu_motion.opacity;
+                        let submenu_scale = submenu_motion.scale;
                         let open_submenu = menu::sub::with_open_submenu(
                             cx,
                             &submenu_for_panel,
@@ -1961,8 +2064,9 @@ impl MenubarMenuEntries {
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
 
-                                    let submenu_panel = menu::sub_content::submenu_panel_at(
+                                    let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
                                         cx,
+                                        open_value.clone(),
                                         placed,
                                         move |layout| ContainerProps {
                                             layout,
@@ -2450,7 +2554,24 @@ impl MenubarMenuEntries {
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
-                                            vec![roving]
+
+                                            let scroll_layout = LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Fill,
+                                                    ..Default::default()
+                                                },
+                                                overflow: fret_ui::element::Overflow::Clip,
+                                                ..Default::default()
+                                            };
+                                            vec![cx.scroll(
+                                                ScrollProps {
+                                                    layout: scroll_layout,
+                                                    axis: ScrollAxis::Y,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![roving],
+                                            )]
                                         },
                                     );
 
@@ -2463,13 +2584,10 @@ impl MenubarMenuEntries {
                                         geometry.floating,
                                         side,
                                     );
-                                    let zoom = overlay_motion::shadcn_zoom_transform(
-                                        origin,
-                                        submenu_motion.progress,
-                                    );
+                                    let zoom = shadcn_zoom_transform(origin, submenu_scale);
                                     let slide = overlay_motion::shadcn_enter_slide_transform(
                                         side,
-                                        submenu_motion.progress,
+                                        submenu_opacity,
                                         true,
                                     );
                                     let transform = slide * zoom;
@@ -2482,7 +2600,7 @@ impl MenubarMenuEntries {
                                         },
                                         ..Default::default()
                                     };
-                                    let opacity = submenu_motion.progress;
+                                    let opacity = submenu_opacity;
                                     let submenu_panel_content = submenu_panel;
                                     let submenu_panel = cx.interactivity_gate(
                                         submenu_motion.present,
@@ -2513,7 +2631,7 @@ impl MenubarMenuEntries {
                         (children, Some(dismissible_on_pointer_move))
                     });
 
-                    let request = menu::root::dismissible_menu_request(
+                    let request = menu::root::dismissible_menu_request_with_modal(
                         cx,
                         trigger_id,
                         trigger_id,
@@ -2523,6 +2641,7 @@ impl MenubarMenuEntries {
                         overlay_root_name,
                         content_focus_id.get(),
                         dismissible_on_pointer_move,
+                        false,
                     );
                     OverlayController::request(cx, request);
                 }

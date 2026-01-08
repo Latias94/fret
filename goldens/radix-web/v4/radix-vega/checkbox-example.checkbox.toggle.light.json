@@ -1,0 +1,2750 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "checkbox-example",
+  "primitive": "checkbox",
+  "scenario": "toggle",
+  "url": "http://localhost:4020/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked"
+                                      },
+                                      "children": []
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditions"
+                                }
+                              ],
+                              "text": "Accept terms and conditions"
+                            }
+                          ],
+                          "text": "BasicAccept terms and conditions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "true",
+                                        "data-state": "checked"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "checked"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                                }
+                              ],
+                              "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                            }
+                          ],
+                          "text": "With DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked",
+                                        "aria-invalid": "true"
+                                      },
+                                      "children": []
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditions"
+                                }
+                              ],
+                              "text": "Accept terms and conditions"
+                            }
+                          ],
+                          "text": "InvalidAccept terms and conditions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked",
+                                        "data-disabled": ""
+                                      },
+                                      "children": []
+                                    }
+                                  ],
+                                  "text": "Enable notifications"
+                                }
+                              ],
+                              "text": "Enable notifications"
+                            }
+                          ],
+                          "text": "DisabledEnable notifications"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "checkbox",
+                                                "aria-checked": "true",
+                                                "data-state": "checked"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    4,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                        }
+                                      ],
+                                      "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": "true"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "checkbox",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                        }
+                                      ],
+                                      "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                    }
+                                  ],
+                                  "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
+                                }
+                              ],
+                              "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
+                            }
+                          ],
+                          "text": "With TitleEnable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or …"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "table",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "thead",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "th",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "NameEmailRole"
+                                            }
+                                          ],
+                                          "text": "NameEmailRole"
+                                        },
+                                        {
+                                          "tag": "tbody",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "selected"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "true",
+                                                        "data-state": "checked"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "tag": "span",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            5,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-state": "checked"
+                                                          },
+                                                          "children": []
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Sarah Chensarah.chen@example.comAdmin"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Marcus Rodriguezmarcus.rodriguez@example.comUser"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        2,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Priya Patelpriya.patel@example.comUser"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                3
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        3,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "David Kimdavid.kim@example.comEditor"
+                                            }
+                                          ],
+                                          "text": "Sarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel@example.comU…"
+                                        }
+                                      ],
+                                      "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                                    }
+                                  ],
+                                  "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                                }
+                              ],
+                              "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                            }
+                          ],
+                          "text": "In TableNameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpri…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "vertical"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Hard disks"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "External disks"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "CDs, DVDs, and iPods"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        4
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            4,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Connected servers"
+                                    }
+                                  ],
+                                  "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                                }
+                              ],
+                              "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                            }
+                          ],
+                          "text": "GroupShow these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                        }
+                      ],
+                      "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
+                    }
+                  ],
+                  "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "checkbox-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Description"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "By clicking this checkbox, you agree to the terms and conditions."
+            },
+            {
+              "role": "StaticText",
+              "name": "Invalid"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "checked": false,
+              "invalid": "true"
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "checkbox",
+              "name": "Enable notifications",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Title"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "You can enable or disable notifications at any time."
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "You can enable or disable notifications at any time."
+            },
+            {
+              "role": "StaticText",
+              "name": "In Table"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Name"
+            },
+            {
+              "role": "StaticText",
+              "name": "Email"
+            },
+            {
+              "role": "StaticText",
+              "name": "Role"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Sarah Chen"
+            },
+            {
+              "role": "StaticText",
+              "name": "sarah.chen@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "Admin"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Marcus Rodriguez"
+            },
+            {
+              "role": "StaticText",
+              "name": "marcus.rodriguez@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "User"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Priya Patel"
+            },
+            {
+              "role": "StaticText",
+              "name": "priya.patel@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "User"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "David Kim"
+            },
+            {
+              "role": "StaticText",
+              "name": "david.kim@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "Editor"
+            },
+            {
+              "role": "StaticText",
+              "name": "Group"
+            },
+            {
+              "role": "StaticText",
+              "name": "Show these items on the desktop:"
+            },
+            {
+              "role": "checkbox",
+              "name": "Hard disks",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Hard disks"
+            },
+            {
+              "role": "checkbox",
+              "name": "External disks",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "External disks"
+            },
+            {
+              "role": "checkbox",
+              "name": "CDs, DVDs, and iPods",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "CDs, DVDs, and iPods"
+            },
+            {
+              "role": "checkbox",
+              "name": "Connected servers",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Connected servers"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "checkbox"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "attrs": {
+            "role": "checkbox",
+            "aria-checked": "true",
+            "data-state": "checked"
+          }
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "true",
+                                        "data-state": "checked"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "checked"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditions"
+                                }
+                              ],
+                              "text": "Accept terms and conditions"
+                            }
+                          ],
+                          "text": "BasicAccept terms and conditions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "true",
+                                        "data-state": "checked"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "checked"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                                }
+                              ],
+                              "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                            }
+                          ],
+                          "text": "With DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked",
+                                        "aria-invalid": "true"
+                                      },
+                                      "children": []
+                                    }
+                                  ],
+                                  "text": "Accept terms and conditions"
+                                }
+                              ],
+                              "text": "Accept terms and conditions"
+                            }
+                          ],
+                          "text": "InvalidAccept terms and conditions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "checkbox",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked",
+                                        "data-disabled": ""
+                                      },
+                                      "children": []
+                                    }
+                                  ],
+                                  "text": "Enable notifications"
+                                }
+                              ],
+                              "text": "Enable notifications"
+                            }
+                          ],
+                          "text": "DisabledEnable notifications"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "checkbox",
+                                                "aria-checked": "true",
+                                                "data-state": "checked"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    4,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                        }
+                                      ],
+                                      "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": "true"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "checkbox",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                        }
+                                      ],
+                                      "text": "Enable notificationsYou can enable or disable notifications at any time."
+                                    }
+                                  ],
+                                  "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
+                                }
+                              ],
+                              "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
+                            }
+                          ],
+                          "text": "With TitleEnable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or …"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "table",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "thead",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "th",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "NameEmailRole"
+                                            }
+                                          ],
+                                          "text": "NameEmailRole"
+                                        },
+                                        {
+                                          "tag": "tbody",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "selected"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "true",
+                                                        "data-state": "checked"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "tag": "span",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            5,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-state": "checked"
+                                                          },
+                                                          "children": []
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Sarah Chensarah.chen@example.comAdmin"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Marcus Rodriguezmarcus.rodriguez@example.comUser"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        2,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "Priya Patelpriya.patel@example.comUser"
+                                            },
+                                            {
+                                              "tag": "tr",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                3
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "td",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "button",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        5,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        3,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "role": "checkbox",
+                                                        "aria-checked": "false",
+                                                        "data-state": "unchecked"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ],
+                                              "text": "David Kimdavid.kim@example.comEditor"
+                                            }
+                                          ],
+                                          "text": "Sarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel@example.comU…"
+                                        }
+                                      ],
+                                      "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                                    }
+                                  ],
+                                  "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                                }
+                              ],
+                              "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
+                            }
+                          ],
+                          "text": "In TableNameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpri…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "vertical"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Hard disks"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "External disks"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "CDs, DVDs, and iPods"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        4
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            6,
+                                            1,
+                                            0,
+                                            4,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "checkbox",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Connected servers"
+                                    }
+                                  ],
+                                  "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                                }
+                              ],
+                              "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                            }
+                          ],
+                          "text": "GroupShow these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
+                        }
+                      ],
+                      "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
+                    }
+                  ],
+                  "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "checkbox-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "focused": true,
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Description"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "By clicking this checkbox, you agree to the terms and conditions."
+            },
+            {
+              "role": "StaticText",
+              "name": "Invalid"
+            },
+            {
+              "role": "checkbox",
+              "name": "Accept terms and conditions",
+              "checked": false,
+              "invalid": "true"
+            },
+            {
+              "role": "StaticText",
+              "name": "Accept terms and conditions"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "checkbox",
+              "name": "Enable notifications",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Title"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "You can enable or disable notifications at any time."
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Enable notifications"
+            },
+            {
+              "role": "StaticText",
+              "name": "You can enable or disable notifications at any time."
+            },
+            {
+              "role": "StaticText",
+              "name": "In Table"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Name"
+            },
+            {
+              "role": "StaticText",
+              "name": "Email"
+            },
+            {
+              "role": "StaticText",
+              "name": "Role"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Sarah Chen"
+            },
+            {
+              "role": "StaticText",
+              "name": "sarah.chen@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "Admin"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Marcus Rodriguez"
+            },
+            {
+              "role": "StaticText",
+              "name": "marcus.rodriguez@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "User"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Priya Patel"
+            },
+            {
+              "role": "StaticText",
+              "name": "priya.patel@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "User"
+            },
+            {
+              "role": "checkbox",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "David Kim"
+            },
+            {
+              "role": "StaticText",
+              "name": "david.kim@example.com"
+            },
+            {
+              "role": "StaticText",
+              "name": "Editor"
+            },
+            {
+              "role": "StaticText",
+              "name": "Group"
+            },
+            {
+              "role": "StaticText",
+              "name": "Show these items on the desktop:"
+            },
+            {
+              "role": "checkbox",
+              "name": "Hard disks",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Hard disks"
+            },
+            {
+              "role": "checkbox",
+              "name": "External disks",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "External disks"
+            },
+            {
+              "role": "checkbox",
+              "name": "CDs, DVDs, and iPods",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "CDs, DVDs, and iPods"
+            },
+            {
+              "role": "checkbox",
+              "name": "Connected servers",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Connected servers"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

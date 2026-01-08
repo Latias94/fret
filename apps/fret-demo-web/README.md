@@ -21,6 +21,7 @@ hash or query string:
 
 - `?demo=chart_demo` (or `#chart_demo`)
 - `?demo=plot_demo` (or `#plot_demo`)
+- `?demo=plot_image_demo` (or `#plot_image_demo`)
 - `?demo=bars_demo` (or `#bars_demo`)
 - `?demo=grouped_bars_demo` (or `#grouped_bars_demo`)
 - `?demo=stacked_bars_demo` (or `#stacked_bars_demo`)
@@ -29,6 +30,7 @@ hash or query string:
 - `?demo=error_bars_demo` (or `#error_bars_demo`)
 - `?demo=heatmap_demo` (or `#heatmap_demo`)
 - `?demo=histogram_demo` (or `#histogram_demo`)
+- `?demo=histogram2d_demo` (or `#histogram2d_demo`)
 - `?demo=shaded_demo` (or `#shaded_demo`)
 - `?demo=stairs_demo` (or `#stairs_demo`)
 - `?demo=stems_demo` (or `#stems_demo`)

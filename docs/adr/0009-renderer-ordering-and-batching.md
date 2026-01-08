@@ -25,6 +25,7 @@ References:
 - Zed/GPUI quad SDF + batching style (illustrative renderer design):
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
 - Vello encoding/recording separation (useful for thinking about renderer internals, not a drop-in backend):
+  - optional checkout at `repo-ref/vello` (see `docs/repo-ref.md`)
   - `repo-ref/vello/doc/ARCHITECTURE.md`
 
 ## Decision

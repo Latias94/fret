@@ -193,12 +193,13 @@ Resolution rule:
 
 ## Future Work
 
-- Define the `when` expression language and available context keys.
-- Decide whether to support multi-stroke chords and how they interact with text input.
+- Keep the `when` expression language and available context keys aligned with ADR 0022 (`docs/adr/0022-when-expressions.md`).
+- Harden multi-stroke chord arbitration against text input/IME (see ADR 0043).
 - Lock shortcut arbitration + AltGr semantics + pending bindings (see `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`).
 - Provide a canonical list of `KeyCode` tokens and migration rules when upstream (`keyboard-types`) changes.
 
 ## Implementation Notes (Current Prototype)
 
-- Demo keymap loading (prototype): `crates/fret-demo` reads `./.fret/keymap.json` if present and layers it over defaults.
+- Keymap format + parser are implemented in `crates/fret-runtime` (`KeymapFileV1`, `Keymap`, `WhenExpr`).
+- Demo keymap loading from disk is not currently wired; the demo harness uses defaults via `KeymapService` (see `crates/fret-app/src/app.rs`).
 - Sample file: `docs/examples/keymap.json`

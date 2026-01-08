@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, NodeId};
 use crate::UiHost;
 use crate::widget::Invalidation;
 
-use fret_runtime::ModelId;
+use fret_runtime::{ModelId, TimerToken};
 
 use super::runtime::StateEntry;
 use super::{ElementRuntime, GlobalElementId, WindowElementState};
@@ -78,6 +78,34 @@ pub(crate) fn with_window_state<H: UiHost, R>(
         runtime.prepare_window_for_frame(window, frame_id);
         let window_state = runtime.for_window_mut(window);
         f(window_state)
+    })
+}
+
+pub(crate) fn record_timer_target<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    token: TimerToken,
+    target: GlobalElementId,
+) {
+    with_window_state(app, window, |st| {
+        st.timer_targets.insert(token, target);
+    });
+}
+
+pub(crate) fn clear_timer_target<H: UiHost>(app: &mut H, window: AppWindowId, token: TimerToken) {
+    with_window_state(app, window, |st| {
+        st.timer_targets.remove(&token);
+    });
+}
+
+pub(crate) fn timer_target_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    token: TimerToken,
+) -> Option<NodeId> {
+    with_window_state(app, window, |st| {
+        let element = st.timer_targets.get(&token).copied()?;
+        st.node_entry(element).map(|e| e.node)
     })
 }
 

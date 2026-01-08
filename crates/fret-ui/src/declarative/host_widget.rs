@@ -4,11 +4,15 @@ use super::frame::layout_style_for_node;
 use super::layout_helpers::clamp_to_constraints;
 use super::prelude::*;
 use super::taffy_layout::*;
-use crate::widget::CommandCx;
+use crate::layout_constraints::{
+    AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize,
+};
+use crate::widget::{CommandCx, MeasureCx};
 use fret_runtime::CommandId;
 
 mod event;
 mod layout;
+mod measure;
 mod paint;
 mod semantics;
 
@@ -245,23 +249,34 @@ impl ElementHostWidget {
                         return *size;
                     }
 
-                    let max_w = match avail.width {
-                        TaffyAvailableSpace::Definite(w) => Px(w),
-                        _ => Px(1.0e9),
-                    };
-                    let max_h = match avail.height {
-                        TaffyAvailableSpace::Definite(h) => Px(h),
-                        _ => Px(1.0e9),
-                    };
-
-                    let known_w = known.width.map(Px);
-                    let known_h = known.height.map(Px);
-
-                    let w = known_w.unwrap_or(max_w);
-                    let h = known_h.unwrap_or(max_h);
-
-                    let probe = Rect::new(inner_origin, Size::new(w, h));
-                    let s = cx.layout_in(child, probe);
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                        LayoutSize::new(
+                            match avail.width {
+                                TaffyAvailableSpace::Definite(w) => {
+                                    RuntimeAvailableSpace::Definite(Px(w))
+                                }
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
+                            },
+                            match avail.height {
+                                TaffyAvailableSpace::Definite(h) => {
+                                    RuntimeAvailableSpace::Definite(Px(h))
+                                }
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
+                            },
+                        ),
+                    );
+                    let s = cx.measure_in(child, constraints);
                     let out = taffy::geometry::Size {
                         width: s.width.0,
                         height: s.height.0,
@@ -431,6 +446,57 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
 
         match instance {
+            ElementInstance::SelectableText(props) => {
+                if cx.focus != Some(cx.node) {
+                    return false;
+                }
+                let (outcome, range) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        let outcome = crate::text_surface::apply_selectable_text_command(
+                            &props.rich.text,
+                            state,
+                            command.as_str(),
+                        );
+                        let range = match outcome {
+                            crate::text_surface::SelectableTextCommandOutcome::Handled {
+                                copy_range: Some(r),
+                                ..
+                            } => Some(r),
+                            _ => None,
+                        };
+                        (outcome, range)
+                    },
+                );
+
+                let crate::text_surface::SelectableTextCommandOutcome::Handled {
+                    needs_repaint,
+                    copy_range: _,
+                } = outcome
+                else {
+                    return false;
+                };
+
+                if let Some((start, end)) = range
+                    && end <= props.rich.text.len()
+                    && let Some(sel) = props.rich.text.get(start..end)
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText {
+                        text: sel.to_string(),
+                    });
+                }
+
+                if needs_repaint {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+
+                cx.stop_propagation();
+                true
+            }
             ElementInstance::FocusScope(props) if props.trap_focus => {
                 let forward = match command.as_str() {
                     "focus.next" => Some(true),
@@ -563,6 +629,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         self.semantics_impl(cx);
+    }
+
+    fn measure(&mut self, cx: &mut MeasureCx<'_, H>) -> Size {
+        self.measure_impl(cx)
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {

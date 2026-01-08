@@ -5,10 +5,9 @@ use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     ViewportInputEvent, geometry::Px,
 };
-use fret_icons::IconRegistry;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext, run_app,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -831,9 +830,6 @@ pub fn run() -> anyhow::Result<()> {
         caps.ui.window_tear_off = true;
     }
     app.set_global(caps);
-    app.with_global_mut(IconRegistry::default, |icons, _app| {
-        fret_icons_lucide::register_icons(icons);
-    });
     app.with_global_mut(DockPanelRegistryService::<App>::default, |svc, _app| {
         svc.set(Arc::new(DockingArbitrationDockPanelRegistry));
     });
@@ -841,20 +837,11 @@ pub fn run() -> anyhow::Result<()> {
         svc.set(Arc::new(DemoViewportOverlayHooks));
     });
 
-    let mut config = WinitRunnerConfig {
+    let config = WinitRunnerConfig {
         main_window_title: "fret-demo docking_arbitration_demo".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
         ..Default::default()
     };
-
-    if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
-        .context("load .fret/settings.json")?
-    {
-        app.set_global(settings.docking_interaction_settings());
-        config.text_font_families.ui_sans = settings.fonts.ui_sans;
-        config.text_font_families.ui_serif = settings.fonts.ui_serif;
-        config.text_font_families.ui_mono = settings.fonts.ui_mono;
-    }
 
     let pending_layout =
         fret_app::DockLayoutFileV1::load_json_if_exists(DockingArbitrationDriver::DOCK_LAYOUT_PATH)
@@ -865,5 +852,5 @@ pub fn run() -> anyhow::Result<()> {
             });
 
     let driver = DockingArbitrationDriver::new(pending_layout);
-    run_app(config, app, driver).map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
 }

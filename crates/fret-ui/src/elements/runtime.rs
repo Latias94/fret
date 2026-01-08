@@ -6,7 +6,7 @@ use std::sync::{
 };
 
 use fret_core::{AppWindowId, NodeId, Rect};
-use fret_runtime::{FrameId, ModelId};
+use fret_runtime::{FrameId, ModelId, TimerToken};
 
 use crate::widget::Invalidation;
 
@@ -52,6 +52,7 @@ pub struct WindowElementState {
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) observed_models: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     pub(super) observed_globals: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,

@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ElementKind, PressableProps, SemanticsProps};
+use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -26,6 +26,7 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
+use crate::primitives::trigger_a11y;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverVariant {
@@ -167,7 +168,6 @@ pub fn popover_use_open_model<H: UiHost>(
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
-#[track_caller]
 pub fn popover_dialog_wrapper<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Option<Arc<str>>,
@@ -187,7 +187,6 @@ pub fn popover_dialog_wrapper<H: UiHost>(
 ///
 /// This is intended for `aria-controls` / `controls_element` style relationships:
 /// the trigger can reference this element to indicate which dialog/panel it controls.
-#[track_caller]
 pub fn popover_dialog_wrapper_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
@@ -202,22 +201,11 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id).
 pub fn apply_popover_trigger_a11y(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     expanded: bool,
-    dialog_element: GlobalElementId,
+    dialog_element: Option<GlobalElementId>,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = Some(dialog_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = Some(dialog_element.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(expanded), dialog_element)
 }
 
 /// Builds an overlay request for a Radix-style popover.
@@ -273,6 +261,27 @@ pub fn popover_request_with_anchor(
     request
 }
 
+/// Layout used for a Radix-like popover modal barrier element.
+///
+/// This is a re-export of the shared modal barrier layout from `primitives::dialog`.
+pub fn popover_modal_barrier_layout() -> LayoutStyle {
+    dialog_prim::modal_barrier_layout()
+}
+
+/// Builds a full-window modal barrier for Radix-like popover overlays.
+///
+/// This is a thin wrapper over `primitives::dialog::modal_barrier` so non-shadcn users can reuse
+/// the same "hide others + block outside pointer events" outcome without depending on dialog
+/// primitives.
+pub fn popover_modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    dialog_prim::modal_barrier(cx, open, dismiss_on_press, children)
+}
+
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order: barrier
 /// then content.
 ///
@@ -284,13 +293,10 @@ pub fn popover_modal_layer_children<H: UiHost>(
     barrier_children: Vec<AnyElement>,
     content: AnyElement,
 ) -> Vec<AnyElement> {
-    dialog_prim::modal_dialog_layer_children(
-        cx,
-        open,
-        dialog_prim::DialogOptions::default(),
-        barrier_children,
+    vec![
+        popover_modal_barrier(cx, open, true, barrier_children),
         content,
-    )
+    ]
 }
 
 /// Builds an overlay request for a Radix-style non-modal popover.
@@ -387,13 +393,29 @@ mod tests {
             );
 
             let dialog_id = popover_dialog_wrapper_id::<App>(cx, "popover-a11y-test");
-            let trigger = apply_popover_trigger_a11y(trigger, true, dialog_id);
+            let trigger = apply_popover_trigger_a11y(trigger, true, Some(dialog_id));
 
             let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
                 panic!("expected pressable trigger");
             };
             assert_eq!(a11y.expanded, Some(true));
             assert_eq!(a11y.controls_element, Some(dialog_id.0));
+        });
+    }
+
+    #[test]
+    fn popover_dialog_wrapper_id_matches_rendered_wrapper_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root_name = "popover-dialog-wrapper-id-test";
+            let computed = popover_dialog_wrapper_id::<App>(cx, root_name);
+            let rendered = cx.with_root_name(root_name, |cx| {
+                popover_dialog_wrapper::<App>(cx, None, |_cx| Vec::new())
+            });
+            assert_eq!(computed, rendered.id);
         });
     }
 

@@ -24,7 +24,7 @@ definitions live in `docs/archive/mvp/reference-plan.md`.
 - MVP 50: composable declarative virtualized list contract
   - keyed row identity (`virtual_list_keyed`)
   - `scroll_to_index` support to keep selection visible
-  - TanStack Virtual alignment: `VirtualItem` output + `rangeExtractor` hook + `scrollMargin`/`gap` vocabulary (ADR 0070)
+  - virtualizer alignment: `VirtualItem` output + `rangeExtractor` hook + `scrollMargin`/`gap` vocabulary (ADR 0070)
   - migrated a real surface (command palette list) to composable rows
 - MVP 52: declarative sizing semantics + `Flex` container (ADR 0057)
   - “fit-content by default, fill only when requested” is the stable mental model

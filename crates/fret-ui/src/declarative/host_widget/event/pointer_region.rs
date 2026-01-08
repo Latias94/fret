@@ -15,6 +15,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
     struct PointerHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
+        element: crate::GlobalElementId,
         node: NodeId,
         bounds: Rect,
         input_ctx: &'a fret_runtime::InputContext,
@@ -29,6 +30,24 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         }
 
         fn push_effect(&mut self, effect: Effect) {
+            match effect {
+                Effect::SetTimer {
+                    window: Some(window),
+                    token,
+                    ..
+                } if window == self.window => {
+                    crate::elements::record_timer_target(
+                        &mut *self.app,
+                        window,
+                        token,
+                        self.element,
+                    );
+                }
+                Effect::CancelTimer { token } => {
+                    crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                }
+                _ => {}
+            }
             self.app.push_effect(effect);
         }
 
@@ -115,6 +134,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let mut host = PointerHookHost {
                 app: &mut *cx.app,
                 window,
+                element: this.element,
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
@@ -163,6 +183,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             let mut host = PointerHookHost {
                 app: &mut *cx.app,
                 window,
+                element: this.element,
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
@@ -211,6 +232,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 let mut host = PointerHookHost {
                     app: &mut *cx.app,
                     window,
+                    element: this.element,
                     node: cx.node,
                     bounds: cx.bounds,
                     input_ctx: &cx.input_ctx,

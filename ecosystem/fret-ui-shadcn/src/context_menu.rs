@@ -2,15 +2,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{
-    Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
-    RovingFocusProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    RovingFocusProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -21,10 +19,10 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::context_menu as radix_context_menu;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::context_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -45,6 +43,12 @@ pub enum ContextMenuEntry {
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -674,6 +678,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
 fn context_menu_submenu_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    open_value: Arc<str>,
     placed: Rect,
     entries: Vec<ContextMenuEntry>,
     open: Model<bool>,
@@ -752,8 +757,9 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
-    menu::sub_content::submenu_panel_at(
+    menu::sub_content::submenu_panel_for_value_at(
         cx,
+        open_value,
         placed,
         move |layout| ContainerProps {
             layout,
@@ -1133,7 +1139,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 
 /// shadcn/ui `ContextMenu` root (v4).
 ///
-/// This is a dismissible popover (non-modal) opened by a component-owned pointer policy:
+/// This is a dismissible popover opened by a component-owned pointer policy:
 /// - right click
 /// - (macOS) ctrl + left click
 ///
@@ -1144,6 +1150,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 #[derive(Clone)]
 pub struct ContextMenu {
     open: Model<bool>,
+    modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
     side_offset: Px,
@@ -1172,6 +1179,7 @@ impl ContextMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
             // `ContextMenuPrimitive.Content` uses `side="right" sideOffset={2} align="start"`.
@@ -1188,6 +1196,12 @@ impl ContextMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Controls whether outside-press dismissal should be click-through (Radix `modal={false}`).
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -1241,18 +1255,21 @@ impl ContextMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
             };
-            let opacity = motion.progress;
+            let opacity = motion.opacity;
+            let scale = motion.scale;
             let opening = is_open;
             let arrow = self.arrow;
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
@@ -1269,13 +1286,22 @@ impl ContextMenu {
             });
 
             let id = cx.root_id();
+            let overlay_root_name = menu::context_menu_root_name(id);
+            let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
+            let content_id_for_trigger =
+                menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger = trigger(cx);
+            let trigger = menu::trigger::apply_menu_trigger_a11y(
+                trigger,
+                is_open,
+                Some(content_id_for_trigger),
+            );
             let trigger_id = trigger.id;
 
             menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
 
             let open = self.open;
-            let pointer_policy = radix_context_menu::context_menu_pointer_down_policy(open.clone());
+            let pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
 
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
                 cx.pointer_region_on_pointer_down(pointer_policy);
@@ -1284,8 +1310,6 @@ impl ContextMenu {
 
             let pointer_down = cx.with_state(PointerRegionState::default, |st| st.last_down);
             let anchor_point = pointer_down.map(|it| it.position);
-
-            let overlay_root_name = OverlayController::popover_root_name(id);
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                 menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
@@ -1298,6 +1322,7 @@ impl ContextMenu {
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let align_leading_icons = self.align_leading_icons;
+                let modal = self.modal;
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -1396,7 +1421,7 @@ impl ContextMenu {
                         anchor_rect,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let zoom = shadcn_zoom_transform(origin, scale);
                     let slide = if opening {
                         overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                     } else {
@@ -1430,35 +1455,36 @@ impl ContextMenu {
                     let destructive_bg = alpha_mul(destructive_fg, 0.12);
                     let panel_bg = theme.color_required("popover");
 
-                    let arrow_el = popper_arrow::diamond_arrow_element(
-                        cx,
-                        &layout,
-                        wrapper_insets,
-                        arrow_size,
-                        DiamondArrowStyle {
-                            bg: panel_bg,
-                            border: Some(border),
-                            border_width: Px(1.0),
-                        },
-                    );
-
                     let entries_for_submenu = entries.clone();
                     let open_for_submenu = open_for_overlay.clone();
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
 
-                    let content = cx.semantics(
-                        SemanticsProps {
-                            layout: LayoutStyle::default(),
-                            role: SemanticsRole::Menu,
-                            ..Default::default()
-                        },
+                    let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
+                        cx,
+                        LayoutStyle::default(),
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed,
                                 wrapper_insets,
                                 move |cx| {
+                                    let arrow_el = arrow
+                                        .then(|| {
+                                            popper_arrow::diamond_arrow_element(
+                                                cx,
+                                                &layout,
+                                                wrapper_insets,
+                                                arrow_size,
+                                                DiamondArrowStyle {
+                                                    bg: panel_bg,
+                                                    border: Some(border),
+                                                    border_width: Px(1.0),
+                                                },
+                                            )
+                                        })
+                                        .flatten();
+
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
@@ -1593,6 +1619,8 @@ impl ContextMenu {
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item = submenu_for_content.clone();
+                                                        let overlay_root_name_for_controls =
+                                                            overlay_root_name_for_controls.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(
@@ -1634,6 +1662,25 @@ impl ContextMenu {
                                                                         }
                                                                     }
 
+                                                                    let mut a11y =
+                                                                        menu::item::menu_item_a11y(
+                                                                            a11y_label,
+                                                                            has_submenu.then_some(
+                                                                                is_open_submenu,
+                                                                            ),
+                                                                        );
+                                                                    if has_submenu {
+                                                                        a11y.controls_element =
+                                                                            Some(
+                                                                                menu::sub_content::submenu_content_semantics_id(
+                                                                                    cx,
+                                                                                    overlay_root_name_for_controls
+                                                                                        .as_ref(),
+                                                                                    &value,
+                                                                                )
+                                                                                .0,
+                                                                            );
+                                                                    }
                                                                     let props = PressableProps {
                                                                         layout: {
                                                                             let mut layout =
@@ -1647,13 +1694,7 @@ impl ContextMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_a11y(
-                                                                            a11y_label,
-                                                                            has_submenu.then_some(
-                                                                                is_open_submenu,
-                                                                            ),
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
                                                                         ),
@@ -1975,13 +2016,17 @@ impl ContextMenu {
                         .ok()
                         .flatten();
                     let submenu_is_open = submenu_open_value.is_some();
-                    let submenu_motion = OverlayController::transition_with_durations_and_easing(
+                    let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
                         submenu_is_open,
                         overlay_motion::SHADCN_MOTION_TICKS_100,
                         overlay_motion::SHADCN_MOTION_TICKS_100,
+                        0.95,
+                        1.0,
                         overlay_motion::shadcn_ease,
                     );
+                    let submenu_opacity = submenu_motion.opacity;
+                    let submenu_scale = submenu_motion.scale;
 
                     let open_submenu = menu::sub::with_open_submenu(
                         cx,
@@ -2023,6 +2068,7 @@ impl ContextMenu {
                         {
                             let submenu_panel = context_menu_submenu_panel(
                                 cx,
+                                open_value.clone(),
                                 geometry.floating,
                                 submenu_entries,
                                 open_for_submenu.clone(),
@@ -2038,13 +2084,10 @@ impl ContextMenu {
                                 geometry.floating,
                                 side,
                             );
-                            let zoom = overlay_motion::shadcn_zoom_transform(
-                                origin,
-                                submenu_motion.progress,
-                            );
+                            let zoom = shadcn_zoom_transform(origin, submenu_scale);
                             let slide = overlay_motion::shadcn_enter_slide_transform(
                                 side,
-                                submenu_motion.progress,
+                                submenu_opacity,
                                 true,
                             );
                             let transform = slide * zoom;
@@ -2057,7 +2100,7 @@ impl ContextMenu {
                                 },
                                 ..Default::default()
                             };
-                            let opacity = submenu_motion.progress;
+                            let opacity = submenu_opacity;
                             let submenu_panel = cx.interactivity_gate(
                                 submenu_motion.present,
                                 submenu_is_open,
@@ -2086,7 +2129,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request(
+                let request = menu::root::dismissible_menu_request_with_modal(
                     cx,
                     id,
                     trigger_id,
@@ -2096,6 +2139,7 @@ impl ContextMenu {
                     overlay_root_name,
                     content_focus_id.get(),
                     dismissible_on_pointer_move,
+                    modal,
                 );
                 OverlayController::request(cx, request);
             }

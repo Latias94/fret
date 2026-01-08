@@ -15,11 +15,17 @@ editor primitive that we want to reuse across multiple domains:
 Local upstream references show three complementary strengths:
 
 - `repo-ref/imgui-node-editor`: mature interaction protocol (“draw your content, we do the rest”),
-  including link creation/deletion queries, selection, navigation, and persisted editor state hooks.
+  including link creation/deletion queries, selection, navigation, persisted editor state hooks, and
+  a **canvas coordinate escape hatch** (`Suspend/Resume`) for screen-space popups/menus while the
+  graph is pan/zoom transformed.
 - `repo-ref/Graphics/Packages/com.unity.shadergraph`: asset-first graph model, strong slot compatibility
   rules, graph validation/diagnostics, dynamic slot concretization, unknown-node survival, and migration.
 - `repo-ref/egui-snarl`: small data model + separate UI state + a “viewer” trait that externalizes
   behavior, including multi-connection interactions.
+- `repo-ref/xyflow` (React Flow / Svelte Flow): production-grade interaction and geometry contracts:
+  handle IDs, strict vs loose connection modes, reconnection flows, edge hit slop (`interactionWidth`),
+  parent/child subflows with movement extents, and the separation of user-authored nodes from derived
+  internals (measured sizes, absolute positions, cached handle bounds).
 
 We want a Fret-native node editor that:
 
@@ -63,15 +69,19 @@ We introduce a new workspace crate:
 
 Feature policy:
 
-- Default features include `fret-ui` integration (`default = ["fret-ui"]`).
+- Default features include `fret-ui` integration and a convenience kit (`default = ["fret-ui", "kit"]`).
 - A `headless` feature exists for non-UI usage (graph model + schema + rules only).
   `headless` must not depend on `crates/fret-ui`.
+- A `kit` feature provides common profiles and recipes on top of the substrate. It is headless-safe
+  and must not depend on `crates/fret-ui`.
 
 Rationale:
 
 - This is a policy-heavy editor component (ADR 0074), not a mechanism-only runtime feature.
 - Default-on UI integration optimizes for Fret’s primary use case while keeping an escape hatch for
   CLI tools, server-side validation, and alternative front-ends.
+- Keeping a kit inside the same crate avoids crate proliferation while still separating
+  **mechanism-only substrate contracts** (XyFlow-like) from **optional convenience policies**.
 
 ### 2) Hard boundary: Model vs Rules vs UI
 
@@ -85,6 +95,13 @@ Rationale:
 
 The UI layer must not encode domain semantics. All “can connect?” decisions and all automatic fixes
 flow through the rules layer.
+
+Additionally, within a single crate we distinguish:
+
+- **Substrate (mechanism)**: stable contracts for graph editing (similar to XyFlow’s philosophy).
+  This includes `core/`, `ops/`, `rules/`, `schema/`, and `profile/` *interfaces/pipeline*.
+- **Kit (convenience)**: optional reusable policies and recipes (e.g. a permissive `DataflowProfile`,
+  demo/utility node kinds). This lives under `kit/` and is feature-gated.
 
 ### 3) Graph primitives and stable IDs
 
@@ -184,6 +201,14 @@ Rationale:
 
 - This is required for plugin ecosystems, cross-team projects, and forward compatibility.
 
+Reserved builtin kinds (locked):
+
+- `fret.reroute`: a schema-less "wire reroute" node used for routing and interaction affordances.
+  - It may be inserted by editor gestures (split-edge) even when the domain registry does not
+    contain a schema for it.
+  - Its ports are implementation-defined by `fret-node` and must remain stable (one data in, one
+    data out; no domain payload semantics).
+
 Node kind versioning and migration (locked):
 
 - Each node instance stores `{ kind: NodeKindKey, kind_version: u32, data: ... }`.
@@ -248,6 +273,26 @@ Rationale:
   from the UI alone.
 - `ConnectPlan` aligns with the query/accept flow in `imgui-node-editor` while remaining rules-driven.
 
+Conversion discovery and disambiguation (locked):
+
+- The system must support “this connection is rejected, but could be made valid via explicit conversion”.
+- To avoid embedding UI decisions into rules, conversion insertion is treated as a separate, UI-driven
+  workflow:
+  - `plan_connect` answers the direct-connect question and may include deterministic auto-fixes
+    (e.g. disconnecting conflicting edges), but it must not silently change runtime semantics.
+  - The presenter may additionally expose a set of conversion candidates via
+    `NodeGraphPresenter::list_conversions(graph, from, to) -> Vec<InsertNodeTemplate>`.
+  - The UI uses these candidates to:
+    - show “convertible” affordances during hover/preview,
+    - auto-insert a conversion node when there is exactly one unambiguous candidate (optional policy),
+    - or open a conversion picker (screen-space overlay) when multiple candidates exist.
+- Conversion candidates are inserted as explicit graph edits (ops), producing a concrete conversion
+  node in the serialized graph. No implicit casts are applied.
+- Presenter hooks control UX without changing semantics:
+  - `NodeGraphPresenter::conversion_label(...) -> Arc<str>` defines the label shown in the picker/UI,
+  - `NodeGraphPresenter::conversion_insert_position(...) -> CanvasPoint` defines where the conversion
+    node is placed (e.g. midpoint between endpoints for ShaderGraph-like readability).
+
 Type inference and conversion boundary (locked):
 
 - `TypeDesc` is a data model, not a policy engine:
@@ -286,6 +331,9 @@ All edits flow through `GraphOp`:
 - `GraphOp` is the minimal reversible edit unit.
 - Multi-step operations (dragging, paste, connect with autofix) are grouped into transactions and
   support coalescing (ADR 0024).
+- Reconnection-friendly shape: endpoint moves that should preserve edge identity (and metadata like
+  selection, inspection state, or per-edge UI) should be representable as a dedicated reversible op
+  (e.g. `SetEdgeEndpoints`) rather than only as remove+add.
 
 Rationale:
 
@@ -302,6 +350,29 @@ The `fret-ui` integration uses:
   - pointer down/move/up streams for drag interactions,
   - key handlers for shortcuts and command routing,
   - context menu triggers and node creation flows (ADR 0074).
+
+Canvas coordinate escape hatch (locked):
+
+- The editor must be able to render and interact with **screen-space** UI (context menus, typeahead
+  search, tooltips, toasts) while the graph content is under a pan/zoom transform.
+- This is the Fret equivalent of `imgui-node-editor`'s `Suspend/Resume`:
+  - "Graph content" lives under the canvas transform.
+  - "Overlays" are rendered outside that transform, using window/screen coordinates, but can be
+    anchored to graph elements via explicit `canvas_to_screen` geometry conversions.
+- This is the preferred way to implement “floating” editor affordances (conversion pickers, node
+  searchers, tooltips) without requiring node content to be implemented as independent floating
+  windows.
+
+Rendering model (locked):
+
+- The node graph editor is a single canvas widget embedded in panels/tabs (docking/multi-view), not a
+  collection of native floating windows.
+- Node UIs are rendered as regular retained widget subtrees (header/body/ports) authored by the
+  presenter/viewer surface; the editor owns only interaction and layout framing.
+- Wires, background patterns, selection rectangles, and other canvas-level visuals are drawn by the
+  editor widget using Fret’s renderer primitives (paths, strokes, fills) under the canvas transform.
+- Screen-space popups/menus (including conversion pickers) use overlays rendered outside the canvas
+  transform (see above), avoiding the need for a separate “floating window” UI subsystem.
 
 Interaction protocol target (inspired by `imgui-node-editor`):
 
@@ -338,8 +409,11 @@ Baseline UI capabilities (MVP parity targets):
 Planned advanced interaction features (parity with `egui-snarl` / editor expectations):
 
 - multi-connect gestures (bundle connect, yank-reconnect),
+- edge reconnection (yank and reattach one endpoint while preserving edge identity when possible),
 - reroute nodes and wire hit-testing with large-graph performance constraints,
 - node collapse/expand and group dragging,
+- movement constraints: graph-wide translate extents, per-node extents, and optional “expand parent”
+  behaviors for frame-like parent nodes (ReactFlow parity, future extension),
 - deterministic draw order (z-order) and explicit “bring to front” interactions,
 - wire styling hooks for “execution flow” visualization (animated markers / highlight),
 - configurable wire layer (render behind nodes vs above nodes),
@@ -352,6 +426,141 @@ Node layout contract:
 - Nodes have standard regions (header, inputs, body, outputs, footer) to ensure consistent styling,
   hit-testing, and extensibility (inspired by `egui-snarl`).
 - Port placement is configurable (inside frame / on edge / outside) as a style/UX choice.
+- Wire hit-testing uses a larger, configurable interaction width independent of the visual stroke
+  (touch-friendly, ReactFlow parity).
+
+Port geometry contract (handles vs measurement):
+
+- Port anchors are a UI concept used for wire routing and hit-testing.
+- Implementations must support two sources of truth for port anchors:
+  1) **Measured anchors**: derived from the rendered node subtree (cached per frame / invalidated on resize),
+  2) **Declared anchors**: provided by schema/presenter for non-DOM backends or highly optimized nodes.
+- The UI is allowed to cache per-node “handle bounds” or anchor maps in editor view state to avoid
+  per-frame recomputation (ReactFlow’s `internals.handleBounds` pattern), but these caches must be
+  treated as derived data and never as graph semantics.
+- `fret-node` provides an explicit derived-geometry output (`CanvasGeometry`) for the canvas:
+  - per-node rects in canvas space (`node_rect`),
+  - per-port handle bounds and centers (`handle_bounds` / `port_center`).
+  This output is UI-only, depends on style + zoom + node layout, and must never be serialized into the
+  graph asset (it may be cached in editor view state as derived internals).
+
+Derived geometry and internals (locked):
+
+- The editor must maintain a clear separation between **user-authored graph state** and **derived UI internals**.
+  Inspired by ReactFlow / XyFlow's "internal node" model, the following fields are considered derived:
+  - measured node size (`measured.width/height`),
+  - absolute/cached node position in the current parent/extent context (`positionAbsolute`),
+  - handle/port bounds (`handleBounds` / anchor rects),
+  - z-index / stacking hints derived from selection policy.
+- Derived internals:
+  - may be cached for performance,
+  - must be invalidated deterministically (node resize, zoom changes, node template changes, port layout changes),
+  - must not be serialized into the graph asset.
+- API clarity constraint:
+  - avoid overloading `Node.width/height` or other user-facing fields with measured values;
+    measured geometry must have its own namespace in editor state to prevent "who owns size?" confusion.
+
+Minimap and overview navigation (locked):
+
+- The editor provides an optional minimap/overview surface (ReactFlow parity) that is:
+  - purely a view over derived geometry (node rects + viewport rect),
+  - not serialized into the graph asset (view state only),
+  - implemented as a separate widget/overlay that consumes `CanvasGeometry`/internals stores.
+- Minimap interactions (drag viewport, click-to-pan) must produce the same canonical navigation ops as
+  normal canvas navigation:
+  - set pan/zoom,
+  - frame a rect (selection / all nodes),
+  - fit view (optional command surface).
+- The minimap must not require a "floating window" subsystem:
+  it is rendered as an overlay outside the canvas transform using the coordinate escape hatch.
+
+Connection modes and handle resolution (locked):
+
+- We standardize a `connection_mode` concept (ReactFlow parity):
+  - `Strict`: connections can only be created when the pointer is over a concrete compatible handle/port.
+  - `Loose`: connections may "snap" to a compatible handle within a radius, even if the pointer is not
+    exactly over the handle (useful for dense graphs / touch).
+- Handle resolution is a UI concern but must be deterministic:
+  - The UI chooses a candidate `(from_port, to_port)` pair based on the pointer position, connection radius,
+    and `connection_mode`, and then delegates final acceptance to the rules layer via `ConnectPlan`.
+  - When multiple handles are within range, the UI must use a deterministic tie-breaker (closest distance,
+    then stable port ordering) to avoid flicker.
+- The UI exposes tunables in editor view state (not graph semantics):
+  - `connection_radius` (for loose mode),
+  - `edge_interaction_width` (wire hit slop independent from stroke thickness),
+  - `reconnect_radius` (see below),
+  - `auto_pan` parameters for drag/connect.
+
+Reconnection protocol and anchors (locked):
+
+- Edge reconnection is a first-class workflow:
+  - dragging from an existing edge endpoint or from a dedicated reconnection handle triggers a
+    reconnection interaction,
+  - the rules layer decides via `plan_reconnect_edge` (preserving `EdgeId` when possible).
+- Edges may be configured as reconnectable or not (ReactFlow parity):
+  - reconnectability is a UI policy flag and may be controlled per edge kind or per edge instance.
+- Custom reconnection anchors are supported:
+  - an edge may expose one or more "reconnect anchors" (small hit targets) that start a reconnection drag,
+    similar to ReactFlow's `EdgeReconnectAnchor` concept for custom edges,
+  - anchors must have a configurable hit radius (`reconnect_radius`) independent of wire stroke thickness.
+
+Parent/child subflows and movement extents (locked):
+
+- The editor must support a parent/child relationship between nodes (ReactFlow parity: `parentId`):
+  - a child node's `pos` is interpreted as **relative to its parent**,
+  - a node's derived absolute position is computed from the parent chain + per-node origin rules
+    (derived internals; see "Derived geometry and internals").
+- Parent/child is a **layout/interaction contract**:
+  - dragging a parent moves its children as a group,
+  - selection, hit-testing, and z-order must behave deterministically when parents overlap children.
+- Movement extents must support both global and per-node constraints (ReactFlow parity: `nodeExtent`):
+  - graph-wide extent ("global node extent") clamps nodes from leaving a defined canvas region,
+  - per-node extent may override the global extent for that node.
+- Parent extent modes:
+  - a child may declare its extent as `"parent"` (clamp within the parent bounds),
+  - alternatively, a child may opt into `"expand_parent"` behavior: moving/resizing the child can
+    expand the parent bounds rather than clamping the child.
+- Deterministic clamping during multi-select drag:
+  - when dragging multiple nodes under a global extent, clamping must be applied based on the
+    bounding box of the dragged set, not per-node independently, to avoid jitter and drift
+    (matches ReactFlow's multi-drag extent adjustments).
+- These constraints are **editor interaction policy**, but their inputs must be persistable:
+  - parent/child relationships are part of the graph document (asset semantics),
+  - extents may be stored as graph semantics (for graphs that require it) or as profile policy defaults.
+
+Auto-pan, snapping, and drag thresholds (locked):
+
+- The editor supports snapping to a grid for node move and resize interactions (ReactFlow parity):
+  - `snap_to_grid: bool`
+  - `snap_grid: (x, y)`
+  - snapping must be applied consistently in all coordinate conversion helpers (screen <-> canvas)
+    and in all interactive edits (drag, paste, align tools).
+- Drag threshold must be stable under zoom:
+  - the minimal pointer movement before a drag starts is measured in screen pixels and must not
+    implicitly scale with zoom (matches XyFlow's `nodeDragThreshold` fixes).
+- Auto-pan is supported for editor-grade UX:
+  - auto-pan while dragging nodes near viewport edges,
+  - auto-pan while connecting/reconnecting edges near viewport edges,
+  - optional auto-pan when focusing a node via keyboard navigation.
+- Auto-pan tunables are part of editor view state (not graph semantics):
+  - enable flags per workflow (node drag / connect / focus),
+  - speed and edge margin thresholds.
+
+Resizable nodes and node origins (locked):
+
+- The editor supports optional node resize interactions (XyFlow parity: `NodeResizer`) for node kinds
+  that opt into it (frames/comments, domain nodes with variable UI, etc.).
+- We explicitly separate three size concepts:
+  - **persisted size** (user intent / graph semantics): stored only when a node kind declares it,
+  - **measured size** (derived internals): computed from the rendered node subtree each frame or via
+    cached measurement,
+  - **minimum size** (policy): derived from style + port layout + node content constraints.
+- Resize edits are undoable and expressed as deterministic transactions (ops or domain-owned payload
+  updates). Resizing must not mutate derived internals directly.
+- We standardize a `node_origin` concept (XyFlow parity: `nodeOrigin`):
+  - node `pos` is interpreted as the canvas position of an origin point inside the node rect,
+  - default is top-left (`[0, 0]`), but profiles/components may choose other origins,
+  - origin affects selection/hit-testing, fit-view framing, parent/child extents, and resizer math.
 
 Node presentation contract (Viewer-style):
 
@@ -414,6 +623,39 @@ spatial indexes for hit-testing), but:
 
 - derived caches are rebuildable from the serialized canonical state,
 - caches are not part of the stable asset format unless explicitly versioned and justified.
+
+The UI layer additionally maintains **editor internals** (derived geometry) similar to ReactFlow/XyFlow:
+
+- node rectangles (in canvas and screen space),
+- port handle bounds and anchor points (screen px),
+- edge routing samples and edge hit-testing slop,
+- spatial indexes (grid/R-tree) to keep hit-testing and selection rectangles fast on 10k+ graphs.
+
+Hard boundary (locked):
+
+- Internals are **never** serialized into the graph asset.
+- Internals may be persisted as editor-state only when they are user intent (e.g. node z-order),
+  not when they are derived measurement (e.g. handle bounds).
+
+Invalidation contract (locked):
+
+- Derived geometry caches must be invalidated by a small set of monotonic revision keys:
+  - graph model revision,
+  - view state revision (camera/zoom/draw order),
+  - presenter geometry revision (custom anchor hints / sizing heuristics),
+  - optional measured geometry revision (host-provided layout measurements).
+
+Measured geometry injection (locked):
+
+- Hosts may feed measured node sizes and handle bounds into the canvas without mutating the graph model.
+- Measured values are expressed in screen-space logical pixels (px), consistent with the style system.
+- The injection surface is a small, thread-safe store (`MeasuredGeometryStore`) + a presenter wrapper
+  (`MeasuredNodeGraphPresenter`) that consults the store before delegating to the inner presenter.
+
+Rationale:
+
+- This mirrors XyFlow’s separation of user-authored node data from derived internals (`handleBounds`),
+  and prevents graph assets from accumulating render/layout-specific noise.
 
 ### 13) Graph symbols (blackboard/variables) are first-class
 
@@ -486,6 +728,18 @@ Editor view state includes:
 - selection and focused element (optional),
 - per-node UI state (collapsed/open, z-order),
 - custom zoom levels or input scheme overrides (mouse buttons / smooth zoom).
+- optional interaction settings: snap grid, selection mode (partial vs full), connection mode
+  (strict vs loose), and auto-pan tuning for drag/connect.
+
+Multi-view (docking) integration:
+
+- Multiple node-graph canvases may view the same `GraphId` simultaneously (split views, multiple tabs).
+- Each canvas instance must maintain its own in-memory `NodeGraphViewState` so camera/selection can
+  differ per view. The persistence layer must not assume a single canonical view state per graph.
+- Persisted state MAY store:
+  - a single `"state"` (the “last active view”), and/or
+  - a `"views"` map keyed by a host-provided stable view key (e.g. docking panel instance id),
+    allowing restoring multiple views when reopening a workspace.
 
 Persistence:
 
@@ -503,6 +757,31 @@ On-disk shape (locked, v1):
 - Backward compatibility: loaders may also accept a plain `state` root object when `graph_id` is
   supplied out-of-band by the caller (mirrors `DockLayoutFileV1`’s wrapper tolerance).
 
+View-state schema (locked, v1):
+
+- All fields are optional unless stated otherwise; missing fields must default to the behavior
+  described below.
+- Unknown fields must be ignored to allow forward-compatible additions.
+- `state.pan`: `{ "x": f32, "y": f32 }` (canvas units).
+- `state.zoom`: `f32` (default `1.0`).
+- `state.selected_nodes`: `Vec<NodeId>` (optional).
+- `state.selected_edges`: `Vec<EdgeId>` (optional).
+- `state.draw_order`: `Vec<NodeId>` (optional).
+- `state.interaction` (optional): editor interaction tuning and policy overrides (per-user/per-project):
+  - `connection_mode`: `"strict" | "loose"` (default `"strict"`).
+  - `connection_radius`: `f32` (screen px; only used for `"loose"`; default `16`).
+  - `reconnect_radius`: `f32` (screen px; default `10`).
+  - `edge_interaction_width`: `f32` (screen px; default `12`).
+  - `snap_to_grid`: `bool` (default `false`).
+  - `snap_grid`: `{ "width": f32, "height": f32 }` (canvas units; default `16x16`).
+  - `node_drag_threshold`: `f32` (screen px; default `1`).
+  - `auto_pan` (optional):
+    - `on_node_drag`: `bool` (default `true`).
+    - `on_connect`: `bool` (default `true`).
+    - `on_node_focus`: `bool` (default `false`).
+    - `speed`: `f32` (screen px/s; default `900`).
+    - `margin`: `f32` (screen px; default `24`).
+
 Graph asset on-disk shape (locked, v1):
 
 - Canonical format is JSON via `serde_json` (aligns with docking persistence patterns).
@@ -519,7 +798,15 @@ Selection is editor-owned policy but must be exposed as data:
 - Selection can feed an inspector/property panel via the editor-layer protocol (ADR 0048), enabling
   node/edge properties to be edited without coupling the UI widget to domain logic.
 - Core editing commands are command IDs (ADR 0023), not hard-coded key handlers:
-  - `node_graph.create_node`
+  - `node_graph.undo`
+  - `node_graph.redo`
+  - `node_graph.open_insert_node` (background picker / palette)
+  - `node_graph.open_split_edge_insert_node` (edge “insert node” picker)
+  - `node_graph.insert_reroute`
+  - `node_graph.open_conversion_picker` (re-open last conversion candidates)
+  - `node_graph.copy`
+  - `node_graph.cut`
+  - `node_graph.paste`
   - `node_graph.delete_selection`
   - `node_graph.duplicate_selection`
   - `node_graph.frame_selection`
@@ -549,6 +836,104 @@ Contract:
 - Recursive dependencies must be detected and surfaced as diagnostics, and profiles may forbid them.
 - Copy/paste of subgraph nodes preserves the reference (it does not inline by default).
 
+### 19) Collaboration readiness: deterministic diffs and patchability
+
+Even in single-user editors, graphs end up in Git and require workable diffs/merges.
+
+We require:
+
+- Deterministic serialization shape:
+  - stable ID types (already),
+  - stable map ordering for canonical formats (e.g. `BTreeMap` in the model),
+  - stable normalization for derived structures (e.g. unions, port ordering).
+- A stable patch unit for integration:
+  - `GraphTransaction` is the canonical reversible patch unit and should be usable for:
+    - local undo/redo,
+    - scripted refactors/migrations,
+    - future collaborative edit streams (CRDT/OT is explicitly out of scope for v1).
+- Diff hygiene:
+  - derived internals are never serialized into the graph asset,
+  - editor view state is stored separately and can be excluded from VCS if desired.
+
+### 20) Editor interaction contract checklist (implementation-oriented)
+
+This section is intentionally implementation-oriented and exists to prevent "death by missing small
+details" when we claim parity with mature editors (XyFlow / ImGui Node Editor / ShaderGraph / Snarl).
+It is a checklist of **hard-to-change interaction contracts**. We expect to implement these
+incrementally, but we want to lock the semantics early to avoid later rewrites.
+
+MVP (v1) must provide:
+
+- **Two-phase connect handshake** (ImGui `BeginCreate/QueryNewLink/AcceptNewItem` mental model):
+  - during drag: expose a stable "in-progress connection" preview (from, to, candidate, validity),
+  - on release: emit a single "commit decision point" that either applies a `GraphTransaction` or
+    cancels without side effects.
+- **Reconnect as first-class** (XyFlow `reconnectEdge` mental model):
+  - reconnection is distinct from new connection creation,
+  - reconnection preserves `EdgeId` when the domain allows it (see rules `ConnectPlan`),
+  - reconnection supports both “single edge” and “yank many” flows (Snarl multi-connection).
+- **Connection modes** (XyFlow `ConnectionMode`):
+  - `Strict`: source->target only,
+  - `Loose`: allow same-side connections, resolved by closest compatible port within a configurable
+    screen-space radius.
+- **Edge interaction width** (XyFlow `interactionWidth`):
+  - edge hit-testing must use a separate "interaction width" (screen-space) independent of visual
+    stroke width to keep selection usable at all zoom levels.
+- **Auto-pan while connecting**:
+  - while dragging a wire near viewport edges, pan the canvas (speed and threshold are style knobs).
+- **Viewport helpers**:
+  - `fit_view` / `frame_selection` must exist and be deterministic given derived geometry.
+- **Derived geometry is authoritative for hit-testing**:
+  - node bounds, port anchors, and edge paths must come from the measured geometry store or
+    presenter-provided fallback, never from ad-hoc per-frame layout guesses.
+
+Soon (parity targets we should design for now):
+
+- **Parent/child (subflow) constraints** (XyFlow `parentId` + `nodeExtent` mental model):
+  - define whether we model this as `Group` bounds, a "frame node kind", or both,
+  - enforce movement extents and prevent overlap across unrelated parents.
+- **Node resizing** (XyFlow `NodeResizer` mental model):
+  - decide where "explicit size" lives (graph vs extension vs view-state) and how it composes with
+    parent extents and snapping.
+- **Edge markers and routing policies**:
+  - arrowheads/markers must not be an afterthought (ties into execution graphs),
+  - routing must be swappable (bezier, step, orthogonal, custom).
+- **Minimap / overview navigation**:
+  - consumes derived geometry and writes only view-state.
+- **Z-order policy**:
+  - define how edges layer relative to nodes and parent frames (XyFlow elevates some edges above
+    parents; Fret must define this for group/subflow parity).
+
+Notes:
+
+- Items above are contracts; the *visual* design (theme tokens) is intentionally orthogonal.
+- Features like "conversion node insertion" and "domain-specific auto nodes" remain profile-level
+  policy and must not leak into the substrate.
+
+### 21) Groups (container frames) and explicit node size are graph semantics
+
+We standardize the "subflow / parent container" concept early (XyFlow `parentId` mental model):
+
+- `Graph.groups` stores group frames as `Group { rect: CanvasRect, ... }` in **canvas space**.
+- `Node.parent: Option<GroupId>` assigns a node to a container frame.
+- Node positions remain **absolute canvas positions** (`Node.pos` is not made relative to the parent).
+  - Moving a group in UI should translate its child nodes explicitly (policy), rather than relying on
+    a relative-position encoding in the core model.
+
+Group removal semantics (locked):
+
+- Removing a group must detach its child nodes (`Node.parent = None`) as part of the same reversible
+  edit transaction.
+- `GraphOp::RemoveGroup` carries a `detached` list so undo/redo can restore the original parents.
+
+Node explicit size semantics (locked):
+
+- `Node.size: Option<CanvasSize>` is stored in the graph asset (not view-state).
+- `Node.size` is interpreted as a **semantic size in logical px at zoom=1**.
+  - Geometry conversion divides by `zoom` so the node remains readable under semantic zoom.
+  - When `None`, the editor derives size from measured geometry or style defaults.
+- The node resize interaction (NodeResizer) writes `Node.size` via `GraphOp::SetNodeSize`.
+
 ## Consequences
 
 Pros:
@@ -575,9 +960,50 @@ Cons:
 3) Bake a single domain type system (shader slots) into core:
    rejected (we need cross-domain reuse).
 
+## Appendix: Upstream parity map (non-normative)
+
+This appendix is intentionally implementation-oriented: it helps keep naming and responsibilities
+aligned with upstream mental models while preserving Fret’s own layering.
+
+XyFlow (`@xyflow/system`) concept map:
+
+- Pan/zoom (`XYPanZoom`) → `NodeGraphCanvasTransform` + view-state stored pan/zoom.
+- Dragging (`XYDrag`) → node/selection drag interactions in the canvas state machine.
+- Handles/connections (`XYHandle`) → port anchor resolution + connection/reconnection flows.
+- Connection mode (`ConnectionMode`) → `NodeGraphConnectionMode` (strict/loose).
+- Edge hit slop (`EdgeBase.interactionWidth`) → `NodeGraphStyle::wire_interaction_width` (screen-space).
+- Edge updates (`reconnectEdge`) → `ConnectPlan::Reconnect` + `GraphTransaction` apply.
+- Derived internals (`internals.handleBounds`, `positionAbsolute`, `measured`) → `CanvasGeometry` /
+  `MeasuredGeometryStore` / `NodeGraphInternalsStore` (output-only, never serialized into the graph asset).
+- Minimap (`XYMiniMap`) → optional overlay widget consuming derived geometry (see “Minimap and overview navigation”).
+- Change sets (`NodeChange` / `EdgeChange`) → `GraphOp` + `GraphTransaction` as the canonical reversible patch unit.
+
+ImGui Node Editor concept map:
+
+- “Draw your content, we do the rest” → presenter/viewer surface: the canvas owns interaction; the
+  caller owns node/pin/wire UI.
+- `Suspend/Resume` → canvas coordinate escape hatch for screen-space overlays (menus/searchers).
+
+Unity ShaderGraph concept map:
+
+- Graph validation pipeline → `GraphProfile::validate_graph` + `Diagnostic` reporting.
+- Concretization (dynamic slots) → `GraphProfile::concretize` executed in the apply pipeline.
+- Unknown node survival + migrations → schema versioning + explicit migrations (see earlier sections).
+
 ## Open Questions
 
 - Whether to standardize on a single on-disk format (JSON/RON) for node assets, or support multiple
   formats behind a stable serde model.
 - Whether to support additional “compat read” formats (e.g. RON) while keeping JSON as canonical.
 - Whether node graph assets should additionally carry an asset-database GUID alongside `GraphId` (ADR 0026).
+- Whether to lock a stable "view key" contract for multi-view persistence (dock panel id, explicit `ViewId`,
+  or per-asset “named views”), and how to migrate between them when layouts change.
+- Whether node resizing is a first-class interaction (ReactFlow/XyFlow `NodeResizer` parity), and if so:
+  - where explicit sizes live (graph vs extension data vs editor-state),
+  - how it composes with parent/child extents and group frames.
+- Whether to expose a viewer hook to adjust the canvas transform (inspired by `egui-snarl`’s
+  `SnarlViewer::current_transform`) to support “UI scaling” modes where text remains readable at extreme zoom.
+- How to connect `crates/fret-ui`’s post-layout measurement (node bounds / handle bounds) to the measured-geometry
+  injection surface without introducing frame-order hazards or accidental coupling to a specific layout engine.
+- Whether edge hit-testing should be strictly "interaction-width only", or additionally allow a
+  per-edge override (XyFlow allows per-edge `interactionWidth`).

@@ -33,7 +33,7 @@ impl<H: UiHost> UiTree<H> {
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
             wants_pointer_move_events: false,
-            wants_timer_events: false,
+            wants_timer_events: true,
         });
         self.root_to_layer.insert(root, id);
         self.layer_order.insert(0, id);

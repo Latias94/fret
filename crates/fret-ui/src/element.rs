@@ -2,8 +2,8 @@ use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
-    Color, Corners, Edges, ImageId, NodeId, Px, RichText, SemanticsRole, SvgFit, TextOverflow,
-    TextStyle, TextWrap, UvRect,
+    CaretAffinity, Color, Corners, Edges, ImageId, NodeId, Px, RichText, SemanticsRole, SvgFit,
+    TextOverflow, TextStyle, TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -50,6 +50,7 @@ pub enum ElementKind {
     Spacer(SpacerProps),
     Text(TextProps),
     StyledText(StyledTextProps),
+    SelectableText(SelectableTextProps),
     TextInput(TextInputProps),
     TextArea(TextAreaProps),
     ResizablePanelGroup(ResizablePanelGroupProps),
@@ -678,6 +679,38 @@ pub struct StyledTextProps {
     pub overflow: TextOverflow,
 }
 
+#[derive(Debug, Clone)]
+pub struct SelectableTextProps {
+    pub layout: LayoutStyle,
+    pub rich: RichText,
+    pub style: Option<TextStyle>,
+    /// Base color for glyphs without a per-run override.
+    pub color: Option<Color>,
+    pub wrap: TextWrap,
+    pub overflow: TextOverflow,
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectableTextState {
+    pub selection_anchor: usize,
+    pub caret: usize,
+    pub affinity: CaretAffinity,
+    pub dragging: bool,
+    pub last_pointer_pos: Option<fret_core::Point>,
+}
+
+impl Default for SelectableTextState {
+    fn default() -> Self {
+        Self {
+            selection_anchor: 0,
+            caret: 0,
+            affinity: CaretAffinity::Downstream,
+            dragging: false,
+            last_pointer_pos: None,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct TextInputProps {
     pub layout: LayoutStyle,
@@ -932,6 +965,19 @@ impl StyledTextProps {
     }
 }
 
+impl SelectableTextProps {
+    pub fn new(rich: RichText) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            rich,
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct FlexProps {
     pub layout: LayoutStyle,
@@ -1075,6 +1121,12 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    /// When true (default), scroll containers probe their content with a very large available size
+    /// along the scroll axis to measure the full scrollable extent.
+    ///
+    /// When false, probing uses the viewport constraints, which allows word-wrapping content while
+    /// still permitting scrolling for long unbreakable tokens.
+    pub probe_unbounded: bool,
 }
 
 impl Default for ScrollProps {
@@ -1087,6 +1139,7 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            probe_unbounded: true,
         }
     }
 }
@@ -1148,16 +1201,11 @@ impl Default for ScrollbarStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ScrollbarAxis {
+    #[default]
     Vertical,
     Horizontal,
-}
-
-impl Default for ScrollbarAxis {
-    fn default() -> Self {
-        Self::Vertical
-    }
 }
 
 /// A mechanism-only scrollbar primitive.
@@ -1207,6 +1255,12 @@ impl IntoElement for TextProps {
 impl IntoElement for StyledTextProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::StyledText(self), Vec::new())
+    }
+}
+
+impl IntoElement for SelectableTextProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::SelectableText(self), Vec::new())
     }
 }
 

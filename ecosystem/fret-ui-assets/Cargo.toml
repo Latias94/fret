@@ -2,6 +2,17 @@
 name = "fret-ui-assets"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 
 [dependencies]
 fret-asset-cache = { path = "../fret-asset-cache" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+
+[dev-dependencies]
+slotmap.workspace = true

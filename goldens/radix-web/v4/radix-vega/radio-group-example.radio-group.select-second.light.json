@@ -1,0 +1,3383 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "radio-group-example",
+  "primitive": "radio-group",
+  "scenario": "select-second",
+  "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Default"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Comfortable"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Compact"
+                                    }
+                                  ],
+                                  "text": "DefaultComfortableCompact"
+                                }
+                              ],
+                              "text": "DefaultComfortableCompact"
+                            }
+                          ],
+                          "text": "BasicDefaultComfortableCompact"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "PlusFor individuals and small teams"
+                                        }
+                                      ],
+                                      "text": "PlusFor individuals and small teams"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "ProFor growing businesses"
+                                        }
+                                      ],
+                                      "text": "ProFor growing businesses"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "EnterpriseFor large teams and enterprises"
+                                        }
+                                      ],
+                                      "text": "EnterpriseFor large teams and enterprises"
+                                    }
+                                  ],
+                                  "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                                }
+                              ],
+                              "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                            }
+                          ],
+                          "text": "With DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "fieldset",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "radiogroup",
+                                        "aria-required": "false",
+                                        "tabindex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "High"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    2,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    1,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Medium"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            2
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Low"
+                                        }
+                                      ],
+                                      "text": "HighMediumLow"
+                                    }
+                                  ],
+                                  "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
+                                }
+                              ],
+                              "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
+                            }
+                          ],
+                          "text": "With FieldSetBattery LevelChoose your preferred battery level.HighMediumLow"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Small"
+                                        }
+                                      ],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    3,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Medium"
+                                        }
+                                      ],
+                                      "text": "Medium"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Large"
+                                        }
+                                      ],
+                                      "text": "Large"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                3,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "X-Large"
+                                        }
+                                      ],
+                                      "text": "X-Large"
+                                    }
+                                  ],
+                                  "text": "SmallMediumLargeX-Large"
+                                }
+                              ],
+                              "text": "SmallMediumLargeX-Large"
+                            }
+                          ],
+                          "text": "Grid LayoutSmallMediumLargeX-Large"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "data-disabled": "",
+                                    "tabindex": "-1"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Option 1"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Option 2"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Option 3"
+                                    }
+                                  ],
+                                  "text": "Option 1Option 2Option 3"
+                                }
+                              ],
+                              "text": "Option 1Option 2Option 3"
+                            }
+                          ],
+                          "text": "DisabledOption 1Option 2Option 3"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "fieldset",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "radiogroup",
+                                        "aria-required": "false",
+                                        "tabindex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Email only"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "SMS only"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            2
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Both Email & SMS"
+                                        }
+                                      ],
+                                      "text": "Email onlySMS onlyBoth Email & SMS"
+                                    }
+                                  ],
+                                  "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                                }
+                              ],
+                              "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                            }
+                          ],
+                          "text": "InvalidNotification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                        }
+                      ],
+                      "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
+                    }
+                  ],
+                  "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "radio-group-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Default",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Default"
+                },
+                {
+                  "role": "radio",
+                  "name": "Comfortable",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Comfortable"
+                },
+                {
+                  "role": "radio",
+                  "name": "Compact",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Compact"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Descriptions"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "StaticText",
+                  "name": "Plus"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For individuals and small teams"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Pro"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For growing businesses"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Enterprise"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For large teams and enterprises"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With FieldSet"
+            },
+            {
+              "role": "StaticText",
+              "name": "Battery Level"
+            },
+            {
+              "role": "StaticText",
+              "name": "Choose your preferred battery level."
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "High",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "High"
+                },
+                {
+                  "role": "radio",
+                  "name": "Medium",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Medium"
+                },
+                {
+                  "role": "radio",
+                  "name": "Low",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Low"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Grid Layout"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Small"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Medium"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Large"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "X-Large"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Option 1",
+                  "disabled": true,
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 1"
+                },
+                {
+                  "role": "radio",
+                  "name": "Option 2",
+                  "disabled": true,
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 2"
+                },
+                {
+                  "role": "radio",
+                  "name": "Option 3",
+                  "disabled": true,
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 3"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Invalid"
+            },
+            {
+              "role": "StaticText",
+              "name": "Notification Preferences"
+            },
+            {
+              "role": "StaticText",
+              "name": "Choose how you want to receive notifications."
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Email only",
+                  "checked": true,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Email only"
+                },
+                {
+                  "role": "radio",
+                  "name": "SMS only",
+                  "checked": false,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "SMS only"
+                },
+                {
+                  "role": "radio",
+                  "name": "Both Email & SMS",
+                  "checked": false,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Both Email & SMS"
+                }
+              ]
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "radio[1]"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "attrs": {
+            "role": "radio",
+            "aria-checked": "true",
+            "data-state": "checked",
+            "tabindex": "0",
+            "data-radix-collection-item": ""
+          }
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Default"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Comfortable"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Compact"
+                                    }
+                                  ],
+                                  "text": "DefaultComfortableCompact"
+                                }
+                              ],
+                              "text": "DefaultComfortableCompact"
+                            }
+                          ],
+                          "text": "BasicDefaultComfortableCompact"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "PlusFor individuals and small teams"
+                                        }
+                                      ],
+                                      "text": "PlusFor individuals and small teams"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "ProFor growing businesses"
+                                        }
+                                      ],
+                                      "text": "ProFor growing businesses"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "EnterpriseFor large teams and enterprises"
+                                        }
+                                      ],
+                                      "text": "EnterpriseFor large teams and enterprises"
+                                    }
+                                  ],
+                                  "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                                }
+                              ],
+                              "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                            }
+                          ],
+                          "text": "With DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "fieldset",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "radiogroup",
+                                        "aria-required": "false",
+                                        "tabindex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "High"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    2,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    1,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Medium"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            2
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Low"
+                                        }
+                                      ],
+                                      "text": "HighMediumLow"
+                                    }
+                                  ],
+                                  "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
+                                }
+                              ],
+                              "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
+                            }
+                          ],
+                          "text": "With FieldSetBattery LevelChoose your preferred battery level.HighMediumLow"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "tabindex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Small"
+                                        }
+                                      ],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    3,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Medium"
+                                        }
+                                      ],
+                                      "text": "Medium"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Large"
+                                        }
+                                      ],
+                                      "text": "Large"
+                                    },
+                                    {
+                                      "tag": "label",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                3,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "X-Large"
+                                        }
+                                      ],
+                                      "text": "X-Large"
+                                    }
+                                  ],
+                                  "text": "SmallMediumLargeX-Large"
+                                }
+                              ],
+                              "text": "SmallMediumLargeX-Large"
+                            }
+                          ],
+                          "text": "Grid LayoutSmallMediumLargeX-Large"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "radiogroup",
+                                    "aria-required": "false",
+                                    "data-disabled": "",
+                                    "tabindex": "-1"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Option 1"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Option 2"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "radio",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": "",
+                                            "tabindex": "-1",
+                                            "data-radix-collection-item": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ],
+                                      "text": "Option 3"
+                                    }
+                                  ],
+                                  "text": "Option 1Option 2Option 3"
+                                }
+                              ],
+                              "text": "Option 1Option 2Option 3"
+                            }
+                          ],
+                          "text": "DisabledOption 1Option 2Option 3"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "fieldset",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "role": "radiogroup",
+                                        "aria-required": "false",
+                                        "tabindex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "true",
+                                                "data-state": "checked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    5,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "checked"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ],
+                                          "text": "Email only"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "SMS only"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            2
+                                          ],
+                                          "attrs": {
+                                            "role": "group",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                5,
+                                                1,
+                                                0,
+                                                2,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "radio",
+                                                "aria-checked": "false",
+                                                "data-state": "unchecked",
+                                                "aria-invalid": "true",
+                                                "tabindex": "-1",
+                                                "data-radix-collection-item": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Both Email & SMS"
+                                        }
+                                      ],
+                                      "text": "Email onlySMS onlyBoth Email & SMS"
+                                    }
+                                  ],
+                                  "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                                }
+                              ],
+                              "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                            }
+                          ],
+                          "text": "InvalidNotification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
+                        }
+                      ],
+                      "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
+                    }
+                  ],
+                  "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "radio-group-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Default",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Default"
+                },
+                {
+                  "role": "radio",
+                  "name": "Comfortable",
+                  "focused": true,
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Comfortable"
+                },
+                {
+                  "role": "radio",
+                  "name": "Compact",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Compact"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With Descriptions"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "StaticText",
+                  "name": "Plus"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For individuals and small teams"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Pro"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For growing businesses"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Enterprise"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "For large teams and enterprises"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "With FieldSet"
+            },
+            {
+              "role": "StaticText",
+              "name": "Battery Level"
+            },
+            {
+              "role": "StaticText",
+              "name": "Choose your preferred battery level."
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "High",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "High"
+                },
+                {
+                  "role": "radio",
+                  "name": "Medium",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Medium"
+                },
+                {
+                  "role": "radio",
+                  "name": "Low",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Low"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Grid Layout"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Small"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Medium"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Large"
+                },
+                {
+                  "role": "radio",
+                  "name": "",
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "X-Large"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Option 1",
+                  "disabled": true,
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 1"
+                },
+                {
+                  "role": "radio",
+                  "name": "Option 2",
+                  "disabled": true,
+                  "checked": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 2"
+                },
+                {
+                  "role": "radio",
+                  "name": "Option 3",
+                  "disabled": true,
+                  "checked": false
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Option 3"
+                }
+              ]
+            },
+            {
+              "role": "StaticText",
+              "name": "Invalid"
+            },
+            {
+              "role": "StaticText",
+              "name": "Notification Preferences"
+            },
+            {
+              "role": "StaticText",
+              "name": "Choose how you want to receive notifications."
+            },
+            {
+              "role": "radiogroup",
+              "name": "",
+              "children": [
+                {
+                  "role": "radio",
+                  "name": "Email only",
+                  "checked": true,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Email only"
+                },
+                {
+                  "role": "radio",
+                  "name": "SMS only",
+                  "checked": false,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "SMS only"
+                },
+                {
+                  "role": "radio",
+                  "name": "Both Email & SMS",
+                  "checked": false,
+                  "invalid": "true"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Both Email & SMS"
+                }
+              ]
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

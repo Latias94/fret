@@ -42,6 +42,7 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod menubar;
+pub mod navigation_menu;
 mod overlay_motion;
 pub mod pagination;
 pub mod popover;
@@ -142,6 +143,11 @@ pub use menubar::{
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
 };
+pub use navigation_menu::{
+    NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
+    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
+    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
@@ -155,7 +161,10 @@ pub use radio_group::{RadioGroup, RadioGroupItem, radio_group, radio_group_uncon
 pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
-pub use scroll_area::{ScrollArea, scroll_area};
+pub use scroll_area::{
+    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar,
+    ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
+};
 pub use select::{
     Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
     SelectSide, select,
@@ -179,9 +188,11 @@ pub use switch::{Switch, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
-pub use tabs::{Tabs, TabsItem, tabs, tabs_uncontrolled};
+pub use tabs::{
+    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
+};
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
+pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,

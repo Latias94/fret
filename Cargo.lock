@@ -763,6 +763,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
+name = "data-encoding"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
+
+[[package]]
 name = "data-url"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1117,22 +1123,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-app-kit"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fret-app",
- "fret-core",
- "fret-runtime",
- "fret-ui",
- "fret-ui-app",
- "fret-ui-assets",
- "fret-ui-kit",
- "slotmap",
- "tracing",
-]
-
-[[package]]
 name = "fret-asset-cache"
 version = "0.1.0"
 dependencies = [
@@ -1150,7 +1140,11 @@ dependencies = [
  "fret-icons",
  "fret-launch",
  "fret-render",
+ "fret-ui",
+ "fret-ui-app",
+ "fret-ui-assets",
  "fret-ui-kit",
+ "subsecond",
  "thiserror 2.0.17",
 ]
 
@@ -1189,7 +1183,15 @@ name = "fret-demo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
  "fret-examples",
+ "fret-icons-lucide",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
 ]
 
 [[package]]
@@ -1211,24 +1213,27 @@ dependencies = [
  "anyhow",
  "delinea",
  "fret-app",
- "fret-app-kit",
  "fret-bootstrap",
  "fret-chart",
+ "fret-code-view",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
+ "fret-node",
  "fret-plot",
  "fret-plot3d",
  "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
+ "fret-ui-assets",
  "fret-ui-docking",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "image",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "ureq",
@@ -1276,9 +1281,12 @@ dependencies = [
  "fret-runtime",
  "objc",
  "pollster",
+ "serde_json",
  "slotmap",
+ "subsecond",
  "thiserror 2.0.17",
  "tracing",
+ "tungstenite",
  "wasm-bindgen-futures",
  "web-sys",
  "wgpu",
@@ -1298,6 +1306,20 @@ dependencies = [
  "mdstream",
  "pulldown-cmark",
  "tracing",
+]
+
+[[package]]
+name = "fret-node"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.17",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -1487,6 +1509,9 @@ name = "fret-ui-assets"
 version = "0.1.0"
 dependencies = [
  "fret-asset-cache",
+ "fret-core",
+ "fret-runtime",
+ "slotmap",
 ]
 
 [[package]]
@@ -1509,6 +1534,8 @@ dependencies = [
  "fret-icons",
  "fret-runtime",
  "fret-ui",
+ "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -1840,6 +1867,22 @@ checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "http"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3ba2a386d7f85a81f119ad7498ebe444d2e22c2af0b86b069416ace48b3311a"
+dependencies = [
+ "bytes",
+ "itoa",
+]
+
+[[package]]
+name = "httparse"
+version = "1.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
 name = "icu_collections"
@@ -2262,6 +2305,15 @@ name = "memchr"
 version = "2.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
+
+[[package]]
+name = "memfd"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad38eb12aea514a0466ea40a80fd8cc83637065948eb4a426e4aa46261175227"
+dependencies = [
+ "rustix 1.1.3",
+]
 
 [[package]]
 name = "memmap2"
@@ -3285,6 +3337,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha1"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3bf829a2d51ab4a5ddf1352d8470c140cadc8301b2ae1789db023f01cedd6ba"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
+]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
+
+[[package]]
 name = "sha2"
 version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3459,6 +3528,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6637bab7722d379c8b41ba849228d680cc12d0a45ba1fa2b48f2a30577a06731"
 dependencies = [
  "float-cmp",
+]
+
+[[package]]
+name = "subsecond"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c09bc2c9ef0381b403ab8b58122961cb83266d16b1f55f9486d5857ba4a9ae26"
+dependencies = [
+ "js-sys",
+ "libc",
+ "libloading",
+ "memfd",
+ "memmap2",
+ "serde",
+ "subsecond-types",
+ "thiserror 2.0.17",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "subsecond-types"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d07aa455c66ddfdbb51507537402b961e027846468954ef8d974bce65dff9eb0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -4137,6 +4234,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eadc29d668c91fcc564941132e17b28a7ceb2f3ebf0b9dae3e03fd7a6748eb0d"
+dependencies = [
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand",
+ "sha1",
+ "thiserror 2.0.17",
+ "utf-8",
+]
+
+[[package]]
 name = "typenum"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4287,6 +4401,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "utf-8"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
+
+[[package]]
 name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4298,8 +4418,10 @@ version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2e054861b4bd027cd373e18e8d8d8e6548085000e41290d95ce0c373a654b4a"
 dependencies = [
+ "getrandom 0.3.4",
  "js-sys",
  "serde_core",
+ "sha1_smol",
  "wasm-bindgen",
 ]
 

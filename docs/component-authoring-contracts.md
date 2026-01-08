@@ -37,13 +37,13 @@ at least one regression test before expanding usage.
 
 ### Component-layer ergonomics (recommended defaults)
 
-- Action hook helpers: `fret_components_ui::declarative::ActionHooksExt`
-- Model read+observe helpers: `fret_components_ui::declarative::ModelWatchExt`
-- Collection semantics helpers: `fret_components_ui::declarative::CollectionSemanticsExt`
-- Overlay request facade: `fret_components_ui::{OverlayController, OverlayRequest, OverlayPresence}`
-- Anchoring helpers for overlays: `fret_components_ui::overlay::*`
-- Control chrome wrapper (focus ring + clipping split): `fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props`
-- Styling refinements: `fret_components_ui::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
+- Action hook helpers: `fret_ui_kit::declarative::action_hooks::ActionHooksExt`
+- Model read+observe helpers: `fret_ui_kit::declarative::ModelWatchExt`
+- Collection semantics helpers: `fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt`
+- Overlay request facade: `fret_ui_kit::{OverlayController, OverlayRequest, OverlayPresence}`
+- Anchoring helpers for overlays: `fret_ui_kit::overlay::*`
+- Control chrome wrapper (focus ring + clipping split): `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
+- Styling refinements: `fret_ui_kit::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
 
 ## Identity and element-local state (hard-to-change contract)
 
@@ -66,7 +66,7 @@ observation, the runtime may not invalidate layout/paint when the model changes.
 
 Recommended patterns:
 
-- Use `fret_components_ui::declarative::ModelWatchExt`:
+- Use `fret_ui_kit::declarative::ModelWatchExt`:
   - `cx.watch_model(&model).layout().cloned()`
   - `cx.watch_model(&model).paint().copied()`
 - Or use `ElementContext::{read_model_ref, get_model_*}` and pass the correct `Invalidation`.
@@ -85,7 +85,7 @@ Runtime hook surfaces (registered during rendering via `ElementContext`):
 
 Component-layer convenience:
 
-- Prefer `fret_components_ui::declarative::ActionHooksExt` for common policies:
+- Prefer `fret_ui_kit::declarative::action_hooks::ActionHooksExt` for common policies:
   - toggle/set models, dispatch commands, close overlays, roving selection writes, typeahead rules.
 
 ## Semantics / a11y (what you can set today)
@@ -145,7 +145,7 @@ Components should converge on predictable conventions instead of sprinkling ad-h
 
 Recommended helper:
 
-- `fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props`
+- `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 
 ## Overlays (policy vs mechanism)
 
@@ -155,7 +155,7 @@ Recommended helper:
 Recommended entry point:
 
 - Use `OverlayController::{begin_frame, request, render}` to coordinate overlay roots per window.
-- Use `fret_components_ui::overlay::anchor_bounds_for_element(...)` and
+- Use `fret_ui_kit::overlay::anchor_bounds_for_element(...)` and
   `ElementContext::last_visual_bounds_for_element(...)` for render-transform-aware anchoring.
 - If placement anchoring should differ from the interactive trigger, model them explicitly:
   - keep the trigger element for hover/focus/dismissal/restore policies, and
@@ -167,7 +167,7 @@ Recommended entry point:
 
 Avoid:
 
-- Depending directly on `fret_components_ui::window_overlays::*` internals unless you explicitly
+- Depending directly on `fret_ui_kit::window_overlays::*` internals unless you explicitly
   enable `fret-ui-kit/unstable-internals`.
 
 ## Scrolling and virtualization
@@ -188,7 +188,7 @@ Current constraints to account for:
 
 Component-layer helpers:
 
-- Use `fret_components_ui::declarative::scroll::*` wrappers for common “overflow scroll + optional
+- Use `fret_ui_kit::declarative::scroll::*` wrappers for common “overflow scroll + optional
   scrollbar” ergonomics.
 
 ## Text input / text area (IME, caret, selection)

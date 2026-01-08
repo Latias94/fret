@@ -1,0 +1,1306 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "switch-example",
+  "primitive": "switch",
+  "scenario": "toggle",
+  "url": "http://localhost:4020/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/switch-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "switch",
+                                        "aria-checked": "false",
+                                        "data-state": "unchecked"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Airplane Mode"
+                                }
+                              ],
+                              "text": "Airplane Mode"
+                            }
+                          ],
+                          "text": "BasicAirplane Mode"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "label",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                    }
+                                  ],
+                                  "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                }
+                              ],
+                              "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                            }
+                          ],
+                          "text": "With DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the app."
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Disabled (Unchecked)"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "data-disabled": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Disabled (Checked)"
+                                    }
+                                  ],
+                                  "text": "Disabled (Unchecked)Disabled (Checked)"
+                                }
+                              ],
+                              "text": "Disabled (Unchecked)Disabled (Checked)"
+                            }
+                          ],
+                          "text": "DisabledDisabled (Unchecked)Disabled (Checked)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Default"
+                                    }
+                                  ],
+                                  "text": "SmallDefault"
+                                }
+                              ],
+                              "text": "SmallDefault"
+                            }
+                          ],
+                          "text": "SizesSmallDefault"
+                        }
+                      ],
+                      "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
+                    }
+                  ],
+                  "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "switch-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "switch",
+              "name": "Airplane Mode",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Airplane Mode"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Description"
+            },
+            {
+              "role": "StaticText",
+              "name": "Share across devices"
+            },
+            {
+              "role": "StaticText",
+              "name": "Focus is shared across devices, and turns off when you leave the app."
+            },
+            {
+              "role": "switch",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "switch",
+              "name": "Disabled (Unchecked)",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled (Unchecked)"
+            },
+            {
+              "role": "switch",
+              "name": "Disabled (Checked)",
+              "disabled": true,
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled (Checked)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Sizes"
+            },
+            {
+              "role": "switch",
+              "name": "Small",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Small"
+            },
+            {
+              "role": "switch",
+              "name": "Default",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Default"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "switch"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "attrs": {
+            "role": "switch",
+            "aria-checked": "true",
+            "data-state": "checked"
+          }
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "role": "group",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "switch",
+                                        "aria-checked": "true",
+                                        "data-state": "checked"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "checked"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Airplane Mode"
+                                }
+                              ],
+                              "text": "Airplane Mode"
+                            }
+                          ],
+                          "text": "BasicAirplane Mode"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "label",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "role": "group",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                    }
+                                  ],
+                                  "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                                }
+                              ],
+                              "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
+                            }
+                          ],
+                          "text": "With DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the app."
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked",
+                                            "data-disabled": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Disabled (Unchecked)"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "true",
+                                            "data-state": "checked",
+                                            "data-disabled": ""
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                2,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "checked",
+                                                "data-disabled": ""
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Disabled (Checked)"
+                                    }
+                                  ],
+                                  "text": "Disabled (Unchecked)Disabled (Checked)"
+                                }
+                              ],
+                              "text": "Disabled (Unchecked)Disabled (Checked)"
+                            }
+                          ],
+                          "text": "DisabledDisabled (Unchecked)Disabled (Checked)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "switch",
+                                            "aria-checked": "false",
+                                            "data-state": "unchecked"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "unchecked"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "Default"
+                                    }
+                                  ],
+                                  "text": "SmallDefault"
+                                }
+                              ],
+                              "text": "SmallDefault"
+                            }
+                          ],
+                          "text": "SizesSmallDefault"
+                        }
+                      ],
+                      "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
+                    }
+                  ],
+                  "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "switch-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "switch",
+              "name": "Airplane Mode",
+              "focused": true,
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Airplane Mode"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Description"
+            },
+            {
+              "role": "StaticText",
+              "name": "Share across devices"
+            },
+            {
+              "role": "StaticText",
+              "name": "Focus is shared across devices, and turns off when you leave the app."
+            },
+            {
+              "role": "switch",
+              "name": "",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "switch",
+              "name": "Disabled (Unchecked)",
+              "disabled": true,
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled (Unchecked)"
+            },
+            {
+              "role": "switch",
+              "name": "Disabled (Checked)",
+              "disabled": true,
+              "checked": true
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled (Checked)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Sizes"
+            },
+            {
+              "role": "switch",
+              "name": "Small",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Small"
+            },
+            {
+              "role": "switch",
+              "name": "Default",
+              "checked": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Default"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

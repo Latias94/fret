@@ -12,6 +12,48 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
+    struct RovingHookHost<'a, H: UiHost> {
+        app: &'a mut H,
+        window: AppWindowId,
+        element: crate::GlobalElementId,
+    }
+
+    impl<H: UiHost> action::UiActionHost for RovingHookHost<'_, H> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            match effect {
+                Effect::SetTimer {
+                    window: Some(window),
+                    token,
+                    ..
+                } if window == self.window => {
+                    crate::elements::record_timer_target(
+                        &mut *self.app,
+                        window,
+                        token,
+                        self.element,
+                    );
+                }
+                Effect::CancelTimer { token } => {
+                    crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                }
+                _ => {}
+            }
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+            self.app.next_timer_token()
+        }
+    }
+
     let Event::KeyDown {
         key,
         modifiers,
@@ -44,7 +86,11 @@ pub(super) fn handle_roving_flex<H: UiHost>(
     let mut handled = false;
 
     if let Some(h) = navigate_hook {
-        let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+        let mut host = RovingHookHost {
+            app: &mut *cx.app,
+            window,
+            element: this.element,
+        };
         let result = h(
             &mut host,
             action::ActionCx {
@@ -86,7 +132,11 @@ pub(super) fn handle_roving_flex<H: UiHost>(
 
         if let Some(h) = hook {
             let tick = cx.app.tick_id().0;
-            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+            let mut host = RovingHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+            };
             target = h(
                 &mut host,
                 action::ActionCx {
@@ -131,7 +181,11 @@ pub(super) fn handle_roving_flex<H: UiHost>(
     );
 
     if let Some(h) = hook {
-        let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+        let mut host = RovingHookHost {
+            app: &mut *cx.app,
+            window,
+            element: this.element,
+        };
         h(
             &mut host,
             action::ActionCx {

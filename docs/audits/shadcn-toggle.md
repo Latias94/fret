@@ -17,7 +17,8 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 
 ### Composition surface
 
-- Partial: Fret exposes a `Toggle` builder instead of a fully composable primitive surface.
+- Pass: Exposes a Radix-shaped `ToggleRoot` primitive surface (pressed + defaultPressed), while keeping
+  the ergonomic shadcn-aligned `Toggle` builder for styling/variants.
 - Pass: Supports controlled state via `Model<bool>`.
 - Pass: Supports uncontrolled initial state via `defaultPressed` (`Toggle::uncontrolled(...)` /
   `Toggle::default_pressed(...)` / `toggle_uncontrolled(...)`).

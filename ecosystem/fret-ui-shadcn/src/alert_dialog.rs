@@ -13,7 +13,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
-use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space,
@@ -29,7 +28,7 @@ fn default_overlay_color() -> Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
-        a: 0.8,
+        a: 0.5,
     }
 }
 
@@ -63,6 +62,23 @@ impl AlertDialog {
         }
     }
 
+    /// Creates an alert dialog with a controlled/uncontrolled open model (Radix `open` /
+    /// `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_alert_dialog::AlertDialogRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        Self::new(open)
+    }
+
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
         self
@@ -91,15 +107,15 @@ impl AlertDialog {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let overlay_root_name = radix_alert_dialog::alert_dialog_root_name(id);
             let prev_content_element =
                 cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
 
             let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
@@ -139,12 +155,6 @@ impl AlertDialog {
                             corner_radii: Corners::all(Px(0.0)),
                         },
                         |_cx| Vec::new(),
-                    );
-
-                    let barrier = radix_alert_dialog::alert_dialog_modal_barrier(
-                        cx,
-                        self.open.clone(),
-                        vec![barrier_fill],
                     );
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
@@ -209,23 +219,29 @@ impl AlertDialog {
                         },
                         ..Default::default()
                     };
+                    let content_layout = opacity_layout.clone();
+                    let barrier_children = vec![barrier_fill];
+                    let open_for_children = self.open.clone();
 
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout.clone(),
+                            layout: opacity_layout,
                             opacity,
                         },
                         move |cx| {
-                            vec![
-                                barrier,
-                                cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout: opacity_layout,
-                                        transform: zoom,
-                                    },
-                                    move |_cx| vec![wrapper],
-                                ),
-                            ]
+                            let content = cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: content_layout,
+                                    transform: zoom,
+                                },
+                                move |_cx| vec![wrapper],
+                            );
+                            radix_alert_dialog::alert_dialog_modal_layer_children(
+                                cx,
+                                open_for_children.clone(),
+                                barrier_children,
+                                content,
+                            )
                         },
                     )]
                 });
@@ -244,7 +260,7 @@ impl AlertDialog {
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
 
-                let request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_alert_dialog::alert_dialog_modal_request_with_options(
                     id,
                     id,
                     self.open.clone(),
@@ -252,13 +268,13 @@ impl AlertDialog {
                     options,
                     overlay_children,
                 );
-                radix_dialog::request_modal_dialog(cx, request);
+                radix_alert_dialog::request_alert_dialog(cx, request);
             } else {
                 radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
             }
 
             let content_element = content_element_for_trigger.get().or(prev_content_element);
-            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
+            radix_alert_dialog::apply_alert_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 }
@@ -614,6 +630,39 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+
+    #[test]
+    fn alert_dialog_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let alert = AlertDialog::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(alert.open, controlled);
+        });
+    }
+
+    #[test]
+    fn alert_dialog_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let alert = AlertDialog::new_controllable(cx, None, true);
+            let open = cx.watch_model(&alert.open).copied().unwrap_or(false);
+            assert!(open);
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;

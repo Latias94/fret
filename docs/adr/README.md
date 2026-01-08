@@ -23,6 +23,21 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
+- **Renderer v3: postprocessing substrate + effect semantics**
+  - Proposed: `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
+    `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+  - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
+
+- **Renderer budgets (intermediates + streaming uploads)**
+  - Proposed: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
+    `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
+  - Decide: accounting scopes, deterministic degradation rules, and observability requirements.
+
+- **Streaming surfaces + capture**
+  - Proposed: `docs/adr/0121-streaming-images-and-video-surfaces.md`,
+    `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+  - Decide: minimal pixel-format/metadata vocabulary, coalescing keys, and capability-gated fast paths.
+
 - **Font discovery + user font loading + stable IDs**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
@@ -134,6 +149,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md` (event-driven scheduling + continuous mode)
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md` (hybrid layout, editor-friendly)
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md` (Tailwind-friendly sizing + Flex semantics)
+- `docs/adr/0115-available-space-and-non-reentrant-measurement.md` (constraint-correct measurement, avoid layout re-entry)
+- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md` (multi-viewport end-state for declarative flow layout)
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (profiling and inspector hooks)
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md` (recording/replay caching for editor-scale UI)
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + external components repo)
@@ -226,6 +243,16 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0009-renderer-ordering-and-batching.md`
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - `docs/adr/0089-renderer-architecture-v2-scene-compiler.md`
+- `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+- `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+- `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- `docs/adr/0121-streaming-images-and-video-surfaces.md`
+- `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+- `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
+- `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
+- `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
+- `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
+- `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
 - `docs/adr/0096-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)
@@ -249,6 +276,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
+- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
 
@@ -265,16 +293,20 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0097-plot-widgets-and-crate-placement.md`
 - `docs/adr/0098-plot3d-rendering-strategy.md`
 - `docs/adr/0099-plot-architecture-and-performance.md`
-- Archived (bootstrap drafts; kept for history):
-  - `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-  - `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-  - `docs/archive/delinea-adr-bootstrap/0113-delinea-axis-scales-and-coordinate-mapping.md`
-  - `docs/archive/delinea-adr-bootstrap/0114-delinea-marks-identity-and-renderer-contract.md`
-  - `docs/archive/delinea-adr-bootstrap/0115-delinea-large-data-and-progressive-rendering.md`
-  - `docs/archive/delinea-adr-bootstrap/0116-delinea-interaction-and-hit-testing-contract.md`
-  - `docs/archive/delinea-adr-bootstrap/0117-delinea-multi-axis-and-layout-contract.md`
+- `docs/adr/0128-delinea-headless-chart-engine.md`
+- `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- `docs/adr/0130-delinea-axis-scales-and-coordinate-mapping.md`
+- `docs/adr/0131-delinea-marks-identity-and-renderer-contract.md`
+- `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
+- `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
+- `docs/adr/0134-delinea-multi-axis-and-layout-contract.md`
+- `docs/archive/delinea-adr-bootstrap/README.md`
 - `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`
+- `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- `docs/adr/0113-ecosystem-integration-contracts.md`
+- `docs/adr/0114-ui-assets-facade-and-golden-path-wiring.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
 - `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
 - `docs/adr/0101-headless-table-engine.md`

@@ -13,6 +13,48 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         return;
     }
 
+    struct DismissibleHookHost<'a, H: UiHost> {
+        app: &'a mut H,
+        window: AppWindowId,
+        element: crate::GlobalElementId,
+    }
+
+    impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            match effect {
+                Effect::SetTimer {
+                    window: Some(window),
+                    token,
+                    ..
+                } if window == self.window => {
+                    crate::elements::record_timer_target(
+                        &mut *self.app,
+                        window,
+                        token,
+                        self.element,
+                    );
+                }
+                Effect::CancelTimer { token } => {
+                    crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                }
+                _ => {}
+            }
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+            self.app.next_timer_token()
+        }
+    }
+
     match event {
         Event::KeyDown {
             key: fret_core::KeyCode::Escape,
@@ -28,7 +70,11 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             );
 
             if let Some(h) = hook {
-                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                let mut host = DismissibleHookHost {
+                    app: &mut *cx.app,
+                    window,
+                    element: this.element,
+                };
                 h(
                     &mut host,
                     action::ActionCx {
@@ -55,7 +101,11 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             );
 
             if let Some(h) = hook {
-                let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+                let mut host = DismissibleHookHost {
+                    app: &mut *cx.app,
+                    window,
+                    element: this.element,
+                };
                 h(
                     &mut host,
                     action::ActionCx {
@@ -94,7 +144,11 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 pointer_type: *pointer_type,
             };
 
-            let mut host = action::UiActionHostAdapter { app: &mut *cx.app };
+            let mut host = DismissibleHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+            };
             let handled = h(
                 &mut host,
                 action::ActionCx {

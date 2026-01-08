@@ -1,0 +1,2570 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "toggle-example",
+  "primitive": "toggle",
+  "scenario": "toggle",
+  "url": "http://localhost:4020/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/toggle-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "true",
+                                        "data-state": "on",
+                                        "aria-label": "Toggle bold"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle italic"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle underline"
+                                      },
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Basic"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle italic"
+                                      },
+                                      "children": [],
+                                      "text": "Italic"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle bold"
+                                      },
+                                      "children": [],
+                                      "text": "Bold"
+                                    }
+                                  ],
+                                  "text": "ItalicBold"
+                                }
+                              ],
+                              "text": "ItalicBold"
+                            }
+                          ],
+                          "text": "OutlineItalicBold"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle small"
+                                      },
+                                      "children": [],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle default"
+                                      },
+                                      "children": [],
+                                      "text": "Default"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle large"
+                                      },
+                                      "children": [],
+                                      "text": "Large"
+                                    }
+                                  ],
+                                  "text": "SmallDefaultLarge"
+                                }
+                              ],
+                              "text": "SmallDefaultLarge"
+                            }
+                          ],
+                          "text": "SizesSmallDefaultLarge"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    }
+                                  ],
+                                  "text": "ButtonToggleButtonToggleButtonToggle"
+                                }
+                              ],
+                              "text": "ButtonToggleButtonToggleButtonToggle"
+                            }
+                          ],
+                          "text": "With Button TextButtonToggleButtonToggleButtonToggle"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "With Button Icon"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    }
+                                  ],
+                                  "text": "ButtonToggleButtonToggleButtonToggle"
+                                }
+                              ],
+                              "text": "ButtonToggleButtonToggleButtonToggle"
+                            }
+                          ],
+                          "text": "With Button Icon + TextButtonToggleButtonToggleButtonToggle"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "data-disabled": "",
+                                        "aria-label": "Toggle disabled"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "data-disabled": "",
+                                        "aria-label": "Toggle disabled outline"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    }
+                                  ],
+                                  "text": "DisabledDisabled"
+                                }
+                              ],
+                              "text": "DisabledDisabled"
+                            }
+                          ],
+                          "text": "DisabledDisabledDisabled"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "true",
+                                        "data-state": "on",
+                                        "aria-label": "Toggle bookmark"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle bookmark outline"
+                                      },
+                                      "children": [],
+                                      "text": "Bookmark"
+                                    }
+                                  ],
+                                  "text": "Bookmark"
+                                }
+                              ],
+                              "text": "Bookmark"
+                            }
+                          ],
+                          "text": "With IconBookmark"
+                        }
+                      ],
+                      "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
+                    }
+                  ],
+                  "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "toggle-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Toggle bold",
+              "pressed": true
+            },
+            {
+              "role": "button",
+              "name": "Toggle italic",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle underline",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Outline"
+            },
+            {
+              "role": "button",
+              "name": "Toggle italic",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle bold",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Sizes"
+            },
+            {
+              "role": "button",
+              "name": "Toggle small",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle default",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle large",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Text"
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle default",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Icon"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm icon",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle default icon",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg icon",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Icon + Text"
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm icon text",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle default icon text",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg icon text",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "button",
+              "name": "Toggle disabled",
+              "disabled": true,
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle disabled outline",
+              "disabled": true,
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icon"
+            },
+            {
+              "role": "button",
+              "name": "Toggle bookmark",
+              "pressed": true
+            },
+            {
+              "role": "button",
+              "name": "Toggle bookmark outline",
+              "pressed": false
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "toggle"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "attrs": {
+            "aria-pressed": "false",
+            "data-state": "off",
+            "aria-label": "Toggle bold"
+          }
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle bold"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle italic"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle underline"
+                                      },
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Basic"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle italic"
+                                      },
+                                      "children": [],
+                                      "text": "Italic"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle bold"
+                                      },
+                                      "children": [],
+                                      "text": "Bold"
+                                    }
+                                  ],
+                                  "text": "ItalicBold"
+                                }
+                              ],
+                              "text": "ItalicBold"
+                            }
+                          ],
+                          "text": "OutlineItalicBold"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle small"
+                                      },
+                                      "children": [],
+                                      "text": "Small"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle default"
+                                      },
+                                      "children": [],
+                                      "text": "Default"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle large"
+                                      },
+                                      "children": [],
+                                      "text": "Large"
+                                    }
+                                  ],
+                                  "text": "SmallDefaultLarge"
+                                }
+                              ],
+                              "text": "SmallDefaultLarge"
+                            }
+                          ],
+                          "text": "SizesSmallDefaultLarge"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    }
+                                  ],
+                                  "text": "ButtonToggleButtonToggleButtonToggle"
+                                }
+                              ],
+                              "text": "ButtonToggleButtonToggleButtonToggle"
+                            }
+                          ],
+                          "text": "With Button TextButtonToggleButtonToggleButtonToggle"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": []
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg icon"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "With Button Icon"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle sm icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle default icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [],
+                                          "text": "Button"
+                                        },
+                                        {
+                                          "tag": "button",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            2,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "aria-pressed": "false",
+                                            "data-state": "off",
+                                            "aria-label": "Toggle lg icon text"
+                                          },
+                                          "children": [],
+                                          "text": "Toggle"
+                                        }
+                                      ],
+                                      "text": "ButtonToggle"
+                                    }
+                                  ],
+                                  "text": "ButtonToggleButtonToggleButtonToggle"
+                                }
+                              ],
+                              "text": "ButtonToggleButtonToggleButtonToggle"
+                            }
+                          ],
+                          "text": "With Button Icon + TextButtonToggleButtonToggleButtonToggle"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "data-disabled": "",
+                                        "aria-label": "Toggle disabled"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        6,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "data-disabled": "",
+                                        "aria-label": "Toggle disabled outline"
+                                      },
+                                      "children": [],
+                                      "text": "Disabled"
+                                    }
+                                  ],
+                                  "text": "DisabledDisabled"
+                                }
+                              ],
+                              "text": "DisabledDisabled"
+                            }
+                          ],
+                          "text": "DisabledDisabledDisabled"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "true",
+                                        "data-state": "on",
+                                        "aria-label": "Toggle bookmark"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        7,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-pressed": "false",
+                                        "data-state": "off",
+                                        "aria-label": "Toggle bookmark outline"
+                                      },
+                                      "children": [],
+                                      "text": "Bookmark"
+                                    }
+                                  ],
+                                  "text": "Bookmark"
+                                }
+                              ],
+                              "text": "Bookmark"
+                            }
+                          ],
+                          "text": "With IconBookmark"
+                        }
+                      ],
+                      "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
+                    }
+                  ],
+                  "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "toggle-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Toggle bold",
+              "focused": true,
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle italic",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle underline",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Outline"
+            },
+            {
+              "role": "button",
+              "name": "Toggle italic",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle bold",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Sizes"
+            },
+            {
+              "role": "button",
+              "name": "Toggle small",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle default",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle large",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Text"
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle default",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Icon"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm icon",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle default icon",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg icon",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Button Icon + Text"
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle sm icon text",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle default icon text",
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Button"
+            },
+            {
+              "role": "button",
+              "name": "Toggle lg icon text",
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "button",
+              "name": "Toggle disabled",
+              "disabled": true,
+              "pressed": false
+            },
+            {
+              "role": "button",
+              "name": "Toggle disabled outline",
+              "disabled": true,
+              "pressed": false
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icon"
+            },
+            {
+              "role": "button",
+              "name": "Toggle bookmark",
+              "pressed": true
+            },
+            {
+              "role": "button",
+              "name": "Toggle bookmark outline",
+              "pressed": false
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -19,8 +19,8 @@ examples in `repo-ref/ui`.
 
 ### Composition surface
 
-- Partial: Fret exposes a `RadioGroup` builder with labeled `RadioGroupItem` entries; shadcn’s wrapper
-  exposes `RadioGroup` + `RadioGroupItem` primitives and expects labels to be composed externally.
+- Pass: `RadioGroupItem` supports composable contents via `RadioGroupItem::children(...)` while keeping
+  the convenient `RadioGroup::item(RadioGroupItem::new(value, label))` builder shape.
 - Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).
 

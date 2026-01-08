@@ -15,37 +15,24 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-fn apply_popover_trigger_a11y(
-    mut trigger: AnyElement,
-    expanded: bool,
-    controls: Option<fret_ui::elements::GlobalElementId>,
-) -> AnyElement {
-    match &mut trigger.kind {
-        fret_ui::element::ElementKind::Pressable(fret_ui::element::PressableProps {
-            a11y, ..
-        }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = controls.map(|id| id.0);
-        }
-        fret_ui::element::ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = controls.map(|id| id.0);
-        }
-        _ => {}
-    }
-    trigger
+fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
+    fret_core::Transform2D::translation(origin)
+        * fret_core::Transform2D::scale_uniform(scale)
+        * fret_core::Transform2D::translation(fret_core::Point::new(
+            fret_core::Px(-origin.x.0),
+            fret_core::Px(-origin.y.0),
+        ))
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -122,6 +109,22 @@ impl Popover {
             initial_focus: None,
             anchor_override: None,
         }
+    }
+
+    /// Creates a popover with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_popover::PopoverRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        Self::new(open)
     }
 
     pub fn align(mut self, align: PopoverAlign) -> Self {
@@ -239,11 +242,13 @@ impl Popover {
                 radix_popover::popover_root_name(trigger_id)
             };
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
@@ -275,21 +280,20 @@ impl Popover {
                         .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
                 });
 
-                let opacity = motion.progress;
+                let opacity = motion.opacity;
+                let scale = motion.scale;
                 let opening = is_open;
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
                 let open_for_barrier = self.open.clone();
-                let barrier_options =
-                    radix_dialog::DialogOptions::default().dismiss_on_overlay_press(true);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
                         if modal {
-                            return vec![radix_dialog::modal_barrier(
+                            return vec![radix_popover::popover_modal_barrier(
                                 cx,
                                 open_for_barrier.clone(),
-                                barrier_options.dismiss_on_overlay_press,
+                                true,
                                 Vec::new(),
                             )];
                         }
@@ -347,7 +351,7 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let zoom = shadcn_zoom_transform(origin, scale);
                     let slide = if opening {
                         overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                     } else {
@@ -420,10 +424,9 @@ impl Popover {
                     );
 
                     if modal {
-                        radix_dialog::modal_dialog_layer_children(
+                        radix_popover::popover_modal_layer_children(
                             cx,
                             open_for_barrier.clone(),
-                            barrier_options,
                             Vec::new(),
                             overlay_content,
                         )
@@ -458,7 +461,7 @@ impl Popover {
             }
 
             let dialog_id_for_trigger = dialog_id_for_trigger.get();
-            apply_popover_trigger_a11y(trigger, is_open, dialog_id_for_trigger)
+            radix_popover::apply_popover_trigger_a11y(trigger, is_open, dialog_id_for_trigger)
         })
     }
 }
@@ -706,7 +709,41 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
+    use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+
+    #[test]
+    fn popover_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let popover = Popover::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(popover.open, controlled);
+        });
+    }
+
+    #[test]
+    fn popover_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let popover = Popover::new_controllable(cx, None, true);
+            let open = cx.watch_model(&popover.open).copied().unwrap_or(false);
+            assert!(open);
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;

@@ -7,8 +7,6 @@ use fret_ui::element::{
     PressableProps, RovingFlexProps, RovingFocusProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
-use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
@@ -83,18 +81,13 @@ fn radio_indicator(theme: &Theme) -> Color {
     theme.color_required("primary")
 }
 
-/// Matches Radix RadioGroup `orientation` outcome.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum RadioGroupOrientation {
-    #[default]
-    Vertical,
-    Horizontal,
-}
+pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;
 
 #[derive(Debug, Clone)]
 pub struct RadioGroupItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    pub children: Option<Vec<AnyElement>>,
     pub disabled: bool,
 }
 
@@ -103,8 +96,20 @@ impl RadioGroupItem {
         Self {
             value: value.into(),
             label: label.into(),
+            children: None,
             disabled: false,
         }
+    }
+
+    /// Overrides the default item contents (icon + label text) to enable composable labels.
+    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
+        self.children = Some(children);
+        self
+    }
+
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children = Some(vec![child]);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -211,93 +216,81 @@ impl RadioGroup {
             let orientation = self.orientation;
             let loop_navigation = self.loop_navigation;
 
-            cx.semantics(
-                radio_group_prim::radio_group_semantics(group_label.clone(), group_disabled),
-                move |cx| {
-                    let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
+            let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
+            let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
+            let disabled: Vec<bool> = items.iter().map(|i| group_disabled || i.disabled).collect();
+            let active =
+                roving_focus::active_index_from_str_keys(&values, selected.as_deref(), &disabled);
 
-                    let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
-                    let disabled: Vec<bool> =
-                        items.iter().map(|i| group_disabled || i.disabled).collect();
-                    let active =
-                        roving_focus::active_index_from_str_keys(&values, selected.as_deref(), &disabled);
+            let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
+            let disabled_arc: Arc<[bool]> = Arc::from(disabled.clone().into_boxed_slice());
+            let set_size = u32::try_from(items.len()).ok().and_then(|n| (n > 0).then_some(n));
 
-                    let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
-                    let roving = RovingFocusProps {
-                        enabled: !group_disabled,
-                        wrap: loop_navigation,
-                        disabled: Arc::from(disabled.clone().into_boxed_slice()),
-                        ..Default::default()
-                    };
+            let mut radix_root = radio_group_prim::RadioGroupRoot::new(model.clone())
+                .disabled(group_disabled)
+                .orientation(orientation)
+                .loop_navigation(loop_navigation);
+            if let Some(label) = group_label.clone() {
+                radix_root = radix_root.a11y_label(label);
+            }
 
-                    vec![cx.roving_flex(
-                        RovingFlexProps {
-                            flex: FlexProps {
-                                direction: match orientation {
-                                    RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
-                                    RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
-                                },
-                                gap: match orientation {
-                                    RadioGroupOrientation::Vertical => gap_y,
-                                    RadioGroupOrientation::Horizontal => gap_x,
-                                },
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: match orientation {
-                                    RadioGroupOrientation::Vertical => CrossAlign::Stretch,
-                                    RadioGroupOrientation::Horizontal => CrossAlign::Center,
-                                },
-                                wrap: false,
-                                ..Default::default()
-                            },
-                            roving,
+            let root_for_items = radix_root.clone();
+            let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
+
+            list.into_element(
+                cx,
+                RovingFlexProps {
+                    flex: FlexProps {
+                        gap: match orientation {
+                            RadioGroupOrientation::Vertical => gap_y,
+                            RadioGroupOrientation::Horizontal => gap_x,
                         },
-                        move |cx| {
-                            cx.roving_nav_apg();
-                            cx.roving_select_option_arc_str(&model, values_arc.clone());
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: match orientation {
+                            RadioGroupOrientation::Vertical => CrossAlign::Stretch,
+                            RadioGroupOrientation::Horizontal => CrossAlign::Center,
+                        },
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    roving: RovingFocusProps::default(),
+                },
+                move |cx| {
+                    let mut out = Vec::with_capacity(items.len());
+                    for (idx, item) in items.iter().cloned().enumerate() {
+                        let item_disabled = disabled.get(idx).copied().unwrap_or(true);
+                        let item_enabled = !item_disabled;
+                        let tab_stop = active.is_some_and(|a| a == idx);
 
-                            let mut out = Vec::with_capacity(items.len());
-                            for (idx, item) in items.iter().cloned().enumerate() {
-                                let item_disabled = disabled.get(idx).copied().unwrap_or(true);
-                                let item_enabled = !item_disabled;
-                                let tab_stop = active.is_some_and(|a| a == idx);
-                                let is_selected =
-                                    selected.as_deref().is_some_and(|v| v == item.value.as_ref());
+                        let radius = Px((icon.0 * 0.5).max(0.0));
+                        let ring_style = decl_style::focus_ring(&theme, radius);
+                        let pressable_layout = decl_style::layout_style(
+                            &theme,
+                            fret_ui_kit::LayoutRefinement::default().w_full(),
+                        );
 
-                                let radius = Px((icon.0 * 0.5).max(0.0));
-                                let ring_style = decl_style::focus_ring(&theme, radius);
-                                let pressable_layout = decl_style::layout_style(
-                                    &theme,
-                                    fret_ui_kit::LayoutRefinement::default().w_full(),
-                                );
-
-                                let a11y_label = item.label.clone();
-                                let pressable_item_value = item.value.clone();
-                                let model = model.clone();
-                                let text_style = text_style.clone();
-                                out.push(cx.pressable_with_id(
+                        let a11y_label = item.label.clone();
+                        let item_children = item.children.clone();
+                        let text_style = text_style.clone();
+                        out.push(
+                            radio_group_prim::RadioGroupItem::new(item.value.clone())
+                                .label(a11y_label.clone())
+                                .disabled(!item_enabled)
+                                .index(idx)
+                                .tab_stop(tab_stop)
+                                .set_size(set_size)
+                                .into_element(
+                                    cx,
+                                    &root_for_items,
                                     PressableProps {
                                         layout: pressable_layout,
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
-                                        a11y: radio_group_prim::radio_button_a11y(
-                                            Some(a11y_label.clone()),
-                                            is_selected,
-                                        )
-                                        .with_collection_position(idx, items.len()),
                                         ..Default::default()
                                     },
-                                    move |cx, st, id| {
-                                        cx.key_add_on_key_down_for(
-                                            id,
-                                            fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
-                                        );
-                                        cx.pressable_set_option_arc_str(
-                                            &model,
-                                            pressable_item_value.clone(),
-                                        );
-
+                                    move |cx, st, checked| {
                                         let theme = Theme::global(&*cx.app).clone();
 
                                         let mut border_color = border;
@@ -358,7 +351,7 @@ impl RadioGroup {
                                             )),
                                         };
 
-                                        let label = item.label.clone();
+                                        let label = a11y_label.clone();
                                         let label_props = TextProps {
                                             layout: LayoutStyle::default(),
                                             text: label,
@@ -381,7 +374,7 @@ impl RadioGroup {
                                             move |cx| {
                                                 let mut out = Vec::new();
                                                 out.push(cx.container(icon_props, move |cx| {
-                                                    if !is_selected {
+                                                    if !checked {
                                                         return Vec::new();
                                                     }
 
@@ -407,16 +400,21 @@ impl RadioGroup {
                                                         },
                                                     )]
                                                 }));
-                                                out.push(cx.text_props(label_props));
+
+                                                if let Some(children) = item_children.clone() {
+                                                    out.extend(children);
+                                                } else {
+                                                    out.push(cx.text_props(label_props));
+                                                }
+
                                                 out
                                             },
                                         )]
                                     },
-                                ));
-                            }
-                            out
-                        },
-                    )]
+                                ),
+                        );
+                    }
+                    out
                 },
             )
         })

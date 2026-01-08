@@ -31,6 +31,20 @@ impl Drawer {
         }
     }
 
+    /// Creates a drawer with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        Self {
+            inner: Sheet::new_controllable(cx, open, default_open).side(DrawerSide::Bottom),
+        }
+    }
+
     pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
         self.inner = self.inner.overlay_closable(overlay_closable);
         self
@@ -70,4 +84,31 @@ pub fn drawer<H: UiHost>(
     content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
     Drawer::new(open).into_element(cx, trigger, content)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn drawer_new_controllable_can_build_with_or_without_controlled_open_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let controlled = app.models_mut().insert(false);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let _ = Drawer::new_controllable(cx, None, false);
+            let _ = Drawer::new_controllable(cx, Some(controlled.clone()), true);
+        });
+    }
 }

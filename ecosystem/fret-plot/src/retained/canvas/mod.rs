@@ -36,13 +36,15 @@ use super::layers::{
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{
-    PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState,
+    PlotAxisLock, PlotAxisLocks, PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotImage,
+    PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotState,
 };
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
+use crate::plot::colormap::ColorMapId;
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
     expand_data_bounds_scaled, local_from_absolute, pan_view_by_px_scaled, sanitize_data_rect,
@@ -109,6 +111,47 @@ fn apply_axis_locks(
     next
 }
 
+fn all_visible_axes_zoom_locked(
+    show_y2_axis: bool,
+    show_y3_axis: bool,
+    show_y4_axis: bool,
+    lock_x_zoom: bool,
+    lock_y1_zoom: bool,
+    lock_y2_zoom: bool,
+    lock_y3_zoom: bool,
+    lock_y4_zoom: bool,
+) -> bool {
+    lock_x_zoom
+        && lock_y1_zoom
+        && (!show_y2_axis || lock_y2_zoom)
+        && (!show_y3_axis || lock_y3_zoom)
+        && (!show_y4_axis || lock_y4_zoom)
+}
+
+fn fit_view_bounds_with_zoom_locks(
+    current: DataRect,
+    fit: DataRect,
+    lock_x_zoom: bool,
+    lock_y_zoom: bool,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+    x_constraints: AxisConstraints,
+    y_constraints: AxisConstraints,
+) -> Option<DataRect> {
+    if lock_x_zoom && lock_y_zoom {
+        return None;
+    }
+
+    let next = apply_axis_locks(current, fit, lock_x_zoom, lock_y_zoom);
+    Some(constrain_view_bounds_scaled(
+        next,
+        x_scale,
+        y_scale,
+        x_constraints,
+        y_constraints,
+    ))
+}
+
 fn log10_decade_exponent(v: f64) -> Option<i32> {
     if !v.is_finite() || v <= 0.0 {
         return None;
@@ -123,6 +166,125 @@ fn log10_decade_exponent(v: f64) -> Option<i32> {
     ((e - rounded).abs() <= eps).then_some(rounded as i32)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WheelZoomMode {
+    PlotAll,
+    PlotXOnly,
+    PlotYOnly,
+    XAxis,
+    YAxis(YAxis),
+}
+
+fn wheel_zoom_mode(
+    input_map: PlotInputMap,
+    region: PlotRegion,
+    modifiers: fret_core::Modifiers,
+) -> Option<WheelZoomMode> {
+    if let Some(required) = input_map.wheel_zoom_mod
+        && !required.is_pressed(modifiers)
+    {
+        return None;
+    }
+
+    match region {
+        PlotRegion::Plot => {
+            let x_only = input_map
+                .wheel_zoom_x_only_mod
+                .is_some_and(|m| m.is_pressed(modifiers));
+            let y_only = input_map
+                .wheel_zoom_y_only_mod
+                .is_some_and(|m| m.is_pressed(modifiers));
+
+            if x_only {
+                return Some(WheelZoomMode::PlotXOnly);
+            }
+            if y_only {
+                return Some(WheelZoomMode::PlotYOnly);
+            }
+            Some(WheelZoomMode::PlotAll)
+        }
+        PlotRegion::XAxis => Some(WheelZoomMode::XAxis),
+        PlotRegion::YAxis(axis) => Some(WheelZoomMode::YAxis(axis)),
+    }
+}
+
+fn paint_plot_images(
+    scene: &mut fret_core::Scene,
+    images: &[PlotImage],
+    layer: PlotImageLayer,
+    transform_y1: PlotTransform,
+    transform_y2: Option<PlotTransform>,
+    transform_y3: Option<PlotTransform>,
+    transform_y4: Option<PlotTransform>,
+) {
+    if images.is_empty() {
+        return;
+    }
+
+    let transform_for_axis = |axis: YAxis| -> Option<PlotTransform> {
+        match axis {
+            YAxis::Left => Some(transform_y1),
+            YAxis::Right => transform_y2,
+            YAxis::Right2 => transform_y3,
+            YAxis::Right3 => transform_y4,
+        }
+    };
+
+    for img in images {
+        if img.layer != layer {
+            continue;
+        }
+
+        let Some(transform) = transform_for_axis(img.axis) else {
+            continue;
+        };
+
+        let rect = img.rect;
+        if !rect.x_min.is_finite()
+            || !rect.x_max.is_finite()
+            || !rect.y_min.is_finite()
+            || !rect.y_max.is_finite()
+        {
+            continue;
+        }
+
+        let a = transform.data_to_px(DataPoint {
+            x: rect.x_min,
+            y: rect.y_min,
+        });
+        let b = transform.data_to_px(DataPoint {
+            x: rect.x_max,
+            y: rect.y_max,
+        });
+        if !a.x.0.is_finite() || !a.y.0.is_finite() || !b.x.0.is_finite() || !b.y.0.is_finite() {
+            continue;
+        }
+
+        let left = a.x.0.min(b.x.0);
+        let right = a.x.0.max(b.x.0);
+        let top = a.y.0.min(b.y.0);
+        let bottom = a.y.0.max(b.y.0);
+        let w = (right - left).max(0.0);
+        let h = (bottom - top).max(0.0);
+        if w <= 0.0 || h <= 0.0 {
+            continue;
+        }
+
+        let opacity = img.opacity.clamp(0.0, 1.0);
+        if opacity <= 0.0 {
+            continue;
+        }
+
+        scene.push(SceneOp::ImageRegion {
+            order: DrawOrder(1),
+            rect: Rect::new(Point::new(Px(left), Px(top)), Size::new(Px(w), Px(h))),
+            image: img.image,
+            uv: img.uv,
+            opacity,
+        });
+    }
+}
+
 fn log10_tick_label_or_empty(v: f64) -> String {
     let Some(exp) = log10_decade_exponent(v) else {
         return String::new();
@@ -130,10 +292,21 @@ fn log10_tick_label_or_empty(v: f64) -> String {
     format!("10^{exp}")
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct AxisLock {
-    pan: bool,
-    zoom: bool,
+fn format_colorbar_value(v: f32) -> String {
+    if !v.is_finite() {
+        return "NA".to_string();
+    }
+    let a = v.abs();
+    if a > 1.0e6 || (a > 0.0 && a < 1.0e-3) {
+        return format!("{v:.3e}");
+    }
+    if a >= 1000.0 {
+        return format!("{v:.0}");
+    }
+    if a >= 10.0 {
+        return format!("{v:.2}");
+    }
+    format!("{v:.3}")
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -143,6 +316,12 @@ enum DragRectHandle {
     Right,
     Top,
     Bottom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DragAxisConstraint {
+    XOnly,
+    YOnly,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -165,6 +344,8 @@ enum DragCapture {
         axis: YAxis,
         button: MouseButton,
         offset: DataPoint,
+        start: DataPoint,
+        constraint: Option<DragAxisConstraint>,
         current: DataPoint,
     },
     Rect {
@@ -173,6 +354,8 @@ enum DragCapture {
         button: MouseButton,
         handle: DragRectHandle,
         offset: DataPoint,
+        start: DataRect,
+        constraint: Option<DragAxisConstraint>,
         current: DataRect,
     },
 }
@@ -217,11 +400,11 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     show_y2_axis: bool,
     show_y3_axis: bool,
     show_y4_axis: bool,
-    lock_x: AxisLock,
-    lock_y: AxisLock,
-    lock_y2: AxisLock,
-    lock_y3: AxisLock,
-    lock_y4: AxisLock,
+    lock_x: PlotAxisLock,
+    lock_y: PlotAxisLock,
+    lock_y2: PlotAxisLock,
+    lock_y3: PlotAxisLock,
+    lock_y4: PlotAxisLock,
     x_constraints: AxisConstraints,
     y_constraints: AxisConstraints,
     y2_constraints: AxisConstraints,
@@ -263,6 +446,9 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     linked_cursor_readout_text: Option<PreparedText>,
     overlays_text_key: Option<u64>,
     overlays_text: Vec<PreparedText>,
+
+    heatmap_colorbar_text_key: Option<u64>,
+    heatmap_colorbar_text: Vec<PreparedText>,
 }
 
 #[cfg(test)]
@@ -346,6 +532,145 @@ mod box_select_modifier_tests {
             );
         assert_eq!((s_req.x.0, s_req.y.0), (10.0, 10.0));
         assert_eq!((e_req.x.0, e_req.y.0), (20.0, 20.0));
+    }
+}
+
+#[cfg(test)]
+mod wheel_zoom_policy_tests {
+    use super::*;
+
+    #[test]
+    fn wheel_zoom_respects_wheel_zoom_mod_gate() {
+        let mut map = PlotInputMap::default();
+        map.wheel_zoom_mod = Some(ModifierKey::Shift);
+        map.wheel_zoom_x_only_mod = None;
+        map.wheel_zoom_y_only_mod = None;
+
+        let region = PlotRegion::Plot;
+        let mods = fret_core::Modifiers::default();
+        assert_eq!(wheel_zoom_mode(map, region, mods), None);
+
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ..fret_core::Modifiers::default()
+        };
+        assert_eq!(
+            wheel_zoom_mode(map, region, mods),
+            Some(WheelZoomMode::PlotAll)
+        );
+    }
+
+    #[test]
+    fn wheel_zoom_plot_region_prefers_x_only_over_y_only() {
+        let map = PlotInputMap::default();
+        let region = PlotRegion::Plot;
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ctrl: true,
+            ..fret_core::Modifiers::default()
+        };
+        assert_eq!(
+            wheel_zoom_mode(map, region, mods),
+            Some(WheelZoomMode::PlotXOnly)
+        );
+    }
+
+    #[test]
+    fn wheel_zoom_axis_region_routing_overrides_axis_only_modifiers() {
+        let map = PlotInputMap::default();
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ctrl: true,
+            ..fret_core::Modifiers::default()
+        };
+
+        assert_eq!(
+            wheel_zoom_mode(map, PlotRegion::XAxis, mods),
+            Some(WheelZoomMode::XAxis)
+        );
+        assert_eq!(
+            wheel_zoom_mode(map, PlotRegion::YAxis(YAxis::Right2), mods),
+            Some(WheelZoomMode::YAxis(YAxis::Right2))
+        );
+    }
+}
+
+#[cfg(test)]
+mod fit_and_box_zoom_lock_tests {
+    use super::*;
+
+    #[test]
+    fn all_visible_axes_zoom_locked_ignores_hidden_axes() {
+        assert!(all_visible_axes_zoom_locked(
+            false, false, false, true, true, false, false, false,
+        ));
+    }
+
+    #[test]
+    fn all_visible_axes_zoom_locked_requires_visible_axes_locked() {
+        assert!(!all_visible_axes_zoom_locked(
+            true, false, false, true, true, false, true, true,
+        ));
+    }
+
+    #[test]
+    fn fit_view_bounds_is_none_when_both_axes_locked() {
+        let current = DataRect {
+            x_min: 0.0,
+            x_max: 10.0,
+            y_min: 0.0,
+            y_max: 10.0,
+        };
+        let fit = DataRect {
+            x_min: -5.0,
+            x_max: 5.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+
+        assert_eq!(
+            fit_view_bounds_with_zoom_locks(
+                current,
+                fit,
+                true,
+                true,
+                AxisScale::Linear,
+                AxisScale::Linear,
+                AxisConstraints::default(),
+                AxisConstraints::default(),
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn fit_view_bounds_preserves_locked_axis_and_updates_unlocked_axis() {
+        let current = DataRect {
+            x_min: 0.0,
+            x_max: 10.0,
+            y_min: 0.0,
+            y_max: 10.0,
+        };
+        let fit = DataRect {
+            x_min: -5.0,
+            x_max: 5.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+
+        let next = fit_view_bounds_with_zoom_locks(
+            current,
+            fit,
+            true,
+            false,
+            AxisScale::Linear,
+            AxisScale::Linear,
+            AxisConstraints::default(),
+            AxisConstraints::default(),
+        )
+        .expect("expected update");
+        assert_eq!((next.x_min, next.x_max), (current.x_min, current.x_max));
+        assert_eq!((next.y_min, next.y_max), (fit.y_min, fit.y_max));
     }
 }
 
@@ -595,11 +920,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             show_y2_axis: false,
             show_y3_axis: false,
             show_y4_axis: false,
-            lock_x: AxisLock::default(),
-            lock_y: AxisLock::default(),
-            lock_y2: AxisLock::default(),
-            lock_y3: AxisLock::default(),
-            lock_y4: AxisLock::default(),
+            lock_x: PlotAxisLock::default(),
+            lock_y: PlotAxisLock::default(),
+            lock_y2: PlotAxisLock::default(),
+            lock_y3: PlotAxisLock::default(),
+            lock_y4: PlotAxisLock::default(),
             x_constraints: AxisConstraints::default(),
             y_constraints: AxisConstraints::default(),
             y2_constraints: AxisConstraints::default(),
@@ -641,11 +966,39 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             linked_cursor_readout_text: None,
             overlays_text_key: None,
             overlays_text: Vec::new(),
+
+            heatmap_colorbar_text_key: None,
+            heatmap_colorbar_text: Vec::new(),
         }
     }
 
     pub fn style(mut self, style: LinePlotStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    pub fn heatmap_colormap(mut self, colormap: ColorMapId) -> Self {
+        self.style.heatmap_colormap = colormap;
+        self
+    }
+
+    pub fn heatmap_colorbar(mut self, enabled: bool) -> Self {
+        self.style.heatmap_show_colorbar = enabled;
+        self
+    }
+
+    pub fn heatmap_colorbar_width(mut self, width: Px) -> Self {
+        self.style.heatmap_colorbar_width = width;
+        self
+    }
+
+    pub fn heatmap_colorbar_padding(mut self, padding: Px) -> Self {
+        self.style.heatmap_colorbar_padding = padding;
+        self
+    }
+
+    pub fn heatmap_colorbar_steps(mut self, steps: usize) -> Self {
+        self.style.heatmap_colorbar_steps = steps;
         self
     }
 
@@ -692,92 +1045,107 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     }
 
     pub fn x_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_x = AxisLock {
+        self.lock_x = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn y_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y = AxisLock {
+        self.lock_y = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y2_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y2 = AxisLock {
+        self.lock_y2 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y3_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y3 = AxisLock {
+        self.lock_y3 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y4_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y4 = AxisLock {
+        self.lock_y4 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
     pub fn x_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_x.pan = locked;
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn x_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_x.zoom = locked;
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn y_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y.pan = locked;
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y.zoom = locked;
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y2_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y2.pan = locked;
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y2_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y2.zoom = locked;
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y3_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y3.pan = locked;
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y3_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y3.zoom = locked;
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y4_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y4.pan = locked;
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
     pub fn y4_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y4.zoom = locked;
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
@@ -1007,6 +1375,52 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             self.plot_state.clone()
         }
+    }
+
+    fn canvas_axis_locks(&self) -> PlotAxisLocks {
+        PlotAxisLocks {
+            x: self.lock_x,
+            y: self.lock_y,
+            y2: self.lock_y2,
+            y3: self.lock_y3,
+            y4: self.lock_y4,
+        }
+    }
+
+    fn set_canvas_axis_locks(&mut self, locks: PlotAxisLocks) {
+        self.lock_x = locks.x;
+        self.lock_y = locks.y;
+        self.lock_y2 = locks.y2;
+        self.lock_y3 = locks.y3;
+        self.lock_y4 = locks.y4;
+    }
+
+    fn sync_axis_locks<H: UiHost>(&mut self, app: &mut H) {
+        let state = self.read_plot_state(app);
+        let state_locks = state.axis_locks;
+        let canvas_locks = self.canvas_axis_locks();
+
+        if self.plot_state_model.is_some() {
+            // Allow PlotCanvas builder configuration to provide initial locks when the caller
+            // uses an external PlotState but has not set axis locks yet.
+            if state_locks == PlotAxisLocks::default() && canvas_locks != PlotAxisLocks::default() {
+                let _ = self.update_plot_state(app, |s| {
+                    s.axis_locks = canvas_locks;
+                });
+            } else if state_locks != canvas_locks {
+                self.set_canvas_axis_locks(state_locks);
+            }
+        } else if self.plot_state.axis_locks != canvas_locks {
+            // Internal PlotState should always stay in sync with the widget-owned lock flags.
+            self.plot_state.axis_locks = canvas_locks;
+        }
+    }
+
+    fn persist_axis_locks<H: UiHost>(&mut self, app: &mut H) {
+        let locks = self.canvas_axis_locks();
+        let _ = self.update_plot_state(app, |s| {
+            s.axis_locks = locks;
+        });
     }
 
     fn update_plot_state<H: UiHost>(
@@ -1336,6 +1750,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         // Axis enablement is derived from the model (series -> axis assignment), so make sure
         // we don't accidentally interpret "right axis series" using the primary Y transform.
         self.ensure_required_axes_enabled(cx.app);
+        self.sync_axis_locks(cx.app);
         let resolved_style = self.resolve_style_from_theme(cx.theme());
 
         match event {
@@ -1345,8 +1760,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     && !modifiers.alt
                     && !modifiers.alt_gr
                     && !modifiers.meta;
-                let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
-                if lock_mods_ok && *key == KeyCode::KeyL {
+                let lock_action = if let Some(chord) = self.input_map.axis_pan_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((true, false))
+                } else if let Some(chord) = self.input_map.axis_zoom_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((false, true))
+                } else if let Some(chord) = self.input_map.axis_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((true, true))
+                } else {
+                    None
+                };
+
+                if let Some((toggle_pan, toggle_zoom)) = lock_action {
                     let Some(pos) = self.last_pointer_pos else {
                         return;
                     };
@@ -1371,16 +1801,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         return;
                     };
 
-                    let toggle_pan = modifiers.shift && !modifiers.ctrl;
-                    let toggle_zoom = modifiers.ctrl && !modifiers.shift;
-                    let toggle_both = !toggle_pan && !toggle_zoom;
-
                     match region {
                         PlotRegion::XAxis => {
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 self.lock_x.pan = !self.lock_x.pan;
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 self.lock_x.zoom = !self.lock_x.zoom;
                             }
                         }
@@ -1391,15 +1817,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 YAxis::Right2 => &mut self.lock_y3,
                                 YAxis::Right3 => &mut self.lock_y4,
                             };
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 lock.pan = !lock.pan;
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 lock.zoom = !lock.zoom;
                             }
                         }
                         PlotRegion::Plot => {
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 self.lock_x.pan = !self.lock_x.pan;
                                 self.lock_y.pan = !self.lock_y.pan;
                                 if self.show_y2_axis {
@@ -1412,7 +1838,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     self.lock_y4.pan = !self.lock_y4.pan;
                                 }
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 self.lock_x.zoom = !self.lock_x.zoom;
                                 self.lock_y.zoom = !self.lock_y.zoom;
                                 if self.show_y2_axis {
@@ -1427,6 +1853,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             }
                         }
                     }
+
+                    self.persist_axis_locks(cx.app);
 
                     self.hover = None;
                     self.cursor_px = None;
@@ -1600,8 +2028,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 self.drag_output = None;
 
                 // Axis lock UI: Ctrl+Click on an axis region toggles pan+zoom lock.
-                if modifiers.ctrl
-                    && *button == MouseButton::Left
+                if let Some(chord) = self.input_map.axis_lock_click
+                    && chord.matches(*button, *modifiers)
                     && let Some(region) = layout.hit_test_region(*position)
                     && region != PlotRegion::Plot
                 {
@@ -1622,6 +2050,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         }
                         PlotRegion::Plot => {}
                     }
+
+                    self.persist_axis_locks(cx.app);
 
                     self.hover = None;
                     self.cursor_px = None;
@@ -1884,6 +2314,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             axis: point.axis,
                             button: *button,
                             offset,
+                            start: point.point,
+                            constraint: None,
                             current: point.point,
                         };
                         if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
@@ -2035,6 +2467,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 button: *button,
                                 handle,
                                 offset,
+                                start: rect.rect,
+                                constraint: None,
                                 current: rect.rect,
                             };
                             if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
@@ -2290,19 +2724,85 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                                 let _ = self.update_plot_state(cx.app, |s| match region {
                                     PlotRegion::Plot => {
-                                        s.view_is_auto = false;
-                                        s.view_bounds = Some(fit);
-                                        if show_y2_axis {
+                                        let all_locked = all_visible_axes_zoom_locked(
+                                            show_y2_axis,
+                                            show_y3_axis,
+                                            show_y4_axis,
+                                            lock_x_zoom,
+                                            lock_y1_zoom,
+                                            lock_y2_zoom,
+                                            lock_y3_zoom,
+                                            lock_y4_zoom,
+                                        );
+                                        if all_locked {
+                                            // Axis locks prevent any view change; keep auto-fit state intact.
+                                            return;
+                                        }
+
+                                        if let Some(next) = fit_view_bounds_with_zoom_locks(
+                                            current,
+                                            fit,
+                                            lock_x_zoom,
+                                            lock_y1_zoom,
+                                            x_scale,
+                                            y_scale,
+                                            x_constraints,
+                                            y_constraints,
+                                        ) {
+                                            s.view_is_auto = false;
+                                            s.view_bounds = Some(next);
+                                        }
+
+                                        if show_y2_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y2, fit_y2)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y2_zoom,
+                                                x_scale,
+                                                y2_scale,
+                                                x_constraints,
+                                                y2_constraints,
+                                            )
+                                        {
                                             s.view_y2_is_auto = false;
-                                            s.view_bounds_y2 = fit_y2;
+                                            s.view_bounds_y2 = Some(next);
                                         }
-                                        if show_y3_axis {
+                                        if show_y3_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y3, fit_y3)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y3_zoom,
+                                                x_scale,
+                                                y3_scale,
+                                                x_constraints,
+                                                y3_constraints,
+                                            )
+                                        {
                                             s.view_y3_is_auto = false;
-                                            s.view_bounds_y3 = fit_y3;
+                                            s.view_bounds_y3 = Some(next);
                                         }
-                                        if show_y4_axis {
+                                        if show_y4_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y4, fit_y4)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y4_zoom,
+                                                x_scale,
+                                                y4_scale,
+                                                x_constraints,
+                                                y4_constraints,
+                                            )
+                                        {
                                             s.view_y4_is_auto = false;
-                                            s.view_bounds_y4 = fit_y4;
+                                            s.view_bounds_y4 = Some(next);
                                         }
                                     }
                                     PlotRegion::XAxis => {
@@ -2585,11 +3085,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let h = (start.y.0 - end.y.0).abs();
 
                             if w >= 4.0 && h >= 4.0 {
-                                let all_locked = self.lock_x.zoom
-                                    && self.lock_y.zoom
-                                    && (!self.show_y2_axis || self.lock_y2.zoom)
-                                    && (!self.show_y3_axis || self.lock_y3.zoom)
-                                    && (!self.show_y4_axis || self.lock_y4.zoom);
+                                let all_locked = all_visible_axes_zoom_locked(
+                                    self.show_y2_axis,
+                                    self.show_y3_axis,
+                                    self.show_y4_axis,
+                                    self.lock_x.zoom,
+                                    self.lock_y.zoom,
+                                    self.lock_y2.zoom,
+                                    self.lock_y3.zoom,
+                                    self.lock_y4.zoom,
+                                );
                                 if all_locked {
                                     // Axis locks prevent any view change; keep auto-fit state intact.
                                     // The selection rectangle is still useful feedback for users.
@@ -2887,42 +3392,42 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                if let Some(required) = self.input_map.wheel_zoom_mod
-                    && !required.is_pressed(*modifiers)
-                {
-                    return;
-                }
-
                 let delta_y = delta.y.0;
                 if !delta_y.is_finite() {
                     return;
                 }
 
-                let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * 0.0025));
+                let speed = self.input_map.wheel_zoom_log2_per_px;
+                let speed = if speed.is_finite() { speed } else { 0.0025 };
+                let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * speed));
                 let mut zoom_x = zoom;
                 let mut zoom_y1 = zoom;
                 let mut zoom_y2 = zoom;
                 let mut zoom_y3 = zoom;
                 let mut zoom_y4 = zoom;
 
-                match region {
-                    PlotRegion::Plot => {
-                        if modifiers.shift {
-                            zoom_y1 = 1.0;
-                            zoom_y2 = 1.0;
-                            zoom_y3 = 1.0;
-                            zoom_y4 = 1.0;
-                        } else if modifiers.ctrl {
-                            zoom_x = 1.0;
-                        }
-                    }
-                    PlotRegion::XAxis => {
+                let Some(mode) = wheel_zoom_mode(self.input_map, region, *modifiers) else {
+                    return;
+                };
+
+                match mode {
+                    WheelZoomMode::PlotAll => {}
+                    WheelZoomMode::PlotXOnly => {
                         zoom_y1 = 1.0;
                         zoom_y2 = 1.0;
                         zoom_y3 = 1.0;
                         zoom_y4 = 1.0;
                     }
-                    PlotRegion::YAxis(axis) => {
+                    WheelZoomMode::PlotYOnly => {
+                        zoom_x = 1.0;
+                    }
+                    WheelZoomMode::XAxis => {
+                        zoom_y1 = 1.0;
+                        zoom_y2 = 1.0;
+                        zoom_y3 = 1.0;
+                        zoom_y4 = 1.0;
+                    }
+                    WheelZoomMode::YAxis(axis) => {
                         zoom_x = 1.0;
                         zoom_y1 = 1.0;
                         zoom_y2 = 1.0;
@@ -3161,7 +3666,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            Event::Pointer(PointerEvent::Move { position, .. }) => {
+            Event::Pointer(PointerEvent::Move {
+                position,
+                modifiers,
+                ..
+            }) => {
                 self.last_pointer_pos = Some(*position);
                 let (
                     y_axis_gap,
@@ -3229,6 +3738,29 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(mut capture) = self.drag_capture {
+                    let snap_to_nearest_tick = |value: f64, ticks: &[f64]| -> f64 {
+                        let mut best: Option<(f64, f64)> = None;
+                        for t in ticks {
+                            if !t.is_finite() {
+                                continue;
+                            }
+                            let dist = (value - t).abs();
+                            if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                                best = Some((dist, *t));
+                            }
+                        }
+                        best.map(|(_, t)| t).unwrap_or(value)
+                    };
+                    let snap_x = |x: f64| -> f64 { snap_to_nearest_tick(x, &self.axis_ticks_x) };
+                    let snap_y = |axis: YAxis, y: f64| -> f64 {
+                        match axis {
+                            YAxis::Left => snap_to_nearest_tick(y, &self.axis_ticks_y),
+                            YAxis::Right => snap_to_nearest_tick(y, &self.axis_ticks_y2),
+                            YAxis::Right2 => snap_to_nearest_tick(y, &self.axis_ticks_y3),
+                            YAxis::Right3 => snap_to_nearest_tick(y, &self.axis_ticks_y4),
+                        }
+                    };
+
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
                     let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
@@ -3323,16 +3855,47 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             id,
                             axis,
                             offset,
+                            start,
+                            constraint,
                             current,
                             ..
                         } => {
                             if let Some(transform) = transform_for_y_axis(*axis) {
                                 let data = transform.px_to_data(local);
                                 if data.x.is_finite() && data.y.is_finite() {
-                                    let next = DataPoint {
+                                    let mut next = DataPoint {
                                         x: data.x - offset.x,
                                         y: data.y - offset.y,
                                     };
+
+                                    if modifiers.shift {
+                                        let next_constraint = match *constraint {
+                                            Some(c) => Some(c),
+                                            None => {
+                                                let dx = (next.x - start.x).abs();
+                                                let dy = (next.y - start.y).abs();
+                                                Some(if dx >= dy {
+                                                    DragAxisConstraint::XOnly
+                                                } else {
+                                                    DragAxisConstraint::YOnly
+                                                })
+                                            }
+                                        };
+                                        if let Some(c) = next_constraint {
+                                            match c {
+                                                DragAxisConstraint::XOnly => next.y = start.y,
+                                                DragAxisConstraint::YOnly => next.x = start.x,
+                                            }
+                                        }
+                                        *constraint = next_constraint;
+                                    } else {
+                                        *constraint = None;
+                                    }
+
+                                    if modifiers.alt || modifiers.alt_gr {
+                                        next.x = snap_x(next.x);
+                                        next.y = snap_y(*axis, next.y);
+                                    }
                                     if next.x.is_finite() && next.y.is_finite() {
                                         *current = next;
                                         self.drag_output = Some(PlotDragOutput::Point {
@@ -3350,6 +3913,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             axis,
                             handle,
                             offset,
+                            start,
+                            constraint,
                             current,
                             ..
                         } => {
@@ -3359,8 +3924,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     let mut next = *current;
                                     match handle {
                                         DragRectHandle::Inside => {
-                                            let w = current.width();
-                                            let h = current.height();
+                                            let w = start.width();
+                                            let h = start.height();
                                             next.x_min = data.x - offset.x;
                                             next.x_max = next.x_min + w;
                                             next.y_min = data.y - offset.y;
@@ -3388,6 +3953,73 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             next.y_min = data.y - offset.y;
                                             if next.y_min > next.y_max {
                                                 next.y_min = next.y_max;
+                                            }
+                                        }
+                                    }
+
+                                    if matches!(handle, DragRectHandle::Inside) && modifiers.shift {
+                                        let next_constraint = match *constraint {
+                                            Some(c) => Some(c),
+                                            None => {
+                                                let dx = (next.x_min - start.x_min).abs();
+                                                let dy = (next.y_min - start.y_min).abs();
+                                                Some(if dx >= dy {
+                                                    DragAxisConstraint::XOnly
+                                                } else {
+                                                    DragAxisConstraint::YOnly
+                                                })
+                                            }
+                                        };
+                                        if let Some(c) = next_constraint {
+                                            match c {
+                                                DragAxisConstraint::XOnly => {
+                                                    next.y_min = start.y_min;
+                                                    next.y_max = start.y_max;
+                                                }
+                                                DragAxisConstraint::YOnly => {
+                                                    next.x_min = start.x_min;
+                                                    next.x_max = start.x_max;
+                                                }
+                                            }
+                                        }
+                                        *constraint = next_constraint;
+                                    } else {
+                                        *constraint = None;
+                                    }
+
+                                    if modifiers.alt || modifiers.alt_gr {
+                                        match handle {
+                                            DragRectHandle::Inside => {
+                                                let w = start.width();
+                                                let h = start.height();
+                                                next.x_min = snap_x(next.x_min);
+                                                next.y_min = snap_y(*axis, next.y_min);
+                                                next.x_max = next.x_min + w;
+                                                next.y_max = next.y_min + h;
+                                            }
+                                            DragRectHandle::Left => {
+                                                next.x_min = snap_x(next.x_min);
+                                                if next.x_min > next.x_max {
+                                                    next.x_min = next.x_max;
+                                                }
+                                            }
+                                            DragRectHandle::Right => {
+                                                next.x_max = snap_x(next.x_max);
+                                                if next.x_max < next.x_min {
+                                                    next.x_max = next.x_min;
+                                                }
+                                            }
+                                            DragRectHandle::Top => {
+                                                next.y_max = snap_y(*axis, next.y_max);
+                                                if next.y_max < next.y_min {
+                                                    next.y_max = next.y_min;
+                                                }
+                                            }
+                                            DragRectHandle::Bottom => {
+                                                next.y_min = snap_y(*axis, next.y_min);
+                                                if next.y_min > next.y_max {
+                                                    next.y_min = next.y_max;
+                                                }
                                             }
                                         }
                                     }
@@ -3788,6 +4420,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.last_scale_factor = cx.scale_factor;
 
         self.ensure_required_axes_enabled(cx.app);
+        self.sync_axis_locks(cx.app);
 
         let default_style = LinePlotStyle::default();
         let font_stack_key = cx
@@ -3816,6 +4449,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             resolved_axis_gap,
             resolved_stroke_width,
             resolved_hover_threshold,
+            resolved_heatmap_colorbar_width,
+            resolved_heatmap_colorbar_padding,
         ) = {
             let theme = cx.theme();
             let resolved_series_palette =
@@ -3871,6 +4506,30 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     .unwrap_or(default_style.hover_threshold)
                 } else {
                     self.style.hover_threshold
+                };
+
+            let resolved_heatmap_colorbar_width =
+                if self.style.heatmap_colorbar_width == default_style.heatmap_colorbar_width {
+                    crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.heatmap.colorbar.width",
+                        "plot.heatmap.colorbar.width",
+                    )
+                    .unwrap_or(default_style.heatmap_colorbar_width)
+                } else {
+                    self.style.heatmap_colorbar_width
+                };
+
+            let resolved_heatmap_colorbar_padding =
+                if self.style.heatmap_colorbar_padding == default_style.heatmap_colorbar_padding {
+                    crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.heatmap.colorbar.padding",
+                        "plot.heatmap.colorbar.padding",
+                    )
+                    .unwrap_or(default_style.heatmap_colorbar_padding)
+                } else {
+                    self.style.heatmap_colorbar_padding
                 };
 
             let background = self.style.background.unwrap_or_else(|| {
@@ -3962,6 +4621,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 resolved_axis_gap,
                 resolved_stroke_width,
                 resolved_hover_threshold,
+                resolved_heatmap_colorbar_width,
+                resolved_heatmap_colorbar_padding,
             )
         };
 
@@ -3973,6 +4634,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             axis_gap: resolved_axis_gap,
             stroke_width: resolved_stroke_width,
             hover_threshold: resolved_hover_threshold,
+            heatmap_colorbar_width: resolved_heatmap_colorbar_width,
+            heatmap_colorbar_padding: resolved_heatmap_colorbar_padding,
             ..self.style
         };
 
@@ -4088,6 +4751,53 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
 
         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+            // Plot-space images (caller-owned overlays). These are rendered in plot coordinates and
+            // clipped to the plot viewport.
+            let plot_images = &state.overlays.images;
+            let image_transform_y1 = PlotTransform {
+                viewport: layout.plot,
+                data: view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+            };
+            let image_transform_y2 =
+                view_bounds_y2
+                    .filter(|_| self.show_y2_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y2_scale,
+                    });
+            let image_transform_y3 =
+                view_bounds_y3
+                    .filter(|_| self.show_y3_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y3_scale,
+                    });
+            let image_transform_y4 =
+                view_bounds_y4
+                    .filter(|_| self.show_y4_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y4_scale,
+                    });
+
+            paint_plot_images(
+                cx.scene,
+                plot_images,
+                PlotImageLayer::BelowGrid,
+                image_transform_y1,
+                image_transform_y2,
+                image_transform_y3,
+                image_transform_y4,
+            );
+
             // Grid: align to axis ticks so labels and grid are consistent (ImPlot-style).
             let x_ticks = &self.axis_ticks_x;
             let y_ticks = &self.axis_ticks_y;
@@ -4147,6 +4857,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
+            paint_plot_images(
+                cx.scene,
+                plot_images,
+                PlotImageLayer::AboveGrid,
+                image_transform_y1,
+                image_transform_y2,
+                image_transform_y3,
+                image_transform_y4,
+            );
+
             let emphasized = self.style.emphasize_hovered_series;
             let dim_alpha = self.style.dimmed_series_alpha;
             let series_meta: Vec<SeriesMeta> = self
@@ -4162,6 +4882,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.hover.map(|h| h.series_id))
                 .or(self.legend_hover);
 
+            let mut emphasized_path: Option<(PathId, Color)> = None;
             for quad in self.rebuild_quads_if_needed(
                 cx,
                 layout.plot,
@@ -4192,14 +4913,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 hidden,
                 resolved_style,
             ) {
-                let color = if emphasized {
-                    if let Some(emphasized) = emphasized_series
-                        && emphasized != series_id
-                    {
-                        dim_color(color, dim_alpha)
-                    } else {
-                        color
-                    }
+                if emphasized
+                    && let Some(emphasized) = emphasized_series
+                    && emphasized == series_id
+                {
+                    emphasized_path = Some((path, color));
+                    continue;
+                }
+
+                let color = if emphasized && emphasized_series.is_some() {
+                    dim_color(color, dim_alpha)
                 } else {
                     color
                 };
@@ -4209,6 +4932,185 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     path,
                     color,
                 });
+            }
+
+            if let Some((path, color)) = emphasized_path {
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(2),
+                    origin: layout.plot.origin,
+                    path,
+                    color,
+                });
+            }
+
+            // Heatmap colorbar (when the current plot layer supports it).
+            if resolved_style.heatmap_show_colorbar
+                && let Ok(model) = self.model.read(cx.app, |_app, m| m.clone())
+                && let Some((vmin, vmax)) = L::heatmap_value_range(&model)
+                && vmin.is_finite()
+                && vmax.is_finite()
+                && vmax > vmin
+            {
+                let padding = resolved_style.heatmap_colorbar_padding.0.max(0.0);
+                let bar_w = resolved_style.heatmap_colorbar_width.0.max(1.0);
+                let steps = resolved_style.heatmap_colorbar_steps.clamp(8, 512);
+
+                let plot_w = layout.plot.size.width.0;
+                let plot_h = layout.plot.size.height.0;
+                let bar_h = (plot_h - padding * 2.0).max(0.0);
+                if plot_w > 0.0 && plot_h > 0.0 && bar_h >= 24.0 {
+                    let text_style = TextStyle {
+                        font: FontId::default(),
+                        size: Px((theme_font_size.0 * 0.85).max(9.0)),
+                        weight: FontWeight::NORMAL,
+                        slant: TextSlant::Normal,
+                        line_height: None,
+                        letter_spacing_em: None,
+                    };
+                    let text_constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor,
+                    };
+
+                    let max_label = format_colorbar_value(vmax);
+                    let min_label = format_colorbar_value(vmin);
+
+                    let mut key = 0u64;
+                    key = Self::hash_u64(key, theme_revision);
+                    key = Self::hash_u64(key, font_stack_key);
+                    key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                    key = Self::hash_u64(key, u64::from(vmin.to_bits()));
+                    key = Self::hash_u64(key, u64::from(vmax.to_bits()));
+                    key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
+                    key = Self::hash_u64(key, u64::from(steps as u32));
+                    key = Self::hash_u64(key, u64::from(bar_w.to_bits()));
+                    key = Self::hash_u64(key, Self::text_style_key(&text_style));
+
+                    let needs_text = self.heatmap_colorbar_text_key != Some(key);
+                    if needs_text {
+                        for t in self.heatmap_colorbar_text.drain(..) {
+                            cx.services.text().release(t.blob);
+                        }
+                        self.heatmap_colorbar_text_key = Some(key);
+
+                        for s in [&max_label, &min_label] {
+                            let (blob, metrics) =
+                                cx.services.text().prepare(s, &text_style, text_constraints);
+                            self.heatmap_colorbar_text
+                                .push(PreparedText { blob, metrics, key });
+                        }
+                    }
+
+                    let max_text = self.heatmap_colorbar_text.get(0).copied();
+                    let min_text = self.heatmap_colorbar_text.get(1).copied();
+
+                    let label_gap = 6.0_f32;
+                    let label_w = max_text
+                        .map(|t| t.metrics.size.width.0)
+                        .unwrap_or(0.0)
+                        .max(min_text.map(|t| t.metrics.size.width.0).unwrap_or(0.0));
+
+                    let panel_w = (bar_w + label_gap + label_w).max(bar_w);
+                    let panel_left = (plot_w - padding - panel_w).max(padding);
+                    let panel_top = padding;
+
+                    let bar_left = panel_left;
+                    let label_x = bar_left + bar_w + label_gap;
+                    let bar_top = panel_top;
+
+                    let panel_rect = Rect::new(
+                        Point::new(
+                            Px(layout.plot.origin.x.0 + panel_left),
+                            Px(layout.plot.origin.y.0 + panel_top),
+                        ),
+                        Size::new(Px(panel_w), Px(bar_h)),
+                    );
+                    let panel_radius = cx.theme().metric_required("metric.radius.sm");
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: panel_rect,
+                        background: Color {
+                            a: 0.88,
+                            ..tooltip_background
+                        },
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(panel_radius),
+                    });
+
+                    let colormap = resolved_style.heatmap_colormap;
+                    for i in 0..steps {
+                        let t0 = (i as f32) / (steps as f32);
+                        let t1 = ((i + 1) as f32) / (steps as f32);
+                        let t = (t0 + t1) * 0.5;
+                        let color = crate::plot::colormap::sample(colormap, t);
+
+                        let y0 = bar_top + (1.0 - t1) * bar_h;
+                        let h = (t1 - t0) * bar_h;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(4),
+                            rect: Rect::new(
+                                Point::new(
+                                    Px(layout.plot.origin.x.0 + bar_left),
+                                    Px(layout.plot.origin.y.0 + y0),
+                                ),
+                                Size::new(Px(bar_w), Px(h.max(1.0))),
+                            ),
+                            background: color,
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + bar_left),
+                                Px(layout.plot.origin.y.0 + bar_top),
+                            ),
+                            Size::new(Px(bar_w), Px(bar_h)),
+                        ),
+                        background: Color::TRANSPARENT,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+
+                    let text_color = tooltip_text_color;
+                    let text_margin = 2.0_f32;
+
+                    if let Some(t) = max_text {
+                        let origin = Point::new(
+                            Px(layout.plot.origin.x.0 + label_x),
+                            Px(layout.plot.origin.y.0
+                                + bar_top
+                                + text_margin
+                                + t.metrics.baseline.0),
+                        );
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(6),
+                            origin,
+                            text: t.blob,
+                            color: text_color,
+                        });
+                    }
+                    if let Some(t) = min_text {
+                        let baseline = layout.plot.origin.y.0 + bar_top + bar_h
+                            - text_margin
+                            - (t.metrics.size.height.0 - t.metrics.baseline.0);
+                        let origin = Point::new(Px(layout.plot.origin.x.0 + label_x), Px(baseline));
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(6),
+                            origin,
+                            text: t.blob,
+                            color: text_color,
+                        });
+                    }
+                }
             }
 
             // Infinite reference lines (caller-owned overlays).
@@ -5241,17 +6143,214 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let hx = Px((layout.plot.origin.x.0 + hover.plot_px.x.0).round());
                 let hy = Px((layout.plot.origin.y.0 + hover.plot_px.y.0).round());
 
+                let hover_color = self
+                    .model
+                    .read(cx.app, |_app, m| {
+                        let meta = L::series_meta(m);
+                        let series_count = meta.len().max(1);
+                        let mut series_index = 0usize;
+                        let mut override_color = None;
+                        for (i, s) in meta.iter().enumerate() {
+                            if s.id == hover.series_id {
+                                series_index = i;
+                                override_color = s.stroke_color;
+                                break;
+                            }
+                        }
+                        resolve_series_color(series_index, self.style, series_count, override_color)
+                    })
+                    .unwrap_or(crosshair_color);
+
+                let outer_size = Px(10.0);
+                let outer_origin =
+                    Point::new(Px(hx.0 - outer_size.0 * 0.5), Px(hy.0 - outer_size.0 * 0.5));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: Rect::new(outer_origin, Size::new(outer_size, outer_size)),
+                    background: Color::TRANSPARENT,
+                    border: fret_core::Edges::all(Px(2.0)),
+                    border_color: hover_color,
+                    corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
+                });
+
                 let dot_size = Px(6.0);
                 let dot_origin =
                     Point::new(Px(hx.0 - dot_size.0 * 0.5), Px(hy.0 - dot_size.0 * 0.5));
                 cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(4),
+                    order: DrawOrder(5),
                     rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
-                    background: crosshair_color,
+                    background: hover_color,
                     border: fret_core::Edges::all(Px(1.0)),
                     border_color: tooltip_border,
                     corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
                 });
+            }
+
+            if self.hover.is_none()
+                && self.style.series_tooltip == SeriesTooltipMode::NearestAtCursor
+                && let Some(cursor_px) = self.cursor_px
+            {
+                let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                let cursor_data = PlotTransform {
+                    viewport: local_viewport,
+                    data: view_bounds,
+                    x_scale: self.x_scale,
+                    y_scale: self.y_scale,
+                }
+                .px_to_data(cursor_px);
+
+                if cursor_data.x.is_finite() && cursor_data.y.is_finite() {
+                    let hidden = &state.hidden_series;
+                    let readout_args = PlotCursorReadoutArgs {
+                        x: cursor_data.x,
+                        plot_size: layout.plot.size,
+                        view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                        scale_factor: cx.scale_factor,
+                        hidden,
+                    };
+                    let readout_rows = self
+                        .model
+                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                        .unwrap_or_default();
+
+                    let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
+                    let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+
+                    let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
+                    for row in readout_rows {
+                        if let Some(pinned) = pinned {
+                            if row.series_id != pinned {
+                                continue;
+                            }
+                        } else if let Some(hovered) = legend_hover {
+                            if row.series_id != hovered {
+                                continue;
+                            }
+                        }
+
+                        let Some(y) = row.y.filter(|y| y.is_finite()) else {
+                            continue;
+                        };
+                        let dist = (cursor_data.y - y).abs();
+                        if !dist.is_finite() {
+                            continue;
+                        }
+
+                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
+                            best = Some((dist, row));
+                        }
+                    }
+
+                    if let Some((_dist, row)) = best
+                        && let Some(y) = row.y.filter(|y| y.is_finite())
+                    {
+                        let local_viewport =
+                            Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                        let transform = match row.y_axis {
+                            YAxis::Right if self.show_y2_axis => {
+                                view_bounds_y2.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y2_scale,
+                                })
+                            }
+                            YAxis::Right2 if self.show_y3_axis => {
+                                view_bounds_y3.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y3_scale,
+                                })
+                            }
+                            YAxis::Right3 if self.show_y4_axis => {
+                                view_bounds_y4.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y4_scale,
+                                })
+                            }
+                            _ => Some(PlotTransform {
+                                viewport: local_viewport,
+                                data: view_bounds,
+                                x_scale: self.x_scale,
+                                y_scale: self.y_scale,
+                            }),
+                        };
+
+                        if let Some(transform) = transform {
+                            let p = transform.data_to_px(DataPoint {
+                                x: cursor_data.x,
+                                y,
+                            });
+                            if p.x.0.is_finite()
+                                && p.y.0.is_finite()
+                                && (0.0..=layout.plot.size.width.0).contains(&p.x.0)
+                                && (0.0..=layout.plot.size.height.0).contains(&p.y.0)
+                            {
+                                let series_color = self
+                                    .model
+                                    .read(cx.app, |_app, m| {
+                                        let meta = L::series_meta(m);
+                                        let series_count = meta.len().max(1);
+                                        let mut series_index = 0usize;
+                                        let mut override_color = None;
+                                        for (i, s) in meta.iter().enumerate() {
+                                            if s.id == row.series_id {
+                                                series_index = i;
+                                                override_color = s.stroke_color;
+                                                break;
+                                            }
+                                        }
+                                        resolve_series_color(
+                                            series_index,
+                                            self.style,
+                                            series_count,
+                                            override_color,
+                                        )
+                                    })
+                                    .unwrap_or(crosshair_color);
+
+                                let hx = Px((layout.plot.origin.x.0 + cursor_px.x.0).round());
+                                let hy = Px((layout.plot.origin.y.0 + p.y.0).round());
+
+                                let outer_size = Px(10.0);
+                                let outer_origin = Point::new(
+                                    Px(hx.0 - outer_size.0 * 0.5),
+                                    Px(hy.0 - outer_size.0 * 0.5),
+                                );
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(4),
+                                    rect: Rect::new(
+                                        outer_origin,
+                                        Size::new(outer_size, outer_size),
+                                    ),
+                                    background: Color::TRANSPARENT,
+                                    border: fret_core::Edges::all(Px(2.0)),
+                                    border_color: series_color,
+                                    corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
+                                });
+
+                                let dot_size = Px(6.0);
+                                let dot_origin = Point::new(
+                                    Px(hx.0 - dot_size.0 * 0.5),
+                                    Px(hy.0 - dot_size.0 * 0.5),
+                                );
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(5),
+                                    rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
+                                    background: series_color,
+                                    border: fret_core::Edges::all(Px(1.0)),
+                                    border_color: tooltip_border,
+                                    corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
+                                });
+                            }
+                        }
+                    }
+                }
             }
 
             if let Some(query) = state.query {
@@ -5675,7 +6774,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         // Axis lock indicators (P0: lightweight discoverability).
-        let lock_indicator = |lock: AxisLock| match (lock.pan, lock.zoom) {
+        let lock_indicator = |lock: PlotAxisLock| match (lock.pan, lock.zoom) {
             (false, false) => None,
             (true, true) => Some("L"),
             (true, false) => Some("P"),
@@ -6108,9 +7207,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(tt) = self.mouse_readout_text {
+                    let pad = Px(6.0);
                     let margin = Px(6.0);
-                    let w = Px(tt.metrics.size.width.0);
-                    let h = Px(tt.metrics.size.height.0);
+                    let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                    let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
                     let Some(rect) = overlay_rect_in_plot(
                         layout.plot,
                         Size::new(w, h),
@@ -6119,10 +7219,21 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     ) else {
                         return;
                     };
-                    let origin =
-                        Point::new(rect.origin.x, Px(rect.origin.y.0 + tt.metrics.baseline.0));
-                    cx.scene.push(SceneOp::Text {
+                    cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(12),
+                        rect,
+                        background: tooltip_background,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(6.0)),
+                    });
+
+                    let origin = Point::new(
+                        Px(rect.origin.x.0 + pad.0),
+                        Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(13),
                         origin,
                         text: tt.blob,
                         color: label_color,
@@ -6131,253 +7242,321 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
-        let tooltip = selection_tooltip.or_else(|| {
-            let format_y = |y: f64, axis: YAxis| {
-                if axis == YAxis::Right && self.show_y2_axis {
-                    let span = view_bounds_y2
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y2_axis_labels.format(y, span)
-                } else if axis == YAxis::Right2 && self.show_y3_axis {
-                    let span = view_bounds_y3
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y3_axis_labels.format(y, span)
-                } else if axis == YAxis::Right3 && self.show_y4_axis {
-                    let span = view_bounds_y4
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y4_axis_labels.format(y, span)
-                } else {
-                    self.tooltip_y_labels.format(y, y_span)
-                }
-            };
-
-            self.hover
-                .map(|hover| {
-                    let (series_count, series_label, y_axis) = self
-                        .model
-                        .read(cx.app, |_app, m| {
-                            let series_count = L::series_meta(m).len();
-                            let series_label = L::series_label(m, hover.series_id);
-                            let y_axis = L::series_y_axis(m, hover.series_id);
-                            (series_count, series_label, y_axis)
-                        })
-                        .unwrap_or((0, None, YAxis::Left));
-
-                    let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
-                    let y_text = format_y(hover.data.y, y_axis);
-                    let text = if series_count > 1 {
-                        if let Some(label) = series_label.as_deref() {
-                            format!("{label}  x={x_text}  y={y_text}")
-                        } else {
-                            format!("s={}  x={x_text}  y={y_text}", hover.series_id.0)
-                        }
+        let tooltip = selection_tooltip
+            .map(|(anchor, text)| (anchor, text, None))
+            .or_else(|| {
+                let format_y = |y: f64, axis: YAxis| {
+                    if axis == YAxis::Right && self.show_y2_axis {
+                        let span = view_bounds_y2
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y2_axis_labels.format(y, span)
+                    } else if axis == YAxis::Right2 && self.show_y3_axis {
+                        let span = view_bounds_y3
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y3_axis_labels.format(y, span)
+                    } else if axis == YAxis::Right3 && self.show_y4_axis {
+                        let span = view_bounds_y4
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y4_axis_labels.format(y, span)
                     } else {
-                        format!("x={x_text}  y={y_text}")
-                    };
-                    let text = if series_count == 0
-                        && let Some(label) = series_label.as_deref()
-                    {
-                        format!("{label}  {text}")
-                    } else {
-                        text
-                    };
-                    let text = if let Some(v) = hover.value
-                        && v.is_finite()
-                    {
-                        let v_text = if v.abs() < 10_000.0 {
-                            format!("{v:.4}")
-                        } else {
-                            format!("{v:.4e}")
-                        };
-                        format!("{text}  value={v_text}")
-                    } else {
-                        text
-                    };
-                    (hover.plot_px, text)
-                })
-                .or_else(|| {
-                    if self.style.series_tooltip != SeriesTooltipMode::NearestAtCursor {
-                        return None;
+                        self.tooltip_y_labels.format(y, y_span)
                     }
+                };
 
-                    let cursor_px = cursor_px?;
-                    let cursor_data = cursor_data?;
+                self.hover
+                    .and_then(|hover| {
+                        if self.style.series_tooltip == SeriesTooltipMode::NearestAtCursor
+                            && state.pinned_series.is_some()
+                        {
+                            return None;
+                        }
 
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: cursor_data.x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
+                        let (series_count, series_label, y_axis) = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let series_count = L::series_meta(m).len();
+                                let series_label = L::series_label(m, hover.series_id);
+                                let y_axis = L::series_y_axis(m, hover.series_id);
+                                (series_count, series_label, y_axis)
+                            })
+                            .unwrap_or((0, None, YAxis::Left));
 
-                    let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
-                    let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+                        let series_color = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let meta = L::series_meta(m);
+                                let series_count = meta.len().max(1);
+                                let mut series_index = 0usize;
+                                let mut override_color = None;
+                                for (i, s) in meta.iter().enumerate() {
+                                    if s.id == hover.series_id {
+                                        series_index = i;
+                                        override_color = s.stroke_color;
+                                        break;
+                                    }
+                                }
+                                resolve_series_color(
+                                    series_index,
+                                    self.style,
+                                    series_count,
+                                    override_color,
+                                )
+                            })
+                            .unwrap_or(crosshair_color);
 
-                    let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
-                    for row in readout_rows {
-                        if let Some(pinned) = pinned {
-                            if row.series_id != pinned {
+                        let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
+                        let y_text = format_y(hover.data.y, y_axis);
+                        let line = format!("x={x_text}  y={y_text}");
+                        let header = if series_count > 1 {
+                            series_label
+                                .as_deref()
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| format!("s={}", hover.series_id.0))
+                        } else {
+                            String::new()
+                        };
+                        let header = if series_count == 0
+                            && let Some(label) = series_label.as_deref()
+                        {
+                            label.to_string()
+                        } else {
+                            header
+                        };
+
+                        let header = if let Some(v) = hover.value
+                            && v.is_finite()
+                        {
+                            let v_text = if v.abs() < 10_000.0 {
+                                format!("{v:.4}")
+                            } else {
+                                format!("{v:.4e}")
+                            };
+                            if header.is_empty() {
+                                format!("value={v_text}")
+                            } else {
+                                format!("{header}  value={v_text}")
+                            }
+                        } else {
+                            header
+                        };
+
+                        let text = if header.is_empty() {
+                            line
+                        } else {
+                            format!("{header}\n{line}")
+                        };
+
+                        Some((hover.plot_px, text, Some(series_color)))
+                    })
+                    .or_else(|| {
+                        if self.style.series_tooltip != SeriesTooltipMode::NearestAtCursor {
+                            return None;
+                        }
+
+                        let cursor_px = cursor_px?;
+                        let cursor_data = cursor_data?;
+
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: cursor_data.x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+
+                        let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
+                        let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+
+                        let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
+                        for row in readout_rows {
+                            if let Some(pinned) = pinned {
+                                if row.series_id != pinned {
+                                    continue;
+                                }
+                            } else if let Some(hovered) = legend_hover {
+                                if row.series_id != hovered {
+                                    continue;
+                                }
+                            }
+
+                            let Some(y) = row.y.filter(|y| y.is_finite()) else {
+                                continue;
+                            };
+                            let dist = (cursor_data.y - y).abs();
+                            if !dist.is_finite() {
                                 continue;
                             }
-                        } else if let Some(hovered) = legend_hover {
-                            if row.series_id != hovered {
-                                continue;
+
+                            if best.as_ref().is_none_or(|(d, _)| dist < *d) {
+                                best = Some((dist, row));
                             }
                         }
 
-                        let Some(y) = row.y.filter(|y| y.is_finite()) else {
-                            continue;
+                        let (_dist, row) = best?;
+                        let y = row.y?;
+                        let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                        let y_text = format_y(y, row.y_axis);
+                        let header = if !row.label.is_empty() {
+                            row.label.to_string()
+                        } else {
+                            format!("s={}", row.series_id.0)
                         };
-                        let dist = (cursor_data.y - y).abs();
-                        if !dist.is_finite() {
-                            continue;
+                        let line = format!("x={x_text}  y={y_text}");
+                        let text = format!("{header}\n{line}");
+
+                        let series_color = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let meta = L::series_meta(m);
+                                let series_count = meta.len().max(1);
+                                let mut series_index = 0usize;
+                                let mut override_color = None;
+                                for (i, s) in meta.iter().enumerate() {
+                                    if s.id == row.series_id {
+                                        series_index = i;
+                                        override_color = s.stroke_color;
+                                        break;
+                                    }
+                                }
+                                resolve_series_color(
+                                    series_index,
+                                    self.style,
+                                    series_count,
+                                    override_color,
+                                )
+                            })
+                            .unwrap_or(crosshair_color);
+
+                        Some((cursor_px, text, Some(series_color)))
+                    })
+                    .or_else(|| {
+                        if self.style.mouse_readout != MouseReadoutMode::Tooltip {
+                            return None;
                         }
 
-                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
-                            best = Some((dist, row));
+                        let cursor_px = cursor_px?;
+                        let cursor_data = cursor_data?;
+
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: cursor_data.x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let mut readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+
+                        if let Some(pinned) = state.pinned_series {
+                            readout_rows.retain(|r| r.series_id == pinned);
                         }
-                    }
 
-                    let (_dist, row) = best?;
-                    let y = row.y?;
-                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
-                    let y_text = format_y(y, row.y_axis);
-                    let text = if !row.label.is_empty() {
-                        format!("{}  x={x_text}  y={y_text}", row.label)
-                    } else {
-                        format!("s={}  x={x_text}  y={y_text}", row.series_id.0)
-                    };
+                        let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                        let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
+                        let mut text = format!("x={x_text}  y={y_text}");
+                        for row in readout_rows {
+                            let y_text = row
+                                .y
+                                .filter(|y| y.is_finite())
+                                .map(|y| format_y(y, row.y_axis))
+                                .unwrap_or_else(|| "NA".to_string());
+                            text.push_str(&format!("\n{}: y={y_text}", row.label));
+                        }
 
-                    Some((cursor_px, text))
-                })
-                .or_else(|| {
-                    if self.style.mouse_readout != MouseReadoutMode::Tooltip {
-                        return None;
-                    }
+                        if let Some(query) = state.query {
+                            let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                            let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                            let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                            let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                            text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
+                        }
 
-                    let cursor_px = cursor_px?;
-                    let cursor_data = cursor_data?;
+                        Some((cursor_px, text, None))
+                    })
+                    .or_else(|| {
+                        let linked_x = state.linked_cursor_x?;
+                        if self.style.linked_cursor_readout != MouseReadoutMode::Tooltip {
+                            return None;
+                        }
+                        if !linked_x.is_finite() {
+                            return None;
+                        }
 
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: cursor_data.x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let mut readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
+                        let transform = PlotTransform {
+                            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                            data: view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                        };
+                        let Some(linked_x_px) = transform.data_x_to_px(linked_x) else {
+                            return None;
+                        };
 
-                    if let Some(pinned) = state.pinned_series {
-                        readout_rows.retain(|r| r.series_id == pinned);
-                    }
+                        let anchor_local = Point::new(
+                            Px(linked_x_px.0.clamp(0.0, layout.plot.size.width.0)),
+                            Px(0.0),
+                        );
 
-                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
-                    let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
-                    let mut text = format!("x={x_text}  y={y_text}");
-                    for row in readout_rows {
-                        let y_text = row
-                            .y
-                            .filter(|y| y.is_finite())
-                            .map(|y| format_y(y, row.y_axis))
-                            .unwrap_or_else(|| "NA".to_string());
-                        text.push_str(&format!("\n{}: y={y_text}", row.label));
-                    }
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: linked_x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let mut readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+                        apply_readout_policy(
+                            &mut readout_rows,
+                            state.pinned_series,
+                            self.legend_hover,
+                            self.style.linked_cursor_readout_policy,
+                        );
 
-                    if let Some(query) = state.query {
-                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
-                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
-                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
-                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
-                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
-                    }
+                        let x_text = self.tooltip_x_labels.format(linked_x, x_span);
+                        let mut text = format!("x={x_text}");
+                        for row in readout_rows {
+                            let y_text = row
+                                .y
+                                .filter(|y| y.is_finite())
+                                .map(|y| format_y(y, row.y_axis))
+                                .unwrap_or_else(|| "NA".to_string());
+                            text.push_str(&format!("\n{}: y={y_text}", row.label));
+                        }
 
-                    Some((cursor_px, text))
-                })
-                .or_else(|| {
-                    let linked_x = state.linked_cursor_x?;
-                    if self.style.linked_cursor_readout != MouseReadoutMode::Tooltip {
-                        return None;
-                    }
-                    if !linked_x.is_finite() {
-                        return None;
-                    }
+                        if let Some(query) = state.query {
+                            let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                            let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                            let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                            let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                            text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
+                        }
 
-                    let transform = PlotTransform {
-                        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
-                        data: view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                    };
-                    let Some(linked_x_px) = transform.data_x_to_px(linked_x) else {
-                        return None;
-                    };
+                        Some((anchor_local, text, None))
+                    })
+            });
 
-                    let anchor_local = Point::new(
-                        Px(linked_x_px.0.clamp(0.0, layout.plot.size.width.0)),
-                        Px(0.0),
-                    );
-
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: linked_x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let mut readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
-                    apply_readout_policy(
-                        &mut readout_rows,
-                        state.pinned_series,
-                        self.legend_hover,
-                        self.style.linked_cursor_readout_policy,
-                    );
-
-                    let x_text = self.tooltip_x_labels.format(linked_x, x_span);
-                    let mut text = format!("x={x_text}");
-                    for row in readout_rows {
-                        let y_text = row
-                            .y
-                            .filter(|y| y.is_finite())
-                            .map(|y| format_y(y, row.y_axis))
-                            .unwrap_or_else(|| "NA".to_string());
-                        text.push_str(&format!("\n{}: y={y_text}", row.label));
-                    }
-
-                    if let Some(query) = state.query {
-                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
-                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
-                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
-                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
-                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
-                    }
-
-                    Some((anchor_local, text))
-                })
-        });
-
-        if let Some((anchor_local, text)) = tooltip {
+        if let Some((anchor_local, text, swatch_color)) = tooltip {
             let font_size = theme_font_size;
             let style = TextStyle {
                 font: FontId::default(),
@@ -6422,8 +7601,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     Px(layout.plot.origin.y.0 + anchor_local.y.0),
                 );
                 let pad = Px(6.0);
+                let swatch_size = Px(10.0);
+                let swatch_gap = Px(8.0);
+                let swatch_extra = swatch_color
+                    .map(|_| swatch_size.0 + swatch_gap.0)
+                    .unwrap_or(0.0);
                 let gap = Px(10.0);
-                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0 + swatch_extra);
                 let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
 
                 let mut x = Px(anchor.x.0 + gap.0);
@@ -6447,8 +7631,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     corner_radii: fret_core::Corners::all(Px(6.0)),
                 });
 
+                if let Some(swatch_color) = swatch_color {
+                    let swatch_top = rect.origin.y.0 + (rect.size.height.0 - swatch_size.0) * 0.5;
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(21),
+                        rect: Rect::new(
+                            Point::new(Px(rect.origin.x.0 + pad.0), Px(swatch_top)),
+                            Size::new(swatch_size, swatch_size),
+                        ),
+                        background: swatch_color,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(2.0)),
+                    });
+                }
+
                 let origin = Point::new(
-                    Px(rect.origin.x.0 + pad.0),
+                    Px(rect.origin.x.0 + pad.0 + swatch_extra),
                     Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
                 );
                 cx.scene.push(SceneOp::Text {
@@ -6498,5 +7697,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             services.text().release(t.blob);
         }
         self.overlays_text_key = None;
+
+        for t in self.heatmap_colorbar_text.drain(..) {
+            services.text().release(t.blob);
+        }
+        self.heatmap_colorbar_text_key = None;
     }
 }

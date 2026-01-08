@@ -28,22 +28,26 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `avatar` -> `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
 - `aspect-ratio` -> `ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs`
 - `alert-dialog` -> `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
+- `arrow` -> `ecosystem/fret-ui-kit/src/primitives/arrow.rs` (facade over `popper_arrow`)
 - `checkbox` -> `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
 - `collapsible` -> `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
 - `collection` -> `ecosystem/fret-ui-kit/src/primitives/collection.rs`
 - `context-menu` -> `ecosystem/fret-ui-kit/src/primitives/context_menu.rs` (facade over `menu`)
 - `dialog` -> `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
 - `dismissable-layer` -> `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
+- `direction` -> `ecosystem/fret-ui-kit/src/primitives/direction.rs`
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 - `hover-card` -> `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
 - `label` -> `ecosystem/fret-ui-kit/src/primitives/label.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
 - `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
+- `navigation-menu` -> `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
 - `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`
 - `progress` -> `ecosystem/fret-ui-kit/src/primitives/progress.rs`
+- `portal` -> `ecosystem/fret-ui-kit/src/primitives/portal.rs` (facade over overlay root naming/scoping)
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`
 - `roving-focus` -> `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
 - `scroll-area` -> `ecosystem/fret-ui-kit/src/primitives/scroll_area.rs`
@@ -52,6 +56,8 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `select` -> `ecosystem/fret-ui-kit/src/primitives/select.rs`
 - `switch` -> `ecosystem/fret-ui-kit/src/primitives/switch.rs`
 - `tabs` -> `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
+- `toast` -> `ecosystem/fret-ui-kit/src/primitives/toast.rs` (facade over `window_overlays::toast`)
+- `toolbar` -> `ecosystem/fret-ui-kit/src/primitives/toolbar.rs` (facade over roving focus + toggle group + separator)
 - `toggle` -> `ecosystem/fret-ui-kit/src/primitives/toggle.rs`
 - `toggle-group` -> `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`
 - `tooltip` -> `ecosystem/fret-ui-kit/src/primitives/tooltip.rs` (facade over provider + delay-group + popper)

@@ -30,8 +30,7 @@ Recommended integration patterns:
 - **Model-driven availability**: store `Model<Option<ImageId>>` and render `AvatarImage` only when
   the model is `Some(id)`. Use `AvatarFallbackDelay` + `fallback_visible(...)` to gate fallback.
 - **Asset-cache integration**: if you use `ecosystem/fret-asset-cache` (`ImageUploadService` /
-  `ImageAssetCache`), map `(pending/ready/failed)` to `AvatarImageLoadingStatus` (see
-  `ecosystem/fret-app-kit/src/avatar_asset_cache.rs` for a ready-to-use adapter).
+  `ImageAssetCache`), map `(pending/ready/failed)` to `AvatarImageLoadingStatus`.
 
 We intentionally do not force a particular image pipeline (network fetching, decoding, caching) at
 the primitives layer.

@@ -3,7 +3,6 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, RenderTargetId};
 use fret_launch::{
     EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    run_app,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
@@ -296,5 +295,5 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_driver();
 
-    run_app(config, app, driver).context("run plot3d_demo app")
+    crate::run_native_demo(config, app, driver).context("run plot3d_demo app")
 }

@@ -36,6 +36,7 @@ pub(crate) enum ElementInstance {
     Spacer(SpacerProps),
     Text(TextProps),
     StyledText(crate::element::StyledTextProps),
+    SelectableText(crate::element::SelectableTextProps),
     TextInput(crate::element::TextInputProps),
     TextArea(crate::element::TextAreaProps),
     ResizablePanelGroup(crate::element::ResizablePanelGroupProps),
@@ -181,7 +182,7 @@ pub(crate) fn element_id_map_for_window<H: UiHost>(
     })
 }
 
-pub(super) fn layout_style_for_node<H: UiHost>(
+pub(crate) fn layout_style_for_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     node: NodeId,
@@ -203,6 +204,7 @@ pub(super) fn layout_style_for_node<H: UiHost>(
             ElementInstance::Spacer(p) => p.layout,
             ElementInstance::Text(p) => p.layout,
             ElementInstance::StyledText(p) => p.layout,
+            ElementInstance::SelectableText(p) => p.layout,
             ElementInstance::TextInput(p) => p.layout,
             ElementInstance::TextArea(p) => p.layout,
             ElementInstance::ResizablePanelGroup(p) => p.layout,

@@ -13,6 +13,11 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
+authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Latias94/fret"
+homepage = "https://github.com/Latias94/fret"
+documentation = "https://docs.rs/fret"
 
 [workspace.dependencies]
 anyhow = "1"
@@ -37,7 +42,7 @@ webbrowser = "1.0.4"
 wgpu = "28.0.0"
 winit = "0.31.0-beta.2"
 naga = "28.0.0"
-uuid = { version = "1", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
 lyon = "1"
 etagere = "0.2.15"
 resvg = { version = "0.45.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }

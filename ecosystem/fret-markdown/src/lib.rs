@@ -1,5 +1,7 @@
 //! Markdown renderer component(s) for Fret.
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_core::{
@@ -10,7 +12,7 @@ use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, ScrollAxis, ScrollProps, StyledTextProps, TextProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -246,6 +248,7 @@ pub struct ParagraphInfo {
 
 #[derive(Debug, Clone)]
 pub struct CodeBlockInfo {
+    pub id: BlockId,
     pub language: Option<Arc<str>>,
     pub code: Arc<str>,
 }
@@ -431,6 +434,11 @@ pub type CodeBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
 pub type CodeBlockActionsRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
+pub type CodeBlockUiResolver<H> = dyn for<'a> Fn(
+    &mut ElementContext<'a, H>,
+    &CodeBlockInfo,
+    &mut fret_code_view::CodeBlockUiOptions,
+) -> ();
 pub type RawBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, RawBlockInfo) -> AnyElement;
 pub type ListRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ListInfo) -> AnyElement;
@@ -490,6 +498,21 @@ pub struct MarkdownComponents<H: UiHost> {
     pub heading: Option<Arc<HeadingRenderer<H>>>,
     pub paragraph: Option<Arc<ParagraphRenderer<H>>>,
     pub code_block: Option<Arc<CodeBlockRenderer<H>>>,
+    /// UI policy for the default fenced code block renderer (`fret-code-view`).
+    ///
+    /// If you set `code_block`, you own the full rendering and this value is ignored.
+    pub code_block_ui: fret_code_view::CodeBlockUiOptions,
+    /// Whether the default fenced code block renderer should resolve `max_height` from theme
+    /// tokens when `code_block_ui.max_height` is unset.
+    ///
+    /// This is a policy knob on `fret-markdown` rather than `fret-code-view` because only
+    /// Markdown knows which theme token names are relevant.
+    pub code_block_max_height_from_theme: bool,
+    /// Per-code-block UI tweaks for the default fenced code block renderer (`fret-code-view`).
+    ///
+    /// This is applied after theme token resolution, so the resolver can override the final
+    /// `CodeBlockUiOptions` for specific blocks (expand/collapse, wrap overrides, etc.).
+    pub code_block_ui_resolver: Option<Arc<CodeBlockUiResolver<H>>>,
     /// Render an optional “actions” area for fenced code blocks.
     ///
     /// Note: This is only used by the default code block renderer. If you provide `code_block`,
@@ -505,7 +528,7 @@ pub struct MarkdownComponents<H: UiHost> {
     ///
     /// Notes:
     /// - `fret-markdown` does not fetch images. The host is responsible for loading and caching.
-    /// - See `ecosystem/fret-app-kit` helpers for integrating `ImageAssetCache` / `SvgAssetCache`.
+    /// - See `ecosystem/fret-ui-assets` for integrating `ImageAssetCache` / `SvgAssetCache`.
     pub image: Option<Arc<ImageRenderer<H>>>,
     /// Render an inline math span (`$...$`).
     pub inline_math: Option<Arc<InlineMathRenderer<H>>>,
@@ -516,10 +539,23 @@ pub struct MarkdownComponents<H: UiHost> {
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
     fn default() -> Self {
+        let mut code_block_ui = fret_code_view::CodeBlockUiOptions::default();
+        code_block_ui.show_header = true;
+        code_block_ui.header_divider = true;
+        code_block_ui.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
+        code_block_ui.show_copy_button = true;
+        code_block_ui.copy_button_on_hover = true;
+        code_block_ui.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
+        code_block_ui.show_scrollbar_x = true;
+        code_block_ui.scrollbar_x_on_hover = true;
+
         Self {
             heading: None,
             paragraph: None,
             code_block: None,
+            code_block_ui,
+            code_block_max_height_from_theme: true,
+            code_block_ui_resolver: None,
             code_block_actions: None,
             raw_block: None,
             list: None,
@@ -538,6 +574,49 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
 impl<H: UiHost> MarkdownComponents<H> {
     pub fn with_open_url(mut self) -> Self {
         self.on_link_activate = Some(on_link_activate_open_url());
+        self
+    }
+
+    pub fn with_code_block_wrap(mut self, wrap: fret_code_view::CodeBlockWrap) -> Self {
+        self.code_block_ui.wrap = wrap;
+        self
+    }
+
+    pub fn with_code_block_max_height(mut self, max_height: Option<Px>) -> Self {
+        self.code_block_ui.max_height = max_height;
+        self
+    }
+
+    pub fn with_code_block_max_height_from_theme(mut self, enabled: bool) -> Self {
+        self.code_block_max_height_from_theme = enabled;
+        self
+    }
+
+    pub fn with_code_block_ui_resolver(
+        mut self,
+        resolver: Option<Arc<CodeBlockUiResolver<H>>>,
+    ) -> Self {
+        self.code_block_ui_resolver = resolver;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_x(mut self, show: bool) -> Self {
+        self.code_block_ui.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_x_on_hover(mut self, on_hover: bool) -> Self {
+        self.code_block_ui.scrollbar_x_on_hover = on_hover;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_y(mut self, show: bool) -> Self {
+        self.code_block_ui.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_y_on_hover(mut self, on_hover: bool) -> Self {
+        self.code_block_ui.scrollbar_y_on_hover = on_hover;
         self
     }
 }
@@ -595,22 +674,44 @@ fn render_code_block<H: UiHost>(
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
-    let mut block = fret_code_view::CodeBlock::new(info.code.clone())
-        .show_copy_button(true)
-        .copy_button_on_hover(true);
-    if let Some(lang) = info.language.clone() {
-        block = block.language(lang);
+    let theme = Theme::global(&*cx.app);
+    let mut options = components.code_block_ui;
+    if components.code_block_max_height_from_theme {
+        resolve_code_block_ui(theme, &mut options);
     }
-    let code_view = block.show_line_numbers(false).into_element(cx);
+    if let Some(resolve) = &components.code_block_ui_resolver {
+        resolve(cx, &info, &mut options);
+    }
 
-    let Some(render_actions) = &components.code_block_actions else {
-        return code_view;
-    };
+    let mut header = fret_code_view::CodeBlockHeaderSlots::default();
+    if let Some(render_actions) = &components.code_block_actions {
+        header = header.push_right(render_actions(cx, info.clone()));
+    }
 
-    let actions = render_actions(cx, info);
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
-        vec![actions, code_view]
-    })
+    fret_code_view::code_block_with_header_slots(
+        cx,
+        &info.code,
+        info.language.as_deref(),
+        false,
+        options,
+        header,
+    )
+}
+
+fn resolve_code_block_ui(theme: &Theme, options: &mut fret_code_view::CodeBlockUiOptions) {
+    if options.max_height.is_none() {
+        let canonical = "fret.markdown.code_block.max_height";
+        let compat = "markdown.code_block.max_height";
+        options.max_height = if theme.metric_key_configured(canonical) {
+            theme.metric_by_key(canonical)
+        } else if theme.metric_key_configured(compat) {
+            theme.metric_by_key(compat)
+        } else {
+            theme
+                .metric_by_key(canonical)
+                .or_else(|| theme.metric_by_key(compat))
+        };
+    }
 }
 
 fn render_thematic_break<H: UiHost>(
@@ -1115,7 +1216,11 @@ fn render_mdstream_block_with_events<H: UiHost>(
         }
         mdstream::BlockKind::CodeFence => {
             let (language, code) = parse_code_fence_body(block.display_or_raw());
-            let info = CodeBlockInfo { language, code };
+            let info = CodeBlockInfo {
+                id: block.id,
+                language,
+                code,
+            };
             if let Some(render) = &components.code_block {
                 render(cx, info)
             } else {
@@ -1433,7 +1538,7 @@ fn render_rich_text_inline<H: UiHost>(
 
     let rich = RichText::new(Arc::<str>::from(text), runs);
 
-    let mut props = StyledTextProps::new(rich);
+    let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;
     props.style = Some(TextStyle {
         font: base.font.clone(),
@@ -1447,7 +1552,7 @@ fn render_rich_text_inline<H: UiHost>(
     props.wrap = TextWrap::Word;
     props.overflow = TextOverflow::Clip;
 
-    Some(cx.styled_text_props(props))
+    Some(cx.selectable_text_props(props))
 }
 
 fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
@@ -2048,6 +2153,7 @@ fn render_pulldown_code_block<H: UiHost>(
         CodeBlockKind::Fenced(info) => parse_fenced_code_language(info),
     };
 
+    let start = *cursor;
     *cursor += 1;
     let mut buf = String::new();
     while *cursor < events.len() {
@@ -2063,7 +2169,14 @@ fn render_pulldown_code_block<H: UiHost>(
         *cursor += 1;
     }
 
+    let mut hasher = DefaultHasher::new();
+    start.hash(&mut hasher);
+    language.as_deref().hash(&mut hasher);
+    buf.hash(&mut hasher);
+    let id = BlockId(hasher.finish());
+
     let info = CodeBlockInfo {
+        id,
         language,
         code: Arc::<str>::from(buf),
     };
@@ -3285,7 +3398,7 @@ fn svg_viewbox_aspect_ratio(svg: &str) -> Option<f32> {
 }
 
 fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> {
-    if text.trim().is_empty() {
+    if text.is_empty() {
         return Vec::new();
     }
     if style.code {
@@ -3296,9 +3409,31 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
     }
 
     let mut out: Vec<InlinePiece> = Vec::new();
-    let words: Vec<&str> = text.split_whitespace().filter(|s| !s.is_empty()).collect();
-    for (i, w) in words.iter().enumerate() {
-        let trailing_space = i + 1 < words.len();
+    let mut i = 0usize;
+    while i < text.len() {
+        let ch = text[i..].chars().next().unwrap_or(' ');
+        let is_ws = ch.is_whitespace();
+        let mut j = i + ch.len_utf8();
+        while j < text.len() {
+            let next = text[j..].chars().next().unwrap_or(' ');
+            if next.is_whitespace() != is_ws {
+                break;
+            }
+            j += next.len_utf8();
+        }
+
+        let token = &text[i..j];
+        i = j;
+
+        if is_ws {
+            out.push(InlinePiece {
+                kind: InlinePieceKind::Text(token.to_string()),
+                style: style.clone(),
+            });
+            continue;
+        }
+
+        let w = token;
 
         if style.link.is_none() {
             let mut start = 0usize;
@@ -3351,23 +3486,12 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
                         style: style.clone(),
                     });
                 }
-
-                if trailing_space {
-                    out.push(InlinePiece {
-                        kind: InlinePieceKind::Text(" ".to_string()),
-                        style: style.clone(),
-                    });
-                }
                 continue;
             }
         }
 
-        let mut token = w.to_string();
-        if trailing_space {
-            token.push(' ');
-        }
         out.push(InlinePiece {
-            kind: InlinePieceKind::Text(token),
+            kind: InlinePieceKind::Text(w.to_string()),
             style: style.clone(),
         });
     }
@@ -3400,6 +3524,220 @@ fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{
+        any::{Any, TypeId},
+        collections::{HashMap, HashSet},
+    };
+
+    use fret_core::{AppWindowId, ClipboardToken, ImageUploadToken, Point, TimerToken};
+    use fret_runtime::{
+        CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
+        FrameId, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TickId, TimeHost,
+    };
+    use fret_ui::ThemeConfig;
+
+    #[derive(Default)]
+    struct ThemeTestHost {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
+        commands: CommandRegistry,
+        redraw: HashSet<AppWindowId>,
+        effects: Vec<Effect>,
+        drag: Option<DragSession>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for ThemeTestHost {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_ref::<T>())
+        }
+
+        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
+            self.globals
+                .get_mut(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_mut::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            #[derive(Debug)]
+            struct GlobalLeaseMarker;
+
+            struct Guard<T: Any> {
+                type_id: TypeId,
+                value: Option<T>,
+                globals: *mut HashMap<TypeId, Box<dyn Any>>,
+            }
+
+            impl<T: Any> Drop for Guard<T> {
+                fn drop(&mut self) {
+                    let Some(value) = self.value.take() else {
+                        return;
+                    };
+                    unsafe {
+                        (*self.globals).insert(self.type_id, Box::new(value));
+                    }
+                }
+            }
+
+            let type_id = TypeId::of::<T>();
+            let existing = self
+                .globals
+                .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+
+            let existing = match existing {
+                None => None,
+                Some(v) => {
+                    if v.is::<GlobalLeaseMarker>() {
+                        panic!("global already leased: {type_id:?}");
+                    }
+                    Some(*v.downcast::<T>().expect("global type id must match"))
+                }
+            };
+
+            let mut guard = Guard::<T> {
+                type_id,
+                value: Some(existing.unwrap_or_else(init)),
+                globals: &mut self.globals as *mut _,
+            };
+
+            let result = {
+                let value = guard.value.as_mut().expect("guard value exists");
+                f(value, self)
+            };
+
+            drop(guard);
+            result
+        }
+    }
+
+    impl ModelHost for ThemeTestHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl ModelsHost for ThemeTestHost {
+        fn take_changed_models(&mut self) -> Vec<ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl CommandsHost for ThemeTestHost {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
+    }
+
+    impl EffectSink for ThemeTestHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw.insert(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl TimeHost for ThemeTestHost {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_image_upload_token(&mut self) -> ImageUploadToken {
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            ImageUploadToken(self.next_image_upload_token)
+        }
+    }
+
+    impl DragHost for ThemeTestHost {
+        fn drag(&self) -> Option<&DragSession> {
+            self.drag.as_ref()
+        }
+
+        fn drag_mut(&mut self) -> Option<&mut DragSession> {
+            self.drag.as_mut()
+        }
+
+        fn cancel_drag(&mut self) {
+            self.drag = None;
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            kind: DragKind,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new(source_window, kind, start, payload));
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            kind: DragKind,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new_cross_window(
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
+        }
+    }
+
+    fn theme_with_metrics(metrics: &[(&str, f32)]) -> Theme {
+        let mut host = ThemeTestHost::default();
+        let theme = Theme::global_mut(&mut host);
+
+        let mut cfg = ThemeConfig {
+            name: theme.name.clone(),
+            author: theme.author.clone(),
+            url: theme.url.clone(),
+            colors: HashMap::new(),
+            metrics: HashMap::new(),
+        };
+        for (k, v) in metrics {
+            cfg.metrics.insert((*k).to_string(), *v);
+        }
+
+        theme.apply_config(&cfg);
+        theme.clone()
+    }
 
     fn count_top_level_list_items(events: &[pulldown_cmark::Event<'static>]) -> usize {
         use pulldown_cmark::{Event, Tag, TagEnd};
@@ -3688,5 +4026,35 @@ $$
         assert!(!is_safe_open_url("javascript:alert(1)"));
         assert!(!is_safe_open_url("data:text/html;base64,PHNjcmlwdD4="));
         assert!(!is_safe_open_url("file:///etc/passwd"));
+    }
+
+    #[test]
+    fn code_block_max_height_prefers_fret_namespace() {
+        let theme = theme_with_metrics(&[
+            ("markdown.code_block.max_height", 111.0),
+            ("fret.markdown.code_block.max_height", 222.0),
+        ]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = None;
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(222.0)));
+    }
+
+    #[test]
+    fn code_block_max_height_falls_back_to_markdown_namespace() {
+        let theme = theme_with_metrics(&[("markdown.code_block.max_height", 123.0)]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = None;
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(123.0)));
+    }
+
+    #[test]
+    fn code_block_max_height_does_not_override_explicit_option() {
+        let theme = theme_with_metrics(&[("fret.markdown.code_block.max_height", 999.0)]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = Some(Px(321.0));
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(321.0)));
     }
 }

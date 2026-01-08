@@ -3,6 +3,8 @@
 use fret_core::geometry::Px;
 use fret_core::scene::Color;
 
+use crate::plot::colormap::ColorMapId;
+
 pub const DEFAULT_SERIES_PALETTE: [Color; 10] = [
     Color {
         r: 0.35,
@@ -166,6 +168,12 @@ pub struct LinePlotStyle {
     pub overscroll_fraction: f32,
     pub emphasize_hovered_series: bool,
     pub dimmed_series_alpha: f32,
+
+    pub heatmap_colormap: ColorMapId,
+    pub heatmap_show_colorbar: bool,
+    pub heatmap_colorbar_width: Px,
+    pub heatmap_colorbar_padding: Px,
+    pub heatmap_colorbar_steps: usize,
 }
 
 impl Default for LinePlotStyle {
@@ -203,6 +211,12 @@ impl Default for LinePlotStyle {
             overscroll_fraction: 0.03,
             emphasize_hovered_series: true,
             dimmed_series_alpha: 0.35,
+
+            heatmap_colormap: ColorMapId::default(),
+            heatmap_show_colorbar: false,
+            heatmap_colorbar_width: Px(14.0),
+            heatmap_colorbar_padding: Px(8.0),
+            heatmap_colorbar_steps: 64,
         }
     }
 }

@@ -25,10 +25,12 @@ pub(super) struct WindowOverlayFrame {
 
 pub(super) struct ActivePopover {
     pub(super) layer: UiLayerId,
+    pub(super) pointer_barrier_layer: Option<UiLayerId>,
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) consume_outside_pointer_events: bool,
+    pub(super) disable_outside_pointer_events: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,

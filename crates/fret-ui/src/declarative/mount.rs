@@ -360,6 +360,7 @@ fn render_dismissible_root_impl<
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mount_element<H: UiHost>(
     ui: &mut UiTree<H>,
     _window: AppWindowId,
@@ -430,6 +431,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
         ElementKind::StyledText(p) => ElementInstance::StyledText(p),
+        ElementKind::SelectableText(p) => ElementInstance::SelectableText(p),
         ElementKind::TextInput(p) => ElementInstance::TextInput(p),
         ElementKind::TextArea(p) => ElementInstance::TextArea(p),
         ElementKind::ResizablePanelGroup(p) => ElementInstance::ResizablePanelGroup(p),
