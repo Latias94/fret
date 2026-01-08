@@ -1,7 +1,8 @@
 import fs from "fs"
 import os from "os"
 import path from "path"
-import puppeteer from "puppeteer"
+import type puppeteer from "puppeteer"
+import { createRequire } from "module"
 import { fileURLToPath, pathToFileURL } from "url"
 
 type Theme = "light" | "dark"
@@ -418,6 +419,15 @@ function repoRootFromScript(): string {
 
 const repoRoot = repoRootFromScript()
 
+async function loadPuppeteer(): Promise<typeof import("puppeteer")> {
+  const require = createRequire(import.meta.url)
+  const entry = require.resolve("puppeteer", {
+    paths: [path.join(repoRoot, "repo-ref", "ui")],
+  })
+  const mod = await import(pathToFileURL(entry).href)
+  return ((mod as any).default ?? mod) as typeof import("puppeteer")
+}
+
 async function resolveCssInjectionUrls(style: string, baseUrl: string) {
   // Next's HTML output for this route can omit some CSS links depending on how RSC streaming resolves.
   // We use the server-side RSC manifest to discover the actual CSS chunks and inject them ourselves.
@@ -556,6 +566,8 @@ async function run(options: GoldenOptions): Promise<string[]> {
   }
 
   const executablePath = resolveBrowserExecutablePath()
+
+  const puppeteer = await loadPuppeteer()
 
   let browser: puppeteer.Browser
   try {
