@@ -3,7 +3,7 @@ use fret_core::Point;
 use crate::engine::window::{DataWindowX, DataWindowY};
 use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
 use crate::spec::FilterMode;
-use crate::view::RowRange;
+use crate::transform::RowRange;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

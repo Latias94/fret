@@ -1,6 +1,6 @@
 use crate::engine::window::DataWindowX;
 use crate::engine::window_policy::AxisFilter1D;
-use crate::view::RowRange;
+use crate::transform::RowRange;
 
 pub fn row_range_for_x_filter(values: &[f64], base: RowRange, filter: AxisFilter1D) -> RowRange {
     if let Some(window) = filter.as_window() {

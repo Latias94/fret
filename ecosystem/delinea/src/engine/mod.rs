@@ -36,7 +36,7 @@ pub struct ChartState {
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub hover_px: Option<Point>,
-    pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::view::RowRange>,
+    pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]

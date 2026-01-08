@@ -10,7 +10,7 @@ use crate::spec::{
     GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
-use crate::view::RowRange;
+use crate::transform::RowRange;
 use fret_core::{Px, Rect, Size};
 
 fn basic_spec() -> ChartSpec {
