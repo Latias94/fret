@@ -47,6 +47,7 @@ mod edge_drag;
 mod marquee;
 mod node_drag;
 mod searcher;
+mod sticky_wire;
 mod wire_drag;
 
 use super::conversion;
@@ -3383,126 +3384,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if *button == MouseButton::Left
-                    && self.interaction.sticky_wire
-                    && self.interaction.wire_drag.is_some()
-                {
-                    let Some(mut w) = self.interaction.wire_drag.take() else {
-                        self.interaction.sticky_wire = false;
-                        self.interaction.sticky_wire_ignore_next_up = false;
-                        return;
-                    };
-
-                    let from = match &w.kind {
-                        WireDragKind::New { from, .. } => *from,
-                        _ => {
-                            self.interaction.wire_drag = Some(w);
-                            return;
-                        }
-                    };
-
-                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-                    let mut scratch_ports: Vec<PortId> = Vec::new();
-                    let hit_port = self.hit_port(
-                        geom.as_ref(),
-                        index.as_ref(),
-                        *position,
-                        zoom,
-                        &mut scratch_ports,
-                    );
-
-                    if let Some(target) = hit_port {
-                        enum Outcome {
-                            Apply(Vec<GraphOp>),
-                            Reject(DiagnosticSeverity, Arc<str>),
-                            Ignore,
-                        }
-
-                        let outcome = {
-                            let presenter = &mut *self.presenter;
-                            self.graph
-                                .read_ref(cx.app, |graph| {
-                                    let plan = presenter.plan_connect(graph, from, target);
-                                    match plan.decision {
-                                        ConnectDecision::Accept => Outcome::Apply(plan.ops),
-                                        ConnectDecision::Reject => {
-                                            Self::toast_from_diagnostics(&plan.diagnostics)
-                                                .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                                .unwrap_or(Outcome::Ignore)
-                                        }
-                                    }
-                                })
-                                .ok()
-                                .unwrap_or(Outcome::Ignore)
-                        };
-
-                        match outcome {
-                            Outcome::Apply(ops) => {
-                                self.apply_ops(cx.app, cx.window, ops);
-                                self.interaction.sticky_wire = false;
-                                self.interaction.sticky_wire_ignore_next_up = false;
-                                cx.release_pointer_capture();
-                                cx.stop_propagation();
-                                cx.request_redraw();
-                                cx.invalidate_self(Invalidation::Paint);
-                                return;
-                            }
-                            Outcome::Reject(sev, msg) => {
-                                self.show_toast(cx.app, cx.window, sev, msg);
-                            }
-                            Outcome::Ignore => {}
-                        }
-
-                        w.pos = *position;
-                        self.interaction.wire_drag = Some(w);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    }
-
-                    let at = self.interaction.last_canvas_pos.unwrap_or_default();
-                    let on_background = {
-                        let this = &*self;
-                        let geom = geom.clone();
-                        let index = index.clone();
-                        this.graph
-                            .read_ref(cx.app, |graph| {
-                                let order = this.node_order(graph, &snapshot);
-                                let on_node =
-                                    this.hit_node(graph, *position, &order, zoom).is_some();
-                                if on_node {
-                                    return false;
-                                }
-                                let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                                let on_edge = this
-                                    .hit_edge(
-                                        graph,
-                                        &snapshot,
-                                        geom.as_ref(),
-                                        index.as_ref(),
-                                        *position,
-                                        zoom,
-                                        &mut scratch_edges,
-                                    )
-                                    .is_some();
-                                !on_edge
-                            })
-                            .ok()
-                            .unwrap_or(false)
-                    };
-
-                    self.interaction.sticky_wire = false;
-                    self.interaction.sticky_wire_ignore_next_up = false;
-                    cx.release_pointer_capture();
-
-                    if on_background {
-                        self.open_connection_insert_node_picker(cx.app, from, at);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    }
+                if sticky_wire::handle_sticky_wire_pointer_down(
+                    self, cx, &snapshot, *position, *button, zoom,
+                ) {
+                    return;
                 }
 
                 if *button == MouseButton::Middle {
