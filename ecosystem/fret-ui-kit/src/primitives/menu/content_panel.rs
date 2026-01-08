@@ -18,7 +18,6 @@ use fret_ui::{ElementContext, UiHost};
 /// Render a menu content semantics wrapper (`role=menu`) and return its stable element id.
 ///
 /// This is intended for `aria-controls`-style trigger relationships (`controls_element`).
-#[track_caller]
 pub fn menu_content_semantics_with_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
@@ -39,7 +38,6 @@ pub fn menu_content_semantics_with_id<H: UiHost>(
 ///
 /// This mirrors the `aria-controls`/`controls_element` outcome used by Radix triggers: the trigger
 /// can reference the menu content element even while it is not mounted.
-#[track_caller]
 pub fn menu_content_semantics_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,

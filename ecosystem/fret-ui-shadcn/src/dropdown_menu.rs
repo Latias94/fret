@@ -2665,6 +2665,72 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_capture_id(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        trigger_id_out: Model<Option<fret_ui::elements::GlobalElementId>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> (fret_core::NodeId, fret_ui::elements::GlobalElementId) {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let trigger_id_out_for_render = trigger_id_out.clone();
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-trigger",
+            move |cx| {
+                let trigger_id_out = trigger_id_out_for_render.clone();
+                vec![DropdownMenu::new(open).into_element(
+                    cx,
+                    move |cx| {
+                        cx.pressable_with_id_props(move |cx, _st, id| {
+                            let _ = cx
+                                .app
+                                .models_mut()
+                                .update(&trigger_id_out, |v| *v = Some(id));
+                            let props = PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            };
+                            let children =
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())];
+                            (props, children)
+                        })
+                    },
+                    move |_cx| entries,
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let trigger_id = app
+            .models_mut()
+            .read(&trigger_id_out, |v| *v)
+            .ok()
+            .flatten()
+            .expect("captured trigger element id");
+        (root, trigger_id)
+    }
+
     fn render_frame_clipped_surface(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3025,6 +3091,85 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
             "menu items should render after ArrowDown opens the menu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_trigger_controls_menu_content_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        // First frame: capture a stable trigger element id.
+        let (_, trigger_element) = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: menu content is mounted.
+        let _ = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            entries,
+        );
+
+        let trigger_node = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "dropdown-menu-trigger",
+            |cx| cx.node_for_element(trigger_element),
+        )
+        .expect("expected trigger element node");
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_sem = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == trigger_node)
+            .expect("trigger semantics node");
+
+        assert!(
+            trigger_sem.flags.expanded,
+            "expected trigger to expose expanded=true while open"
+        );
+
+        let menu_content = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("menu content semantics node");
+
+        assert!(
+            trigger_sem.controls.contains(&menu_content.id),
+            "expected trigger to control menu content; controls={:?} content={:?}",
+            trigger_sem.controls,
+            menu_content.id
         );
     }
 
