@@ -268,6 +268,103 @@ fn pressable_keyboard_activation_dispatches_click_command() {
     );
 }
 
+struct TwoViewportRects {
+    a: Rect,
+    b: Rect,
+}
+
+impl TwoViewportRects {
+    fn new(a: Rect, b: Rect) -> Self {
+        Self { a, b }
+    }
+}
+
+impl<H: UiHost> Widget<H> for TwoViewportRects {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        if let Some(&a) = cx.children.get(0) {
+            let _ = cx.layout_in(a, self.a);
+        }
+        if let Some(&b) = cx.children.get(1) {
+            let _ = cx.layout_in(b, self.b);
+        }
+        cx.available
+    }
+}
+
+#[test]
+fn viewport_rects_do_not_couple_fill_semantics_across_subtrees() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_viewport(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let mut props = crate::element::FlexProps::default();
+        props.layout.size.width = crate::element::Length::Fill;
+        props.layout.size.height = crate::element::Length::Fill;
+
+        vec![cx.flex(props, |cx| {
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.width = crate::element::Length::Fill;
+            child.layout.size.height = crate::element::Length::Fill;
+            vec![cx.container(child, |_| Vec::new())]
+        })]
+    }
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-a",
+        build_viewport,
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-b",
+        build_viewport,
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_a = ui.children(root_a)[0];
+    let container_a = ui.children(flex_a)[0];
+    let b_a = ui
+        .debug_node_bounds(container_a)
+        .expect("viewport a container bounds");
+    assert!((b_a.origin.x.0 - viewport_a.origin.x.0).abs() < 0.01);
+    assert!((b_a.size.width.0 - viewport_a.size.width.0).abs() < 0.01);
+
+    let flex_b = ui.children(root_b)[0];
+    let container_b = ui.children(flex_b)[0];
+    let b_b = ui
+        .debug_node_bounds(container_b)
+        .expect("viewport b container bounds");
+    assert!((b_b.origin.x.0 - viewport_b.origin.x.0).abs() < 0.01);
+    assert!((b_b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
+}
+
 #[test]
 fn pressable_disabled_is_not_focusable() {
     let mut app = TestHost::new();
