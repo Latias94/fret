@@ -65,6 +65,8 @@ Deliverables:
 - Add infrastructure for fullscreen passes (triangle/quad) that:
   - bind a source texture + sampler + uniform block,
   - write to a destination color attachment.
+- Implementation note:
+  - Keep a shared fullscreen pass runner utility that owns render-pass boilerplate (to avoid N copies as effects grow).
 - Add internal utilities for common postprocess patterns:
   - ping-pong between A/B intermediates
   - downsample chain helpers (half/quarter res)

@@ -18,6 +18,7 @@ mod util;
 mod buffers;
 mod config;
 mod frame_targets;
+mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
@@ -29,6 +30,7 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use fullscreen::*;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;

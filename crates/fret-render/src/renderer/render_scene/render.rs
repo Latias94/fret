@@ -802,25 +802,14 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: Some(label),
-                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: dst_view,
-                            depth_slice: None,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: pass.load,
-                                store: wgpu::StoreOp::Store,
-                            },
-                        })],
-                        depth_stencil_attachment: None,
-                        timestamp_writes: None,
-                        occlusion_query_set: None,
-                        multiview_mask: None,
-                    });
-                    rp.set_pipeline(pipeline);
-                    rp.set_bind_group(0, &bind_group, &[]);
-                    rp.draw(0..3, 0..1);
+                    run_fullscreen_triangle_pass(
+                        &mut encoder,
+                        label,
+                        pipeline,
+                        dst_view,
+                        pass.load,
+                        &bind_group,
+                    );
                 }
                 RenderPlanPass::FullscreenBlit(pass) => {
                     let blit_pipeline = self
@@ -867,25 +856,14 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: Some("fret blit pass"),
-                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: dst_view,
-                            depth_slice: None,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: pass.load,
-                                store: wgpu::StoreOp::Store,
-                            },
-                        })],
-                        depth_stencil_attachment: None,
-                        timestamp_writes: None,
-                        occlusion_query_set: None,
-                        multiview_mask: None,
-                    });
-                    rp.set_pipeline(blit_pipeline);
-                    rp.set_bind_group(0, &blit_bind_group, &[]);
-                    rp.draw(0..3, 0..1);
+                    run_fullscreen_triangle_pass(
+                        &mut encoder,
+                        "fret blit pass",
+                        blit_pipeline,
+                        dst_view,
+                        pass.load,
+                        &blit_bind_group,
+                    );
                 }
             }
         }
