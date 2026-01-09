@@ -235,6 +235,7 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         pass_kind: LayoutPassKind,
     ) -> Size {
+        let is_probe = pass_kind == LayoutPassKind::Probe;
         if self.debug_enabled {
             self.debug_stats.layout_nodes_visited =
                 self.debug_stats.layout_nodes_visited.saturating_add(1);
@@ -244,12 +245,13 @@ impl<H: UiHost> UiTree<H> {
             Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
             None => return Size::default(),
         };
+        let invalidated_for_pass = invalidated || is_probe;
 
         if let Some(n) = self.nodes.get_mut(node) {
             n.bounds = bounds;
         }
 
-        if !invalidated
+        if !invalidated_for_pass
             && prev_bounds.size == bounds.size
             && prev_bounds.origin != bounds.origin
             && measured != Size::default()
@@ -281,7 +283,7 @@ impl<H: UiHost> UiTree<H> {
                     };
                     n.bounds.origin =
                         Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
-                    if let (Some(window), Some(element)) = (window, n.element) {
+                    if !is_probe && let (Some(window), Some(element)) = (window, n.element) {
                         crate::elements::record_bounds_for_element(app, window, element, n.bounds);
                     }
                     for &child in &n.children {
@@ -289,15 +291,16 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
-            if let (Some(window), Some(element)) =
-                (self.window, self.nodes.get(node).and_then(|n| n.element))
+            if !is_probe
+                && let (Some(window), Some(element)) =
+                    (self.window, self.nodes.get(node).and_then(|n| n.element))
             {
                 crate::elements::record_bounds_for_element(app, window, element, bounds);
             }
             return measured;
         }
 
-        let needs_layout = invalidated || prev_bounds != bounds;
+        let needs_layout = invalidated_for_pass || prev_bounds != bounds;
         if !needs_layout {
             return measured;
         }
@@ -350,13 +353,15 @@ impl<H: UiHost> UiTree<H> {
             widget.layout(&mut cx)
         });
 
-        self.observed_in_layout
-            .record(node, observations.as_slice());
-        self.observed_globals_in_layout
-            .record(node, global_observations.as_slice());
-        if let Some(n) = self.nodes.get_mut(node) {
-            n.measured_size = size;
-            n.invalidation.layout = false;
+        if !is_probe {
+            self.observed_in_layout
+                .record(node, observations.as_slice());
+            self.observed_globals_in_layout
+                .record(node, global_observations.as_slice());
+            if let Some(n) = self.nodes.get_mut(node) {
+                n.measured_size = size;
+                n.invalidation.layout = false;
+            }
         }
 
         size

@@ -514,6 +514,101 @@ fn virtual_list_scroll_to_item_keeps_target_visible() {
     );
 }
 
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn virtual_list_probe_layout_does_not_consume_deferred_scroll_request() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    // Frame 0: establish viewport height.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-probe-scroll-to",
+        |cx| {
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                &scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect()
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: request scroll-to on a row below the viewport.
+    let target = 6usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Nearest);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((target, crate::scroll::ScrollStrategy::Nearest))
+    );
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-probe-scroll-to",
+        |cx| {
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                &scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect()
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((target, crate::scroll::ScrollStrategy::Nearest)),
+        "probe layout must not consume deferred scroll requests"
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "final layout must consume deferred scroll requests"
+    );
+}
+
 #[test]
 fn virtual_list_scroll_to_item_uses_measured_row_heights() {
     let mut app = TestHost::new();
