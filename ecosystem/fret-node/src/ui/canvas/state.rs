@@ -81,6 +81,84 @@ pub(crate) struct PasteSeries {
     pub(crate) count: u32,
 }
 
+impl PasteSeries {
+    pub(crate) fn next(prev: Option<Self>, anchor: CanvasPoint, zoom: f32) -> (Self, CanvasPoint) {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+
+        let threshold = 6.0 / zoom;
+        let step = 24.0 / zoom;
+
+        let mut count = 0u32;
+        if let Some(series) = prev {
+            let dx = anchor.x - series.anchor.x;
+            let dy = anchor.y - series.anchor.y;
+            let d2 = dx * dx + dy * dy;
+            if d2.is_finite() && d2 <= threshold * threshold {
+                count = series.count.saturating_add(1);
+            }
+        }
+
+        let next = Self { anchor, count };
+        let at = CanvasPoint {
+            x: anchor.x + count as f32 * step,
+            y: anchor.y + count as f32 * step,
+        };
+        (next, at)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CanvasPoint, PasteSeries};
+
+    #[test]
+    fn paste_series_increments_when_anchor_is_stable() {
+        let anchor = CanvasPoint { x: 10.0, y: 20.0 };
+
+        let (s1, at1) = PasteSeries::next(None, anchor, 1.0);
+        assert_eq!(s1.count, 0);
+        assert_eq!(at1, anchor);
+
+        let (s2, at2) = PasteSeries::next(Some(s1), anchor, 1.0);
+        assert_eq!(s2.count, 1);
+        assert_eq!(at2, CanvasPoint { x: 34.0, y: 44.0 });
+
+        let (s3, at3) = PasteSeries::next(Some(s2), anchor, 1.0);
+        assert_eq!(s3.count, 2);
+        assert_eq!(at3, CanvasPoint { x: 58.0, y: 68.0 });
+    }
+
+    #[test]
+    fn paste_series_resets_when_anchor_moves_farther_than_threshold() {
+        let anchor = CanvasPoint { x: 10.0, y: 20.0 };
+        let (s1, _) = PasteSeries::next(None, anchor, 1.0);
+        let (s2, _) = PasteSeries::next(Some(s1), anchor, 1.0);
+        assert_eq!(s2.count, 1);
+
+        // Threshold is 6px at zoom=1, so moving by 7px should reset.
+        let moved = CanvasPoint { x: 17.0, y: 20.0 };
+        let (s3, at3) = PasteSeries::next(Some(s2), moved, 1.0);
+        assert_eq!(s3.count, 0);
+        assert_eq!(at3, moved);
+    }
+
+    #[test]
+    fn paste_series_scales_threshold_and_step_by_zoom() {
+        let anchor = CanvasPoint { x: 0.0, y: 0.0 };
+
+        // At zoom=2, step should be 12 canvas units (24/2).
+        let (s1, at1) = PasteSeries::next(None, anchor, 2.0);
+        let (s2, at2) = PasteSeries::next(Some(s1), anchor, 2.0);
+        assert_eq!(s2.count, 1);
+        assert_eq!(at1, anchor);
+        assert_eq!(at2, CanvasPoint { x: 12.0, y: 12.0 });
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct PanInertiaState {
     pub(crate) timer: TimerToken,

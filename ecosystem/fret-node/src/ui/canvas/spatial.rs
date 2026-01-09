@@ -192,3 +192,85 @@ impl Default for CanvasSpatialIndex {
         Self::empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fret_core::{Point, Px, Rect, Size};
+
+    use crate::core::{
+        CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection,
+        PortId, PortKey, PortKind,
+    };
+
+    use super::super::geometry::{CanvasGeometry, NodeGeometry, PortHandleGeometry};
+    use super::CanvasSpatialIndex;
+
+    #[test]
+    fn port_query_hits_bounds_even_when_center_is_elsewhere() {
+        let mut graph = Graph::new(GraphId::new());
+
+        let node = NodeId::new();
+        let port = PortId::new();
+
+        graph.nodes.insert(
+            node,
+            Node {
+                kind: NodeKindKey::new("test.node"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![port],
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port,
+            Port {
+                node,
+                key: PortKey::new("p"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+
+        // Create a handle geometry where the bounds are far away from the center.
+        // This catches regressions where the spatial index only inserts ports by `center`.
+        let bounds = Rect::new(
+            Point::new(Px(1024.0), Px(2048.0)),
+            Size::new(Px(12.0), Px(10.0)),
+        );
+        let center = Point::new(Px(0.0), Px(0.0));
+
+        let mut geom = CanvasGeometry::default();
+        geom.order = vec![node];
+        geom.node_rank.insert(node, 0);
+        geom.nodes.insert(
+            node,
+            NodeGeometry {
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            },
+        );
+        geom.ports.insert(
+            port,
+            PortHandleGeometry {
+                node,
+                dir: PortDirection::In,
+                center,
+                bounds,
+            },
+        );
+
+        let index = CanvasSpatialIndex::build(&graph, &geom, 1.0, 0.0);
+
+        let mut out: Vec<PortId> = Vec::new();
+        let query_pos = Point::new(Px(1028.0), Px(2051.0));
+        index.query_ports(query_pos, 1.0, &mut out);
+
+        assert!(out.contains(&port));
+    }
+}

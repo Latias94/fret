@@ -1043,25 +1043,9 @@ impl NodeGraphCanvas {
             Self::screen_to_canvas(bounds, center, snapshot.pan, zoom)
         });
 
-        let threshold = 6.0 / zoom;
-        let step = 24.0 / zoom;
-
-        let mut count = 0u32;
-        if let Some(series) = self.interaction.paste_series {
-            let dx = anchor.x - series.anchor.x;
-            let dy = anchor.y - series.anchor.y;
-            let d2 = dx * dx + dy * dy;
-            if d2.is_finite() && d2 <= threshold * threshold {
-                count = series.count.saturating_add(1);
-            }
-        }
-
-        self.interaction.paste_series = Some(PasteSeries { anchor, count });
-
-        CanvasPoint {
-            x: anchor.x + count as f32 * step,
-            y: anchor.y + count as f32 * step,
-        }
+        let (series, at) = PasteSeries::next(self.interaction.paste_series, anchor, zoom);
+        self.interaction.paste_series = Some(series);
+        at
     }
 
     fn copy_selected_nodes_to_clipboard<H: UiHost>(
