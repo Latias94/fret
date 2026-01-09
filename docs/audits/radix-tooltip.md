@@ -57,9 +57,14 @@ Fret models Radix tooltip outcomes by composing:
     `onPointerDown` close behavior), wired via `ElementContext::pressable_add_on_pointer_down_for`.
   - Click/keyboard activation requests a close and suppresses focus-driven re-open (Radix `onClick`
     close outcome), wired via `ElementContext::pressable_add_on_activate_for`.
+- Pass: Provider-scoped pointer-in-transit suppression is modeled via a provider model:
+  - The currently open tooltip publishes a transit corridor geometry via
+    `tooltip_provider::set_pointer_transit_geometry(...)`.
+  - Other tooltip triggers consult `tooltip_provider::pointer_transit_geometry_model(...)` to
+    avoid setting the "pointermove opened" gate while the pointer lies inside that corridor
+    (Radix `isPointerInTransitRef`).
 
 ## Follow-ups (recommended)
 
-- Consider tightening parity with the upstream trigger event model (open-on-pointermove gating,
-  pointer-in-transit suppression) if strict behavioral matching becomes a goal outside of the
-  current shadcn recipes.
+- Consider auditing remaining tooltip content dismissal/focus edge cases if strict behavioral
+  matching becomes a goal outside of the current shadcn recipes.

@@ -15,6 +15,7 @@
 
 pub use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 use fret_core::{Point, PointerType, Px, Rect};
@@ -23,8 +24,10 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 pub use crate::tooltip_provider::{
-    TooltipProviderConfig, current_config, last_opened_tooltip, note_closed, note_opened_tooltip,
-    open_delay_ticks, open_delay_ticks_with_base, with_tooltip_provider,
+    TooltipProviderConfig, current_config, is_pointer_in_transit, last_opened_tooltip, note_closed,
+    note_opened_tooltip, open_delay_ticks, open_delay_ticks_with_base, pointer_in_transit_model,
+    pointer_transit_geometry_model, set_pointer_in_transit, set_pointer_transit_geometry,
+    with_tooltip_provider,
 };
 
 pub use crate::primitives::popper::{Align, ArrowOptions, LayoutDirection, Side};
@@ -118,6 +121,215 @@ pub fn tooltip_last_pointer_model<H: UiHost>(
     model
 }
 
+fn tooltip_floating_side(anchor: Rect, floating: Rect) -> Option<fret_ui::overlay_placement::Side> {
+    let anchor_left = anchor.origin.x.0;
+    let anchor_right = anchor_left + anchor.size.width.0;
+    let anchor_top = anchor.origin.y.0;
+    let anchor_bottom = anchor_top + anchor.size.height.0;
+
+    let floating_left = floating.origin.x.0;
+    let floating_right = floating_left + floating.size.width.0;
+    let floating_top = floating.origin.y.0;
+    let floating_bottom = floating_top + floating.size.height.0;
+
+    if floating_left >= anchor_right {
+        return Some(fret_ui::overlay_placement::Side::Right);
+    }
+    if floating_right <= anchor_left {
+        return Some(fret_ui::overlay_placement::Side::Left);
+    }
+    if floating_bottom <= anchor_top {
+        return Some(fret_ui::overlay_placement::Side::Top);
+    }
+    if floating_top >= anchor_bottom {
+        return Some(fret_ui::overlay_placement::Side::Bottom);
+    }
+    None
+}
+
+/// Returns `true` when the pointer should be considered "in transit" between the tooltip trigger
+/// and content (Radix `isPointerInTransitRef` outcome).
+///
+/// Notes:
+/// - This is a geometry-only approximation: it uses the safe-hover corridor between `anchor` and
+///   `floating`.
+/// - Unlike menus, Radix Tooltip's in-transit concept is used to *suppress other tooltip trigger
+///   opens* while the pointer moves from trigger to content.
+pub fn tooltip_pointer_in_transit(
+    position: Point,
+    anchor: Rect,
+    floating: Rect,
+    buffer: Px,
+) -> bool {
+    if anchor.contains(position) || floating.contains(position) {
+        return false;
+    }
+
+    let Some(exit_side) = tooltip_floating_side(anchor, floating) else {
+        return false;
+    };
+
+    let exit_point = tooltip_project_exit_point(anchor, position, exit_side);
+    let padding = buffer;
+    let exit_points = tooltip_padded_exit_points(exit_point, exit_side, padding);
+
+    let mut points = Vec::with_capacity(6);
+    points.extend_from_slice(&exit_points);
+    points.extend_from_slice(&tooltip_rect_points(floating));
+
+    let hull = tooltip_convex_hull(&mut points);
+    tooltip_point_in_polygon(position, &hull)
+}
+
+fn tooltip_rect_points(rect: Rect) -> [Point; 4] {
+    let left = rect.origin.x;
+    let top = rect.origin.y;
+    let right = rect.origin.x + rect.size.width;
+    let bottom = rect.origin.y + rect.size.height;
+    [
+        Point::new(left, top),
+        Point::new(right, top),
+        Point::new(right, bottom),
+        Point::new(left, bottom),
+    ]
+}
+
+fn tooltip_clamp(v: Px, min: Px, max: Px) -> Px {
+    Px(v.0.max(min.0).min(max.0))
+}
+
+fn tooltip_project_exit_point(
+    anchor: Rect,
+    position: Point,
+    side: fret_ui::overlay_placement::Side,
+) -> Point {
+    let left = anchor.origin.x;
+    let top = anchor.origin.y;
+    let right = anchor.origin.x + anchor.size.width;
+    let bottom = anchor.origin.y + anchor.size.height;
+
+    match side {
+        fret_ui::overlay_placement::Side::Right => {
+            Point::new(right, tooltip_clamp(position.y, top, bottom))
+        }
+        fret_ui::overlay_placement::Side::Left => {
+            Point::new(left, tooltip_clamp(position.y, top, bottom))
+        }
+        fret_ui::overlay_placement::Side::Top => {
+            Point::new(tooltip_clamp(position.x, left, right), top)
+        }
+        fret_ui::overlay_placement::Side::Bottom => {
+            Point::new(tooltip_clamp(position.x, left, right), bottom)
+        }
+    }
+}
+
+fn tooltip_padded_exit_points(
+    exit_point: Point,
+    side: fret_ui::overlay_placement::Side,
+    padding: Px,
+) -> [Point; 2] {
+    match side {
+        fret_ui::overlay_placement::Side::Top => [
+            Point::new(exit_point.x - padding, exit_point.y + padding),
+            Point::new(exit_point.x + padding, exit_point.y + padding),
+        ],
+        fret_ui::overlay_placement::Side::Bottom => [
+            Point::new(exit_point.x - padding, exit_point.y - padding),
+            Point::new(exit_point.x + padding, exit_point.y - padding),
+        ],
+        fret_ui::overlay_placement::Side::Left => [
+            Point::new(exit_point.x + padding, exit_point.y - padding),
+            Point::new(exit_point.x + padding, exit_point.y + padding),
+        ],
+        fret_ui::overlay_placement::Side::Right => [
+            Point::new(exit_point.x - padding, exit_point.y - padding),
+            Point::new(exit_point.x - padding, exit_point.y + padding),
+        ],
+    }
+}
+
+fn tooltip_point_in_polygon(point: Point, polygon: &[Point]) -> bool {
+    if polygon.len() < 3 {
+        return false;
+    }
+
+    let x = point.x.0;
+    let y = point.y.0;
+    let mut inside = false;
+    let mut j = polygon.len() - 1;
+
+    for i in 0..polygon.len() {
+        let xi = polygon[i].x.0;
+        let yi = polygon[i].y.0;
+        let xj = polygon[j].x.0;
+        let yj = polygon[j].y.0;
+
+        let intersect = (yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi;
+        if intersect {
+            inside = !inside;
+        }
+        j = i;
+    }
+
+    inside
+}
+
+fn tooltip_cross(o: Point, a: Point, b: Point) -> f32 {
+    (a.x.0 - o.x.0) * (b.y.0 - o.y.0) - (a.y.0 - o.y.0) * (b.x.0 - o.x.0)
+}
+
+fn tooltip_convex_hull(points: &mut [Point]) -> Vec<Point> {
+    if points.len() <= 1 {
+        return points.to_vec();
+    }
+
+    points.sort_by(|a, b| {
+        a.x.0
+            .partial_cmp(&b.x.0)
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| a.y.0.partial_cmp(&b.y.0).unwrap_or(Ordering::Equal))
+    });
+
+    let mut lower: Vec<Point> = Vec::new();
+    for &p in points.iter() {
+        while lower.len() >= 2 {
+            let len = lower.len();
+            if tooltip_cross(lower[len - 2], lower[len - 1], p) <= 0.0 {
+                lower.pop();
+            } else {
+                break;
+            }
+        }
+        lower.push(p);
+    }
+    lower.pop();
+
+    let mut upper: Vec<Point> = Vec::new();
+    for &p in points.iter().rev() {
+        while upper.len() >= 2 {
+            let len = upper.len();
+            if tooltip_cross(upper[len - 2], upper[len - 1], p) <= 0.0 {
+                upper.pop();
+            } else {
+                break;
+            }
+        }
+        upper.push(p);
+    }
+    upper.pop();
+
+    if lower.len() == 1
+        && upper.len() == 1
+        && lower[0].x.0 == upper[0].x.0
+        && lower[0].y.0 == upper[0].y.0
+    {
+        lower
+    } else {
+        lower.into_iter().chain(upper).collect()
+    }
+}
+
 /// Installs a pointer-move observer that updates the tooltip's pointer tracking model.
 ///
 /// Notes:
@@ -206,6 +418,10 @@ pub fn tooltip_update_interaction<H: UiHost>(
         if was_open {
             note_closed(cx, now);
         }
+        if was_open {
+            set_pointer_in_transit(cx, false);
+            set_pointer_transit_geometry(cx, None);
+        }
         return TooltipInteractionUpdate {
             open: false,
             wants_continuous_ticks: false,
@@ -248,6 +464,23 @@ pub fn tooltip_update_interaction<H: UiHost>(
 
     if was_open && !open {
         note_closed(cx, now);
+    }
+
+    if open {
+        set_pointer_in_transit(cx, pointer_safe);
+        if cfg.disable_hoverable_content || blurred {
+            set_pointer_transit_geometry(cx, None);
+        } else {
+            match (anchor_bounds, floating_bounds) {
+                (Some(anchor), Some(floating)) => {
+                    set_pointer_transit_geometry(cx, Some((anchor, floating)));
+                }
+                _ => set_pointer_transit_geometry(cx, None),
+            }
+        }
+    } else if was_open {
+        set_pointer_in_transit(cx, false);
+        set_pointer_transit_geometry(cx, None);
     }
 
     TooltipInteractionUpdate {

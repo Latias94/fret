@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use fret_core::Rect;
 use fret_runtime::FrameId;
+use fret_runtime::Model;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -28,12 +30,15 @@ impl TooltipProviderConfig {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct ProviderState {
     config: TooltipProviderConfig,
     delay_group: TooltipDelayGroupState,
     last_opened_token: u64,
     last_opened_tooltip: Option<GlobalElementId>,
+    pointer_in_transit: bool,
+    pointer_in_transit_model: Option<Model<bool>>,
+    pointer_transit_geometry_model: Option<Model<Option<(Rect, Rect)>>>,
 }
 
 #[derive(Default)]
@@ -168,8 +173,101 @@ pub fn note_opened_tooltip<H: UiHost>(
             let st = svc.current_state_mut();
             st.last_opened_token = st.last_opened_token.saturating_add(1);
             st.last_opened_tooltip = Some(tooltip);
+
+            if st.pointer_in_transit {
+                st.pointer_in_transit = false;
+                if let Some(model) = st.pointer_in_transit_model.clone() {
+                    let _ = app.models_mut().update(&model, |v| *v = false);
+                }
+            }
+            if let Some(model) = st.pointer_transit_geometry_model.clone() {
+                let _ = app.models_mut().update(&model, |v| *v = None);
+            }
             st.last_opened_token
         })
+}
+
+pub fn pointer_in_transit_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state_mut();
+            let existing = st.pointer_in_transit_model.clone();
+            if let Some(model) = existing {
+                return model;
+            }
+
+            let model = app.models_mut().insert(st.pointer_in_transit);
+            st.pointer_in_transit_model = Some(model.clone());
+            model
+        })
+}
+
+pub fn pointer_transit_geometry_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<(Rect, Rect)>> {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state_mut();
+            let existing = st.pointer_transit_geometry_model.clone();
+            if let Some(model) = existing {
+                return model;
+            }
+
+            let model = app.models_mut().insert(None);
+            st.pointer_transit_geometry_model = Some(model.clone());
+            model
+        })
+}
+
+pub fn set_pointer_transit_geometry<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    geometry: Option<(Rect, Rect)>,
+) {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state_mut();
+            let model = st
+                .pointer_transit_geometry_model
+                .clone()
+                .unwrap_or_else(|| {
+                    let model = app.models_mut().insert(None);
+                    st.pointer_transit_geometry_model = Some(model.clone());
+                    model
+                });
+
+            let _ = app.models_mut().update(&model, |v| *v = geometry);
+        });
+}
+
+pub fn is_pointer_in_transit<H: UiHost>(cx: &mut ElementContext<'_, H>) -> bool {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            svc.current_state().pointer_in_transit
+        })
+}
+
+pub fn set_pointer_in_transit<H: UiHost>(cx: &mut ElementContext<'_, H>, in_transit: bool) {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state_mut();
+            if st.pointer_in_transit == in_transit {
+                return;
+            }
+            st.pointer_in_transit = in_transit;
+
+            let model = st.pointer_in_transit_model.clone().unwrap_or_else(|| {
+                let model = app.models_mut().insert(in_transit);
+                st.pointer_in_transit_model = Some(model.clone());
+                model
+            });
+
+            let _ = app.models_mut().update(&model, |v| *v = in_transit);
+        });
 }
 
 #[cfg(test)]
@@ -270,6 +368,33 @@ mod tests {
                 assert_eq!(last_opened_tooltip(cx), Some((t2, tok2)));
                 assert!(tok2 > tok1);
             });
+        });
+    }
+
+    #[test]
+    fn pointer_in_transit_model_tracks_state_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            assert!(!is_pointer_in_transit(cx));
+            let model = pointer_in_transit_model(cx);
+            assert_eq!(
+                cx.app.models().read(&model, |v| *v).ok(),
+                Some(false),
+                "expected model to reflect initial transit state"
+            );
+
+            set_pointer_in_transit(cx, true);
+            assert!(is_pointer_in_transit(cx));
+            assert_eq!(cx.app.models().read(&model, |v| *v).ok(), Some(true));
+
+            set_pointer_in_transit(cx, false);
+            assert!(!is_pointer_in_transit(cx));
+            assert_eq!(cx.app.models().read(&model, |v| *v).ok(), Some(false));
         });
     }
 }
