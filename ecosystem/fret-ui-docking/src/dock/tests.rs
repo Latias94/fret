@@ -22,6 +22,13 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use std::sync::{Arc, Mutex};
 
+#[cfg(feature = "layout-engine-v2")]
+use fret_ui::declarative;
+#[cfg(feature = "layout-engine-v2")]
+use slotmap::KeyData;
+#[cfg(feature = "layout-engine-v2")]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 #[derive(Default)]
 struct FakeTextService;
 
@@ -226,6 +233,199 @@ impl DockPanelRegistry<TestHost> for CachedRetainedPanelRegistry {
         nodes.insert(panel.clone(), node);
         Some(node)
     }
+}
+
+#[cfg(feature = "layout-engine-v2")]
+struct OverlayAssertsViewportBounds {
+    left_spacer: fret_core::NodeId,
+    right_spacer: fret_core::NodeId,
+    expected_left: Rect,
+    expected_right: Rect,
+    ok: Arc<AtomicBool>,
+}
+
+#[cfg(feature = "layout-engine-v2")]
+impl<H: UiHost> Widget<H> for OverlayAssertsViewportBounds {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let left = cx.tree.debug_node_bounds(self.left_spacer);
+        let right = cx.tree.debug_node_bounds(self.right_spacer);
+        self.ok.store(
+            left == Some(self.expected_left) && right == Some(self.expected_right),
+            Ordering::Relaxed,
+        );
+        cx.available
+    }
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_fill() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut services = FakeTextService::default();
+
+    let panel_left = PanelKey::new("test.viewport.left");
+    let panel_right = PanelKey::new("test.viewport.right");
+
+    let target_left = fret_core::RenderTargetId::from(KeyData::from_ffi(1));
+    let target_right = fret_core::RenderTargetId::from(KeyData::from_ffi(2));
+
+    let left_root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "dock-test-left",
+        |cx| {
+            let flex = fret_ui::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Fill,
+                        height: fret_ui::element::Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                vec![cx.spacer(fret_ui::element::SpacerProps::default())]
+            })]
+        },
+    );
+    let right_root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "dock-test-right",
+        |cx| {
+            let flex = fret_ui::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Fill,
+                        height: fret_ui::element::Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                vec![cx.spacer(fret_ui::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let left_flex = ui.children(left_root)[0];
+    let left_spacer = ui.children(left_flex)[0];
+
+    let right_flex = ui.children(right_root)[0];
+    let right_spacer = ui.children(right_flex)[0];
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel_left, || DockPanel {
+            title: "Left".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_left,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        dock.ensure_panel(&panel_right, || DockPanel {
+            title: "Right".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_right,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+
+        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_left.clone()],
+            active: 0,
+        });
+        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_right.clone()],
+            active: 0,
+        });
+        let root = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left_tabs, right_tabs],
+            fractions: vec![0.35, 0.65],
+        });
+        dock.graph.set_window_root(window, root);
+    });
+
+    let (expected_left, expected_right) = {
+        let dock = app.global::<DockManager>().expect("dock manager");
+        let root = dock.graph.window_root(window).expect("dock root");
+        let (_chrome, dock_bounds) = dock_space_regions(bounds);
+        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+        let active = active_panel_content_bounds(&dock.graph, &layout);
+        let left = active.get(&panel_left).copied().expect("left bounds");
+        let right = active.get(&panel_right).copied().expect("right bounds");
+        (left, right)
+    };
+
+    let dock_space = ui.create_node_retained(
+        DockSpace::new(window)
+            .with_panel_content(panel_left.clone(), left_root)
+            .with_panel_content(panel_right.clone(), right_root),
+    );
+    ui.set_children(dock_space, vec![left_root, right_root]);
+    ui.set_root(dock_space);
+
+    let ok = Arc::new(AtomicBool::new(false));
+    let overlay = ui.create_node_retained(OverlayAssertsViewportBounds {
+        left_spacer,
+        right_spacer,
+        expected_left,
+        expected_right,
+        ok: ok.clone(),
+    });
+    ui.push_overlay_root(overlay, false);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        ok.load(Ordering::Relaxed),
+        "expected overlay layout to observe viewport-laid-out spacer bounds"
+    );
+    assert_eq!(ui.debug_node_bounds(left_spacer), Some(expected_left));
+    assert_eq!(ui.debug_node_bounds(right_spacer), Some(expected_right));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let dock = app.global::<DockManager>().expect("dock manager");
+    assert_eq!(
+        dock.viewport_content_rect(window, target_left),
+        Some(expected_left)
+    );
+    assert_eq!(
+        dock.viewport_content_rect(window, target_right),
+        Some(expected_right)
+    );
 }
 
 #[test]

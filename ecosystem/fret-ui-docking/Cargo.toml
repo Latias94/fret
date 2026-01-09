@@ -15,5 +15,8 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
 tracing.workspace = true
 
+[features]
+layout-engine-v2 = ["fret-ui/layout-engine-v2"]
+
 [dev-dependencies]
 slotmap.workspace = true
