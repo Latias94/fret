@@ -47,6 +47,7 @@ V1 scope:
 
 - Support rectangular clip stacks via scissor-only (already exists).
 - Support rounded-rect clip stacks via a soft clip mask (alpha coverage) derived from the clip stack.
+- Support **mask resolution tiers** (full / half / quarter) to enable deterministic degradation under budgets (ADR 0120).
 
 ### 3) Deterministic degradation is required
 
@@ -120,6 +121,12 @@ Benefits:
 - Can be generated at the same resolution as downsampled blur/pixelate for cost control.
 - Does not require coupling every effect pipeline to stencil formats or depth attachments.
 
+Implementation note:
+
+- When the mask texture resolution differs from the viewport, sampling must map pixel coordinates into the mask
+  grid deterministically (no filtering), so that scissor/bounds remain computation-only and clip visibility stays
+  stable under degradation.
+
 ### Option 2: Stencil-based clip masks
 
 Use a depth-stencil attachment, populate stencil with the clip stack, then run effect passes with stencil tests.
@@ -165,7 +172,10 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 
 - `FilterContent` composite binds the effect-boundary clip stack uniform so rounded clips do not leak on composite.
 - `ClipMaskPass` can generate `Mask0` (full-resolution `R8Unorm` coverage) from the effective clip stack.
+- `ClipMaskPass` can also generate `Mask1`/`Mask2` (half/quarter) and the plan chooses the best tier within
+  `intermediate_budget_bytes`.
 - `ScaleNearest` and `CompositePremul` can sample `Mask0` (`mask_target`) to gate writes without per-pixel clip-stack iteration.
+- Mask-sampling shaders map viewport pixel coordinates into the mask texture dimensions, enabling tiered masks.
 - `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.
 
 Remaining v1 follow-ups:
