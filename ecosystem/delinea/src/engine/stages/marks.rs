@@ -103,6 +103,8 @@ pub struct MarksStage {
     cursor: MinMaxPerPixelCursor,
     bounds_cursor: BoundsCursor,
     bounds_accum: BoundsAccum,
+    active_series: Option<SeriesId>,
+    active_selection: RowSelection,
     stack_accum: BTreeMap<StackId, StackAccum>,
     stack_bounds: BTreeMap<StackId, DataBounds>,
     stack_bounds_build: Option<StackBoundsBuild>,
@@ -160,6 +162,8 @@ impl MarksStage {
         self.cursor = MinMaxPerPixelCursor::default();
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
+        self.active_series = None;
+        self.active_selection = RowSelection::default();
         self.stack_accum.clear();
         self.stack_bounds.clear();
         self.stack_bounds_build = None;
@@ -185,6 +189,7 @@ impl MarksStage {
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
+        selection_stage: &crate::engine::stages::SelectionStage,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -210,7 +215,7 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (selection, view_x_filter, view_x_mapping_window) =
+            let (base_selection, view_x_filter, view_x_mapping_window) =
                 if let Some(v) = view.series_view(series.id) {
                     (
                         v.selection.clone(),
@@ -237,6 +242,29 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
+
+            let selection_range = base_selection.as_range(table.row_count);
+            let selection_range = crate::transform::RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+
+            if self.active_series != Some(series.id) {
+                let mut selection = base_selection.clone();
+                if let Some(sel) = selection_stage.selection_for(
+                    series.dataset,
+                    x_col,
+                    selection_range,
+                    view_x_filter,
+                    table.revision,
+                ) {
+                    selection = sel;
+                }
+                self.active_series = Some(series.id);
+                self.active_selection = selection;
+            }
+
+            let selection = self.active_selection.clone();
 
             let Some(x) = table.column_f64(x_col) else {
                 self.series_index += 1;

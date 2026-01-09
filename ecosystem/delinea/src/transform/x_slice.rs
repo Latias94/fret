@@ -1,6 +1,5 @@
 use crate::engine::window::DataWindowX;
 use crate::engine::window_policy::AxisFilter1D;
-use std::sync::Arc;
 
 use crate::transform::{RowRange, RowSelection};
 
@@ -49,12 +48,12 @@ pub fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindow
         return base;
     };
     if !first.is_finite() || !last.is_finite() {
-        return row_range_for_x_window_linear(values, base, window);
+        return base;
     }
 
     let ascending = first <= last;
-    if !is_probably_monotonic(slice, ascending) {
-        return row_range_for_x_window_linear(values, base, window);
+    if !is_probably_monotonic_sampled(slice, ascending) {
+        return base;
     }
 
     let (min, max) = if window.min <= window.max {
@@ -81,31 +80,32 @@ pub fn row_selection_for_x_window(
     base: RowRange,
     window: DataWindowX,
 ) -> RowSelection {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-    if base.is_empty() {
-        return RowSelection::Range(base);
-    }
-
-    let slice = &values[base.start..base.end];
-    let Some(first) = slice.first().copied() else {
-        return RowSelection::Range(base);
-    };
-    let Some(last) = slice.last().copied() else {
-        return RowSelection::Range(base);
-    };
-    if first.is_finite() && last.is_finite() {
-        let ascending = first <= last;
-        if is_probably_monotonic(slice, ascending) {
-            return RowSelection::Range(row_range_for_x_window(values, base, window));
-        }
-    }
-
-    let indices = indices_for_x_window(values, base, window);
-    RowSelection::Indices(indices)
+    RowSelection::Range(row_range_for_x_window(values, base, window))
 }
 
-fn is_probably_monotonic(values: &[f64], ascending: bool) -> bool {
+pub fn is_probably_monotonic_in_range(values: &[f64], range: RowRange) -> Option<bool> {
+    let mut range = range;
+    range.clamp_to_len(values.len());
+    if range.is_empty() {
+        return None;
+    }
+
+    let slice = &values[range.start..range.end];
+    let Some(first) = slice.first().copied() else {
+        return None;
+    };
+    let Some(last) = slice.last().copied() else {
+        return None;
+    };
+    if !first.is_finite() || !last.is_finite() {
+        return None;
+    }
+
+    let ascending = first <= last;
+    is_probably_monotonic_sampled(slice, ascending).then_some(ascending)
+}
+
+fn is_probably_monotonic_sampled(values: &[f64], ascending: bool) -> bool {
     let len = values.len();
     if len <= 2 {
         return true;
@@ -150,12 +150,12 @@ fn row_range_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowRange {
         return base;
     };
     if !first.is_finite() || !last.is_finite() {
-        return row_range_for_x_min_linear(values, base, min);
+        return base;
     }
 
     let ascending = first <= last;
-    if !is_probably_monotonic(slice, ascending) {
-        return row_range_for_x_min_linear(values, base, min);
+    if !is_probably_monotonic_sampled(slice, ascending) {
+        return base;
     }
 
     if ascending {
@@ -174,28 +174,7 @@ fn row_range_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowRange {
 }
 
 pub fn row_selection_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowSelection {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-    if base.is_empty() || !min.is_finite() {
-        return RowSelection::Range(base);
-    }
-
-    let slice = &values[base.start..base.end];
-    let Some(first) = slice.first().copied() else {
-        return RowSelection::Range(base);
-    };
-    let Some(last) = slice.last().copied() else {
-        return RowSelection::Range(base);
-    };
-    if first.is_finite() && last.is_finite() {
-        let ascending = first <= last;
-        if is_probably_monotonic(slice, ascending) {
-            return RowSelection::Range(row_range_for_x_min(values, base, min));
-        }
-    }
-
-    let indices = indices_for_x_min(values, base, min);
-    RowSelection::Indices(indices)
+    RowSelection::Range(row_range_for_x_min(values, base, min))
 }
 
 fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
@@ -213,12 +192,12 @@ fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
         return base;
     };
     if !first.is_finite() || !last.is_finite() {
-        return row_range_for_x_max_linear(values, base, max);
+        return base;
     }
 
     let ascending = first <= last;
-    if !is_probably_monotonic(slice, ascending) {
-        return row_range_for_x_max_linear(values, base, max);
+    if !is_probably_monotonic_sampled(slice, ascending) {
+        return base;
     }
 
     if ascending {
@@ -237,181 +216,7 @@ fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
 }
 
 pub fn row_selection_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowSelection {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-    if base.is_empty() || !max.is_finite() {
-        return RowSelection::Range(base);
-    }
-
-    let slice = &values[base.start..base.end];
-    let Some(first) = slice.first().copied() else {
-        return RowSelection::Range(base);
-    };
-    let Some(last) = slice.last().copied() else {
-        return RowSelection::Range(base);
-    };
-    if first.is_finite() && last.is_finite() {
-        let ascending = first <= last;
-        if is_probably_monotonic(slice, ascending) {
-            return RowSelection::Range(row_range_for_x_max(values, base, max));
-        }
-    }
-
-    let indices = indices_for_x_max(values, base, max);
-    RowSelection::Indices(indices)
-}
-
-fn row_range_for_x_min_linear(values: &[f64], base: RowRange, min: f64) -> RowRange {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-    if base.is_empty() || !min.is_finite() {
-        return base;
-    }
-
-    let mut first: Option<usize> = None;
-    let mut last: Option<usize> = None;
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v >= min {
-            first.get_or_insert(i);
-            last = Some(i);
-        }
-    }
-
-    match (first, last) {
-        (Some(a), Some(b)) if b >= a => RowRange {
-            start: a,
-            end: b + 1,
-        },
-        _ => RowRange {
-            start: base.start,
-            end: base.start,
-        },
-    }
-}
-
-fn row_range_for_x_max_linear(values: &[f64], base: RowRange, max: f64) -> RowRange {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-    if base.is_empty() || !max.is_finite() {
-        return base;
-    }
-
-    let mut first: Option<usize> = None;
-    let mut last: Option<usize> = None;
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v <= max {
-            first.get_or_insert(i);
-            last = Some(i);
-        }
-    }
-
-    match (first, last) {
-        (Some(a), Some(b)) if b >= a => RowRange {
-            start: a,
-            end: b + 1,
-        },
-        _ => RowRange {
-            start: base.start,
-            end: base.start,
-        },
-    }
-}
-
-fn row_range_for_x_window_linear(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
-    let (min, max) = if window.min <= window.max {
-        (window.min, window.max)
-    } else {
-        (window.max, window.min)
-    };
-
-    let mut first: Option<usize> = None;
-    let mut last: Option<usize> = None;
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v >= min && v <= max {
-            first.get_or_insert(i);
-            last = Some(i);
-        }
-    }
-
-    match (first, last) {
-        (Some(a), Some(b)) if b >= a => RowRange {
-            start: a,
-            end: b + 1,
-        },
-        _ => RowRange {
-            start: base.start,
-            end: base.start,
-        },
-    }
-}
-
-fn indices_for_x_min(values: &[f64], base: RowRange, min: f64) -> Arc<[u32]> {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-
-    let mut out: Vec<u32> = Vec::new();
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v >= min && i <= u32::MAX as usize {
-            out.push(i as u32);
-        }
-    }
-
-    out.into()
-}
-
-fn indices_for_x_max(values: &[f64], base: RowRange, max: f64) -> Arc<[u32]> {
-    let mut base = base;
-    base.clamp_to_len(values.len());
-
-    let mut out: Vec<u32> = Vec::new();
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v <= max && i <= u32::MAX as usize {
-            out.push(i as u32);
-        }
-    }
-
-    out.into()
-}
-
-fn indices_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> Arc<[u32]> {
-    let (min, max) = if window.min <= window.max {
-        (window.min, window.max)
-    } else {
-        (window.max, window.min)
-    };
-
-    let mut out: Vec<u32> = Vec::new();
-    for i in base.start..base.end {
-        let v = values.get(i).copied().unwrap_or(f64::NAN);
-        if !v.is_finite() {
-            continue;
-        }
-        if v >= min && v <= max && i <= u32::MAX as usize {
-            out.push(i as u32);
-        }
-    }
-
-    out.into()
+    RowSelection::Range(row_range_for_x_max(values, base, max))
 }
 
 #[cfg(test)]
@@ -419,7 +224,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn row_selection_for_x_window_uses_indices_for_non_monotonic_data() {
+    fn row_selection_for_x_window_falls_back_to_base_range_for_non_monotonic_data() {
         let xs = vec![0.0, 10.0, 0.0, 10.0, 0.0];
         let base = RowRange {
             start: 0,
@@ -431,16 +236,14 @@ mod tests {
         };
 
         let sel = row_selection_for_x_window(&xs, base, window);
-        match &sel {
-            RowSelection::Indices(indices) => {
-                assert_eq!(&**indices, &[1u32, 3u32]);
-            }
-            other => panic!("expected Indices, got {other:?}"),
-        }
-        assert_eq!(sel.len(xs.len()), 2);
-        assert_eq!(sel.as_range(xs.len()), 1..4);
-        assert_eq!(sel.get_raw_index(xs.len(), 0), Some(1));
-        assert_eq!(sel.get_raw_index(xs.len(), 1), Some(3));
+        assert_eq!(sel, RowSelection::Range(base));
+        assert_eq!(sel.len(xs.len()), xs.len());
+        assert_eq!(sel.as_range(xs.len()), 0..xs.len());
+        assert_eq!(sel.get_raw_index(xs.len(), 0), Some(0));
+        assert_eq!(
+            sel.get_raw_index(xs.len(), xs.len() - 1),
+            Some(xs.len() - 1)
+        );
     }
 
     #[test]
