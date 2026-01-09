@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -16,7 +15,6 @@ use fret_runtime::{
 };
 use fret_ui::Theme;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
-use fret_ui::{TextInputStyle, element::*};
 use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
 
@@ -35,9 +33,9 @@ use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
     NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPortalCommandHandler, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    PortalCommandOutcome, PortalTextCommand, RegistryNodeGraphPresenter,
-    portal_cancel_text_command, portal_submit_text_command, register_node_graph_commands,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalTextEditHandler, PortalTextEditSpec,
+    PortalTextEditSubmit, PortalTextEditor, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
 };
 use fret_ui::element::AnyElement;
 
@@ -705,88 +703,48 @@ struct NodeGraphDemoWindowState {
     root: fret_core::NodeId,
 }
 
-#[derive(Default)]
-struct NodeGraphDemoPortalState {
-    float_value_inputs: BTreeMap<NodeId, fret_runtime::Model<String>>,
-}
-
 #[derive(Debug, Default, Clone, Copy)]
-struct DemoPortalCommandHandler;
+struct DemoFloatPortalSpec;
 
-impl NodeGraphPortalCommandHandler<App> for DemoPortalCommandHandler {
-    fn handle_portal_command(
-        &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, App>,
-        graph: &Graph,
-        command: PortalTextCommand,
-    ) -> PortalCommandOutcome {
-        let (node_id, is_submit) = match command {
-            PortalTextCommand::Submit { node } => (node, true),
-            PortalTextCommand::Cancel { node } => (node, false),
-        };
+impl PortalTextEditSpec for DemoFloatPortalSpec {
+    fn initial_text(&self, graph: &Graph, node: NodeId) -> String {
+        let value = graph
+            .nodes
+            .get(&node)
+            .and_then(|n| n.data.get("value"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        format!("{value:.3}")
+    }
 
-        let input_model = cx
-            .app
-            .with_global_mut(NodeGraphDemoPortalState::default, |st, app| {
-                st.float_value_inputs
-                    .entry(node_id)
-                    .or_insert_with(|| {
-                        let value = graph
-                            .nodes
-                            .get(&node_id)
-                            .and_then(|n| n.data.get("value"))
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        app.models_mut().insert(format!("{value:.3}"))
-                    })
-                    .clone()
-            });
-
-        if !is_submit {
-            let value = graph
-                .nodes
-                .get(&node_id)
-                .and_then(|n| n.data.get("value"))
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
-            let _ = input_model.update(cx.app, |s, _cx| {
-                *s = format!("{value:.3}");
-            });
-            return PortalCommandOutcome::Handled;
-        }
-
-        let text = input_model
-            .read_ref(cx.app, |s| s.clone())
-            .ok()
-            .unwrap_or_default();
+    fn submit(&self, graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit {
         let Ok(parsed) = text.trim().parse::<f64>() else {
-            tracing::warn!(node = ?node_id, text = %text, "portal float submit: parse failed");
-            return PortalCommandOutcome::Handled;
+            return PortalTextEditSubmit::Error {
+                message: "Invalid number".into(),
+            };
         };
 
         let from = graph
             .nodes
-            .get(&node_id)
+            .get(&node)
             .map(|n| n.data.clone())
             .unwrap_or(Value::Null);
         let to = set_float_value_in_node_data(from.clone(), parsed);
-
-        let _ = input_model.update(cx.app, |s, _cx| {
-            *s = format!("{parsed:.3}");
-        });
+        let normalized = Some(format!("{parsed:.3}"));
 
         if from == to {
-            return PortalCommandOutcome::Handled;
+            return PortalTextEditSubmit::Handled {
+                normalized_text: normalized,
+            };
         }
 
-        PortalCommandOutcome::Commit(GraphTransaction {
-            label: Some("Set Float Value".to_string()),
-            ops: vec![GraphOp::SetNodeData {
-                id: node_id,
-                from,
-                to,
-            }],
-        })
+        PortalTextEditSubmit::Commit {
+            tx: GraphTransaction {
+                label: Some("Set Float Value".to_string()),
+                ops: vec![GraphOp::SetNodeData { id: node, from, to }],
+            },
+            normalized_text: normalized,
+        }
     }
 }
 
@@ -846,16 +804,20 @@ impl NodeGraphDemoDriver {
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
 
+        let portal_root = "node_graph_demo.portal";
+        let portal_style = style.clone();
+        let portal_editor = PortalTextEditor::new(portal_root);
+
         let portal = NodeGraphPortalHost::new(
             models.graph.clone(),
             models.view.clone(),
             measured.manual.clone(),
             style.clone(),
-            "node_graph_demo.portal",
-            |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
-             graph: &Graph,
-             layout: NodeGraphPortalNodeLayout|
-             -> Vec<AnyElement> {
+            portal_root,
+            move |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
+                  graph: &Graph,
+                  layout: NodeGraphPortalNodeLayout|
+                  -> Vec<AnyElement> {
                 let Some(node) = graph.nodes.get(&layout.node) else {
                     return Vec::new();
                 };
@@ -863,54 +825,19 @@ impl NodeGraphDemoDriver {
                     return Vec::new();
                 }
 
-                let model = ecx.app.with_global_mut(
-                    NodeGraphDemoPortalState::default,
-                    |st, app: &mut App| {
-                        st.float_value_inputs
-                            .entry(layout.node)
-                            .or_insert_with(|| {
-                                let value = node
-                                    .data
-                                    .get("value")
-                                    .and_then(|v| v.as_f64())
-                                    .unwrap_or(0.0);
-                                app.models_mut().insert(format!("{value:.3}"))
-                            })
-                            .clone()
-                    },
-                );
-
-                // Place the input under the header, inside the node rect.
-                let pad_x = 10.0;
-                let pad_top = 28.0 + 10.0;
-                let max_w = (layout.node_window.size.width.0 - 2.0 * pad_x).max(80.0);
-
-                let chrome = TextInputStyle::from_theme(ecx.theme().snapshot());
-                let mut props = TextInputProps::new(model);
-                props.chrome = chrome;
-                props.submit_command = Some(portal_submit_text_command(layout.node));
-                props.cancel_command = Some(portal_cancel_text_command(layout.node));
-                props.layout = LayoutStyle {
-                    position: PositionStyle::Relative,
-                    size: SizeStyle {
-                        width: Length::Px(Px(max_w.min(180.0))),
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    margin: MarginEdges {
-                        top: MarginEdge::Px(Px(pad_top)),
-                        left: MarginEdge::Px(Px(pad_x)),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-
-                vec![ecx.text_input(props)]
+                portal_editor.render_text_input_for_node(
+                    ecx,
+                    graph,
+                    layout,
+                    &portal_style,
+                    layout.node,
+                    &DemoFloatPortalSpec,
+                )
             },
         )
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
-        .with_command_handler(DemoPortalCommandHandler);
+        .with_command_handler(PortalTextEditHandler::new(portal_root, DemoFloatPortalSpec));
         let portal_node = ui.create_node_retained(portal);
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
