@@ -296,6 +296,21 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
         let (rect_a, rect_b, handle_rect, _center) = self.compute_layout(cx.bounds, fraction);
         self.last_handle_rect = handle_rect;
 
+        #[cfg(feature = "layout-engine-v2")]
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            if !cx.children.is_empty() {
+                tree.precompute_flow_root_island(app, services, cx.children[0], rect_a, sf);
+            }
+            if cx.children.len() >= 2 {
+                tree.precompute_flow_root_island(app, services, cx.children[1], rect_b, sf);
+            }
+        }
+
         if !cx.children.is_empty() {
             let _ = cx.layout_in(cx.children[0], rect_a);
         }
