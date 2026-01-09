@@ -425,7 +425,7 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
 
     let bounds = Rect::new(
         fret_core::Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(crate::layout_probe::PROBE_LAYOUT_SENTINEL_PX), Px(60.0)),
+        Size::new(Px(240.0), Px(60.0)),
     );
     let mut text = FakeTextService::default();
 
@@ -446,7 +446,13 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
         },
     );
     ui.set_root(root);
-    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
 
     assert!(
         ui.viewport_roots().is_empty(),

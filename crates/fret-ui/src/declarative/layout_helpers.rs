@@ -32,7 +32,7 @@ pub(super) fn layout_positioned_child<H: UiHost>(
             let _ = cx.layout_in(child, Rect::new(origin, base.size));
         }
         PositionedLayoutStyle::Absolute(inset) => {
-            let measured = cx.layout_in(child, base);
+            let measured = cx.layout_in_probe(child, base);
 
             let left = inset.left.unwrap_or(Px(0.0));
             let right = inset.right.unwrap_or(Px(0.0));
@@ -79,7 +79,7 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     probe: Rect,
     inset: crate::element::InsetStyle,
 ) {
-    let measured = cx.layout_in(child, probe);
+    let measured = cx.layout_in_probe(child, probe);
 
     let left = inset.left.unwrap_or(Px(0.0));
     let right = inset.right.unwrap_or(Px(0.0));

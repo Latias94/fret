@@ -72,7 +72,7 @@ impl ElementHostWidget {
         // effectively-unbounded available space. Those passes are not the final viewport
         // constraints and would
         // otherwise clear the request before the real layout happens.
-        let is_probe_layout = crate::layout_probe::is_probe_layout_axis(axis, cx.available);
+        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
 
         if !is_probe_layout
             && viewport.0 > 0.0
@@ -356,7 +356,7 @@ impl ElementHostWidget {
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
-        let is_probe_layout = crate::layout_probe::is_probe_layout_any_axis(cx.available);
+        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
         let external_handle = props.scroll_handle.clone();
         let offset = crate::elements::with_element_state(
             &mut *cx.app,

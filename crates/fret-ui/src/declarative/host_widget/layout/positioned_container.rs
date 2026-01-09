@@ -33,7 +33,7 @@ impl ElementHostWidget {
         let base = Rect::new(cx.bounds.origin, desired);
 
         #[cfg(feature = "layout-engine-v2")]
-        if !crate::layout_probe::is_probe_layout_any_axis(cx.available) {
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
             let sf = cx.scale_factor;
             let app = &mut *cx.app;
             let services = &mut *cx.services;
@@ -133,7 +133,7 @@ impl ElementHostWidget {
         let base = Rect::new(cx.bounds.origin, desired);
 
         #[cfg(feature = "layout-engine-v2")]
-        if !crate::layout_probe::is_probe_layout_any_axis(cx.available) {
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
             let sf = cx.scale_factor;
             let app = &mut *cx.app;
             let services = &mut *cx.services;

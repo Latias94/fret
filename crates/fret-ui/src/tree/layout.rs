@@ -4,6 +4,7 @@ use std::any::TypeId;
 #[cfg(feature = "layout-engine-v2")]
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
+use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
@@ -12,6 +13,17 @@ impl<H: UiHost> UiTree<H> {
         services: &mut dyn UiServices,
         bounds: Rect,
         scale_factor: f32,
+    ) {
+        self.layout_all_with_pass_kind(app, services, bounds, scale_factor, LayoutPassKind::Final);
+    }
+
+    pub(crate) fn layout_all_with_pass_kind(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
     ) {
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
@@ -37,7 +49,8 @@ impl<H: UiHost> UiTree<H> {
         let mut viewport_cursor: usize = 0;
 
         for root in roots {
-            let _ = self.layout_in(app, services, root, bounds, scale_factor);
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
             #[cfg(feature = "layout-engine-v2")]
             while viewport_cursor < self.viewport_roots.len() {
@@ -50,7 +63,14 @@ impl<H: UiHost> UiTree<H> {
                     viewport_bounds,
                     scale_factor,
                 );
-                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                    LayoutPassKind::Final,
+                );
             }
         }
 
@@ -86,7 +106,14 @@ impl<H: UiHost> UiTree<H> {
             self.viewport_roots.clear();
 
             let mut viewport_cursor: usize = 0;
-            let size = self.layout_in(app, services, root, bounds, scale_factor);
+            let size = self.layout_in_with_pass_kind(
+                app,
+                services,
+                root,
+                bounds,
+                scale_factor,
+                LayoutPassKind::Final,
+            );
             while viewport_cursor < self.viewport_roots.len() {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
@@ -98,7 +125,14 @@ impl<H: UiHost> UiTree<H> {
                     scale_factor,
                 );
 
-                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                    LayoutPassKind::Final,
+                );
             }
 
             self.layout_engine.end_frame();
@@ -119,7 +153,26 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
-        self.layout_node(app, services, root, bounds, scale_factor)
+        self.layout_in_with_pass_kind(
+            app,
+            services,
+            root,
+            bounds,
+            scale_factor,
+            LayoutPassKind::Final,
+        )
+    }
+
+    pub fn layout_in_with_pass_kind(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+    ) -> Size {
+        self.layout_node(app, services, root, bounds, scale_factor, pass_kind)
     }
 
     pub fn measure_in(
@@ -180,6 +233,7 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         bounds: Rect,
         scale_factor: f32,
+        pass_kind: LayoutPassKind,
     ) -> Size {
         if self.debug_enabled {
             self.debug_stats.layout_nodes_visited =
@@ -286,6 +340,7 @@ impl<H: UiHost> UiTree<H> {
                 children: children_buf.as_slice(),
                 bounds,
                 available: bounds.size,
+                pass_kind,
                 scale_factor: sf,
                 services: &mut *services,
                 observe_model: &mut observe_model,
