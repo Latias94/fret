@@ -165,6 +165,7 @@ pub(super) struct ToastEntry {
     pub(super) remove_token: Option<TimerToken>,
     pub(super) drag_start: Option<Point>,
     pub(super) drag_offset: Point,
+    pub(super) settle_from: Option<Point>,
     pub(super) dragging: bool,
 }
 
@@ -293,6 +294,7 @@ impl ToastStore {
             remove_token: None,
             drag_start: None,
             drag_offset: Point::new(Px(0.0), Px(0.0)),
+            settle_from: None,
             dragging: false,
         });
 
@@ -328,6 +330,7 @@ impl ToastStore {
                     toast.dismissible = request.dismissible;
                     toast.drag_start = None;
                     toast.drag_offset = Point::new(Px(0.0), Px(0.0));
+                    toast.settle_from = None;
                     toast.dragging = false;
 
                     let schedule_auto = match (wants_timer, auto_close_token) {
@@ -452,6 +455,7 @@ impl ToastStore {
         toast.auto_close_remaining = None;
         toast.drag_start = None;
         toast.drag_offset = Point::new(Px(0.0), Px(0.0));
+        toast.settle_from = None;
         toast.dragging = false;
         let cancel_auto = toast.auto_close_token.take();
         if let Some(token) = cancel_auto {
@@ -524,7 +528,22 @@ impl ToastStore {
         }
         toast.drag_start = Some(start);
         toast.drag_offset = Point::new(Px(0.0), Px(0.0));
+        toast.settle_from = None;
         toast.dragging = false;
+        true
+    }
+
+    pub(super) fn clear_settle(&mut self, window: AppWindowId, id: ToastId) -> bool {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            return false;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == id) else {
+            return false;
+        };
+        if toast.settle_from.is_none() {
+            return false;
+        }
+        toast.settle_from = None;
         true
     }
 
@@ -606,13 +625,16 @@ impl ToastStore {
             return None;
         }
 
+        let dismiss = toast.dragging && Self::toast_drag_should_dismiss(toast.drag_offset, cfg);
+        let settle_from = (!dismiss && toast.dragging).then_some(toast.drag_offset);
         let result = ToastDragEnd {
             dragging: toast.dragging,
-            dismiss: toast.dragging && Self::toast_drag_should_dismiss(toast.drag_offset, cfg),
+            dismiss,
         };
         toast.drag_start = None;
         toast.drag_offset = Point::new(Px(0.0), Px(0.0));
         toast.dragging = false;
+        toast.settle_from = settle_from;
         Some(result)
     }
 
@@ -925,6 +947,84 @@ mod tests {
             Point::new(Px(0.0), Px(0.0))
         );
         assert_eq!(store.toasts_for_window(window)[0].drag_start, None);
+    }
+
+    #[test]
+    fn toast_drag_cancel_records_settle_offset() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(window, ToastRequest::new("Cancel").duration(None), None);
+        store.set_window_swipe_config_ex(
+            window,
+            ToastSwipeConfig {
+                direction: ToastSwipeDirection::Right,
+                threshold: Px(50.0),
+                max_drag: Px(240.0),
+                dragging_threshold: Px(0.0),
+            },
+        );
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(30.0), Px(10.0)))
+                .is_some()
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(!end.dismiss, "expected below threshold to not dismiss");
+
+        let toast = store
+            .toasts_for_window(window)
+            .iter()
+            .find(|t| t.id == id)
+            .expect("toast entry");
+        assert_eq!(toast.drag_offset, Point::new(Px(0.0), Px(0.0)));
+        assert_eq!(toast.settle_from, Some(Point::new(Px(20.0), Px(0.0))));
+
+        assert!(store.clear_settle(window, id));
+        let toast = store
+            .toasts_for_window(window)
+            .iter()
+            .find(|t| t.id == id)
+            .expect("toast entry");
+        assert_eq!(toast.settle_from, None);
+        assert!(!store.clear_settle(window, id));
+    }
+
+    #[test]
+    fn toast_drag_dismiss_does_not_record_settle_offset() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(window, ToastRequest::new("Dismiss").duration(None), None);
+        store.set_window_swipe_config_ex(
+            window,
+            ToastSwipeConfig {
+                direction: ToastSwipeDirection::Right,
+                threshold: Px(50.0),
+                max_drag: Px(240.0),
+                dragging_threshold: Px(0.0),
+            },
+        );
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(80.0), Px(10.0)))
+                .is_some()
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss);
+
+        let toast = store
+            .toasts_for_window(window)
+            .iter()
+            .find(|t| t.id == id)
+            .expect("toast entry");
+        assert_eq!(toast.settle_from, None);
     }
 
     #[test]

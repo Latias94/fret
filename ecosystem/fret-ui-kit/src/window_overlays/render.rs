@@ -777,6 +777,7 @@ pub fn render<H: UiHost>(
                             let open = toast.open;
                             let position = position;
                             let drag_offset = toast.drag_offset;
+                            let settle_from = toast.settle_from;
                             let drag_active = toast.dragging;
 
                             let bg_default = theme
@@ -1144,6 +1145,34 @@ pub fn render<H: UiHost>(
                             }
 
                             out.push(cx.keyed(toast_id, move |cx| {
+                                let settle = crate::declarative::transition::drive_transition_with_durations_and_easing(
+                                    cx,
+                                    settle_from.is_some() && !drag_active,
+                                    12,
+                                    1,
+                                    crate::headless::easing::smoothstep,
+                                );
+                                if settle_from.is_some()
+                                    && !settle.animating
+                                    && (settle.progress - 1.0).abs() <= f32::EPSILON
+                                {
+                                    let _ = cx
+                                        .app
+                                        .models_mut()
+                                        .update(&store, |st| st.clear_settle(window, toast_id));
+                                }
+
+                                let settle_offset = settle_from
+                                    .map(|from| {
+                                        let t = (1.0 - settle.progress).clamp(0.0, 1.0);
+                                        Point::new(Px(from.x.0 * t), Px(from.y.0 * t))
+                                    })
+                                    .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+                                let drag_offset = Point::new(
+                                    Px(drag_offset.x.0 + settle_offset.x.0),
+                                    Px(drag_offset.y.0 + settle_offset.y.0),
+                                );
+
                                 let presence =
                                     crate::OverlayController::fade_presence_with_durations(
                                         cx, open, 12, 12,
