@@ -4,7 +4,11 @@ use std::any::TypeId;
 #[cfg(feature = "layout-engine-v2")]
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
+#[cfg(feature = "layout-engine-v2")]
+use crate::layout_engine::{ParentLayoutKind, build_flow_subtree};
 use crate::layout_pass::LayoutPassKind;
+#[cfg(feature = "layout-engine-v2")]
+use taffy::Style as TaffyStyle;
 
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
@@ -308,6 +312,57 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.precompute_flow_root_island(app, services, root, root_bounds, scale_factor);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn solve_flow_island_with_root_style(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        root: NodeId,
+        root_style: TaffyStyle,
+        children: &[NodeId],
+        child_parent_kind: ParentLayoutKind,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+    ) -> (Rect, Vec<(NodeId, Rect)>) {
+        let mut engine = self.take_layout_engine();
+
+        let root_id = engine.request_layout_node(root);
+        engine.set_style(root, root_style);
+        engine.set_children(root, children);
+
+        for &child in children {
+            build_flow_subtree(
+                &mut engine,
+                app,
+                &*self,
+                window,
+                scale_factor,
+                child_parent_kind,
+                child,
+            );
+        }
+
+        let sf = scale_factor;
+        let _ =
+            engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |node, c| {
+                self.measure_in(app, services, node, c, sf)
+            });
+
+        let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(children.len());
+        for &child in children {
+            let Some(id) = engine.layout_id_for_node(child) else {
+                continue;
+            };
+            child_layouts.push((child, engine.layout_rect(id)));
+        }
+
+        let root_layout = engine.layout_rect(root_id);
+        self.put_layout_engine(engine);
+
+        (root_layout, child_layouts)
     }
     fn layout_node(
         &mut self,

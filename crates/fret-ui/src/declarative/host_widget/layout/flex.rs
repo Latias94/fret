@@ -6,9 +6,7 @@ use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
 
 #[cfg(feature = "layout-engine-v2")]
-use crate::layout_engine::{
-    ParentLayoutKind, build_flow_subtree, layout_children_from_engine_if_solved,
-};
+use crate::layout_engine::{ParentLayoutKind, layout_children_from_engine_if_solved};
 
 #[cfg(not(feature = "layout-engine-v2"))]
 use crate::declarative::frame::{ElementInstance, element_record_for_node};
@@ -479,40 +477,24 @@ impl ElementHostWidget {
             RuntimeAvailableSpace::Definite(inner_avail.height),
         );
 
-        let mut engine = cx.tree.take_layout_engine();
-        let root_id = engine.request_layout_node(cx.node);
-        engine.set_style(cx.node, root_style);
-        engine.set_children(cx.node, cx.children);
-        for &child in cx.children {
-            build_flow_subtree(
-                &mut engine,
-                cx.app,
-                &*cx.tree,
-                window,
-                sf,
-                ParentLayoutKind::Flex {
-                    direction: props.direction,
-                },
-                child,
-            );
-        }
-
-        let app = &mut *cx.app;
-        let services = &mut *cx.services;
-        let _ = engine.compute_root_for_node_with_measure_if_needed(
+        let (root_layout, child_layouts) = cx.tree.solve_flow_island_with_root_style(
+            cx.app,
+            cx.services,
+            window,
             cx.node,
+            root_style,
+            cx.children,
+            ParentLayoutKind::Flex {
+                direction: props.direction,
+            },
             available,
             sf,
-            |child, constraints| cx.tree.measure_in(app, services, child, constraints, sf),
         );
 
-        let container_inner_size = {
-            let rect = engine.layout_rect(root_id);
-            Size::new(
-                Px(rect.size.width.0.max(0.0)),
-                Px(rect.size.height.0.max(0.0)),
-            )
-        };
+        let container_inner_size = Size::new(
+            Px(root_layout.size.width.0.max(0.0)),
+            Px(root_layout.size.height.0.max(0.0)),
+        );
         let auto_margin_inner_size = Size::new(
             match props.layout.size.width {
                 Length::Fill => inner_avail.width,
@@ -523,16 +505,6 @@ impl ElementHostWidget {
                 _ => container_inner_size.height,
             },
         );
-
-        let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(cx.children.len());
-        for &child in cx.children {
-            let Some(id) = engine.layout_id_for_node(child) else {
-                continue;
-            };
-            child_layouts.push((child, engine.layout_rect(id)));
-        }
-
-        cx.tree.put_layout_engine(engine);
 
         for (child, layout) in child_layouts {
             let child_style = layout_style_for_node(cx.app, window, child);
@@ -661,7 +633,14 @@ impl ElementHostWidget {
                 let app = &mut *cx.app;
                 let services = &mut *cx.services;
                 let tree = &mut *cx.tree;
-                tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
+                let grandchild_is_engine_backed =
+                    tree.children(child).first().is_some_and(|&grandchild| {
+                        tree.layout_engine_child_local_rect(child, grandchild)
+                            .is_some()
+                    });
+                if !grandchild_is_engine_backed {
+                    tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
+                }
             }
 
             let _ = cx.layout_in(child, rect);

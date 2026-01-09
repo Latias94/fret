@@ -5,9 +5,7 @@ use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
 
 #[cfg(feature = "layout-engine-v2")]
-use crate::layout_engine::{
-    ParentLayoutKind, build_flow_subtree, layout_children_from_engine_if_solved,
-};
+use crate::layout_engine::{ParentLayoutKind, layout_children_from_engine_if_solved};
 
 #[cfg(not(feature = "layout-engine-v2"))]
 use crate::declarative::frame::layout_style_for_node;
@@ -339,45 +337,18 @@ impl ElementHostWidget {
             RuntimeAvailableSpace::Definite(inner_avail.height),
         );
 
-        let (engine, child_layouts, inner_size) = {
-            let mut engine = cx.tree.take_layout_engine();
-            let root_id = engine.request_layout_node(cx.node);
-            engine.set_style(cx.node, root_style);
-            engine.set_children(cx.node, cx.children);
-
-            for &child in cx.children {
-                build_flow_subtree(
-                    &mut engine,
-                    cx.app,
-                    &*cx.tree,
-                    window,
-                    sf,
-                    ParentLayoutKind::Grid,
-                    child,
-                );
-            }
-
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let _ = engine.compute_root_for_node_with_measure_if_needed(
-                cx.node,
-                available,
-                sf,
-                |child, constraints| cx.tree.measure_in(app, services, child, constraints, sf),
-            );
-
-            let mut child_layouts: Vec<(NodeId, Rect)> = Vec::with_capacity(cx.children.len());
-            for &child in cx.children {
-                let Some(id) = engine.layout_id_for_node(child) else {
-                    continue;
-                };
-                child_layouts.push((child, engine.layout_rect(id)));
-            }
-            let inner_size = engine.layout_rect(root_id).size;
-
-            (engine, child_layouts, inner_size)
-        };
-        cx.tree.put_layout_engine(engine);
+        let (root_layout, child_layouts) = cx.tree.solve_flow_island_with_root_style(
+            cx.app,
+            cx.services,
+            window,
+            cx.node,
+            root_style,
+            cx.children,
+            ParentLayoutKind::Grid,
+            available,
+            sf,
+        );
+        let inner_size = root_layout.size;
 
         #[cfg(feature = "layout-engine-v2")]
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
@@ -388,6 +359,14 @@ impl ElementHostWidget {
 
             for &(child, layout_rect) in &child_layouts {
                 if tree.children(child).is_empty() {
+                    continue;
+                }
+                let grandchild_is_engine_backed =
+                    tree.children(child).first().is_some_and(|&grandchild| {
+                        tree.layout_engine_child_local_rect(child, grandchild)
+                            .is_some()
+                    });
+                if grandchild_is_engine_backed {
                     continue;
                 }
 
