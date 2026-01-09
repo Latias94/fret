@@ -1,6 +1,6 @@
 # ADR 0134: `delinea` Multi-Axis + Layout Contract (Cartesian v1)
 
-Status: Proposed
+Status: Accepted (P0)
 
 ## Context
 
@@ -78,7 +78,15 @@ Order within a side:
 The UI adapter derives an “axis region” from pointer position:
 
 - If the pointer is inside an axis band rect, the hovered axis is that axis.
-- Otherwise, the pointer is in the plot region (use primary axes).
+- Otherwise, the pointer is in the plot region.
+
+Active axes in the plot region:
+
+- `fret-chart` tracks an “active axis pair” (`active_x_axis`, `active_y_axis`).
+- Hovering or interacting with an axis band updates the corresponding active axis.
+- Plot-region interactions (pan/zoom/box zoom/reset) target the active axis pair.
+- If no active axis has been selected yet, the active pair falls back to the primary axes
+  (first visible series in model order).
 
 Suggested shortcut policy (UI-level, but implemented via headless actions):
 
@@ -88,7 +96,7 @@ Suggested shortcut policy (UI-level, but implemented via headless actions):
 
 Wheel zoom targeting:
 
-- In plot region: apply zoom to primary axes (subject to modifier policy).
+- In plot region: apply zoom to the active axis pair (subject to modifier policy).
 - In axis band region: apply zoom to the hovered axis (and optionally the primary other axis when
   modifiers request “both”).
 

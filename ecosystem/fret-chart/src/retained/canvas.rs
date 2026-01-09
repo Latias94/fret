@@ -106,6 +106,8 @@ pub struct ChartCanvas {
     last_bounds: Rect,
     last_layout: ChartLayout,
     last_pointer_pos: Option<Point>,
+    active_x_axis: Option<delinea::AxisId>,
+    active_y_axis: Option<delinea::AxisId>,
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
@@ -131,6 +133,8 @@ impl ChartCanvas {
             last_bounds: Rect::default(),
             last_layout: ChartLayout::default(),
             last_pointer_pos: None,
+            active_x_axis: None,
+            active_y_axis: None,
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
@@ -304,9 +308,43 @@ impl ChartCanvas {
     }
 
     fn primary_axes(&self) -> Option<(delinea::AxisId, delinea::AxisId)> {
-        let series_id = *self.engine.model().series_order.first()?;
-        let series = self.engine.model().series.get(&series_id)?;
-        Some((series.x_axis, series.y_axis))
+        let primary = self.engine.model().series_in_order().find(|s| s.visible)?;
+        Some((primary.x_axis, primary.y_axis))
+    }
+
+    fn update_active_axes_for_position(&mut self, layout: &ChartLayout, position: Point) {
+        match Self::axis_region(layout, position) {
+            AxisRegion::XAxis(axis) => {
+                self.active_x_axis = Some(axis);
+            }
+            AxisRegion::YAxis(axis) => {
+                self.active_y_axis = Some(axis);
+            }
+            AxisRegion::Plot => {}
+        }
+    }
+
+    fn x_axis_is_present_in_layout(layout: &ChartLayout, axis: delinea::AxisId) -> bool {
+        layout.x_axes.iter().any(|a| a.axis == axis)
+    }
+
+    fn y_axis_is_present_in_layout(layout: &ChartLayout, axis: delinea::AxisId) -> bool {
+        layout.y_axes.iter().any(|a| a.axis == axis)
+    }
+
+    fn active_axes(&self, layout: &ChartLayout) -> Option<(delinea::AxisId, delinea::AxisId)> {
+        let (primary_x, primary_y) = self.primary_axes()?;
+
+        let x_axis = self
+            .active_x_axis
+            .filter(|a| Self::x_axis_is_present_in_layout(layout, *a))
+            .unwrap_or(primary_x);
+        let y_axis = self
+            .active_y_axis
+            .filter(|a| Self::y_axis_is_present_in_layout(layout, *a))
+            .unwrap_or(primary_y);
+
+        Some((x_axis, y_axis))
     }
 
     fn axis_range(&self, axis: delinea::AxisId) -> delinea::AxisRange {
@@ -477,10 +515,7 @@ impl ChartCanvas {
             .apply_action(Action::SetDataWindowY { axis, window });
     }
 
-    fn reset_view(&mut self) {
-        let Some((x_axis, y_axis)) = self.primary_axes() else {
-            return;
-        };
+    fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
         if self.axis_is_fixed(x_axis).is_none() {
             self.set_data_window_x(x_axis, None);
         }
@@ -489,11 +524,7 @@ impl ChartCanvas {
         }
     }
 
-    fn fit_view_to_data(&mut self) {
-        let Some((x_axis, y_axis)) = self.primary_axes() else {
-            return;
-        };
-
+    fn fit_view_to_data_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
         if self.axis_is_fixed(x_axis).is_none() {
             let mut w = self.compute_axis_extent(x_axis, true);
             let (locked_min, locked_max) = self.axis_constraints(x_axis);
@@ -1292,15 +1323,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let Some(pos) = self.last_pointer_pos else {
                         return;
                     };
-                    let Some((x_axis, y_axis)) = self.primary_axes() else {
-                        return;
-                    };
 
                     let toggle_pan = modifiers.shift && !modifiers.ctrl;
                     let toggle_zoom = modifiers.ctrl && !modifiers.shift;
                     let toggle_both = !toggle_pan && !toggle_zoom;
 
                     let layout = self.compute_layout(cx.bounds);
+                    self.update_active_axes_for_position(&layout, pos);
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
+                        return;
+                    };
                     match Self::axis_region(&layout, pos) {
                         AxisRegion::XAxis(axis) => {
                             if toggle_both || toggle_pan {
@@ -1348,7 +1380,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if plain && *key == KeyCode::KeyR {
-                    self.reset_view();
+                    let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
+                        return;
+                    };
+                    self.reset_view_for_axes(x_axis, y_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     if cx.captured == Some(cx.node) {
@@ -1361,7 +1397,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if plain && *key == KeyCode::KeyF {
-                    self.fit_view_to_data();
+                    let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
+                        return;
+                    };
+                    self.fit_view_to_data_for_axes(x_axis, y_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     if cx.captured == Some(cx.node) {
@@ -1374,7 +1414,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if plain && *key == KeyCode::KeyM {
-                    let Some((x_axis, _y_axis)) = self.primary_axes() else {
+                    let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, _y_axis)) = self.active_axes(&layout) else {
                         return;
                     };
 
@@ -1394,6 +1435,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 position, buttons, ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+                let layout = self.compute_layout(cx.bounds);
+                self.update_active_axes_for_position(&layout, *position);
 
                 let prev_hover = self.legend_hover;
                 self.legend_hover = self.legend_series_at(*position);
@@ -1465,6 +1508,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+                let layout = self.compute_layout(cx.bounds);
+                self.update_active_axes_for_position(&layout, *position);
 
                 if *button == MouseButton::Left
                     && self.pan_drag.is_none()
@@ -1498,22 +1543,26 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && !modifiers.alt_gr
                     && !modifiers.meta
                 {
-                    let Some((_x_axis, _y_axis)) = self.primary_axes() else {
-                        return;
-                    };
                     let layout = self.compute_layout(cx.bounds);
                     match Self::axis_region(&layout, *position) {
                         AxisRegion::XAxis(axis) => {
+                            self.active_x_axis = Some(axis);
                             if self.axis_is_fixed(axis).is_none() {
                                 self.set_data_window_x(axis, None);
                             }
                         }
                         AxisRegion::YAxis(axis) => {
+                            self.active_y_axis = Some(axis);
                             if self.axis_is_fixed(axis).is_none() {
                                 self.set_data_window_y(axis, None);
                             }
                         }
-                        AxisRegion::Plot => self.reset_view(),
+                        AxisRegion::Plot => {
+                            let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
+                                return;
+                            };
+                            self.reset_view_for_axes(x_axis, y_axis);
+                        }
                     }
 
                     self.pan_drag = None;
@@ -1543,16 +1592,19 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 if self.input_map.axis_lock_toggle.matches(*button, *modifiers) {
                     let layout = self.compute_layout(cx.bounds);
-                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                    self.update_active_axes_for_position(&layout, *position);
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
                         return;
                     };
                     match Self::axis_region(&layout, *position) {
                         AxisRegion::XAxis(axis) => {
+                            self.active_x_axis = Some(axis);
                             self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             self.engine
                                 .apply_action(Action::ToggleAxisZoomLock { axis });
                         }
                         AxisRegion::YAxis(axis) => {
+                            self.active_y_axis = Some(axis);
                             self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             self.engine
                                 .apply_action(Action::ToggleAxisZoomLock { axis });
@@ -1591,7 +1643,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         return;
                     }
 
-                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
                         return;
                     };
 
@@ -1640,7 +1692,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 }
 
-                let Some((x_axis, y_axis)) = self.primary_axes() else {
+                let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
                     return;
                 };
                 if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some() {
@@ -1789,11 +1841,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
-                let Some((x_axis, y_axis)) = self.primary_axes() else {
-                    return;
-                };
-
                 let layout = self.compute_layout(cx.bounds);
+                self.update_active_axes_for_position(&layout, *position);
                 let plot = layout.plot;
                 let width = plot.size.width.0;
                 let height = plot.size.height.0;
@@ -1827,10 +1876,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let center_x = local_x;
                 let center_y_from_bottom = height - local_y;
 
+                let Some((primary_x_axis, primary_y_axis)) = self.active_axes(&layout) else {
+                    return;
+                };
+
                 let (x_axis, y_axis) = match region {
-                    AxisRegion::XAxis(axis) => (axis, y_axis),
-                    AxisRegion::YAxis(axis) => (x_axis, axis),
-                    AxisRegion::Plot => (x_axis, y_axis),
+                    AxisRegion::XAxis(axis) => (axis, primary_y_axis),
+                    AxisRegion::YAxis(axis) => (primary_x_axis, axis),
+                    AxisRegion::Plot => (primary_x_axis, primary_y_axis),
                 };
 
                 let (zoom_x, zoom_y) = match region {
@@ -2053,7 +2106,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
-        if let Some((x_axis, _y_axis)) = self.primary_axes()
+        if let Some((x_axis, _y_axis)) = self.active_axes(&self.last_layout)
             && self
                 .engine
                 .state()
@@ -2326,6 +2379,11 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+    use delinea::{
+        AxisKind, AxisPosition, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
+        SeriesEncode, SeriesKind, SeriesSpec,
+    };
 
     #[test]
     fn data_mapping_is_monotonic() {
@@ -2374,5 +2432,137 @@ mod tests {
         let b = ChartCanvas::series_color(delinea::SeriesId::new(2));
         assert_ne!(a, b);
         assert_eq!(a, ChartCanvas::series_color(delinea::SeriesId::new(1)));
+    }
+
+    fn multi_axis_spec() -> ChartSpec {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_left = AxisId::new(2);
+        let y_right = AxisId::new(3);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+
+        ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: Some(AxisPosition::Bottom),
+                    scale: AxisScale::default(),
+                    range: Some(AxisRange::Auto),
+                },
+                delinea::AxisSpec {
+                    id: y_left,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: Some(AxisPosition::Left),
+                    scale: AxisScale::default(),
+                    range: Some(AxisRange::Auto),
+                },
+                delinea::AxisSpec {
+                    id: y_right,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: Some(AxisPosition::Right),
+                    scale: AxisScale::default(),
+                    range: Some(AxisRange::Auto),
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: SeriesId::new(1),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_left,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: SeriesId::new(2),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_right,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    area_baseline: None,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn primary_axes_skip_hidden_series() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas
+            .engine_mut()
+            .apply_action(delinea::action::Action::SetSeriesVisible {
+                series: delinea::SeriesId::new(1),
+                visible: false,
+            });
+
+        let (_x, y) = canvas.primary_axes().expect("expected primary axes");
+        assert_eq!(y, AxisId::new(3));
+    }
+
+    #[test]
+    fn active_axes_prefer_last_hovered_band() {
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        let layout = canvas.compute_layout(Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        ));
+
+        let right_band = layout
+            .y_axes
+            .iter()
+            .find(|b| b.position == AxisPosition::Right)
+            .expect("expected a right y axis band");
+        let p = Point::new(
+            Px(right_band.rect.origin.x.0 + 1.0),
+            Px(right_band.rect.origin.y.0 + 1.0),
+        );
+        canvas.update_active_axes_for_position(&layout, p);
+
+        let (x, y) = canvas.active_axes(&layout).expect("expected active axes");
+        assert_eq!(x, AxisId::new(1));
+        assert_eq!(y, AxisId::new(3));
     }
 }
