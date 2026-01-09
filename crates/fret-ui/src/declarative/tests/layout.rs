@@ -417,6 +417,94 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(1.0e9), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "panel-group-probe-does-not-register-viewport-roots",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| vec![cx.text("left"), cx.text("right")])]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        ui.viewport_roots().is_empty(),
+        "expected probe layout to avoid registering viewport roots"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn resizable_panel_group_viewport_roots_match_panel_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "panel-group-viewport-roots-match-panel-bounds",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| vec![cx.text("left"), cx.text("right")])]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let group = ui.children(root)[0];
+    let panel_a = ui.children(group)[0];
+    let panel_b = ui.children(group)[1];
+
+    let bounds_a = ui
+        .debug_node_bounds(panel_a)
+        .expect("expected panel a bounds");
+    let bounds_b = ui
+        .debug_node_bounds(panel_b)
+        .expect("expected panel b bounds");
+
+    assert_eq!(ui.viewport_roots().len(), 2);
+    assert!(ui.viewport_roots().contains(&(panel_a, bounds_a)));
+    assert!(ui.viewport_roots().contains(&(panel_b, bounds_b)));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn layout_viewport_root_defers_child_layout_until_after_parent() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
