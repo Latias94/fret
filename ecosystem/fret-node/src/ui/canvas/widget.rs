@@ -3508,6 +3508,41 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if *key == fret_core::KeyCode::Space
+                    && !modifiers.ctrl
+                    && !modifiers.meta
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                {
+                    if self.interaction.searcher.is_some()
+                        || self.interaction.context_menu.is_some()
+                    {
+                        return;
+                    }
+
+                    if self.interaction.last_pos.is_none() {
+                        let cx0 = cx.bounds.origin.x.0 + 0.5 * cx.bounds.size.width.0;
+                        let cy0 = cx.bounds.origin.y.0 + 0.5 * cx.bounds.size.height.0;
+                        let center = Point::new(Px(cx0), Px(cy0));
+                        self.interaction.last_pos = Some(center);
+                        self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
+                            cx.bounds,
+                            center,
+                            snapshot.pan,
+                            zoom,
+                        ));
+                    }
+
+                    let cmd = if snapshot.selected_edges.len() == 1 {
+                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE
+                    } else {
+                        CMD_NODE_GRAPH_OPEN_INSERT_NODE
+                    };
+                    cx.dispatch_command(CommandId::from(cmd));
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if !matches!(
                     key,
                     fret_core::KeyCode::Delete | fret_core::KeyCode::Backspace
@@ -3699,9 +3734,22 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 hover::update_hover_edge(self, cx, &snapshot, *position, zoom);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
-                position, button, ..
+                position,
+                button,
+                modifiers,
+                click_count,
+                ..
             }) => {
-                if pointer_up::handle_pointer_up(self, cx, &snapshot, *position, *button, zoom) {
+                if pointer_up::handle_pointer_up(
+                    self,
+                    cx,
+                    &snapshot,
+                    *position,
+                    *button,
+                    *click_count,
+                    *modifiers,
+                    zoom,
+                ) {
                     return;
                 }
             }

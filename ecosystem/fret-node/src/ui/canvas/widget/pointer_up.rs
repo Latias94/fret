@@ -1,6 +1,7 @@
-use fret_core::{MouseButton, Point};
+use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
+use crate::REROUTE_KIND;
 use crate::core::GroupId;
 use crate::ops::GraphOp;
 
@@ -13,6 +14,8 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,
+    click_count: u8,
+    modifiers: Modifiers,
     zoom: f32,
 ) -> bool {
     canvas.interaction.last_pos = Some(position);
@@ -43,6 +46,61 @@ pub(super) fn handle_pointer_up<H: UiHost>(
 
     if button != MouseButton::Left {
         return false;
+    }
+
+    if click_count == 2
+        && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
+        && let Some(edge_drag) = canvas.interaction.edge_drag.take()
+    {
+        let at = NodeGraphCanvas::screen_to_canvas(cx.bounds, position, snapshot.pan, zoom);
+        let outcome = {
+            let presenter = &mut *canvas.presenter;
+            canvas
+                .graph
+                .read_ref(cx.app, |graph| {
+                    let plan = presenter.plan_split_edge(
+                        graph,
+                        edge_drag.edge,
+                        &crate::core::NodeKindKey::new(REROUTE_KIND),
+                        at,
+                    );
+                    match plan.decision {
+                        crate::rules::ConnectDecision::Accept => Ok(plan.ops),
+                        crate::rules::ConnectDecision::Reject => Err(plan.diagnostics),
+                    }
+                })
+                .ok()
+        };
+
+        match outcome {
+            Some(Ok(ops)) => {
+                let node_id = NodeGraphCanvas::first_added_node_id(&ops);
+                if canvas.commit_ops(cx.app, cx.window, Some("Insert Reroute"), ops) {
+                    if let Some(node_id) = node_id {
+                        canvas.update_view_state(cx.app, |s| {
+                            s.selected_edges.clear();
+                            s.selected_groups.clear();
+                            s.selected_nodes.clear();
+                            s.selected_nodes.push(node_id);
+                            s.draw_order.retain(|id| *id != node_id);
+                            s.draw_order.push(node_id);
+                        });
+                    }
+                }
+            }
+            Some(Err(diags)) => {
+                if let Some((sev, msg)) = NodeGraphCanvas::toast_from_diagnostics(&diags) {
+                    canvas.show_toast(cx.app, cx.window, sev, msg);
+                }
+            }
+            None => {}
+        }
+
+        canvas.interaction.hover_edge = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
     }
 
     if super::marquee::handle_left_up(canvas, cx) {
