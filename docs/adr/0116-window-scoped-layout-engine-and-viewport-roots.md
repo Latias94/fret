@@ -262,6 +262,7 @@ Debug surfaces:
 
 - Non-reentrant measurement + `AvailableSpace`: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Container-owned Taffy performance hardening (near-term): `docs/adr/0076-declarative-layout-performance-hardening.md`

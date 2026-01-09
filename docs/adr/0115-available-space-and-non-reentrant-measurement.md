@@ -40,6 +40,7 @@ References:
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
 - GPUI Taffy engine reference: `repo-ref/zed/crates/gpui/src/taffy.rs`
 - Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 
 ## Goals
 
