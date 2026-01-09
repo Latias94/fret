@@ -20,6 +20,7 @@ By default, the web runner starts the components gallery. To launch a specific d
 hash or query string:
 
 - `?demo=chart_demo` (or `#chart_demo`)
+- `?demo=horizontal_bars_demo` (or `#horizontal_bars_demo`)
 - `?demo=plot_demo` (or `#plot_demo`)
 - `?demo=plot_image_demo` (or `#plot_image_demo`)
 - `?demo=bars_demo` (or `#bars_demo`)
@@ -44,4 +45,3 @@ hash or query string:
 To stop the running demo instance without reloading the page, call this from the browser console:
 
 - `window.fret_demo_destroy()`
-
