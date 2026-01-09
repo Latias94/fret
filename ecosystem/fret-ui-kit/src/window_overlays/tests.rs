@@ -139,6 +139,7 @@ fn window_resize_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: Vec::new(),
         },
     );
@@ -158,6 +159,7 @@ fn window_resize_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: Vec::new(),
         },
     );
@@ -201,6 +203,7 @@ fn window_focus_lost_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: Vec::new(),
         },
     );
@@ -221,6 +224,7 @@ fn window_focus_lost_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: Vec::new(),
         },
     );
@@ -498,6 +502,7 @@ fn dismissible_popover_closes_on_outside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: vec![],
         },
@@ -625,6 +630,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children,
         },
@@ -730,6 +736,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -791,6 +798,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -881,6 +889,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -995,6 +1004,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -1033,6 +1043,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -1121,6 +1132,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -1160,6 +1172,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -1309,6 +1322,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: modal_children,
         },
     );
@@ -1353,6 +1367,74 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
         },
     );
     assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn modal_dismiss_handler_can_prevent_default_close() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let dismiss_called = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    begin_frame(&mut app, window);
+    let dismiss_called_for_handler = dismiss_called.clone();
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: GlobalElementId(0x111),
+            root_name: modal_root_name(GlobalElementId(0x111)),
+            trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: Some(Arc::new(move |host, _cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&dismiss_called_for_handler, |v| *v = true);
+            })),
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(app.models().get_copied(&dismiss_called), Some(true));
+    assert_eq!(app.models().get_copied(&open), Some(true));
 }
 
 #[test]
@@ -1438,6 +1520,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             open,
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             children: modal_children,
         },
     );
@@ -1549,6 +1632,7 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_dismiss_request: None,
             children: modal_children.clone(),
         },
     );
@@ -1584,6 +1668,7 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_dismiss_request: None,
             children: modal_children,
         },
     );
@@ -1677,6 +1762,7 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
             open: open.clone(),
             present: true,
             initial_focus: Some(a),
+            on_dismiss_request: None,
             children: modal_children.clone(),
         },
     );
@@ -1713,6 +1799,7 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
             open: open.clone(),
             present: true,
             initial_focus: Some(a),
+            on_dismiss_request: None,
             children: modal_children,
         },
     );
@@ -1809,6 +1896,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             open,
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
         },
@@ -1890,6 +1978,7 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
             open,
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -1967,6 +2056,7 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },
@@ -2100,6 +2190,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
         },
@@ -2263,6 +2354,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
         },
@@ -2316,6 +2408,94 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
     let trigger_node =
         fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
     assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn non_modal_overlay_dismiss_handler_can_prevent_default_close() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+    let underlay_clicked = app.models_mut().insert(false);
+    let dismiss_called = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window);
+    let dismiss_called_for_handler = dismiss_called.clone();
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: Some(Arc::new(move |host, _cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&dismiss_called_for_handler, |v| *v = true);
+            })),
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Outside press should invoke the dismiss handler, but not close nor activate the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&dismiss_called), Some(true));
+    assert_eq!(app.models().get_copied(&open), Some(true));
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
 }
 
 #[test]
@@ -2388,6 +2568,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
         },

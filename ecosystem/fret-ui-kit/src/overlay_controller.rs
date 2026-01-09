@@ -407,6 +407,7 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
@@ -429,6 +430,7 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_dismiss_request: request.dismissible_on_dismiss_request,
                         children: request.children,
                     },
                 );
