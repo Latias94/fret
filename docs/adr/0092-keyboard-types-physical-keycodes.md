@@ -79,3 +79,10 @@ Cons:
 - requires per-platform heuristics similar to GPUI’s `prefer_character_input`.
 
 Fret’s default remains VSCode-style physical key bindings; text input continues to flow through `TextInput`/`Ime`.
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI explicitly models “prefer character input” as part of key dispatch/replay to handle cases
+  like AltGr and multi-stroke bindings:
+  `repo-ref/zed/crates/gpui/src/window.rs` (`replay_pending_input`),
+  `repo-ref/zed/crates/gpui/src/key_dispatch.rs`.

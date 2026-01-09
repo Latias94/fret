@@ -29,6 +29,10 @@ References:
 - GPUI component library virtualization patterns:
   - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
   - `repo-ref/gpui-component/crates/ui/src/table/state.rs`
+- Zed/GPUI runtime list primitives (non-normative):
+  - list elements and scroll/clip integration patterns:
+    `repo-ref/zed/crates/gpui/src/elements/list.rs`,
+    `repo-ref/zed/crates/gpui/src/elements/uniform_list.rs`
 
 ## Decision
 

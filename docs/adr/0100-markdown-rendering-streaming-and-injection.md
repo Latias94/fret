@@ -27,6 +27,9 @@ We reference:
 - `gpui-component`: a “TextView” style approach with a block/inline document model, virtualization, and a code-block actions injection hook.
 - `streamdown`: a block-splitting + component-mapping approach, designed for streaming markdown in React.
 - `mdstream`: a Rust streaming-first Markdown middleware with committed/pending blocks, transformers, and adapter patterns.
+- Zed’s markdown and preview surfaces (non-normative engineering reference):
+  - `repo-ref/zed/crates/markdown`
+  - `repo-ref/zed/crates/markdown_preview`
 
 ## Decision
 

@@ -80,3 +80,6 @@ declarative elements): any component may use the same metrics/range API.
 - virtualizer (Rust): `repo-ref/virtualizer` (primary)
 - GPUI patterns (engineering reference): `repo-ref/gpui-component`
 - Runtime contract surface: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- Zed/GPUI runtime list primitives (non-normative):
+  - `repo-ref/zed/crates/gpui/src/elements/list.rs`
+  - `repo-ref/zed/crates/gpui/src/elements/uniform_list.rs`
