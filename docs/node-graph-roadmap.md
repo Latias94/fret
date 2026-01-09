@@ -10,6 +10,10 @@ Authoritative contracts:
 - Action hooks / policy boundary: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
 - Pan/zoom transform + hit-testing: `docs/adr/0083-render-transform-hit-testing.md`
 
+Conformance:
+
+- Interaction checklist (manual script + invariants): `docs/node-graph-interaction-checklist.md`
+
 Upstream references (pinned locally):
 
 - XyFlow: `repo-ref/xyflow` (esp. `packages/system/src/*`)
@@ -176,7 +180,7 @@ Legend:
 
 ### Near-term (next 1–2 sprints)
 
-- [ ] Add node graph interaction checklist doc (like docking arbitration).
+- [x] Add node graph interaction checklist doc (like docking arbitration): `docs/node-graph-interaction-checklist.md`.
 - [ ] Implement minimap overlay consuming derived geometry.
 - [ ] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [ ] Implement auto-pan during connect/drag near edges.
@@ -195,4 +199,3 @@ Legend:
 - [ ] Blackboard variables + typed symbol references (domain-ready).
 - [ ] Large-graph culling + incremental updates.
 - [ ] Deterministic graph diff/patch set for collaboration.
-

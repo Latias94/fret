@@ -1,0 +1,170 @@
+# Node Graph Interaction Checklist (fret-node)
+
+This checklist is a living conformance target for the node graph editor UI.
+
+It contains:
+
+1) a manual verification script (repro steps),
+2) invariants that should eventually become automated conformance tests.
+
+Roadmap / TODO tracker:
+
+- `docs/node-graph-roadmap.md`
+
+Authoritative contracts:
+
+- `docs/adr/0135-node-graph-editor-and-typed-connections.md`
+
+## Status Legend
+
+- `(implemented)` present in code and expected to be stable.
+- `(prototype)` present but not stabilized; behavior may change.
+- `(todo)` not implemented yet; this checklist defines intended behavior.
+
+## Test Harness
+
+Recommended harness:
+
+- `apps/fret-examples/src/node_graph_demo.rs`
+
+## A) Pan/Zoom and View Ops
+
+### Manual script
+
+- (prototype) Scroll wheel zooms the canvas without moving focus unexpectedly.
+- (prototype) Middle-drag or right-drag pans (whatever the demo binds; document the binding).
+- (todo) “Fit view” command frames all nodes with padding.
+- (todo) “Fit selection” frames selected nodes with padding.
+- (todo) “Reset view” restores canonical pan/zoom.
+
+### Invariants
+
+- (prototype) `min_zoom`/`max_zoom` are enforced (`NodeGraphStyle`).
+- (todo) All view ops (controls, minimap, commands) must route through the same canonical view-state mutations.
+
+## B) Selection and Marquee
+
+### Manual script
+
+- (implemented) Click node selects it.
+- (implemented) Click empty space clears selection.
+- (prototype) Shift-click toggles additive selection (verify exact behavior).
+- (implemented) Drag marquee selects nodes inside the rect.
+
+### Invariants
+
+- (implemented) Selection changes are deterministic given the same pointer inputs.
+- (todo) Keyboard nudge and selection commands must not depend on frame timing.
+
+## C) Node Drag, Group Drag, Snaplines
+
+### Manual script
+
+- (implemented) Dragging a selected node moves it.
+- (prototype) Dragging multiple selected nodes preserves relative offsets.
+- (implemented) Snaplines appear and apply predictable snapping deltas.
+
+### Invariants
+
+- (implemented) Node positions are graph semantics (stored in `Graph`, not internals).
+- (prototype) Snapline computation does not mutate graph until the drag is committed.
+
+## D) Connect / Reconnect (XYHandle parity)
+
+### Manual script
+
+- (prototype) Start a wire drag from a port handle.
+- (prototype) Hover a compatible target port and release:
+  - a connection is created (or reconnection performed),
+  - `GraphTransaction` is committed (undoable).
+- (prototype) Release on empty space:
+  - a menu/searcher appears,
+  - selecting an item either inserts a node and connects, or cancels cleanly.
+
+Multi-connection bundle:
+
+- (prototype) Hold Shift and hover another same-side pin to add it into the bundle.
+- (prototype) Hold Ctrl/Cmd on drag start to yank existing incident edges into the bundle (if supported).
+
+### Invariants
+
+- (implemented) Final accept/reject is mediated by rules (`ConnectPlan`) not by direct edge mutation.
+- (implemented) Single-capacity input ports disconnect existing edges when connecting a new one (per rules).
+- (prototype) Reconnect preserves `EdgeId` when possible (per rules).
+
+Strict/Loose resolution:
+
+- (todo) `connection_mode`:
+  - `Strict`: only connect when pointer is over a compatible handle.
+  - `Loose`: allow snapping to a compatible handle within `connection_radius`.
+- (todo) When multiple handles are within range, selection must be deterministic:
+  - closest distance first,
+  - stable id ordering as tie-break.
+
+Auto-pan:
+
+- (todo) While connecting, if pointer is near the canvas edge, the canvas auto-pans.
+- (todo) Auto-pan speed and edge threshold are configurable.
+
+Drag threshold:
+
+- (todo) A small movement threshold prevents accidental “start connection” on click.
+
+## E) Portal Editors (embedded node UI)
+
+### E1) Text editor (prototype)
+
+- (prototype) Submit/cancel commands:
+  - submit commits a `GraphTransaction` if domain accepts;
+  - cancel resets to the graph-derived value.
+- (prototype) Inline errors show without committing.
+- (prototype) Stepper buttons apply fine/normal/coarse stepping based on modifiers.
+
+### E2) Number editor (prototype)
+
+Manual script:
+
+- (prototype) Typing a number and submitting commits once and updates the node value.
+- (prototype) Clicking `+/-` steps (mode depends on modifiers).
+- (prototype) Dragging the `<>` handle:
+  - does not start until `drag_threshold_px` is exceeded,
+  - uses a mode captured on pointer down (Shift/Ctrl/Cmd),
+  - updates the input buffer during drag (preview),
+  - commits once on pointer up (undoable).
+
+Invariants:
+
+- (prototype) Portal widgets never mutate graph directly; they emit commands and the handler decides.
+- (prototype) Drag sessions produce one commit (undo granularity).
+
+## F) Derived Geometry and Internals (ReactFlow internals parity)
+
+### Invariants
+
+- (implemented) Derived geometry stores are not serialized into graph assets.
+- (prototype) Derived caches are invalidated deterministically on:
+  - node size change,
+  - zoom change,
+  - presenter/template change.
+
+## G) Clipboard (todo)
+
+### Manual script
+
+- (todo) Copy selection creates a deterministic `GraphFragment` payload.
+- (todo) Paste creates nodes with stable relative offsets and a deterministic paste offset strategy.
+- (todo) Paste is undoable as one transaction.
+
+## H) Minimap and Controls (todo)
+
+### Manual script
+
+- (todo) Minimap renders derived node rects + viewport rect.
+- (todo) Minimap click-to-pan and drag-to-move-viewport work.
+- (todo) Controls provide zoom in/out and fit/reset.
+
+### Invariants
+
+- (todo) Minimap consumes derived geometry only; no graph semantics are stored in minimap state.
+- (todo) All navigation flows route through canonical view ops.
+
