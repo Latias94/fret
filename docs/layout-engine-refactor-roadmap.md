@@ -131,3 +131,19 @@ Acceptance:
 ## Known Gaps / Cautions
 
 - Root-level precompute of flow islands (solving a full layer root in one shot) is intentionally **not** enabled yet. A naive "solve the entire root upfront" changes shrink/percent interactions in overlay wrappers (e.g. `Stack` + `Semantics` + `PointerRegion`), which can break hit testing and interaction conformance. Current direction: keep precompute at points where child bounds are already definite (viewport roots, split panels, positioned wrappers, and now `Container`).
+
+## Engineering Guardrails (v2 Runtime Policy)
+
+To keep solve counts stable and avoid accidental re-introduction of re-entrant layout patterns, v2
+code should follow these rules:
+
+1. Prefer `precompute_flow_root_island_if_needed(...)` over `precompute_flow_root_island(...)` in
+   production code paths. The `_if_needed` helper skips work when the subtree is clean, and avoids
+   engine solves for translation-only changes (size stable, origin shifts).
+2. Keep solve stats per-call and use them to detect regressions.
+
+Regression tests that lock these behaviors:
+
+- Scroll translation does not trigger engine solves: `declarative::tests::layout::scroll_translation_does_not_force_layout_engine_solves`.
+- Viewport root flush only lays out invalidated roots: `declarative::tests::layout::viewport_root_flush_only_lays_out_invalidated_roots`.
+- Translation-only precompute gating: `declarative::tests::layout::precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes`.
