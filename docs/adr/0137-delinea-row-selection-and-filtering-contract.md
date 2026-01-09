@@ -149,6 +149,14 @@ Interaction and output:
 - Tooltip formatting contract: decide headless formatter surfaces (typed values + series meta) vs UI-only formatting.
 - Visual mapping: decide whether “visualMap”-like encodings (color/size/opacity) are a first-class contract or UI-only.
 
+Large data and streaming:
+
+- Progressive thresholds: ECharts-style `progressive` / `progressiveThreshold` and `large` / `largeThreshold`
+  (and how they map onto ADR 0132 `WorkBudget` + LOD stages).
+- Data updates: `setOption` merge semantics and `appendData`-like streaming (whether we support incremental
+  dataset appends without re-tessellating everything, and what invalidates cached selections/LOD).
+  This should remain a headless contract expressed via revisions and budgeted work, not UI-only behavior.
+
 ## Consequences
 
 - v1 keeps the engine fast and simple: contiguous row slicing and mapping-only Y/2D zoom.
@@ -169,4 +177,3 @@ P1:
 - Add `FilterMode::{WeakFilter,Empty}` only after:
   - stacking/bar/categorical behaviors are locked,
   - masking semantics are defined and tested.
-
