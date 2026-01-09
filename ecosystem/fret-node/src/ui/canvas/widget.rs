@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
@@ -77,8 +77,8 @@ use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
     ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot,
-    WireDrag, WireDragKind,
+    InternalsCacheKey, MarqueeDrag, PanInertiaState, PendingPaste, SearcherState, ToastState,
+    ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -125,6 +125,9 @@ impl NodeGraphCanvas {
     const AUTO_PAN_TICK_HZ: f32 = 60.0;
     const AUTO_PAN_TICK_INTERVAL: Duration =
         Duration::from_nanos((1.0e9 / Self::AUTO_PAN_TICK_HZ) as u64);
+    const PAN_INERTIA_TICK_HZ: f32 = 60.0;
+    const PAN_INERTIA_TICK_INTERVAL: Duration =
+        Duration::from_nanos((1.0e9 / Self::PAN_INERTIA_TICK_HZ) as u64);
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -2954,6 +2957,91 @@ impl NodeGraphCanvas {
         host.push_effect(Effect::CancelTimer { token: timer });
     }
 
+    fn stop_pan_inertia_timer<H: UiHost>(&mut self, host: &mut H) {
+        let Some(inertia) = self.interaction.pan_inertia.take() else {
+            return;
+        };
+        host.push_effect(Effect::CancelTimer {
+            token: inertia.timer,
+        });
+    }
+
+    fn pan_inertia_should_tick(&self) -> bool {
+        if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
+            return false;
+        }
+        if self.interaction.panning {
+            return false;
+        }
+        self.interaction.pending_marquee.is_none()
+            && self.interaction.marquee.is_none()
+            && self.interaction.pending_node_drag.is_none()
+            && self.interaction.node_drag.is_none()
+            && self.interaction.pending_group_drag.is_none()
+            && self.interaction.group_drag.is_none()
+            && self.interaction.pending_group_resize.is_none()
+            && self.interaction.group_resize.is_none()
+            && self.interaction.pending_node_resize.is_none()
+            && self.interaction.node_resize.is_none()
+            && self.interaction.pending_wire_drag.is_none()
+            && self.interaction.wire_drag.is_none()
+            && self.interaction.edge_drag.is_none()
+    }
+
+    fn maybe_start_pan_inertia_timer<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+    ) {
+        self.stop_pan_inertia_timer(host);
+
+        let tuning = &snapshot.interaction.pan_inertia;
+        if !tuning.enabled {
+            return;
+        }
+
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+
+        let mut velocity = self.interaction.pan_velocity;
+        if !velocity.x.is_finite() || !velocity.y.is_finite() {
+            return;
+        }
+
+        let speed_screen = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt() * zoom;
+        let min_speed = tuning.min_speed.max(0.0);
+        if !speed_screen.is_finite() || speed_screen < min_speed {
+            return;
+        }
+
+        let max_speed = tuning.max_speed.max(min_speed);
+        if max_speed.is_finite() && max_speed > 0.0 {
+            let max_speed_canvas = max_speed / zoom;
+            let speed_canvas = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt();
+            if speed_canvas.is_finite() && speed_canvas > max_speed_canvas && speed_canvas > 0.0 {
+                let scale = max_speed_canvas / speed_canvas;
+                velocity.x *= scale;
+                velocity.y *= scale;
+            }
+        }
+
+        let timer = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window,
+            token: timer,
+            after: Self::PAN_INERTIA_TICK_INTERVAL,
+            repeat: Some(Self::PAN_INERTIA_TICK_INTERVAL),
+        });
+        self.interaction.pan_inertia = Some(PanInertiaState {
+            timer,
+            velocity,
+            last_tick_at: Instant::now(),
+        });
+    }
+
     fn ensure_auto_pan_timer_running<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -3509,6 +3597,78 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if self
+                    .interaction
+                    .pan_inertia
+                    .as_ref()
+                    .is_some_and(|i| i.timer == *token)
+                {
+                    let tuning = snapshot.interaction.pan_inertia.clone();
+                    let zoom = snapshot.zoom;
+                    let before = snapshot.pan;
+
+                    let Some(mut inertia) = self.interaction.pan_inertia.take() else {
+                        return;
+                    };
+                    let timer = inertia.timer;
+
+                    if !tuning.enabled
+                        || !self.pan_inertia_should_tick()
+                        || !zoom.is_finite()
+                        || zoom <= 0.0
+                        || !tuning.decay_per_s.is_finite()
+                        || tuning.decay_per_s <= 0.0
+                    {
+                        cx.app.push_effect(Effect::CancelTimer { token: timer });
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    let now = Instant::now();
+                    let dt = (now - inertia.last_tick_at).as_secs_f32().clamp(0.0, 0.2);
+                    inertia.last_tick_at = now;
+
+                    if dt > 0.0 {
+                        let dx = inertia.velocity.x * dt;
+                        let dy = inertia.velocity.y * dt;
+                        self.update_view_state(cx.app, |s| {
+                            s.pan.x += dx;
+                            s.pan.y += dy;
+                        });
+                    }
+
+                    let after = self.sync_view_state(cx.app).pan;
+                    let moved_x = after.x - before.x;
+                    let moved_y = after.y - before.y;
+                    let moved = (moved_x * moved_x + moved_y * moved_y).sqrt();
+
+                    let decay = (-tuning.decay_per_s * dt).exp();
+                    inertia.velocity.x *= decay;
+                    inertia.velocity.y *= decay;
+
+                    let speed_screen = (inertia.velocity.x * inertia.velocity.x
+                        + inertia.velocity.y * inertia.velocity.y)
+                        .sqrt()
+                        * zoom;
+                    let min_speed = tuning.min_speed.max(0.0);
+
+                    if moved <= 1.0e-6
+                        || !speed_screen.is_finite()
+                        || speed_screen <= min_speed
+                        || !inertia.velocity.x.is_finite()
+                        || !inertia.velocity.y.is_finite()
+                    {
+                        cx.app.push_effect(Effect::CancelTimer { token: timer });
+                    } else {
+                        self.interaction.pan_inertia = Some(inertia);
+                    }
+
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
                 if self.interaction.auto_pan_timer == Some(*token) {
                     if !self.auto_pan_should_tick(&snapshot, cx.bounds) {
                         self.stop_auto_pan_timer(cx.app);
@@ -3656,14 +3816,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 modifiers,
                 ..
             }) => {
+                self.stop_pan_inertia_timer(cx.app);
                 self.interaction.last_pos = Some(*position);
                 self.interaction.last_modifiers = *modifiers;
-                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
-                    cx.bounds,
-                    *position,
-                    snapshot.pan,
-                    zoom,
-                ));
+                self.interaction.last_canvas_pos = Some(CanvasPoint {
+                    x: position.x.0,
+                    y: position.y.0,
+                });
 
                 if searcher::handle_searcher_pointer_down(self, cx, *position, *button, zoom) {
                     return;
@@ -3707,6 +3866,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.interaction.wire_drag = None;
                     self.interaction.edge_drag = None;
                     self.interaction.panning = true;
+                    self.interaction.pan_last_sample_at = Some(Instant::now());
+                    self.interaction.pan_velocity = CanvasPoint::default();
                     cx.capture_pointer(cx.node);
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -3737,23 +3898,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 let Some(last) = self.interaction.last_pos else {
                     self.interaction.last_pos = Some(*position);
                     self.interaction.last_modifiers = *modifiers;
-                    self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
-                        cx.bounds,
-                        *position,
-                        snapshot.pan,
-                        zoom,
-                    ));
+                    self.interaction.last_canvas_pos = Some(CanvasPoint {
+                        x: position.x.0,
+                        y: position.y.0,
+                    });
                     return;
                 };
                 let delta = Point::new(Px(position.x.0 - last.x.0), Px(position.y.0 - last.y.0));
                 self.interaction.last_pos = Some(*position);
                 self.interaction.last_modifiers = *modifiers;
-                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
-                    cx.bounds,
-                    *position,
-                    snapshot.pan,
-                    zoom,
-                ));
+                self.interaction.last_canvas_pos = Some(CanvasPoint {
+                    x: position.x.0,
+                    y: position.y.0,
+                });
 
                 cursor::update_cursors(self, cx, &snapshot, *position, zoom);
 
@@ -3840,6 +3997,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::Pointer(fret_core::PointerEvent::Wheel {
                 delta, modifiers, ..
             }) => {
+                self.stop_pan_inertia_timer(cx.app);
                 if searcher::handle_searcher_wheel(self, cx, *delta, *modifiers, zoom) {
                     return;
                 }

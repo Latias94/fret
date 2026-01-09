@@ -36,6 +36,7 @@ Recommended harness:
   - When `zoom_on_scroll=true` and `zoom_activation_key=ctrl_or_meta`, wheel zooms only while Ctrl/Meta is held.
   - When `pan_on_scroll=true`, wheel pans when zoom is not active.
 - (prototype) Middle-drag or right-drag pans (whatever the demo binds; document the binding).
+- (prototype) Pan inertia (if enabled): after releasing the pan gesture, the viewport continues with exponential decay and stops at extents.
 - (prototype) “Fit view” command frames all nodes with padding.
 - (prototype) “Fit selection” frames selected nodes with padding.
 - (prototype) “Reset view” restores canonical pan/zoom.

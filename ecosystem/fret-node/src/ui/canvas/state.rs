@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use fret_core::{ClipboardToken, Modifiers, Point, Rect};
 use fret_runtime::TimerToken;
@@ -30,6 +31,9 @@ pub(crate) struct InteractionState {
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) panning: bool,
+    pub(crate) pan_last_sample_at: Option<Instant>,
+    pub(crate) pan_velocity: CanvasPoint,
+    pub(crate) pan_inertia: Option<PanInertiaState>,
     /// Whether the current `wire_drag` session was initiated via click-to-connect.
     ///
     /// When set, the next handle click should attempt to finalize the connection and then clear
@@ -66,6 +70,13 @@ pub(crate) struct InteractionState {
     pub(crate) sticky_wire_ignore_next_up: bool,
 
     pub(crate) recent_kinds: Vec<NodeKindKey>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PanInertiaState {
+    pub(crate) timer: TimerToken,
+    pub(crate) velocity: CanvasPoint,
+    pub(crate) last_tick_at: Instant,
 }
 
 #[derive(Debug, Clone)]

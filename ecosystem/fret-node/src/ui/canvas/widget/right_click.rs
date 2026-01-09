@@ -24,12 +24,10 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost>(
     zoom: f32,
 ) -> bool {
     canvas.interaction.last_pos = Some(position);
-    canvas.interaction.last_canvas_pos = Some(NodeGraphCanvas::screen_to_canvas(
-        cx.bounds,
-        position,
-        snapshot.pan,
-        zoom,
-    ));
+    canvas.interaction.last_canvas_pos = Some(crate::core::CanvasPoint {
+        x: position.x.0,
+        y: position.y.0,
+    });
 
     let hit_group = {
         let header_h = canvas.style.node_header_height;

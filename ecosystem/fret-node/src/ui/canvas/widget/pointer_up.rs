@@ -19,12 +19,10 @@ pub(super) fn handle_pointer_up<H: UiHost>(
 ) -> bool {
     canvas.interaction.last_pos = Some(position);
     canvas.interaction.last_modifiers = modifiers;
-    canvas.interaction.last_canvas_pos = Some(NodeGraphCanvas::screen_to_canvas(
-        cx.bounds,
-        position,
-        snapshot.pan,
-        zoom,
-    ));
+    canvas.interaction.last_canvas_pos = Some(crate::core::CanvasPoint {
+        x: position.x.0,
+        y: position.y.0,
+    });
 
     if button == MouseButton::Left
         && canvas.interaction.sticky_wire_ignore_next_up
@@ -38,7 +36,9 @@ pub(super) fn handle_pointer_up<H: UiHost>(
 
     if button == MouseButton::Middle && canvas.interaction.panning {
         canvas.interaction.panning = false;
+        canvas.interaction.pan_last_sample_at = None;
         canvas.stop_auto_pan_timer(cx.app);
+        canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

@@ -280,8 +280,10 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     OpenConversionPicker(Vec<InsertNodeCandidate>),
                 }
 
-                let convert_at =
-                    NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
+                let convert_at = crate::core::CanvasPoint {
+                    x: w.pos.x.0,
+                    y: w.pos.y.0,
+                };
                 let (outcome, toast) = {
                     let presenter = &mut *canvas.presenter;
                     let style = canvas.style.clone();
@@ -459,8 +461,10 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 if let Some(edge_id) = hit_edge {
                     canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_id, w.pos);
                 } else {
-                    let at =
-                        NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
+                    let at = crate::core::CanvasPoint {
+                        x: w.pos.x.0,
+                        y: w.pos.y.0,
+                    };
                     canvas.interaction.suspended_wire_drag = Some(WireDrag {
                         kind: WireDragKind::New {
                             from,

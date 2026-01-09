@@ -49,6 +49,7 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     }
     if canvas.interaction.panning {
         canvas.interaction.panning = false;
+        canvas.interaction.pan_last_sample_at = None;
         canceled = true;
     }
     if canvas.interaction.sticky_wire || canvas.interaction.sticky_wire_ignore_next_up {
@@ -66,6 +67,7 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
 
     if canceled {
         canvas.stop_auto_pan_timer(cx.app);
+        canvas.stop_pan_inertia_timer(cx.app);
         cx.release_pointer_capture();
         cx.stop_propagation();
         cx.request_redraw();

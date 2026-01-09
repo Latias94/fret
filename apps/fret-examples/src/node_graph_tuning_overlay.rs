@@ -15,6 +15,7 @@ use fret_node::ui::style::NodeGraphStyle;
 enum TuningHit {
     ToggleMode,
     TogglePanOnScroll,
+    TogglePanInertia,
     ToggleZoomOnScroll,
     CycleZoomActivationKey,
     ConnRadiusDec,
@@ -81,7 +82,7 @@ impl NodeGraphTuningOverlay {
         let btn = self.style.controls_button_size.max(22.0);
 
         let panel_w = 340.0;
-        let rows = 15.0;
+        let rows = 16.0;
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -171,7 +172,15 @@ impl NodeGraphTuningOverlay {
         hits.push((TuningHit::TogglePanOnScroll, pan_on_scroll_btn));
         cy += row_h + gap;
 
-        // Row 2: wheel zoom_on_scroll
+        // Row 2: pan inertia
+        let pan_inertia_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::TogglePanInertia, pan_inertia_btn));
+        cy += row_h + gap;
+
+        // Row 3: wheel zoom_on_scroll
         let zoom_on_scroll_btn = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
@@ -179,7 +188,7 @@ impl NodeGraphTuningOverlay {
         hits.push((TuningHit::ToggleZoomOnScroll, zoom_on_scroll_btn));
         cy += row_h + gap;
 
-        // Row 3: wheel zoom_activation_key
+        // Row 4: wheel zoom_activation_key
         let zoom_key_btn = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
@@ -409,6 +418,9 @@ impl NodeGraphTuningOverlay {
             }
             TuningHit::TogglePanOnScroll => {
                 s.interaction.pan_on_scroll = !s.interaction.pan_on_scroll;
+            }
+            TuningHit::TogglePanInertia => {
+                s.interaction.pan_inertia.enabled = !s.interaction.pan_inertia.enabled;
             }
             TuningHit::ToggleZoomOnScroll => {
                 s.interaction.zoom_on_scroll = !s.interaction.zoom_on_scroll;
@@ -841,6 +853,47 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(wheel_pan_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             wheel_pan_text,
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        let pan_inertia_text = if state.interaction.pan_inertia.enabled {
+            "On"
+        } else {
+            "Off"
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Pan inertia", pan_inertia_text),
+            self.style.context_menu_text,
+        );
+        let pan_inertia_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let pan_inertia_bg = if self.hovered == Some(TuningHit::TogglePanInertia) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: pan_inertia_btn_rect,
+            background: pan_inertia_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(pan_inertia_btn_rect.origin.x.0 + 4.0),
+                Px(pan_inertia_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            pan_inertia_text,
             self.style.controls_text,
         );
         cy += row_h + gap;
