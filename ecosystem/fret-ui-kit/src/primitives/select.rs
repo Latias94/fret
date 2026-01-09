@@ -14,16 +14,19 @@
 //! This module is intentionally thin: it provides Radix-named entry points for trigger a11y and
 //! overlay request wiring without forcing a visual skin.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret_core::{AppWindowId, KeyCode, Modifiers, Point, PointerType};
+use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps, PressableState,
+};
 use fret_ui::elements::GlobalElementId;
+use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
@@ -33,7 +36,10 @@ pub use crate::headless::select_item_aligned::{
     select_item_aligned_position,
 };
 use crate::headless::typeahead;
+use crate::overlay;
 use crate::primitives::dialog;
+use crate::primitives::popper;
+use crate::primitives::popper_arrow;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -231,6 +237,27 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 /// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
 pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
 
+pub type SelectMouseOpenGuard = Arc<Mutex<SelectMouseOpenGuardState>>;
+
+pub fn select_mouse_open_guard() -> SelectMouseOpenGuard {
+    Arc::new(Mutex::new(SelectMouseOpenGuardState::default()))
+}
+
+pub fn select_mouse_open_guard_clear(guard: &SelectMouseOpenGuard) {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    guard.clear();
+}
+
+pub fn select_mouse_open_guard_record_if_opened(
+    guard: &SelectMouseOpenGuard,
+    was_open: bool,
+    now_open: bool,
+    down_pos: Point,
+) {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    guard.record_if_opened(was_open, now_open, down_pos);
+}
+
 /// Returns `true` when a mouse pointer-up should be treated as part of the original trigger click.
 ///
 /// Upstream Radix installs a one-shot "pointer up guard" after opening on mouse `pointerdown` to
@@ -239,6 +266,269 @@ pub fn select_mouse_open_is_within_click_slop(down: Point, up: Point) -> bool {
     let dx = (down.x.0 - up.x.0).abs();
     let dy = (down.y.0 - up.y.0).abs();
     dx <= SELECT_TRIGGER_CLICK_SLOP_PX && dy <= SELECT_TRIGGER_CLICK_SLOP_PX
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectMouseOpenGuardPointerUpDecision {
+    NoGuard,
+    Suppress,
+    Allow,
+}
+
+pub fn select_mouse_open_guard_pointer_up_decision(
+    guard: &mut SelectMouseOpenGuardState,
+    up: PointerUpCx,
+) -> SelectMouseOpenGuardPointerUpDecision {
+    if up.button != fret_core::MouseButton::Left {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    }
+    if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    }
+
+    let Some(down) = guard.take() else {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    };
+
+    if select_mouse_open_is_within_click_slop(down, up.position) {
+        SelectMouseOpenGuardPointerUpDecision::Suppress
+    } else {
+        SelectMouseOpenGuardPointerUpDecision::Allow
+    }
+}
+
+pub fn select_mouse_open_guard_pointer_up_decision_shared(
+    guard: &SelectMouseOpenGuard,
+    up: PointerUpCx,
+) -> SelectMouseOpenGuardPointerUpDecision {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    select_mouse_open_guard_pointer_up_decision(&mut guard, up)
+}
+
+/// Returns `true` when a pointer-up event should be treated as the original trigger click release
+/// after opening via mouse `pointerdown`.
+///
+/// Upstream Radix installs a one-shot guard to avoid the `pointerup` immediately selecting an
+/// option or dismissing the overlay. We model that guard via `SelectMouseOpenGuardState`.
+pub fn select_mouse_open_guard_should_suppress_pointer_up(
+    guard: &mut SelectMouseOpenGuardState,
+    up: PointerUpCx,
+) -> bool {
+    select_mouse_open_guard_pointer_up_decision(guard, up)
+        == SelectMouseOpenGuardPointerUpDecision::Suppress
+}
+
+pub fn select_mouse_open_guard_should_suppress_pointer_up_shared(
+    guard: &SelectMouseOpenGuard,
+    up: PointerUpCx,
+) -> bool {
+    select_mouse_open_guard_pointer_up_decision_shared(guard, up)
+        == SelectMouseOpenGuardPointerUpDecision::Suppress
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectItemAlignedLayout {
+    pub outputs: SelectItemAlignedOutputs,
+    pub rect: Rect,
+    pub side: Side,
+}
+
+/// Returns a window-space content rect for Radix Select's `item-aligned` positioning mode.
+///
+/// Upstream Radix computes CSS `left/right` + `top/bottom` style values. In Fret we convert that
+/// output into a concrete `Rect` in window space so renderer backends and non-shadcn recipes can
+/// reuse the same contract without reimplementing the mapping logic.
+pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItemAlignedLayout {
+    let outputs = select_item_aligned_position(inputs);
+
+    let margin = SELECT_ITEM_ALIGNED_CONTENT_MARGIN;
+    let window_left = inputs.window.origin.x;
+    let window_top = inputs.window.origin.y;
+    let window_right = Px(window_left.0 + inputs.window.size.width.0);
+    let window_bottom = Px(window_top.0 + inputs.window.size.height.0);
+
+    let x = if let Some(left) = outputs.left {
+        left
+    } else if let Some(right) = outputs.right {
+        Px(window_right.0 - right.0 - outputs.width.0)
+    } else {
+        Px(window_left.0 + margin.0)
+    };
+
+    let y = if outputs.top.is_some() {
+        Px(window_top.0 + margin.0)
+    } else if outputs.bottom.is_some() {
+        Px(window_bottom.0 - margin.0 - outputs.height.0)
+    } else {
+        Px(window_top.0 + margin.0)
+    };
+
+    let side = if outputs.bottom.is_some() {
+        Side::Bottom
+    } else {
+        Side::Top
+    };
+
+    SelectItemAlignedLayout {
+        outputs,
+        rect: Rect::new(Point::new(x, y), Size::new(outputs.width, outputs.height)),
+        side,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectItemAlignedElementInputs {
+    pub direction: popper::LayoutDirection,
+    pub window: Rect,
+    pub trigger: Rect,
+
+    pub content_border_top: Px,
+    pub content_padding_top: Px,
+    pub content_border_bottom: Px,
+    pub content_padding_bottom: Px,
+
+    pub viewport_padding_top: Px,
+    pub viewport_padding_bottom: Px,
+
+    pub value_node: GlobalElementId,
+    pub viewport: GlobalElementId,
+    pub listbox: GlobalElementId,
+    pub content_panel: GlobalElementId,
+    pub selected_item: GlobalElementId,
+    pub selected_item_text: GlobalElementId,
+}
+
+pub fn select_item_aligned_layout_from_elements<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    inputs: SelectItemAlignedElementInputs,
+) -> Option<SelectItemAlignedLayout> {
+    let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
+    let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
+    let listbox = overlay::anchor_bounds_for_element(cx, inputs.listbox)?;
+    let content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
+    let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+
+    Some(select_item_aligned_layout(SelectItemAlignedInputs {
+        direction: inputs.direction,
+        window: inputs.window,
+        trigger: inputs.trigger,
+        content,
+        value_node,
+        selected_item_text,
+        selected_item,
+        viewport,
+        content_border_top: inputs.content_border_top,
+        content_padding_top: inputs.content_padding_top,
+        content_border_bottom: inputs.content_border_bottom,
+        content_padding_bottom: inputs.content_padding_bottom,
+        viewport_padding_top: inputs.viewport_padding_top,
+        viewport_padding_bottom: inputs.viewport_padding_bottom,
+        items_height: listbox.size.height,
+    }))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectResolvedContentPlacement {
+    pub placement: SelectContentPlacement,
+    pub item_aligned_layout: Option<SelectItemAlignedLayout>,
+}
+
+pub fn select_resolve_content_placement(
+    anchor: Rect,
+    outer: Rect,
+    desired: Size,
+    popper_placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+    item_aligned_layout: Option<SelectItemAlignedLayout>,
+) -> SelectResolvedContentPlacement {
+    if let Some(item_aligned_layout) = item_aligned_layout {
+        return SelectResolvedContentPlacement {
+            placement: select_content_placement_item_aligned(anchor, item_aligned_layout),
+            item_aligned_layout: Some(item_aligned_layout),
+        };
+    }
+
+    SelectResolvedContentPlacement {
+        placement: select_content_placement_popper(
+            outer,
+            anchor,
+            desired,
+            popper_placement,
+            arrow_size,
+        ),
+        item_aligned_layout: None,
+    }
+}
+
+pub fn select_resolve_content_placement_from_elements<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    anchor: Rect,
+    outer: Rect,
+    desired: Size,
+    popper_placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+    item_aligned: Option<SelectItemAlignedElementInputs>,
+) -> SelectResolvedContentPlacement {
+    let item_aligned_layout =
+        item_aligned.and_then(|inputs| select_item_aligned_layout_from_elements(cx, inputs));
+    select_resolve_content_placement(
+        anchor,
+        outer,
+        desired,
+        popper_placement,
+        arrow_size,
+        item_aligned_layout,
+    )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectContentPlacement {
+    pub placed: Rect,
+    pub wrapper_insets: Edges,
+    pub side: Side,
+    pub transform_origin: Point,
+    pub popper_layout: Option<fret_ui::overlay_placement::AnchoredPanelLayout>,
+}
+
+pub fn select_content_placement_item_aligned(
+    anchor: Rect,
+    layout: SelectItemAlignedLayout,
+) -> SelectContentPlacement {
+    let pseudo_layout = fret_ui::overlay_placement::AnchoredPanelLayout {
+        rect: layout.rect,
+        side: layout.side,
+        align: popper::Align::Center,
+        arrow: None,
+    };
+
+    SelectContentPlacement {
+        placed: layout.rect,
+        wrapper_insets: Edges::all(Px(0.0)),
+        side: layout.side,
+        transform_origin: popper::popper_content_transform_origin(&pseudo_layout, anchor, None),
+        popper_layout: None,
+    }
+}
+
+pub fn select_content_placement_popper(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+) -> SelectContentPlacement {
+    let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+    let wrapper_insets = popper_arrow::wrapper_insets(&layout, placement.arrow_protrusion);
+    let transform_origin = popper::popper_content_transform_origin(&layout, anchor, arrow_size);
+
+    SelectContentPlacement {
+        placed: layout.rect,
+        wrapper_insets,
+        side: layout.side,
+        transform_origin,
+        popper_layout: Some(layout),
+    }
 }
 
 /// Radix-like select typeahead clear timeout (in milliseconds).
@@ -730,6 +1020,64 @@ pub fn select_modal_layer_children<H: UiHost>(
     ]
 }
 
+/// Builds a pointer region that guards the next mouse `pointerup` after opening on `pointerdown`.
+///
+/// This element should be installed inside the modal barrier so it can swallow the click-release
+/// that opened the select, matching Radix's one-shot pointer-up guard.
+pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    guard: SelectMouseOpenGuard,
+) -> AnyElement {
+    cx.pointer_region(
+        PointerRegionProps {
+            layout: select_modal_barrier_layout(),
+            enabled: true,
+        },
+        move |cx| {
+            let open_for_guard = open.clone();
+            let guard_for_pointer_up = guard.clone();
+            cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up: PointerUpCx| {
+                if up.button != fret_core::MouseButton::Left {
+                    return false;
+                }
+                if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+                    return false;
+                }
+
+                if select_mouse_open_guard_should_suppress_pointer_up_shared(
+                    &guard_for_pointer_up,
+                    up,
+                ) {
+                    return true;
+                }
+
+                let _ = host.models_mut().update(&open_for_guard, |v| *v = false);
+                host.request_redraw(action_cx.window);
+                true
+            }));
+            Vec::new()
+        },
+    )
+}
+
+/// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
+/// inside the barrier (Radix-like behavior when opening on mouse `pointerdown`).
+pub fn select_modal_layer_children_with_pointer_up_guard<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    guard: SelectMouseOpenGuard,
+    mut barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    barrier_children.insert(
+        0,
+        select_modal_barrier_pointer_up_guard(cx, open.clone(), guard),
+    );
+    select_modal_layer_children(cx, open, dismiss_on_press, barrier_children, content)
+}
+
 /// Builds an overlay request for a Radix-style select content overlay.
 ///
 /// This uses a modal overlay layer to approximate Radix Select's outside interaction blocking.
@@ -921,6 +1269,162 @@ mod tests {
         );
         let expected = select_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn select_content_placement_item_aligned_has_no_wrapper_insets_and_origin_on_rect_edge() {
+        let window = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(100.0), Px(80.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+
+        let item_layout = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: popper::LayoutDirection::Ltr,
+            window,
+            trigger: anchor,
+            content: Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            value_node: Rect::new(
+                Point::new(Px(110.0), Px(84.0)),
+                Size::new(Px(60.0), Px(16.0)),
+            ),
+            selected_item_text: Rect::new(
+                Point::new(Px(20.0), Px(40.0)),
+                Size::new(Px(80.0), Px(16.0)),
+            ),
+            selected_item: Rect::new(
+                Point::new(Px(10.0), Px(36.0)),
+                Size::new(Px(140.0), Px(24.0)),
+            ),
+            viewport: Rect::new(
+                Point::new(Px(10.0), Px(30.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            items_height: Px(240.0),
+        });
+
+        let placement = select_content_placement_item_aligned(anchor, item_layout);
+        assert_eq!(placement.wrapper_insets, Edges::all(Px(0.0)));
+        assert!(placement.popper_layout.is_none());
+
+        match placement.side {
+            Side::Bottom => assert_eq!(placement.transform_origin.y, placement.placed.origin.y),
+            Side::Top => {
+                assert_eq!(
+                    placement.transform_origin.y,
+                    Px(placement.placed.origin.y.0 + placement.placed.size.height.0)
+                )
+            }
+            Side::Left | Side::Right => {}
+        }
+    }
+
+    #[test]
+    fn select_content_placement_popper_exposes_layout_and_wrapper_insets_when_arrow_enabled() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(120.0), Px(40.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+        let desired = Size::new(Px(180.0), Px(120.0));
+
+        let (arrow_options, arrow_protrusion) =
+            popper::diamond_arrow_options(true, Px(12.0), Px(4.0));
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(6.0),
+        )
+        .with_align_offset(Px(0.0))
+        .with_arrow(arrow_options, arrow_protrusion);
+
+        let out =
+            select_content_placement_popper(outer, anchor, desired, placement, Some(Px(12.0)));
+        assert!(out.popper_layout.is_some());
+        assert_eq!(out.placed, out.popper_layout.unwrap().rect);
+        assert!(
+            out.wrapper_insets.top.0 > 0.0
+                || out.wrapper_insets.bottom.0 > 0.0
+                || out.wrapper_insets.left.0 > 0.0
+                || out.wrapper_insets.right.0 > 0.0
+        );
+    }
+
+    #[test]
+    fn select_resolve_content_placement_prefers_item_aligned_layout_when_provided() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(120.0), Px(40.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+        let desired = Size::new(Px(180.0), Px(120.0));
+
+        let item_layout = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: popper::LayoutDirection::Ltr,
+            window: outer,
+            trigger: anchor,
+            content: Rect::new(Point::new(Px(0.0), Px(0.0)), desired),
+            value_node: Rect::new(
+                Point::new(Px(130.0), Px(44.0)),
+                Size::new(Px(60.0), Px(16.0)),
+            ),
+            selected_item_text: Rect::new(
+                Point::new(Px(20.0), Px(40.0)),
+                Size::new(Px(80.0), Px(16.0)),
+            ),
+            selected_item: Rect::new(
+                Point::new(Px(10.0), Px(36.0)),
+                Size::new(Px(140.0), Px(24.0)),
+            ),
+            viewport: Rect::new(
+                Point::new(Px(10.0), Px(30.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            items_height: Px(240.0),
+        });
+
+        let popper_placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(6.0),
+        );
+        let resolved = select_resolve_content_placement(
+            anchor,
+            outer,
+            desired,
+            popper_placement,
+            None,
+            Some(item_layout),
+        );
+
+        assert!(resolved.item_aligned_layout.is_some());
+        assert!(resolved.placement.popper_layout.is_none());
     }
 
     #[test]

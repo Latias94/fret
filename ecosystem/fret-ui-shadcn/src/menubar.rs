@@ -37,15 +37,6 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
-    fret_core::Transform2D::translation(origin)
-        * fret_core::Transform2D::scale_uniform(scale)
-        * fret_core::Transform2D::translation(fret_core::Point::new(
-            fret_core::Px(-origin.x.0),
-            fret_core::Px(-origin.y.0),
-        ))
-}
-
 fn menu_panel_desired_size(entries: &[MenubarEntry], font_line_height: Px, pad_y: Px) -> Size {
     let item_line = font_line_height.0.max(16.0);
     let row_height = Px(item_line + pad_y.0 * 2.0);
@@ -1096,10 +1087,13 @@ impl MenubarMenuEntries {
                         );
                         let placed = layout.rect;
                         let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-                        let zoom = shadcn_zoom_transform(origin, scale);
-                        let slide =
-                            overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, true);
-                        let transform = slide * zoom;
+                        let transform = overlay_motion::shadcn_popper_presence_transform(
+                            layout.side,
+                            origin,
+                            opacity,
+                            scale,
+                            true,
+                        );
                         let reserve_leading_slot = align_leading_icons
                             && entries.iter().any(|e| match e {
                                 MenubarEntry::Item(item) => item.leading.is_some(),
@@ -2581,13 +2575,13 @@ impl MenubarMenuEntries {
                                         geometry.floating,
                                         side,
                                     );
-                                    let zoom = shadcn_zoom_transform(origin, submenu_scale);
-                                    let slide = overlay_motion::shadcn_enter_slide_transform(
+                                    let transform = overlay_motion::shadcn_popper_presence_transform(
                                         side,
+                                        origin,
                                         submenu_opacity,
+                                        submenu_scale,
                                         true,
                                     );
-                                    let transform = slide * zoom;
 
                                     let opacity_layout = LayoutStyle {
                                         size: SizeStyle {
