@@ -215,8 +215,8 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 - When a blur step is forced to a quarter-resolution path under budgets (i.e. cannot afford the half-resolution
   scratch chain), the plan may cap the clip mask tier to `Mask2` to avoid allocating a full-resolution mask that
   would dominate the remaining budget.
-- Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (fwidth-scaled AA),
-  keeping rounded corners and soft clip coverage consistent (ADR 0030).
+- Quad rendering, clip-mask generation, and clip-evaluating masked fullscreen passes share a single analytic SDF +
+  coverage foundation (fwidth-scaled AA), keeping rounded corners and soft clip coverage consistent (ADR 0030).
 - `ScaleNearest` and `CompositePremul` can sample `Mask0` (`mask_target`) to gate writes without per-pixel clip-stack iteration.
 - Mask-sampling shaders map viewport pixel coordinates into the mask texture dimensions, enabling tiered masks.
 - `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.

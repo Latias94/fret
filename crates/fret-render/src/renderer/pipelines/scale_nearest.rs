@@ -105,9 +105,10 @@ impl Renderer {
             label: Some("fret upscale-nearest shader"),
             source: wgpu::ShaderSource::Wgsl(UPSCALE_NEAREST_SHADER.into()),
         });
+        let upscale_masked_src = upscale_nearest_masked_shader_source();
         let upscale_masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret upscale-nearest masked shader"),
-            source: wgpu::ShaderSource::Wgsl(UPSCALE_NEAREST_MASKED_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(upscale_masked_src.into()),
         });
         let upscale_mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret upscale-nearest mask shader"),

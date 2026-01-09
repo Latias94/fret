@@ -1,4 +1,4 @@
-const CLIP_SDF_FOUNDATION_WGSL: &str = r#"
+const CLIP_SDF_CORE_WGSL: &str = r#"
 fn saturate(x: f32) -> f32 {
   return clamp(x, 0.0, 1.0);
 }
@@ -7,9 +7,14 @@ fn sdf_aa(sdf: f32) -> f32 {
   return max(fwidth(sdf), 1e-4);
 }
 
-fn sdf_coverage(sdf: f32) -> f32 {
+fn sdf_coverage_smooth(sdf: f32) -> f32 {
   let aa = sdf_aa(sdf);
   return 1.0 - smoothstep(-aa, aa, sdf);
+}
+
+fn sdf_coverage_linear(sdf: f32) -> f32 {
+  let aa = sdf_aa(sdf);
+  return saturate(0.5 - sdf / aa);
 }
 
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
@@ -39,28 +44,6 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
   let corner_to_point = abs(center_to_point) - half_size;
   let corner_center_to_point = corner_to_point + corner_radius;
   return quad_sdf_impl(corner_center_to_point, corner_radius);
-}
-
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage(sdf);
-  }
-  return alpha;
 }
 "#;
 
@@ -179,6 +162,28 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   return vec4<f32>(enc * c.a, c.a);
 }
 
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    alpha = alpha * sdf_coverage_smooth(sdf);
+  }
+  return alpha;
+}
+
 @fragment
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
@@ -226,7 +231,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 "#;
 
 pub(super) fn quad_shader_source() -> String {
-    format!("{QUAD_SHADER_PART_A}{CLIP_SDF_FOUNDATION_WGSL}{QUAD_SHADER_PART_B}")
+    format!("{QUAD_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{QUAD_SHADER_PART_B}")
 }
 
 pub(super) const VIEWPORT_SHADER: &str = r#"
@@ -490,7 +495,7 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const UPSCALE_NEAREST_MASKED_SHADER: &str = r#"
+const UPSCALE_NEAREST_MASKED_SHADER_PART_A: &str = r#"
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -541,36 +546,9 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
   out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
   return out;
 }
+"#;
 
-fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
-}
-
-fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
-  let signed_distance_to_inset_quad =
-    length(max(vec2<f32>(0.0), corner_center_to_point)) +
-    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
-  return signed_distance_to_inset_quad - corner_radius;
-}
-
-fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
-  let center = rect_origin + rect_size * 0.5;
-  let center_to_point = point - center;
-  let half_size = rect_size * 0.5;
-  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
-  let corner_to_point = abs(center_to_point) - half_size;
-  let corner_center_to_point = corner_to_point + corner_radius;
-  return quad_sdf_impl(corner_center_to_point, corner_radius);
-}
-
+const UPSCALE_NEAREST_MASKED_SHADER_PART_B: &str = r#"
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -588,9 +566,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
     );
     let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    let aa = max(fwidth(sdf), 1e-4);
-    let inside = saturate(0.5 - sdf / aa);
-    alpha = alpha * inside;
+    alpha = alpha * sdf_coverage_linear(sdf);
   }
   return alpha;
 }
@@ -611,6 +587,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   return vec4<f32>(sample.rgb * clip, clip);
 }
 "#;
+
+pub(super) fn upscale_nearest_masked_shader_source() -> String {
+    format!(
+        "{UPSCALE_NEAREST_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{UPSCALE_NEAREST_MASKED_SHADER_PART_B}"
+    )
+}
 
 pub(super) const UPSCALE_NEAREST_MASK_SHADER: &str = r#"
 struct Viewport {
@@ -724,6 +706,28 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
 "#;
 
 const CLIP_MASK_SHADER_PART_B: &str = r#"
+fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
+  var alpha = 1.0;
+  var idx = viewport.clip_head;
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
+    if (idx == 0xffffffffu) {
+      break;
+    }
+    let clip = clip_stack.clips[idx];
+    idx = bitcast<u32>(clip.inv0.w);
+    let clip_local = vec2<f32>(
+      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
+      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
+    );
+    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
+    alpha = alpha * sdf_coverage_smooth(sdf);
+  }
+  return alpha;
+}
+
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
   let x = floor(pos.x) + 0.5;
@@ -734,7 +738,7 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
 "#;
 
 pub(super) fn clip_mask_shader_source() -> String {
-    format!("{CLIP_MASK_SHADER_PART_A}{CLIP_SDF_FOUNDATION_WGSL}{CLIP_MASK_SHADER_PART_B}")
+    format!("{CLIP_MASK_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{CLIP_MASK_SHADER_PART_B}")
 }
 
 pub(super) const COLOR_ADJUST_SHADER: &str = r#"
@@ -805,7 +809,7 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const COLOR_ADJUST_MASKED_SHADER: &str = r#"
+const COLOR_ADJUST_MASKED_SHADER_PART_A: &str = r#"
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -856,42 +860,11 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
   out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
   return out;
 }
+"#;
 
-fn saturate(x: f32) -> f32 {
-  return clamp(x, 0.0, 1.0);
-}
-
+const COLOR_ADJUST_MASKED_SHADER_PART_B: &str = r#"
 fn saturate3(v: vec3<f32>) -> vec3<f32> {
   return vec3<f32>(saturate(v.x), saturate(v.y), saturate(v.z));
-}
-
-fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
-}
-
-fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
-  let signed_distance_to_inset_quad =
-    length(max(vec2<f32>(0.0), corner_center_to_point)) +
-    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
-  return signed_distance_to_inset_quad - corner_radius;
-}
-
-fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
-  let center = rect_origin + rect_size * 0.5;
-  let center_to_point = point - center;
-  let half_size = rect_size * 0.5;
-  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
-  let corner_to_point = abs(center_to_point) - half_size;
-  let corner_center_to_point = corner_to_point + corner_radius;
-  return quad_sdf_impl(corner_center_to_point, corner_radius);
 }
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
@@ -911,9 +884,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
     );
     let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    let aa = max(fwidth(sdf), 1e-4);
-    let inside = saturate(0.5 - sdf / aa);
-    alpha = alpha * inside;
+    alpha = alpha * sdf_coverage_linear(sdf);
   }
   return alpha;
 }
@@ -948,6 +919,12 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   return vec4<f32>(rgb * a * clip, clip);
 }
 "#;
+
+pub(super) fn color_adjust_masked_shader_source() -> String {
+    format!(
+        "{COLOR_ADJUST_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{COLOR_ADJUST_MASKED_SHADER_PART_B}"
+    )
+}
 
 pub(super) const COLOR_ADJUST_MASK_SHADER: &str = r#"
 struct ClipRRect {
@@ -1179,7 +1156,7 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const BLUR_H_MASKED_SHADER: &str = r#"
+const BLUR_H_MASKED_SHADER_PART_A: &str = r#"
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -1221,40 +1198,9 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
   out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
   return out;
 }
+"#;
 
-fn saturate(x: f32) -> f32 {
-  return clamp(x, 0.0, 1.0);
-}
-
-fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
-}
-
-fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
-  let signed_distance_to_inset_quad =
-    length(max(vec2<f32>(0.0), corner_center_to_point)) +
-    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
-  return signed_distance_to_inset_quad - corner_radius;
-}
-
-fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
-  let center = rect_origin + rect_size * 0.5;
-  let center_to_point = point - center;
-  let half_size = rect_size * 0.5;
-  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
-  let corner_to_point = abs(center_to_point) - half_size;
-  let corner_center_to_point = corner_to_point + corner_radius;
-  return quad_sdf_impl(corner_center_to_point, corner_radius);
-}
-
+const BLUR_H_MASKED_SHADER_PART_B: &str = r#"
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -1272,9 +1218,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
     );
     let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    let aa = max(fwidth(sdf), 1e-4);
-    let inside = saturate(0.5 - sdf / aa);
-    alpha = alpha * inside;
+    alpha = alpha * sdf_coverage_linear(sdf);
   }
   return alpha;
 }
@@ -1329,7 +1273,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const BLUR_V_MASKED_SHADER: &str = r#"
+pub(super) fn blur_h_masked_shader_source() -> String {
+    format!("{BLUR_H_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BLUR_H_MASKED_SHADER_PART_B}")
+}
+
+const BLUR_V_MASKED_SHADER_PART_A: &str = r#"
 struct ClipRRect {
   rect: vec4<f32>,
   corner_radii: vec4<f32>,
@@ -1371,40 +1319,9 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
   out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
   return out;
 }
+"#;
 
-fn saturate(x: f32) -> f32 {
-  return clamp(x, 0.0, 1.0);
-}
-
-fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
-}
-
-fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
-  let signed_distance_to_inset_quad =
-    length(max(vec2<f32>(0.0), corner_center_to_point)) +
-    min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
-  return signed_distance_to_inset_quad - corner_radius;
-}
-
-fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corner_radii: vec4<f32>) -> f32 {
-  let center = rect_origin + rect_size * 0.5;
-  let center_to_point = point - center;
-  let half_size = rect_size * 0.5;
-  let corner_radius = pick_corner_radius(center_to_point, corner_radii);
-  let corner_to_point = abs(center_to_point) - half_size;
-  let corner_center_to_point = corner_to_point + corner_radius;
-  return quad_sdf_impl(corner_center_to_point, corner_radius);
-}
-
+const BLUR_V_MASKED_SHADER_PART_B: &str = r#"
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -1422,9 +1339,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
       dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
     );
     let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    let aa = max(fwidth(sdf), 1e-4);
-    let inside = saturate(0.5 - sdf / aa);
-    alpha = alpha * inside;
+    alpha = alpha * sdf_coverage_linear(sdf);
   }
   return alpha;
 }
@@ -1478,6 +1393,10 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   return vec4<f32>(out.rgb * clip, clip);
 }
 "#;
+
+pub(super) fn blur_v_masked_shader_source() -> String {
+    format!("{BLUR_V_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BLUR_V_MASKED_SHADER_PART_B}")
+}
 
 pub(super) const BLUR_H_MASK_SHADER: &str = r#"
 struct ClipRRect {

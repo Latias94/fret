@@ -83,9 +83,10 @@ impl Renderer {
             label: Some("fret color-adjust shader"),
             source: wgpu::ShaderSource::Wgsl(COLOR_ADJUST_SHADER.into()),
         });
+        let masked_src = color_adjust_masked_shader_source();
         let masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret color-adjust masked shader"),
-            source: wgpu::ShaderSource::Wgsl(COLOR_ADJUST_MASKED_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(masked_src.into()),
         });
         let mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret color-adjust mask shader"),

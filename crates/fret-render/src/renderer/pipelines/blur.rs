@@ -57,13 +57,15 @@ impl Renderer {
             label: Some("fret blur-v shader"),
             source: wgpu::ShaderSource::Wgsl(BLUR_V_SHADER.into()),
         });
+        let blur_h_masked_src = blur_h_masked_shader_source();
         let blur_h_masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret blur-h masked shader"),
-            source: wgpu::ShaderSource::Wgsl(BLUR_H_MASKED_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(blur_h_masked_src.into()),
         });
+        let blur_v_masked_src = blur_v_masked_shader_source();
         let blur_v_masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret blur-v masked shader"),
-            source: wgpu::ShaderSource::Wgsl(BLUR_V_MASKED_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(blur_v_masked_src.into()),
         });
         let blur_h_mask_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret blur-h mask shader"),
