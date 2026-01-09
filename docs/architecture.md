@@ -90,6 +90,7 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `apps/fret-examples`: shared end-to-end harness code (components gallery, docking demos, smoke tests).
 - `apps/fret-demo`: native demo binaries (thin shells over `fret-examples`).
 - `apps/fret-demo-web`: wasm demo shell (Trunk + `#[wasm_bindgen(start)]`, thin shell over `fret-examples`).
+- `apps/fretboard`: dev CLI for running native/web demos and generating starter templates.
 
 ## Repository Layout (Future)
 

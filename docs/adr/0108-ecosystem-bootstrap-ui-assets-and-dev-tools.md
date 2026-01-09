@@ -99,8 +99,8 @@ We introduce a clearer naming surface:
 
 Migration path:
 
-- Short term: keep `fret-asset-cache` as-is, but document it as "UI render assets".
-- Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites.
+- Short term: keep `fret-asset-cache` as-is, but document it as "UI render assets". (Implemented.)
+- Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites. (Implemented; migration in progress.)
 - Long term: deprecate `fret-asset-cache` name if desired, keeping API paths stable where possible.
 
 ### 3) Remove `fret-app-kit` and keep responsibilities split
