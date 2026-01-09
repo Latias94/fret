@@ -207,10 +207,7 @@ impl MarksStage {
                 continue;
             }
 
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(id, t)| (*id == series.dataset).then_some(t));
+            let table = datasets.dataset(series.dataset);
             let Some(table) = table else {
                 self.series_index += 1;
                 continue;
@@ -389,10 +386,7 @@ impl MarksStage {
                                 continue;
                             };
 
-                            let table = datasets
-                                .datasets
-                                .iter()
-                                .find_map(|(id, t)| (*id == s.dataset).then_some(t));
+                            let table = datasets.dataset(s.dataset);
                             let Some(table) = table else {
                                 build.series_index += 1;
                                 build.cursor = BoundsCursor::default();
@@ -1145,11 +1139,7 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
         };
         let dataset_id = series.dataset;
         hash = fnv1a_step(hash, dataset_id.0);
-        if let Some(table) = datasets
-            .datasets
-            .iter()
-            .find_map(|(id, t)| (*id == dataset_id).then_some(t))
-        {
+        if let Some(table) = datasets.dataset(dataset_id) {
             hash = fnv1a_step(hash, table.revision.0);
             hash = fnv1a_step(hash, table.row_count as u64);
             hash = fnv1a_step(hash, table.columns.len() as u64);

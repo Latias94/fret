@@ -155,7 +155,7 @@ fn bar_emits_rect_batch() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
     table.push_column(Column::F64(vec![1.0, -2.0, 3.0, 0.5]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -574,7 +574,7 @@ fn band_emits_two_polylines() {
     table.push_column(Column::F64(xs));
     table.push_column(Column::F64(lo));
     table.push_column(Column::F64(hi));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     for _ in 0..512 {
@@ -683,7 +683,7 @@ fn stacked_area_emits_two_polylines() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(xs));
     table.push_column(Column::F64(ys));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     for _ in 0..64 {
@@ -791,7 +791,7 @@ fn row_range_limits_mark_indices() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     engine.apply_action(Action::SetDatasetRowRange {
         dataset: dataset_id,
@@ -895,7 +895,7 @@ fn x_window_limits_mark_indices() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     engine.apply_action(Action::SetDataWindowX {
         axis: x_axis,
@@ -1005,7 +1005,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     engine.apply_action(Action::SetDataWindowX {
         axis: x_axis,
@@ -1112,7 +1112,7 @@ fn set_series_visible_hides_marks() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     for _ in 0..16 {
@@ -1242,7 +1242,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     for _ in 0..16 {
@@ -1365,7 +1365,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         let mut table = DataTable::default();
         table.push_column(Column::F64(x.clone()));
         table.push_column(Column::F64(y.clone()));
-        engine.datasets_mut().datasets.push((dataset_id, table));
+        engine.datasets_mut().insert(dataset_id, table);
         engine.apply_action(Action::SetDataWindowX {
             axis: x_axis,
             window: Some(DataWindow {
@@ -1714,7 +1714,7 @@ fn hover_does_not_rebuild_marks() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(vec![0.0, 1.0]));
     table.push_column(Column::F64(vec![0.0, 1.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -1814,7 +1814,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(vec![0.0, 1.0]));
     table.push_column(Column::F64(vec![0.0, 1.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -1946,7 +1946,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
     table.push_column(Column::F64(vec![0.0, 1.0]));
     table.push_column(Column::F64(vec![0.0, 1.0]));
     table.push_column(Column::F64(vec![0.0, 2.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -2051,7 +2051,7 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
     let mut table = DataTable::default();
     table.push_column(Column::F64(vec![0.0, 1.0]));
     table.push_column(Column::F64(vec![0.0, 1.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -2149,7 +2149,7 @@ fn scatter_emits_point_marks() {
     let y: Vec<f64> = (0..n).map(|i| (i as f64 * 0.5).sin()).collect();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let mut steps = 0;
@@ -2260,7 +2260,7 @@ fn scatter_large_mode_is_pixel_bounded() {
     }
     table.push_column(Column::F64(xs));
     table.push_column(Column::F64(ys));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let mut steps = 0;
@@ -2427,7 +2427,7 @@ fn stacked_line_series_offsets_y() {
     table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
     table.push_column(Column::F64(vec![1.0, 1.0, 1.0, 1.0]));
     table.push_column(Column::F64(vec![2.0, 2.0, 2.0, 2.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine
@@ -2558,7 +2558,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
     table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
     table.push_column(Column::F64(vec![1.0, 1.0, 1.0, 1.0]));
     table.push_column(Column::F64(vec![-2.0, -2.0, -2.0, -2.0]));
-    engine.datasets_mut().datasets.push((dataset_id, table));
+    engine.datasets_mut().insert(dataset_id, table);
 
     let mut measurer = NullTextMeasurer::default();
     let step = engine

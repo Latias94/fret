@@ -81,10 +81,7 @@ impl SelectionStage {
                 continue;
             };
 
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(id, t)| (*id == series.dataset).then_some(t));
+            let table = datasets.dataset(series.dataset);
             let Some(table) = table else {
                 continue;
             };
@@ -133,10 +130,7 @@ impl SelectionStage {
             if self.cache.contains_key(key) {
                 continue;
             }
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(id, t)| (*id == key.dataset).then_some(t));
+            let table = datasets.dataset(key.dataset);
             let Some(table) = table else {
                 continue;
             };
@@ -167,10 +161,7 @@ impl SelectionStage {
         while self.cursor < self.desired.len() {
             let key = self.desired[self.cursor];
 
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(id, t)| (*id == key.dataset).then_some(t));
+            let table = datasets.dataset(key.dataset);
             let Some(table) = table else {
                 self.cache.remove(&key);
                 self.cursor += 1;

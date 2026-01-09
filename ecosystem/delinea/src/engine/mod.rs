@@ -859,11 +859,7 @@ fn compute_axis_axis_pointer_output(
             continue;
         }
 
-        let Some(table) = datasets
-            .datasets
-            .iter()
-            .find_map(|(id, t)| (*id == series.dataset).then_some(t))
-        else {
+        let Some(table) = datasets.dataset(series.dataset) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {

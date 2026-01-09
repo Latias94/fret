@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::ids::{DatasetId, Revision, StringId};
 
@@ -154,18 +155,41 @@ mod tests {
             DataTableAppendError::NonF64Column { column: 1 }
         ));
     }
+
+    #[test]
+    fn dataset_store_insert_and_lookup() {
+        let mut store = DatasetStore::default();
+        let dataset_id = DatasetId::new(1);
+
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
+
+        store.insert(dataset_id, table);
+
+        let got = store
+            .dataset(dataset_id)
+            .expect("dataset should be present");
+        assert_eq!(got.row_count, 3);
+        assert_eq!(got.column_f64(0).unwrap(), &[1.0, 2.0, 3.0]);
+    }
 }
 
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DatasetStore {
-    pub datasets: Vec<(DatasetId, DataTable)>,
+    pub datasets: BTreeMap<DatasetId, DataTable>,
 }
 
 impl DatasetStore {
+    pub fn dataset(&self, id: DatasetId) -> Option<&DataTable> {
+        self.datasets.get(&id)
+    }
+
     pub fn dataset_mut(&mut self, id: DatasetId) -> Option<&mut DataTable> {
-        self.datasets
-            .iter_mut()
-            .find_map(|(k, v)| (*k == id).then_some(v))
+        self.datasets.get_mut(&id)
+    }
+
+    pub fn insert(&mut self, id: DatasetId, table: DataTable) -> Option<DataTable> {
+        self.datasets.insert(id, table)
     }
 }

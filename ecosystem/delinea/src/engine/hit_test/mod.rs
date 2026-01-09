@@ -39,10 +39,7 @@ pub fn hover_hit_test(
             }
         }
 
-        let table = datasets
-            .datasets
-            .iter()
-            .find_map(|(id, t)| (*id == series.dataset).then_some(t));
+        let table = datasets.dataset(series.dataset);
         let Some(table) = table else {
             continue;
         };
@@ -351,12 +348,12 @@ mod tests {
         let model = ChartModel::from_spec(spec).unwrap();
 
         let mut store = DatasetStore::default();
-        store.datasets.push((dataset_id, {
+        store.insert(dataset_id, {
             let mut t = DataTable::default();
             t.push_column(Column::F64(vec![0.0, 10.0]));
             t.push_column(Column::F64(vec![0.0, 0.0]));
             t
-        }));
+        });
 
         let mut marks = MarkTree::default();
         let range = marks.arena.extend_points_with_indices(
@@ -499,13 +496,13 @@ mod tests {
         let model = ChartModel::from_spec(spec).unwrap();
 
         let mut store = DatasetStore::default();
-        store.datasets.push((dataset_id, {
+        store.insert(dataset_id, {
             let mut t = DataTable::default();
             t.push_column(Column::F64(vec![0.0, 10.0]));
             t.push_column(Column::F64(vec![1.0, 1.0]));
             t.push_column(Column::F64(vec![2.0, 2.0]));
             t
-        }));
+        });
 
         let mut marks = MarkTree::default();
         let range = marks.arena.extend_points_with_indices(

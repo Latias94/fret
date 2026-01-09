@@ -192,11 +192,7 @@ impl ChartDemoDriver {
         table.push_column(Column::F64(y_a));
         table.push_column(Column::F64(y_b));
         table.push_column(Column::F64(y_c));
-        canvas
-            .engine_mut()
-            .datasets_mut()
-            .datasets
-            .push((dataset_id, table));
+        canvas.engine_mut().datasets_mut().insert(dataset_id, table);
 
         canvas
     }

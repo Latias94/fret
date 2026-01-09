@@ -153,11 +153,7 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
     hash = fnv1a_step(hash, model.datasets.len() as u64);
     for dataset_id in model.datasets.keys() {
         hash = fnv1a_step(hash, dataset_id.0);
-        if let Some(table) = datasets
-            .datasets
-            .iter()
-            .find_map(|(id, t)| (*id == *dataset_id).then_some(t))
-        {
+        if let Some(table) = datasets.dataset(*dataset_id) {
             hash = fnv1a_step(hash, table.revision.0);
             hash = fnv1a_step(hash, table.row_count as u64);
             hash = fnv1a_step(hash, table.columns.len() as u64);
