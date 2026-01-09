@@ -15,7 +15,12 @@
 
 pub use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
+use std::sync::Arc;
+
+use fret_core::{Point, PointerType, Px, Rect};
 use fret_ui::element::AnyElement;
+use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, Invalidation, UiHost};
 
 pub use crate::tooltip_provider::{
     TooltipProviderConfig, current_config, note_closed, open_delay_ticks,
@@ -24,13 +29,14 @@ pub use crate::tooltip_provider::{
 
 pub use crate::primitives::popper::{Align, ArrowOptions, LayoutDirection, Side};
 
-use fret_runtime::Model;
-use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, UiHost};
-
 use crate::declarative::ModelWatchExt;
+use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIntentUpdate};
+use crate::headless::safe_hover;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
+
+use fret_runtime::Model;
+use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 
 /// Stamps Radix-like trigger relationships:
 /// - `described_by_element` mirrors `aria-describedby` (by element id).
@@ -49,6 +55,168 @@ pub fn apply_tooltip_trigger_a11y(
 /// Stable per-overlay root naming convention for tooltip overlays.
 pub fn tooltip_root_name(id: GlobalElementId) -> String {
     OverlayController::tooltip_root_name(id)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TooltipInteractionConfig {
+    pub disable_hoverable_content: bool,
+    /// Overrides the provider-derived open delay (ticks).
+    pub open_delay_ticks_override: Option<u64>,
+    /// Overrides the hover-close delay (ticks).
+    pub close_delay_ticks_override: Option<u64>,
+    /// Pointer safe-hover corridor buffer.
+    pub safe_hover_buffer: Px,
+}
+
+impl Default for TooltipInteractionConfig {
+    fn default() -> Self {
+        Self {
+            disable_hoverable_content: false,
+            open_delay_ticks_override: None,
+            close_delay_ticks_override: None,
+            safe_hover_buffer: Px(5.0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TooltipInteractionUpdate {
+    pub open: bool,
+    pub wants_continuous_ticks: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct TooltipFocusEdgeState {
+    was_focused: bool,
+}
+
+/// Returns a per-tooltip pointer tracking model stored in element state.
+///
+/// Tooltip pointer tracking is used to approximate Radix Tooltip's hoverable-content grace area:
+/// while open, the tooltip remains open if the pointer lies within a "safe corridor" between the
+/// trigger anchor and the floating content bounds.
+pub fn tooltip_last_pointer_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Option<Point>> {
+    #[derive(Default)]
+    struct State {
+        model: Option<Model<Option<Point>>>,
+    }
+
+    let existing = cx.with_state(State::default, |st| st.model.clone());
+    if let Some(model) = existing {
+        return model;
+    }
+
+    let model = cx.app.models_mut().insert(None);
+    cx.with_state(State::default, |st| st.model = Some(model.clone()));
+    model
+}
+
+/// Installs a pointer-move observer that updates the tooltip's pointer tracking model.
+///
+/// Notes:
+/// - This is intended for hoverable-content tooltips. When `disable_hoverable_content=true`, the
+///   recipe should skip installing this observer.
+/// - Touch pointers are ignored to match Radix Tooltip's "no hover on touch" behavior.
+pub fn tooltip_install_pointer_move_tracker(
+    request: &mut OverlayRequest,
+    last_pointer: Model<Option<Point>>,
+) {
+    let last_pointer = last_pointer.clone();
+    request.dismissible_on_pointer_move = Some(Arc::new(
+        move |host: &mut dyn UiActionHost, _acx: ActionCx, mv: PointerMoveCx| {
+            if mv.pointer_type == PointerType::Touch {
+                return false;
+            }
+            let _ = host
+                .models_mut()
+                .update(&last_pointer, |v| *v = Some(mv.position));
+            false
+        },
+    ));
+}
+
+/// Updates an internal hover-intent state machine using Radix-aligned tooltip timing rules.
+///
+/// This is a reusable policy helper for recipes:
+/// - `open_delay_ticks` comes from the provider delay group, unless overridden.
+/// - Blur closes immediately.
+/// - Hoverable-content tooltips remain open while the pointer stays inside a safe-hover corridor
+///   between `anchor_bounds` and `floating_bounds`.
+pub fn tooltip_update_interaction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger_hovered: bool,
+    trigger_focused: bool,
+    last_pointer: Model<Option<Point>>,
+    anchor_bounds: Option<Rect>,
+    floating_bounds: Option<Rect>,
+    cfg: TooltipInteractionConfig,
+) -> TooltipInteractionUpdate {
+    let now = cx.app.frame_id().0;
+
+    let (close_delay_ticks, blurred) = cx.with_state(TooltipFocusEdgeState::default, |st| {
+        let was = st.was_focused;
+        st.was_focused = trigger_focused;
+        let blurred = was && !trigger_focused;
+
+        let close_delay_ticks = if blurred {
+            0
+        } else if trigger_focused {
+            0
+        } else {
+            cfg.close_delay_ticks_override.unwrap_or(0)
+        };
+
+        (close_delay_ticks, blurred)
+    });
+
+    let open_delay_ticks = if trigger_focused {
+        0
+    } else if let Some(base_delay) = cfg.open_delay_ticks_override {
+        open_delay_ticks_with_base(cx, now, base_delay)
+    } else {
+        open_delay_ticks(cx, now)
+    };
+
+    let intent_cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
+
+    let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
+    if was_open && !cfg.disable_hoverable_content && !blurred {
+        cx.observe_model(&last_pointer, Invalidation::Paint);
+    }
+
+    let pointer_safe = if was_open && !cfg.disable_hoverable_content && !blurred {
+        let pointer = cx.app.models().read(&last_pointer, |v| *v).ok().flatten();
+        match (pointer, anchor_bounds, floating_bounds) {
+            (Some(pointer), Some(anchor), Some(floating)) => {
+                safe_hover::safe_hover_contains(pointer, anchor, floating, cfg.safe_hover_buffer)
+            }
+            _ => false,
+        }
+    } else {
+        false
+    };
+
+    let HoverIntentUpdate {
+        open,
+        wants_continuous_ticks,
+    } = cx.with_state(HoverIntentState::default, |st| {
+        st.update(
+            trigger_hovered || trigger_focused || pointer_safe,
+            now,
+            intent_cfg,
+        )
+    });
+
+    if was_open && !open {
+        note_closed(cx, now);
+    }
+
+    TooltipInteractionUpdate {
+        open,
+        wants_continuous_ticks,
+    }
 }
 
 /// A Radix-shaped `Tooltip` root configuration surface (open state only).

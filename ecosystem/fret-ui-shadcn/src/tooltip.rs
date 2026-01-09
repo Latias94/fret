@@ -2,8 +2,6 @@ use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
-use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -16,8 +14,6 @@ use fret_ui_kit::{
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
-use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
     SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps, TextProps, VisualTransformProps,
@@ -329,145 +325,82 @@ impl Tooltip {
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
-            #[derive(Debug, Default, Clone, Copy)]
-            struct FocusEdgeState {
-                was_focused: bool,
-            }
-
-            #[derive(Default)]
-            struct PointerState {
-                last_pointer: Option<Model<Option<Point>>>,
-            }
-
-            let last_pointer = cx.with_state(PointerState::default, |st| st.last_pointer.clone());
-            let last_pointer = if let Some(last_pointer) = last_pointer {
-                last_pointer
-            } else {
-                let last_pointer = cx.app.models_mut().insert(None);
-                cx.with_state(PointerState::default, |st| {
-                    st.last_pointer = Some(last_pointer.clone())
-                });
-                last_pointer
-            };
-
-            let now = cx.app.frame_id().0;
             let focused = cx.is_focused_element(trigger_id);
             let provider_cfg = tooltip_provider::current_config(cx);
             let disable_hoverable_content = disable_hoverable_content_override
                 .unwrap_or(provider_cfg.disable_hoverable_content);
-            let open_delay_ticks = if focused {
-                0
-            } else if let Some(frames) = open_delay_frames_override {
-                tooltip_provider::open_delay_ticks_with_base(cx, now, frames as u64)
-            } else {
-                tooltip_provider::open_delay_ticks(cx, now)
-            };
-            let (close_delay_ticks, blurred) = cx.with_state(FocusEdgeState::default, |st| {
-                let was = st.was_focused;
-                st.was_focused = focused;
-                let blurred = was && !focused;
+            let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
 
-                // shadcn/Radix behavior: blur closes immediately.
-                let close_delay_ticks = if blurred {
-                    0
-                } else if focused {
-                    0
-                } else {
-                    close_delay_frames_override.unwrap_or(0) as u64
+            let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
+            let floating_bounds = anchor_bounds.and_then(|anchor| {
+                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+                let estimated_size = Size::new(Px(240.0), Px(44.0));
+                let content_size = last_content_size.unwrap_or(estimated_size);
+
+                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+
+                let align = match align {
+                    TooltipAlign::Start => Align::Start,
+                    TooltipAlign::Center => Align::Center,
+                    TooltipAlign::End => Align::End,
+                };
+                let side = match side {
+                    TooltipSide::Top => Side::Top,
+                    TooltipSide::Right => Side::Right,
+                    TooltipSide::Bottom => Side::Bottom,
+                    TooltipSide::Left => Side::Left,
                 };
 
-                (close_delay_ticks, blurred)
+                let (arrow_options, arrow_protrusion) =
+                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
+                let layout = popper::popper_content_layout_sized(
+                    outer,
+                    anchor,
+                    content_size,
+                    popper::PopperContentPlacement::new(
+                        LayoutDirection::Ltr,
+                        side,
+                        align,
+                        side_offset,
+                    )
+                    .with_arrow(arrow_options, arrow_protrusion),
+                );
+
+                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
+                wrapper_insets.top.0 += slide_insets.top.0;
+                wrapper_insets.right.0 += slide_insets.right.0;
+                wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                wrapper_insets.left.0 += slide_insets.left.0;
+                Some(Rect::new(
+                    Point::new(
+                        layout.rect.origin.x - wrapper_insets.left,
+                        layout.rect.origin.y - wrapper_insets.top,
+                    ),
+                    Size::new(
+                        layout.rect.size.width + wrapper_insets.left + wrapper_insets.right,
+                        layout.rect.size.height + wrapper_insets.top + wrapper_insets.bottom,
+                    ),
+                ))
             });
 
-            let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
-
-            let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
-            if was_open {
-                cx.observe_model(&last_pointer, fret_ui::Invalidation::Paint);
-            }
-
-            let pointer_safe = if was_open && !disable_hoverable_content && !blurred {
-                let pointer = cx.app.models().read(&last_pointer, |v| *v).ok().flatten();
-                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
-
-                match (pointer, anchor) {
-                    (Some(pointer), Some(anchor)) => {
-                        let last_content_size =
-                            cx.last_bounds_for_element(content_id).map(|r| r.size);
-                        let estimated_size = Size::new(Px(240.0), Px(44.0));
-                        let content_size = last_content_size.unwrap_or(estimated_size);
-
-                        let outer =
-                            overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-
-                        let align = match align {
-                            TooltipAlign::Start => Align::Start,
-                            TooltipAlign::Center => Align::Center,
-                            TooltipAlign::End => Align::End,
-                        };
-                        let side = match side {
-                            TooltipSide::Top => Side::Top,
-                            TooltipSide::Right => Side::Right,
-                            TooltipSide::Bottom => Side::Bottom,
-                            TooltipSide::Left => Side::Left,
-                        };
-
-                        let (arrow_options, arrow_protrusion) =
-                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-
-                        let layout = popper::popper_content_layout_sized(
-                            outer,
-                            anchor,
-                            content_size,
-                            popper::PopperContentPlacement::new(
-                                LayoutDirection::Ltr,
-                                side,
-                                align,
-                                side_offset,
-                            )
-                            .with_arrow(arrow_options, arrow_protrusion),
-                        );
-
-                        let mut wrapper_insets =
-                            popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                        let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
-                        wrapper_insets.top.0 += slide_insets.top.0;
-                        wrapper_insets.right.0 += slide_insets.right.0;
-                        wrapper_insets.bottom.0 += slide_insets.bottom.0;
-                        wrapper_insets.left.0 += slide_insets.left.0;
-                        let wrapper_bounds = Rect::new(
-                            Point::new(
-                                layout.rect.origin.x - wrapper_insets.left,
-                                layout.rect.origin.y - wrapper_insets.top,
-                            ),
-                            Size::new(
-                                layout.rect.size.width + wrapper_insets.left + wrapper_insets.right,
-                                layout.rect.size.height
-                                    + wrapper_insets.top
-                                    + wrapper_insets.bottom,
-                            ),
-                        );
-
-                        // Radix Tooltip's "hoverable content" uses a grace polygon between
-                        // trigger/content. We approximate that with our deterministic safe-hover
-                        // corridor (plus a small buffer).
-                        safe_hover::safe_hover_contains(pointer, anchor, wrapper_bounds, Px(5.0))
-                    }
-                    _ => false,
-                }
-            } else {
-                false
-            };
-
-            let update = cx.with_state(HoverIntentState::default, |st| {
-                st.update(hovered || focused || pointer_safe, now, cfg)
-            });
+            let update = radix_tooltip::tooltip_update_interaction(
+                cx,
+                hovered,
+                focused,
+                last_pointer.clone(),
+                anchor_bounds,
+                floating_bounds,
+                radix_tooltip::TooltipInteractionConfig {
+                    disable_hoverable_content,
+                    open_delay_ticks_override: open_delay_frames_override.map(|v| v as u64),
+                    close_delay_ticks_override: close_delay_frames_override.map(|v| v as u64),
+                    safe_hover_buffer: Px(5.0),
+                },
+            );
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
-
-            if was_open && !update.open {
-                tooltip_provider::note_closed(cx, now);
-            }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
                 base_trigger.clone(),
@@ -622,15 +555,7 @@ impl Tooltip {
             let mut request =
                 radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
             if !disable_hoverable_content {
-                let last_pointer = last_pointer.clone();
-                request.dismissible_on_pointer_move = Some(Arc::new(
-                    move |host: &mut dyn UiActionHost, _acx: ActionCx, mv: PointerMoveCx| {
-                        let _ = host
-                            .models_mut()
-                            .update(&last_pointer, |v| *v = Some(mv.position));
-                        false
-                    },
-                ));
+                radix_tooltip::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
             }
             radix_tooltip::request_tooltip(cx, request);
 

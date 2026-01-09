@@ -36,12 +36,18 @@ Fret models Radix tooltip outcomes by composing:
 - Pass: Controlled/uncontrolled open modeling is available via
   `primitives::tooltip::tooltip_use_open_model(...)` (backed by the shared controllable-state
   substrate).
-- Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState` (see shadcn tooltip
-  for a concrete wiring reference).
-- Pass: Hoverable-content grace behavior (`disableHoverableContent` outcome) is implemented as a
-  deterministic safe-hover corridor between trigger and content (see shadcn tooltip).
+- Pass: Hover open/close and blur-close behavior are modeled via a reusable primitives helper:
+  `primitives::tooltip::tooltip_update_interaction(...)` (built on `HoverIntentState` +
+  provider delay-group policy).
+- Pass: Hoverable-content grace behavior (`disableHoverableContent` outcome) is modeled via a
+  deterministic safe-hover corridor between trigger and content, wired via:
+  - `primitives::tooltip::tooltip_last_pointer_model(...)`
+  - `primitives::tooltip::tooltip_install_pointer_move_tracker(...)`
+  - `primitives::tooltip::tooltip_update_interaction(...)`
+  (shadcn tooltip uses this wiring as a reference recipe).
 
 ## Follow-ups (recommended)
 
-- Consider downshifting the hover intent + grace-corridor wiring into the Radix-named primitives
-  facade (so non-shadcn consumers can reuse the same policy without copying recipe code).
+- Consider tightening parity with the upstream trigger event model (open-on-pointermove gating,
+  pointer-in-transit suppression, close-on-pointerdown/click) if strict behavioral matching becomes
+  a goal outside of the current shadcn recipes.
