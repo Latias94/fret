@@ -35,6 +35,8 @@ Fret models Radix Select outcomes by composing:
   `select_use_open_model(...)` (thin helper), backed by the shared controllable-state substrate.
 - Pass: Select can be rendered in a modal overlay layer to block underlay interaction, matching the
   Radix "disable outside pointer events" outcome.
+- Pass: When opening via mouse `pointerdown`, a one-shot pointer-up guard is installed so the click
+  release does not immediately select an item nor dismiss the content (Radix `pointerup` guard).
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
   `apply_select_trigger_a11y(...)`.
 - Pass: Trigger open keys + closed-state typeahead policy is exposed via the Radix-named facade.
@@ -47,6 +49,10 @@ Fret models Radix Select outcomes by composing:
 - Pass: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is implemented as reusable
   headless geometry math in `ecosystem/fret-ui-kit/src/headless/select_item_aligned.rs` and is
   available to recipes (shadcn select exposes it via `SelectPosition::ItemAligned`).
+- Pass: Modal barrier + pointer-up guard + item selection handlers are exposed as reusable helpers:
+  - `select_modal_layer_children_with_pointer_up_guard(...)`
+  - `select_modal_barrier_pointer_up_guard(...)`
+  - `select_item_pointer_up_handler(...)`
 
 ## Follow-ups (recommended)
 

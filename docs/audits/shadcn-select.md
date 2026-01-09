@@ -43,8 +43,10 @@ examples in `repo-ref/ui`.
 ### Selection & dismissal
 
 - Pass: Selecting an item commits `model` and closes the overlay.
-- Pass: Outside press dismissal is delegated to the shared dismissible overlay infra (ADR 0069).
-- Pass: Select behaves like a Radix-style menu overlay: outside pointer-down is consumed (non-click-through).
+- Pass: Select installs a modal barrier layer while open to block underlay pointer input (Radix
+  `disableOutsidePointerEvents` outcome) and closes on outside press.
+- Pass: When opened via mouse `pointerdown`, a one-shot pointer-up guard prevents the click release
+  from immediately selecting an item or dismissing (Radix behavior).
 
 ### Visual parity (shadcn)
 
@@ -59,7 +61,7 @@ examples in `repo-ref/ui`.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib select`
+- `cargo nextest run -p fret-ui-shadcn select`
 
 ## Follow-ups (recommended)
 
