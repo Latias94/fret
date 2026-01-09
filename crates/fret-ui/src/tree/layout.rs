@@ -265,22 +265,18 @@ impl<H: UiHost> UiTree<H> {
             root,
             root_bounds.size,
         );
-        let Some(root_id) = engine.layout_id_for_node(root) else {
-            self.put_layout_engine(engine);
-            return;
-        };
-
         let available = LayoutSize::new(
             AvailableSpace::Definite(root_bounds.size.width),
             AvailableSpace::Definite(root_bounds.size.height),
         );
 
         let sf = scale_factor;
-        if !engine.root_is_solved_for(root, available, sf) {
-            engine.compute_root_with_measure(root_id, available, sf, |node, constraints| {
-                self.measure_in(app, services, node, constraints, sf)
-            });
-        }
+        let _ = engine.compute_root_for_node_with_measure_if_needed(
+            root,
+            available,
+            sf,
+            |node, constraints| self.measure_in(app, services, node, constraints, sf),
+        );
 
         self.put_layout_engine(engine);
     }

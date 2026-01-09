@@ -49,6 +49,22 @@ fn fill_only_resolves_under_definite_available_space_in_measurement() {
         measured.height
     );
 
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, max_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MaxContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MaxContent, got {:?}",
+        measured.height
+    );
+
     let definite_constraints = LayoutConstraints::new(
         LayoutSize::new(None, None),
         LayoutSize::new(
@@ -1553,6 +1569,143 @@ fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
 
     assert_eq!(pressable_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "opacity-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::OpacityProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.opacity_props(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let opacity = ui.children(child_root)[0];
+    let spacer = ui.children(opacity)[0];
+
+    let opacity_bounds = ui.debug_node_bounds(opacity).expect("opacity bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(opacity_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "visual-transform-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::VisualTransformProps {
+                transform: fret_core::Transform2D::scale_uniform(1.0),
+                ..Default::default()
+            };
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.visual_transform_props(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let transform = ui.children(child_root)[0];
+    let spacer = ui.children(transform)[0];
+
+    let transform_bounds = ui.debug_node_bounds(transform).expect("transform bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(transform_bounds, viewport);
     assert_eq!(spacer_bounds.origin, viewport.origin);
     assert!(spacer_bounds.size.width.0.abs() < 0.01);
     assert!(spacer_bounds.size.height.0.abs() < 0.01);

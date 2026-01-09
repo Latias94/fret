@@ -486,9 +486,12 @@ impl ElementHostWidget {
 
         let app = &mut *cx.app;
         let services = &mut *cx.services;
-        engine.compute_root_with_measure(root_id, available, sf, |child, constraints| {
-            cx.tree.measure_in(app, services, child, constraints, sf)
-        });
+        let _ = engine.compute_root_for_node_with_measure_if_needed(
+            cx.node,
+            available,
+            sf,
+            |child, constraints| cx.tree.measure_in(app, services, child, constraints, sf),
+        );
 
         let container_inner_size = {
             let rect = engine.layout_rect(root_id);

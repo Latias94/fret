@@ -189,6 +189,20 @@ impl TaffyLayoutEngine {
         self.root_solve_keys.get(&root).copied() == Some(key)
     }
 
+    pub fn compute_root_for_node_with_measure_if_needed(
+        &mut self,
+        root: NodeId,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+        measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
+    ) -> Option<LayoutId> {
+        let root_id = self.layout_id_for_node(root)?;
+        if !self.root_is_solved_for(root, available, scale_factor) {
+            self.compute_root_with_measure(root_id, available, scale_factor, measure);
+        }
+        Some(root_id)
+    }
+
     pub fn request_layout_node(&mut self, node: NodeId) -> LayoutId {
         self.seen.insert(node);
         if let Some(id) = self.node_to_layout.get(&node).copied() {
