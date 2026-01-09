@@ -632,6 +632,7 @@ mod tests {
                     y_axis,
                     stack: Some(stack),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
                 SeriesSpec {
@@ -648,6 +649,7 @@ mod tests {
                     y_axis,
                     stack: Some(stack),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
             ],
@@ -769,6 +771,7 @@ mod tests {
                     y_axis,
                     stack: Some(stack),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
                 SeriesSpec {
@@ -785,6 +788,7 @@ mod tests {
                     y_axis,
                     stack: Some(stack),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
             ],

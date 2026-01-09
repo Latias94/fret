@@ -73,6 +73,7 @@ fn basic_spec() -> ChartSpec {
             y_axis: crate::ids::AxisId::new(2),
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     }
@@ -146,6 +147,7 @@ fn bar_emits_rect_batch() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -250,6 +252,7 @@ fn stacked_bar_uses_stack_base() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -266,6 +269,7 @@ fn stacked_bar_uses_stack_base() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -401,6 +405,7 @@ fn grouped_bars_have_distinct_x_offsets() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -417,6 +422,7 @@ fn grouped_bars_have_distinct_x_offsets() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -844,6 +850,7 @@ fn band_emits_two_polylines() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -959,6 +966,7 @@ fn stacked_area_emits_two_polylines() {
             y_axis,
             stack: Some(stack),
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1072,6 +1080,7 @@ fn row_range_limits_mark_indices() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1176,6 +1185,7 @@ fn x_window_limits_mark_indices() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1286,6 +1296,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1393,6 +1404,7 @@ fn set_series_visible_hides_marks() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1513,6 +1525,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1636,6 +1649,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1782,6 +1796,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1892,6 +1907,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2000,6 +2016,7 @@ fn hover_does_not_rebuild_marks() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2100,6 +2117,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2214,6 +2232,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -2230,6 +2249,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -2344,6 +2364,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -2360,6 +2381,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                 y_axis,
                 stack: None,
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -2467,6 +2489,7 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2562,6 +2585,7 @@ fn scatter_emits_point_marks() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2668,6 +2692,7 @@ fn scatter_large_mode_is_pixel_bounded() {
             y_axis,
             stack: None,
             stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2825,6 +2850,7 @@ fn stacked_line_series_offsets_y() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -2841,6 +2867,7 @@ fn stacked_line_series_offsets_y() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: Default::default(),
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -2956,6 +2983,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: crate::spec::StackStrategy::SameSign,
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -2972,6 +3000,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                 y_axis,
                 stack: Some(stack),
                 stack_strategy: crate::spec::StackStrategy::SameSign,
+                bar_layout: Default::default(),
                 area_baseline: None,
             },
         ],

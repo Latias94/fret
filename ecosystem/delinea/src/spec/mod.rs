@@ -230,6 +230,27 @@ pub enum SeriesKind {
     Scatter,
 }
 
+/// Bar layout parameters (ECharts-inspired).
+///
+/// v1: values are specified in **band ratios** (category width = 1.0 in data space).
+/// Pixel units and percent strings are intentionally deferred to a later revision.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct BarLayoutSpec {
+    /// Fraction of the category band occupied by a bar.
+    ///
+    /// If `None`, the engine chooses a width based on `bar_gap` and `bar_category_gap`.
+    pub bar_width: Option<f64>,
+    /// Gap between adjacent bar slots, expressed as a multiple of `bar_width`.
+    ///
+    /// Example: `0.3` means the gap is `0.3 * bar_width`.
+    pub bar_gap: Option<f64>,
+    /// Outer padding inside each category band, expressed as a fraction of band width.
+    ///
+    /// Example: `0.2` means 20% of the band is reserved as padding.
+    pub bar_category_gap: Option<f64>,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum StackStrategy {
@@ -277,6 +298,8 @@ pub struct SeriesSpec {
     pub stack: Option<StackId>,
     /// Stacking strategy (ECharts `series.stackStrategy`).
     pub stack_strategy: StackStrategy,
+    /// Bar layout parameters (only used when `kind == Bar`).
+    pub bar_layout: BarLayoutSpec,
     /// Area baseline configuration (only used when `kind == Area`).
     pub area_baseline: Option<AreaBaseline>,
 }

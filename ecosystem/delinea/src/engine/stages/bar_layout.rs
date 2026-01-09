@@ -141,6 +141,9 @@ fn build_layouts_for_group(
     key: BarLayoutGroupKey,
 ) -> BTreeMap<SeriesId, BarSeriesLayout> {
     let mut series_in_group = Vec::new();
+    let mut requested_bar_width: Option<f64> = None;
+    let mut requested_bar_gap: Option<f64> = None;
+    let mut requested_category_gap: Option<f64> = None;
     for series in model.series_in_order() {
         if !series.visible || series.kind != SeriesKind::Bar {
             continue;
@@ -164,6 +167,16 @@ fn build_layouts_for_group(
             continue;
         }
         series_in_group.push(series.id);
+
+        if requested_bar_width.is_none() {
+            requested_bar_width = sanitize_band_fraction(series.bar_layout.bar_width);
+        }
+        if requested_bar_gap.is_none() {
+            requested_bar_gap = sanitize_gap_ratio(series.bar_layout.bar_gap);
+        }
+        if requested_category_gap.is_none() {
+            requested_category_gap = sanitize_band_padding(series.bar_layout.bar_category_gap);
+        }
     }
 
     let mut slots = Vec::<BarSlotKey>::new();
@@ -195,17 +208,15 @@ fn build_layouts_for_group(
     // ECharts-inspired defaults:
     // - `barCategoryGap`: 20% of the band reserved as outer padding
     // - `barGap`: 30% of bar width as spacing between slots
-    let category_gap = 0.2_f64.clamp(0.0, 0.95);
-    let bar_gap = 0.3_f64.clamp(0.0, 4.0);
+    //
+    // In v1, we treat these as group-level settings. If multiple series in the group specify
+    // different values, the first specified one in series order wins (deterministic).
+    let category_gap = requested_category_gap.unwrap_or(0.2).clamp(0.0, 0.95);
+    let bar_gap = requested_bar_gap.unwrap_or(0.3).clamp(0.0, 4.0);
 
     let group_width = (1.0 - category_gap).clamp(0.0, 1.0);
-    let denom = slot_count as f64 + (slot_count.saturating_sub(1) as f64) * bar_gap;
-    let bar_width = if denom > 0.0 {
-        group_width / denom
-    } else {
-        group_width
-    };
-    let gap_width = bar_width * bar_gap;
+    let (bar_width, gap_width) =
+        compute_slot_widths(group_width, slot_count, bar_gap, requested_bar_width);
 
     let group_left = -0.5 * group_width;
 
@@ -224,4 +235,345 @@ fn build_layouts_for_group(
     }
 
     layouts
+}
+
+fn sanitize_band_fraction(value: Option<f64>) -> Option<f64> {
+    let v = value?;
+    if v.is_finite() && v > 0.0 {
+        Some(v.min(1.0))
+    } else {
+        None
+    }
+}
+
+fn sanitize_band_padding(value: Option<f64>) -> Option<f64> {
+    let v = value?;
+    if v.is_finite() && v >= 0.0 {
+        Some(v.min(0.95))
+    } else {
+        None
+    }
+}
+
+fn sanitize_gap_ratio(value: Option<f64>) -> Option<f64> {
+    let v = value?;
+    if v.is_finite() && v >= 0.0 {
+        Some(v.min(4.0))
+    } else {
+        None
+    }
+}
+
+fn compute_slot_widths(
+    group_width: f64,
+    slot_count: usize,
+    bar_gap: f64,
+    requested_bar_width: Option<f64>,
+) -> (f64, f64) {
+    if slot_count == 0 {
+        return (0.0, 0.0);
+    }
+
+    let requested = requested_bar_width.unwrap_or(f64::NAN);
+    let mut bar_width = if requested.is_finite() {
+        requested
+    } else {
+        let denom = slot_count as f64 + (slot_count.saturating_sub(1) as f64) * bar_gap;
+        if denom > 0.0 {
+            group_width / denom
+        } else {
+            group_width
+        }
+    };
+
+    // If an explicit width would overflow the group, scale down to fit.
+    let denom = slot_count as f64 + (slot_count.saturating_sub(1) as f64) * bar_gap;
+    let total = bar_width * denom;
+    if total.is_finite() && total > group_width && group_width > 0.0 {
+        bar_width *= group_width / total;
+    }
+
+    let gap_width = bar_width * bar_gap;
+    (bar_width, gap_width)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::data::{Column, DataTable};
+    use crate::engine::model::ChartModel;
+    use crate::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId, StackId};
+    use crate::scheduler::WorkBudget;
+    use crate::spec::{
+        AxisKind, AxisSpec, BarLayoutSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
+        SeriesEncode, SeriesKind, SeriesSpec,
+    };
+
+    use super::*;
+
+    #[test]
+    fn bar_layout_groups_stacked_series_into_one_slot() {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_a_field = FieldId::new(2);
+        let y_b_field = FieldId::new(3);
+        let y_c_field = FieldId::new(4);
+        let stack = StackId::new(1);
+        let a = SeriesId::new(1);
+        let b = SeriesId::new(2);
+        let c = SeriesId::new(3);
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                    FieldSpec {
+                        id: y_c_field,
+                        column: 3,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                        categories: vec!["A".into()],
+                    }),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: a,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: b,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: c,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_c_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut datasets = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0]));
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+        table.push_column(Column::F64(vec![3.0]));
+        datasets.insert(dataset_id, table);
+
+        let mut stage = BarLayoutStage::default();
+        stage.begin_frame();
+        stage.request_for_visible_bars(&model);
+        stage.prepare_requests();
+        assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
+
+        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
+        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+        let layout_c = stage.layout_for_series(&model, c, 0).unwrap();
+
+        assert_eq!(layout_a, layout_b);
+        assert_ne!(layout_a, layout_c);
+    }
+
+    #[test]
+    fn bar_layout_respects_explicit_width_and_zero_gaps() {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_a_field = FieldId::new(2);
+        let y_b_field = FieldId::new(3);
+        let a = SeriesId::new(1);
+        let b = SeriesId::new(2);
+
+        let bar_layout = BarLayoutSpec {
+            bar_width: Some(0.4),
+            bar_gap: Some(0.0),
+            bar_category_gap: Some(0.0),
+        };
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                        categories: vec!["A".into()],
+                    }),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: a,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout,
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: b,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout,
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut datasets = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0]));
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+        datasets.insert(dataset_id, table);
+
+        let mut stage = BarLayoutStage::default();
+        stage.begin_frame();
+        stage.request_for_visible_bars(&model);
+        stage.prepare_requests();
+        assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
+
+        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
+        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+
+        assert!((layout_a.width_x - 0.4).abs() < 1e-6);
+        assert!((layout_b.width_x - 0.4).abs() < 1e-6);
+        assert!(layout_a.offset_x < layout_b.offset_x);
+    }
 }

@@ -312,6 +312,11 @@ impl ChartPatch {
                             reason: "series.kind=Band requires encode.y2",
                         });
                     }
+                    if series.kind != SeriesKind::Bar && series.bar_layout != Default::default() {
+                        return Err(ModelError::InvalidSpec {
+                            reason: "bar_layout is only supported for Bar series in v1",
+                        });
+                    }
                     if series.kind == SeriesKind::Bar {
                         let Some(x_axis) = model.axes.get(&series.x_axis) else {
                             return Err(ModelError::MissingReference {
@@ -669,6 +674,7 @@ pub struct SeriesPatch {
     pub y_axis: AxisId,
     pub stack: Option<StackId>,
     pub stack_strategy: StackStrategy,
+    pub bar_layout: crate::spec::BarLayoutSpec,
     pub visible: Option<bool>,
     pub area_baseline: Option<AreaBaseline>,
 }
@@ -687,6 +693,7 @@ impl From<SeriesPatch> for SeriesModel {
             stack_strategy: p.stack_strategy,
             visible: p.visible.unwrap_or(true),
             area_baseline: p.area_baseline.unwrap_or_default(),
+            bar_layout: p.bar_layout,
         }
     }
 }

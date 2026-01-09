@@ -275,6 +275,12 @@ impl ChartModel {
                 });
             }
 
+            if series.kind != SeriesKind::Bar && series.bar_layout != Default::default() {
+                return Err(ModelError::InvalidSpec {
+                    reason: "bar_layout is only supported for Bar series in v1",
+                });
+            }
+
             model.series_order.push(series.id);
             model.series.insert(
                 series.id,
@@ -290,6 +296,7 @@ impl ChartModel {
                     stack_strategy: series.stack_strategy,
                     visible: true,
                     area_baseline: series.area_baseline.unwrap_or_default(),
+                    bar_layout: series.bar_layout,
                 },
             );
         }
@@ -380,6 +387,7 @@ pub struct SeriesModel {
     pub stack_strategy: StackStrategy,
     pub visible: bool,
     pub area_baseline: AreaBaseline,
+    pub bar_layout: crate::spec::BarLayoutSpec,
 }
 
 fn sanitize_px(v: f32, default: f32) -> f32 {
