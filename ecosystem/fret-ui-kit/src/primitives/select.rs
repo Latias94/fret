@@ -14,7 +14,7 @@
 //! This module is intentionally thin: it provides Radix-named entry points for trigger a11y and
 //! overlay request wiring without forcing a visual skin.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
@@ -22,7 +22,9 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps, PressableState,
+};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
@@ -235,6 +237,27 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 /// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
 pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
 
+pub type SelectMouseOpenGuard = Arc<Mutex<SelectMouseOpenGuardState>>;
+
+pub fn select_mouse_open_guard() -> SelectMouseOpenGuard {
+    Arc::new(Mutex::new(SelectMouseOpenGuardState::default()))
+}
+
+pub fn select_mouse_open_guard_clear(guard: &SelectMouseOpenGuard) {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    guard.clear();
+}
+
+pub fn select_mouse_open_guard_record_if_opened(
+    guard: &SelectMouseOpenGuard,
+    was_open: bool,
+    now_open: bool,
+    down_pos: Point,
+) {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    guard.record_if_opened(was_open, now_open, down_pos);
+}
+
 /// Returns `true` when a mouse pointer-up should be treated as part of the original trigger click.
 ///
 /// Upstream Radix installs a one-shot "pointer up guard" after opening on mouse `pointerdown` to
@@ -243,6 +266,43 @@ pub fn select_mouse_open_is_within_click_slop(down: Point, up: Point) -> bool {
     let dx = (down.x.0 - up.x.0).abs();
     let dy = (down.y.0 - up.y.0).abs();
     dx <= SELECT_TRIGGER_CLICK_SLOP_PX && dy <= SELECT_TRIGGER_CLICK_SLOP_PX
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectMouseOpenGuardPointerUpDecision {
+    NoGuard,
+    Suppress,
+    Allow,
+}
+
+pub fn select_mouse_open_guard_pointer_up_decision(
+    guard: &mut SelectMouseOpenGuardState,
+    up: PointerUpCx,
+) -> SelectMouseOpenGuardPointerUpDecision {
+    if up.button != fret_core::MouseButton::Left {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    }
+    if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    }
+
+    let Some(down) = guard.take() else {
+        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    };
+
+    if select_mouse_open_is_within_click_slop(down, up.position) {
+        SelectMouseOpenGuardPointerUpDecision::Suppress
+    } else {
+        SelectMouseOpenGuardPointerUpDecision::Allow
+    }
+}
+
+pub fn select_mouse_open_guard_pointer_up_decision_shared(
+    guard: &SelectMouseOpenGuard,
+    up: PointerUpCx,
+) -> SelectMouseOpenGuardPointerUpDecision {
+    let mut guard = guard.lock().unwrap_or_else(|e| e.into_inner());
+    select_mouse_open_guard_pointer_up_decision(&mut guard, up)
 }
 
 /// Returns `true` when a pointer-up event should be treated as the original trigger click release
@@ -254,18 +314,16 @@ pub fn select_mouse_open_guard_should_suppress_pointer_up(
     guard: &mut SelectMouseOpenGuardState,
     up: PointerUpCx,
 ) -> bool {
-    if up.button != fret_core::MouseButton::Left {
-        return false;
-    }
-    if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
-        return false;
-    }
+    select_mouse_open_guard_pointer_up_decision(guard, up)
+        == SelectMouseOpenGuardPointerUpDecision::Suppress
+}
 
-    let Some(down) = guard.take() else {
-        return false;
-    };
-
-    select_mouse_open_is_within_click_slop(down, up.position)
+pub fn select_mouse_open_guard_should_suppress_pointer_up_shared(
+    guard: &SelectMouseOpenGuard,
+    up: PointerUpCx,
+) -> bool {
+    select_mouse_open_guard_pointer_up_decision_shared(guard, up)
+        == SelectMouseOpenGuardPointerUpDecision::Suppress
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -960,6 +1018,64 @@ pub fn select_modal_layer_children<H: UiHost>(
         select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
         content,
     ]
+}
+
+/// Builds a pointer region that guards the next mouse `pointerup` after opening on `pointerdown`.
+///
+/// This element should be installed inside the modal barrier so it can swallow the click-release
+/// that opened the select, matching Radix's one-shot pointer-up guard.
+pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    guard: SelectMouseOpenGuard,
+) -> AnyElement {
+    cx.pointer_region(
+        PointerRegionProps {
+            layout: select_modal_barrier_layout(),
+            enabled: true,
+        },
+        move |cx| {
+            let open_for_guard = open.clone();
+            let guard_for_pointer_up = guard.clone();
+            cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up: PointerUpCx| {
+                if up.button != fret_core::MouseButton::Left {
+                    return false;
+                }
+                if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+                    return false;
+                }
+
+                if select_mouse_open_guard_should_suppress_pointer_up_shared(
+                    &guard_for_pointer_up,
+                    up,
+                ) {
+                    return true;
+                }
+
+                let _ = host.models_mut().update(&open_for_guard, |v| *v = false);
+                host.request_redraw(action_cx.window);
+                true
+            }));
+            Vec::new()
+        },
+    )
+}
+
+/// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
+/// inside the barrier (Radix-like behavior when opening on mouse `pointerdown`).
+pub fn select_modal_layer_children_with_pointer_up_guard<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    guard: SelectMouseOpenGuard,
+    mut barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    barrier_children.insert(
+        0,
+        select_modal_barrier_pointer_up_guard(cx, open.clone(), guard),
+    );
+    select_modal_layer_children(cx, open, dismiss_on_press, barrier_children, content)
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.
