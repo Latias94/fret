@@ -1,0 +1,301 @@
+use fret_app::{App, Effect, WindowRequest};
+use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
+use fret_core::scene::{
+    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
+};
+use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+
+#[derive(Default)]
+struct EffectsDemoDriver;
+
+impl WinitAppDriver for EffectsDemoDriver {
+    type WindowState = ();
+
+    fn create_window_state(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+    ) -> Self::WindowState {
+        ()
+    }
+
+    fn handle_event(
+        &mut self,
+        context: WinitEventContext<'_, Self::WindowState>,
+        event: &fret_core::Event,
+    ) {
+        let WinitEventContext { app, window, .. } = context;
+        match event {
+            fret_core::Event::WindowCloseRequested
+            | fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                ..
+            } => {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            }
+            _ => {}
+        }
+    }
+
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        let WinitRenderContext { bounds, scene, .. } = context;
+        scene.clear();
+
+        let w = bounds.size.width.0.max(1.0);
+        let h = bounds.size.height.0.max(1.0);
+        let full = Rect::new(bounds.origin, Size::new(Px(w), Px(h)));
+
+        // Background.
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: full,
+            background: Color {
+                r: 0.08,
+                g: 0.09,
+                b: 0.12,
+                a: 1.0,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+
+        // Color stripes: higher-frequency signal for blur / pixelate.
+        let stripe_w = 10.0_f32.max(2.0);
+        let stripe_count = ((w / stripe_w).ceil() as u32).max(1);
+        for i in 0..stripe_count {
+            let x = bounds.origin.x.0 + stripe_w * i as f32;
+            let denom = (stripe_count.saturating_sub(1)).max(1) as f32;
+            let t = i as f32 / denom;
+            let (r, g, b) = if t < 0.33 {
+                (1.0, t / 0.33, 0.0)
+            } else if t < 0.66 {
+                (1.0 - (t - 0.33) / 0.33, 1.0, (t - 0.33) / 0.33)
+            } else {
+                (0.0, 1.0 - (t - 0.66) / 0.34, 1.0)
+            };
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(1 + i),
+                rect: Rect::new(
+                    Point::new(Px(x), bounds.origin.y),
+                    Size::new(Px(stripe_w), Px(h)),
+                ),
+                background: Color { r, g, b, a: 1.0 },
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
+        // Three panels.
+        let pad = 24.0;
+        let panel_h = (h - pad * 2.0).max(120.0);
+        let panel_w = ((w - pad * 4.0) / 3.0).max(120.0);
+        let y0 = bounds.origin.y.0 + pad;
+
+        let panel0 = Rect::new(
+            Point::new(Px(bounds.origin.x.0 + pad), Px(y0)),
+            Size::new(Px(panel_w), Px(panel_h)),
+        );
+        let panel1 = Rect::new(
+            Point::new(Px(bounds.origin.x.0 + pad * 2.0 + panel_w), Px(y0)),
+            Size::new(Px(panel_w), Px(panel_h)),
+        );
+        let panel2 = Rect::new(
+            Point::new(Px(bounds.origin.x.0 + pad * 3.0 + panel_w * 2.0), Px(y0)),
+            Size::new(Px(panel_w), Px(panel_h)),
+        );
+
+        let panel_border = |scene: &mut Scene, order: u32, rect: Rect, color: Color| {
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(order),
+                rect,
+                background: Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                },
+                border: Edges::all(Px(2.0)),
+                border_color: color,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        };
+
+        // Panel 0: backdrop blur + slight color adjust (glass-ish).
+        scene.push(SceneOp::PushEffect {
+            bounds: panel0,
+            mode: EffectMode::Backdrop,
+            chain: EffectChain::from_steps(&[
+                EffectStep::GaussianBlur {
+                    radius_px: Px(6.0),
+                    downsample: 2,
+                },
+                EffectStep::ColorAdjust {
+                    saturation: 1.2,
+                    brightness: 1.02,
+                    contrast: 1.02,
+                },
+            ]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(10_000),
+            rect: panel0,
+            background: Color {
+                r: 0.08,
+                g: 0.08,
+                b: 0.08,
+                a: 0.08,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        panel_border(
+            scene,
+            10_100,
+            panel0,
+            Color {
+                r: 0.35,
+                g: 0.35,
+                b: 0.35,
+                a: 0.35,
+            },
+        );
+        scene.push(SceneOp::PopEffect);
+
+        // Panel 1: backdrop pixelate.
+        scene.push(SceneOp::PushEffect {
+            bounds: panel1,
+            mode: EffectMode::Backdrop,
+            chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 8 }]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(11_000),
+            rect: panel1,
+            background: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.12,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        panel_border(
+            scene,
+            11_100,
+            panel1,
+            Color {
+                r: 0.55,
+                g: 0.495,
+                b: 0.33,
+                a: 0.55,
+            },
+        );
+        scene.push(SceneOp::PopEffect);
+
+        // Panel 2: filter-content pixelate applied to a subtree (content drawn inside the group).
+        scene.push(SceneOp::PushEffect {
+            bounds: panel2,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 6 }]),
+            quality: EffectQuality::Auto,
+        });
+        // High-frequency stripes so pixelation is obvious.
+        let stripe_w = 2.0_f32;
+        let count = (panel2.size.width.0 / stripe_w).ceil().max(1.0) as u32;
+        for i in 0..count {
+            let x = panel2.origin.x.0 + stripe_w * i as f32;
+            let is_red = (i % 2) == 0;
+            let bg = if is_red {
+                Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }
+            } else {
+                Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 1.0,
+                    a: 1.0,
+                }
+            };
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(12_000 + i),
+                rect: Rect::new(
+                    Point::new(Px(x), panel2.origin.y),
+                    Size::new(Px(stripe_w), panel2.size.height),
+                ),
+                background: bg,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+        // Slight tint to keep the panel readable (premultiplied).
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(12_900),
+            rect: panel2,
+            background: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.12,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        scene.push(SceneOp::PopEffect);
+        panel_border(
+            scene,
+            13_000,
+            panel2,
+            Color {
+                r: 0.495,
+                g: 0.495,
+                b: 0.5225,
+                a: 0.55,
+            },
+        );
+
+        // Foreground marker (ordering sanity).
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(20_000),
+            rect: Rect::new(
+                Point::new(
+                    Px(bounds.origin.x.0 + w - 120.0),
+                    Px(bounds.origin.y.0 + h - 80.0),
+                ),
+                Size::new(Px(96.0), Px(56.0)),
+            ),
+            background: Color {
+                r: 0.9,
+                g: 0.9,
+                b: 0.9,
+                a: 0.9,
+            },
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(14.0)),
+        });
+    }
+}
+
+pub fn run() -> anyhow::Result<()> {
+    crate::run_native_demo(
+        WinitRunnerConfig {
+            main_window_title: "effects_demo".to_string(),
+            main_window_size: winit::dpi::LogicalSize::new(1100.0, 520.0),
+            ..Default::default()
+        },
+        App::new(),
+        EffectsDemoDriver::default(),
+    )
+}
