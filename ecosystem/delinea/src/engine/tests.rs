@@ -220,6 +220,47 @@ fn set_view_window_2d_updates_both_axes() {
 }
 
 #[test]
+fn set_view_window_2d_respects_zoom_lock() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let mut engine = ChartEngine::new(basic_spec()).unwrap();
+
+    engine.apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+    let rev = engine.state().revision;
+
+    engine.apply_action(Action::SetViewWindow2D {
+        x_axis,
+        y_axis,
+        x: Some(DataWindow {
+            min: 10.0,
+            max: 20.0,
+        }),
+        y: Some(DataWindow {
+            min: -5.0,
+            max: 5.0,
+        }),
+    });
+
+    let actual_x = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .window;
+    assert_eq!(actual_x, None);
+
+    assert_eq!(
+        engine.state().data_window_y.get(&y_axis).copied(),
+        Some(DataWindow {
+            min: -5.0,
+            max: 5.0
+        })
+    );
+    assert_ne!(engine.state().revision, rev);
+}
+
+#[test]
 fn pan_lock_prevents_pan_window_update() {
     let x_axis = crate::ids::AxisId::new(1);
     let mut engine = ChartEngine::new(basic_spec()).unwrap();

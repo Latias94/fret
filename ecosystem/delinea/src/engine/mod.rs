@@ -312,41 +312,62 @@ impl ChartEngine {
                 x,
                 y,
             } => {
-                let x_range = self.axis_range(x_axis);
-                let y_range = self.axis_range(y_axis);
-                let default_mode = self
-                    .model
-                    .data_zoom_x_by_axis
-                    .get(&x_axis)
-                    .and_then(|id| self.model.data_zoom_x.get(id))
-                    .map(|z| z.filter_mode)
-                    .unwrap_or_default();
-                let entry = self
-                    .state
-                    .data_zoom_x
-                    .entry(x_axis)
-                    .or_insert(DataZoomXState {
-                        window: None,
-                        filter_mode: default_mode,
+                let mut changed = false;
+
+                if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
+                    let x_range = self.axis_range(x_axis);
+                    let default_mode = self
+                        .model
+                        .data_zoom_x_by_axis
+                        .get(&x_axis)
+                        .and_then(|id| self.model.data_zoom_x.get(id))
+                        .map(|z| z.filter_mode)
+                        .unwrap_or_default();
+                    let entry = self
+                        .state
+                        .data_zoom_x
+                        .entry(x_axis)
+                        .or_insert(DataZoomXState {
+                            window: None,
+                            filter_mode: default_mode,
+                        });
+
+                    let next = x.map(|mut w| {
+                        w.clamp_non_degenerate();
+                        w.apply_constraints(x_range.locked_min(), x_range.locked_max())
                     });
-                if let Some(mut x) = x {
-                    x.clamp_non_degenerate();
-                    x = x.apply_constraints(x_range.locked_min(), x_range.locked_max());
-                    entry.window = Some(x);
-                } else {
-                    entry.window = None;
+                    if entry.window != next {
+                        entry.window = next;
+                        changed = true;
+                    }
                 }
 
-                if let Some(mut y) = y {
-                    y.clamp_non_degenerate();
-                    y = y.apply_constraints(y_range.locked_min(), y_range.locked_max());
-                    self.state.data_window_y.insert(y_axis, y);
-                } else {
-                    self.state.data_window_y.remove(&y_axis);
+                if !self.axis_is_fixed(y_axis) && !self.axis_locks(y_axis).zoom_locked {
+                    let y_range = self.axis_range(y_axis);
+                    let next = y.map(|mut w| {
+                        w.clamp_non_degenerate();
+                        w.apply_constraints(y_range.locked_min(), y_range.locked_max())
+                    });
+
+                    match next {
+                        Some(w) => {
+                            if self.state.data_window_y.get(&y_axis).copied() != Some(w) {
+                                self.state.data_window_y.insert(y_axis, w);
+                                changed = true;
+                            }
+                        }
+                        None => {
+                            if self.state.data_window_y.remove(&y_axis).is_some() {
+                                changed = true;
+                            }
+                        }
+                    }
                 }
 
-                self.state.revision.bump();
-                self.marks_stage.mark_dirty();
+                if changed {
+                    self.state.revision.bump();
+                    self.marks_stage.mark_dirty();
+                }
             }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
