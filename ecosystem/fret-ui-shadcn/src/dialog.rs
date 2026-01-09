@@ -6,6 +6,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
@@ -50,6 +51,7 @@ pub struct Dialog {
     overlay_closable: bool,
     overlay_color: Option<Color>,
     window_padding: Space,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -59,6 +61,7 @@ impl std::fmt::Debug for Dialog {
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -70,6 +73,7 @@ impl Dialog {
             overlay_closable: true,
             overlay_color: None,
             window_padding: Space::N4,
+            on_dismiss_request: None,
         }
     }
 
@@ -101,6 +105,15 @@ impl Dialog {
 
     pub fn window_padding(mut self, padding: Space) -> Self {
         self.window_padding = padding;
+        self
+    }
+
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
+    /// default", do not close the `open` model inside the handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
         self
     }
 
@@ -255,12 +268,13 @@ impl Dialog {
                     });
                 }
 
-                let request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
                     id,
                     self.open,
                     overlay_presence,
                     dialog_options,
+                    self.on_dismiss_request.clone(),
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);
@@ -1056,6 +1070,92 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn dialog_escape_can_be_intercepted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
+            Rc::new(Cell::new(None));
+        let dismiss_reason_cell = dismiss_reason.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            dismiss_reason_cell.set(Some(reason));
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .on_dismiss_request(Some(handler.clone()))
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            DialogContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            dismiss_reason.get(),
+            Some(fret_ui::action::DismissReason::Escape)
+        );
     }
 
     #[test]
