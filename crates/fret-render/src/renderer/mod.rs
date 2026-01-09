@@ -108,12 +108,15 @@ pub struct Renderer {
     blit_pipeline_format: Option<wgpu::TextureFormat>,
     blit_pipeline: Option<wgpu::RenderPipeline>,
     blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     blur_pipeline_format: Option<wgpu::TextureFormat>,
     blur_h_pipeline: Option<wgpu::RenderPipeline>,
     blur_v_pipeline: Option<wgpu::RenderPipeline>,
     blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
     blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
+    blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
+    blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     scale_pipeline_format: Option<wgpu::TextureFormat>,
     downsample_pipeline: Option<wgpu::RenderPipeline>,
@@ -127,7 +130,9 @@ pub struct Renderer {
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
     color_adjust_pipeline: Option<wgpu::RenderPipeline>,
     color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_mask_pipeline: Option<wgpu::RenderPipeline>,
     color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_adjust_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_adjust_param_buffer: wgpu::Buffer,
 
     path_vertex_buffers: Vec<wgpu::Buffer>,

@@ -1039,17 +1039,6 @@ impl Renderer {
                         }
                     };
 
-                    let layout = self
-                        .blit_bind_group_layout
-                        .as_ref()
-                        .expect("blit bind group layout must exist");
-                    let bind_group = create_texture_bind_group(
-                        device,
-                        "fret blur bind group",
-                        layout,
-                        &src_view,
-                    );
-
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
                         PlanTarget::Intermediate0
@@ -1070,7 +1059,90 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                    if let Some(mask_target) = pass.mask_target {
+                        debug_assert_eq!(mask_target, PlanTarget::Mask0);
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based blur expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask blur needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask_target, viewport_size);
+                        let layout = self
+                            .blit_mask_bind_group_layout
+                            .as_ref()
+                            .expect("blit mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret blur mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let (pipeline, label) = match pass.axis {
+                            BlurAxis::Horizontal => (
+                                self.blur_h_mask_pipeline
+                                    .as_ref()
+                                    .expect("blur-h mask pipeline must exist"),
+                                "fret blur-h mask pass",
+                            ),
+                            BlurAxis::Vertical => (
+                                self.blur_v_mask_pipeline
+                                    .as_ref()
+                                    .expect("blur-v mask pipeline must exist"),
+                                "fret blur-v mask pass",
+                            ),
+                        };
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some(label),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .blit_bind_group_layout
+                            .as_ref()
+                            .expect("blit bind group layout must exist");
+                        let bind_group = create_texture_bind_group(
+                            device,
+                            "fret blur bind group",
+                            layout,
+                            &src_view,
+                        );
                         let (pipeline, label) = match pass.axis {
                             BlurAxis::Horizontal => (
                                 self.blur_h_masked_pipeline
@@ -1114,6 +1186,16 @@ impl Renderer {
                         }
                         rp.draw(0..3, 0..1);
                     } else {
+                        let layout = self
+                            .blit_bind_group_layout
+                            .as_ref()
+                            .expect("blit bind group layout must exist");
+                        let bind_group = create_texture_bind_group(
+                            device,
+                            "fret blur bind group",
+                            layout,
+                            &src_view,
+                        );
                         let blur_pipeline = match pass.axis {
                             BlurAxis::Horizontal => self
                                 .blur_h_pipeline
@@ -1198,11 +1280,6 @@ impl Renderer {
                     );
                 }
                 RenderPlanPass::ColorAdjust(pass) => {
-                    let layout = self
-                        .color_adjust_bind_group_layout
-                        .as_ref()
-                        .expect("color-adjust bind group layout must exist");
-
                     queue.write_buffer(
                         &self.color_adjust_param_buffer,
                         0,
@@ -1225,13 +1302,6 @@ impl Renderer {
                             frame_targets.require_target(pass.src, pass.src_size)
                         }
                     };
-                    let bind_group = create_texture_uniform_bind_group(
-                        device,
-                        "fret color-adjust bind group",
-                        layout,
-                        &src_view,
-                        self.color_adjust_param_buffer.as_entire_binding(),
-                    );
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
@@ -1253,7 +1323,85 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                    if let Some(mask_target) = pass.mask_target {
+                        debug_assert_eq!(mask_target, PlanTarget::Mask0);
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based color-adjust expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask color-adjust needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask_target, viewport_size);
+                        let layout = self
+                            .color_adjust_mask_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret color-adjust mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.color_adjust_param_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let pipeline = self
+                            .color_adjust_mask_pipeline
+                            .as_ref()
+                            .expect("color-adjust mask pipeline must exist");
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-adjust mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .color_adjust_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-adjust bind group",
+                            layout,
+                            &src_view,
+                            self.color_adjust_param_buffer.as_entire_binding(),
+                        );
                         let pipeline = self
                             .color_adjust_masked_pipeline
                             .as_ref()
@@ -1287,6 +1435,17 @@ impl Renderer {
                         }
                         rp.draw(0..3, 0..1);
                     } else {
+                        let layout = self
+                            .color_adjust_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-adjust bind group",
+                            layout,
+                            &src_view,
+                            self.color_adjust_param_buffer.as_entire_binding(),
+                        );
                         let pipeline = self
                             .color_adjust_pipeline
                             .as_ref()

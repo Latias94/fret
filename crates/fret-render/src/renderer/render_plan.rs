@@ -72,6 +72,7 @@ pub(super) struct BlurPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask_target: Option<PlanTarget>,
     pub(super) axis: BlurAxis,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
@@ -84,6 +85,7 @@ pub(super) struct ColorAdjustPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask_target: Option<PlanTarget>,
     pub(super) saturation: f32,
     pub(super) brightness: f32,
     pub(super) contrast: f32,
@@ -453,6 +455,7 @@ impl RenderPlan {
                                 scissor,
                                 clear,
                                 mask_uniform_index,
+                                mask_target,
                             );
                         }
                         fret_core::EffectStep::ColorAdjust {
@@ -482,6 +485,7 @@ impl RenderPlan {
                                 contrast,
                                 clear,
                                 mask_uniform_index,
+                                mask_target,
                             );
                         }
                         fret_core::EffectStep::Pixelate { scale } => {
@@ -827,6 +831,7 @@ fn append_scissored_blur_in_place_two_scratch(
         dst_size: blur_size,
         dst_scissor: blur_scissor,
         mask_uniform_index: None,
+        mask_target: None,
         axis: BlurAxis::Horizontal,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -837,6 +842,7 @@ fn append_scissored_blur_in_place_two_scratch(
         dst_size: blur_size,
         dst_scissor: blur_scissor,
         mask_uniform_index: None,
+        mask_target: None,
         axis: BlurAxis::Vertical,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -864,6 +870,7 @@ fn append_scissored_blur_in_place_single_scratch(
     scissor: ScissorRect,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
+    mask_target: Option<PlanTarget>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -880,6 +887,7 @@ fn append_scissored_blur_in_place_single_scratch(
         dst_size: size,
         dst_scissor: Some(scissor),
         mask_uniform_index: None,
+        mask_target: None,
         axis: BlurAxis::Horizontal,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -890,6 +898,7 @@ fn append_scissored_blur_in_place_single_scratch(
         dst_size: size,
         dst_scissor: Some(scissor),
         mask_uniform_index,
+        mask_target,
         axis: BlurAxis::Vertical,
         load: wgpu::LoadOp::Load,
     }));
@@ -906,6 +915,7 @@ fn append_color_adjust_in_place_single_scratch(
     contrast: f32,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
+    mask_target: Option<PlanTarget>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -931,6 +941,7 @@ fn append_color_adjust_in_place_single_scratch(
             dst_size: size,
             dst_scissor: Some(scissor),
             mask_uniform_index,
+            mask_target,
             saturation,
             brightness,
             contrast,
@@ -946,6 +957,7 @@ fn append_color_adjust_in_place_single_scratch(
         dst_size: size,
         dst_scissor: None,
         mask_uniform_index: None,
+        mask_target: None,
         saturation,
         brightness,
         contrast,
@@ -1063,10 +1075,16 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
             RenderPlanPass::Blur(p) => {
                 mark(p.src);
                 mark(p.dst);
+                if let Some(t) = p.mask_target {
+                    mark(t);
+                }
             }
             RenderPlanPass::ColorAdjust(p) => {
                 mark(p.src);
                 mark(p.dst);
+                if let Some(t) = p.mask_target {
+                    mark(t);
+                }
             }
             RenderPlanPass::ClipMask(p) => mark(p.dst),
             RenderPlanPass::ReleaseTarget(_target) => {}
@@ -1268,6 +1286,7 @@ fn push_blur(
         dst_size,
         dst_scissor,
         mask_uniform_index: None,
+        mask_target: None,
         axis,
         load,
     }));
@@ -1612,6 +1631,7 @@ fn append_postprocess(
 
 #[cfg(test)]
 mod tests {
+    use super::super::EffectMarker;
     use super::*;
 
     fn strip_releases<'a>(passes: &'a [RenderPlanPass]) -> Vec<&'a RenderPlanPass> {
@@ -1782,6 +1802,66 @@ mod tests {
         assert!(releases.contains(&PlanTarget::Intermediate0));
         assert!(releases.contains(&PlanTarget::Intermediate1));
         assert!(releases.contains(&PlanTarget::Intermediate2));
+    }
+
+    #[test]
+    fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows() {
+        let viewport_size = (100, 100);
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+        let mut encoding = SceneEncoding::default();
+        encoding.effect_markers = vec![
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Push {
+                    scissor,
+                    uniform_index: 0,
+                    mode: fret_core::EffectMode::Backdrop,
+                    chain: fret_core::EffectChain::from_steps(&[
+                        fret_core::EffectStep::ColorAdjust {
+                            saturation: 1.0,
+                            brightness: 0.0,
+                            contrast: 1.0,
+                        },
+                    ]),
+                    quality: fret_core::EffectQuality::Auto,
+                },
+            },
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Pop,
+            },
+        ];
+
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::None,
+            u64::MAX,
+        );
+
+        let core = strip_releases(&plan.passes);
+        assert!(
+            core.iter()
+                .any(|p| matches!(p, RenderPlanPass::ClipMask(_))),
+            "expected ClipMask pass"
+        );
+
+        let Some(color_adjust) = core.iter().find_map(|p| {
+            let RenderPlanPass::ColorAdjust(p) = p else {
+                return None;
+            };
+            Some(*p)
+        }) else {
+            panic!("expected ColorAdjust pass");
+        };
+
+        assert_eq!(color_adjust.mask_target, Some(PlanTarget::Mask0));
+        assert_eq!(color_adjust.mask_uniform_index, Some(0));
+        assert_eq!(color_adjust.dst_scissor, Some(scissor));
     }
 
     #[test]
