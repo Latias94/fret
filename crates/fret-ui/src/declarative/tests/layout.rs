@@ -486,6 +486,72 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let model = app.models_mut().insert(vec![0.5, 0.5]);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "layout-engine-solve-stats-bounded",
+        |cx| {
+            let props = crate::element::ResizablePanelGroupProps::new(
+                fret_core::Axis::Horizontal,
+                model.clone(),
+            );
+            vec![cx.resizable_panel_group(props, |cx| {
+                vec![
+                    cx.flex(crate::element::FlexProps::default(), |cx| {
+                        vec![cx.text("left")]
+                    }),
+                    cx.flex(crate::element::FlexProps::default(), |cx| {
+                        vec![cx.text("right")]
+                    }),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let s1 = ui.debug_stats().layout_engine_solves;
+    assert!(
+        (1..=64).contains(&s1),
+        "expected a small, non-zero solve count; got {s1}"
+    );
+
+    // Force a re-layout within the same frame so a second call performs some engine work.
+    // Stats should reflect *this call's* work, not cumulative engine totals.
+    ui.set_children(root, ui.children(root).to_vec());
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let s2 = ui.debug_stats().layout_engine_solves;
+    assert!(
+        (1..=64).contains(&s2),
+        "expected a small, non-zero solve count after invalidation; got {s2}"
+    );
+
+    // One more call, still within the same frame and without further invalidation. This should
+    // not report the cumulative engine totals from prior calls.
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let s3 = ui.debug_stats().layout_engine_solves;
+    assert_eq!(s3, 0, "expected per-call solve stats (not cumulative)");
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

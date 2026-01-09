@@ -42,10 +42,19 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         #[cfg(feature = "layout-engine-v2")]
-        {
+        let (layout_engine_solves_start, layout_engine_solve_time_start) = {
             self.layout_engine.begin_frame(app.frame_id());
             self.viewport_roots.clear();
-        }
+
+            if self.debug_enabled {
+                (
+                    self.layout_engine.solve_count(),
+                    self.layout_engine.last_solve_time(),
+                )
+            } else {
+                (0, Duration::default())
+            }
+        };
 
         #[cfg(feature = "layout-engine-v2")]
         let mut viewport_cursor: usize = 0;
@@ -91,8 +100,14 @@ impl<H: UiHost> UiTree<H> {
         if self.debug_enabled {
             #[cfg(feature = "layout-engine-v2")]
             {
-                self.debug_stats.layout_engine_solves = self.layout_engine.solve_count();
-                self.debug_stats.layout_engine_solve_time = self.layout_engine.last_solve_time();
+                self.debug_stats.layout_engine_solves = self
+                    .layout_engine
+                    .solve_count()
+                    .saturating_sub(layout_engine_solves_start);
+                self.debug_stats.layout_engine_solve_time = self
+                    .layout_engine
+                    .last_solve_time()
+                    .saturating_sub(layout_engine_solve_time_start);
             }
         }
     }
