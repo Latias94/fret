@@ -126,4 +126,6 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 - ADR 0135: `docs/adr/0135-delinea-axis-interaction-locks-and-shortcuts.md`
 - ADR 0139: `docs/adr/0139-delinea-time-axis-ticks-and-labels.md`
 - ADR 0140: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
+- ADR 0141: `docs/adr/0141-delinea-missing-values-and-segment-policy.md`
+- ADR 0142: `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`
 - `ecosystem/delinea/docs/transform-pipeline.md`
