@@ -133,7 +133,7 @@ Legend:
 
 ### Medium-term
 
-- [ ] Clipboard copy/paste for selection with `GraphFragment` + deterministic paste offset.
+- [~] Clipboard copy/paste for selection with `GraphFragment` + deterministic paste offset.
 - [~] Edge label rendering + per-edge style overrides.
 - [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
 - [ ] Reroute node + edge split UX.

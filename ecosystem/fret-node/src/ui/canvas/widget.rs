@@ -77,8 +77,8 @@ use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
     ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, PanInertiaState, PendingPaste, SearcherState, ToastState,
-    ViewSnapshot, WireDrag, WireDragKind,
+    InternalsCacheKey, MarqueeDrag, PanInertiaState, PasteSeries, PendingPaste, SearcherState,
+    ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -1026,6 +1026,41 @@ impl NodeGraphCanvas {
         CanvasPoint {
             x: sx / zoom - pan.x,
             y: sy / zoom - pan.y,
+        }
+    }
+
+    fn next_paste_canvas_point(&mut self, bounds: Rect, snapshot: &ViewSnapshot) -> CanvasPoint {
+        let zoom = if snapshot.zoom.is_finite() && snapshot.zoom > 0.0 {
+            snapshot.zoom
+        } else {
+            1.0
+        };
+
+        let anchor = self.interaction.last_canvas_pos.unwrap_or_else(|| {
+            let cx0 = bounds.origin.x.0 + 0.5 * bounds.size.width.0;
+            let cy0 = bounds.origin.y.0 + 0.5 * bounds.size.height.0;
+            let center = Point::new(Px(cx0), Px(cy0));
+            Self::screen_to_canvas(bounds, center, snapshot.pan, zoom)
+        });
+
+        let threshold = 6.0 / zoom;
+        let step = 24.0 / zoom;
+
+        let mut count = 0u32;
+        if let Some(series) = self.interaction.paste_series {
+            let dx = anchor.x - series.anchor.x;
+            let dy = anchor.y - series.anchor.y;
+            let d2 = dx * dx + dy * dy;
+            if d2.is_finite() && d2 <= threshold * threshold {
+                count = series.count.saturating_add(1);
+            }
+        }
+
+        self.interaction.paste_series = Some(PasteSeries { anchor, count });
+
+        CanvasPoint {
+            x: anchor.x + count as f32 * step,
+            y: anchor.y + count as f32 * step,
         }
     }
 
@@ -3866,7 +3901,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 true
             }
             CMD_NODE_GRAPH_PASTE => {
-                let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                let at = self.next_paste_canvas_point(bounds, &snapshot);
                 self.request_paste_at_canvas(cx.app, cx.window, at);
                 true
             }

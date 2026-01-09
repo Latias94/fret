@@ -66,12 +66,19 @@ pub(crate) struct InteractionState {
     pub(crate) toast: Option<ToastState>,
     pub(crate) auto_pan_timer: Option<TimerToken>,
     pub(crate) pending_paste: Option<PendingPaste>,
+    pub(crate) paste_series: Option<PasteSeries>,
     pub(crate) snap_guides: Option<SnapGuides>,
 
     pub(crate) sticky_wire: bool,
     pub(crate) sticky_wire_ignore_next_up: bool,
 
     pub(crate) recent_kinds: Vec<NodeKindKey>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PasteSeries {
+    pub(crate) anchor: CanvasPoint,
+    pub(crate) count: u32,
 }
 
 #[derive(Debug, Clone)]

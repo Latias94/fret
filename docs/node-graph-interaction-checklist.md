@@ -175,9 +175,9 @@ Invariants:
 
 - (prototype) Copy selection puts a payload on the system clipboard.
 - (prototype) Paste creates nodes near the cursor (or last known canvas position).
-- (todo) Copy selection creates a deterministic `GraphFragment` payload.
-- (todo) Paste creates nodes with stable relative offsets and a deterministic paste offset strategy.
-- (todo) Paste is undoable as one transaction.
+- (implemented) Copy selection creates a deterministic `GraphFragment` payload.
+- (implemented) Paste uses a deterministic offset strategy when repeatedly pasting at the same anchor.
+- (implemented) Paste is undoable as one transaction.
 
 ## H) Minimap and Controls (todo)
 
