@@ -63,6 +63,10 @@ Fret models Radix tooltip outcomes by composing:
   press requests close without blocking underlay input.
 - Pass: Escape-to-dismiss is supported for focused triggers by installing an Escape key hook on the
   trigger element (Radix `onEscapeKeyDown` outcome for the common focus-open case).
+- Pass: Scroll-to-dismiss is supported for tooltip overlays by wiring the tooltip trigger node as a
+  scroll-dismiss descendant on the overlay layer. When a wheel event scrolls an ancestor of the
+  trigger, the tooltip requests dismissal (Radix scroll listener closes when
+  `event.target.contains(trigger)`).
 - Pass: Provider-scoped pointer-in-transit suppression is modeled via a provider model:
   - The currently open tooltip publishes a transit corridor geometry via
     `tooltip_provider::set_pointer_transit_geometry(...)`.
