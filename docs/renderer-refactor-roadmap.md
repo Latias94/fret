@@ -211,7 +211,10 @@ This section is intentionally lightweight and should be updated as work lands.
   - M2: In progress:
     - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample chain -> upscale chain -> blit).
     - A debug-gated separable blur reference postprocess exists (downsample -> blur H/V -> upscale -> blit).
-  - M3: Not started.
+  - M3: In progress:
+    - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
+    - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
+    - Debug blur postprocess selects a cheaper downsample tier when `intermediate_budget_bytes` would be exceeded.
   - M4: Deferred.
 
 Recent landing points (branch-local):
