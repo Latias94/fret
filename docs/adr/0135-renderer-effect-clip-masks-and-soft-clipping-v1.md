@@ -67,9 +67,13 @@ The renderer chooses a **mask resolution tier** per effect boundary (per effecti
 
 Available tiers:
 
-- `Mask0`: full-resolution mask, `dst_size == viewport_size`
-- `Mask1`: half-resolution mask, `dst_size == downsampled_size(viewport_size, 2)`
-- `Mask2`: quarter-resolution mask, `dst_size == downsampled_size(viewport_size, 4)`
+- `Mask0`: full-resolution mask for the effect viewport rect, `dst_size == viewport_rect.size`
+- `Mask1`: half-resolution mask, `dst_size == downsampled_size(viewport_rect.size, 2)`
+- `Mask2`: quarter-resolution mask, `dst_size == downsampled_size(viewport_rect.size, 4)`
+
+`viewport_rect` is the bounded region the effect is operating on (e.g. `bounds` intersected with the effective
+scissor/clip). The mask resource carries this rect so sampling can map viewport coordinates into the mask grid
+deterministically under degradation.
 
 #### Desired tier (by `EffectQuality`)
 
@@ -217,7 +221,7 @@ This is a renderer-internal refactor and does not change `SceneOp`.
   would dominate the remaining budget.
 - Quad rendering, clip-mask generation, and clip-evaluating masked fullscreen passes share a single analytic SDF +
   coverage foundation (fwidth-scaled AA), keeping rounded corners and soft clip coverage consistent (ADR 0030).
-- `ScaleNearest` and `CompositePremul` can sample `Mask0` (`mask_target`) to gate writes without per-pixel clip-stack iteration.
+- `ScaleNearest` and `CompositePremul` can sample the clip mask (`MaskRef`) to gate writes without per-pixel clip-stack iteration.
 - Mask-sampling shaders map viewport pixel coordinates into the mask texture dimensions, enabling tiered masks.
 - `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.
 
