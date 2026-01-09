@@ -163,7 +163,7 @@ impl ElementHostWidget {
                 let pad_h = pad_top + pad_bottom;
 
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
                     Rect::new(
@@ -277,12 +277,7 @@ impl ElementHostWidget {
             ElementInstance::Pressable(props) => {
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -296,12 +291,7 @@ impl ElementHostWidget {
             ElementInstance::Semantics(props) => {
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -315,12 +305,7 @@ impl ElementHostWidget {
             ElementInstance::FocusScope(props) => {
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -334,12 +319,7 @@ impl ElementHostWidget {
             ElementInstance::Opacity(props) => {
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -357,12 +337,7 @@ impl ElementHostWidget {
 
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -378,12 +353,7 @@ impl ElementHostWidget {
             ElementInstance::VisualTransform(props) => {
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    if let Some(size) =
-                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
-                    {
-                        return size;
-                    }
-                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                         cx,
                         window,
                         Rect::new(cx.bounds.origin, cx.available),
@@ -567,7 +537,7 @@ impl ElementHostWidget {
             }
             ElementInstance::Stack(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
                     Rect::new(cx.bounds.origin, cx.available),
@@ -864,7 +834,7 @@ impl ElementHostWidget {
             }
             ElementInstance::PointerRegion(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
                     Rect::new(cx.bounds.origin, cx.available),
@@ -891,7 +861,7 @@ impl ElementHostWidget {
             }
             ElementInstance::WheelRegion(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
                     Rect::new(cx.bounds.origin, cx.available),
@@ -914,6 +884,21 @@ fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
             AvailableSpace::Definite(size.height),
         ),
     )
+}
+
+#[cfg(feature = "layout-engine-v2")]
+fn try_layout_children_from_engine_or_manual_absolute<H: UiHost>(
+    cx: &mut LayoutCx<'_, H>,
+    window: AppWindowId,
+    base_for_absolute: Rect,
+) -> Option<Size> {
+    if cx.children.is_empty() {
+        return None;
+    }
+    if let Some(size) = crate::layout_engine::layout_children_from_engine_if_solved(cx) {
+        return Some(size);
+    }
+    try_layout_children_from_engine_with_manual_absolute(cx, window, base_for_absolute)
 }
 
 #[cfg(feature = "layout-engine-v2")]
