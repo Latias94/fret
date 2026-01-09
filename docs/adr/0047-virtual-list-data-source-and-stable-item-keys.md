@@ -26,6 +26,9 @@ References:
   - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
   - `repo-ref/gpui-component/crates/ui/src/list/list.rs`
   - `repo-ref/gpui-component/crates/ui/src/table/state.rs`
+- Zed/GPUI runtime list primitives (non-normative):
+  - `repo-ref/zed/crates/gpui/src/elements/list.rs`
+  - `repo-ref/zed/crates/gpui/src/elements/uniform_list.rs`
 
 ## Decision
 

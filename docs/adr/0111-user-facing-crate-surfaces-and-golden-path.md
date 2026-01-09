@@ -17,6 +17,12 @@ We also want to align our external story with the reference repositories we stud
 - GPUI (Zed): small portable core, a clear runtime boundary, policy-heavy components above the kernel.
 - Dioxus: strong developer tooling story (“one command” workflows), with hot reload/hotpatch remaining optional.
 
+Zed/GPUI code anchors (non-normative):
+
+- runtime substrate: `repo-ref/zed/crates/gpui`
+- policy-heavy UI surfaces: `repo-ref/zed/crates/ui`
+- settings/keymap and file-backed layering: `repo-ref/zed/crates/settings`
+
 ## Goals
 
 - Define the smallest *recommended* dependency surface (“golden path”) for end users.

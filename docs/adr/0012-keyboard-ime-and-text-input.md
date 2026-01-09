@@ -178,3 +178,13 @@ Current MVP text widget note:
   - `crates/fret-ui/src/text_input/mod.rs`
 - Multiline text input experiments (still evolving; see ADR 0071):
   - `crates/fret-ui/src/text_area/mod.rs`
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI exposes IME/text-input integration via an explicit `InputHandler` interface (modeled after
+  `NSTextInputClient`), including UTF-16 selection/marked ranges and “bounds for range” queries
+  used for candidate window positioning:
+  `repo-ref/zed/crates/gpui/src/platform.rs` (`InputHandler`, `UTF16Selection`).
+- GPUI updates IME candidate window positioning by querying selection bounds on the next frame and
+  calling a platform window hook:
+  `repo-ref/zed/crates/gpui/src/window.rs` (`invalidate_character_coordinates`).

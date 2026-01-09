@@ -25,6 +25,15 @@ References / inspiration:
   - https://zed.dev/blog/120fps
 - Zed settings UX and strong-typed configuration motivation:
   - https://zed.dev/blog/settings-ui
+- Zed/GPUI code anchors (non-normative):
+  - ownership + update closures + notify/effect cycle:
+    `repo-ref/zed/crates/gpui/src/view.rs`, `repo-ref/zed/crates/gpui/src/app.rs`
+  - window scheduling and draw/present split:
+    `repo-ref/zed/crates/gpui/src/window.rs`
+  - scene/list ordering and batching strategy:
+    `repo-ref/zed/crates/gpui/src/scene.rs`
+  - file-backed settings + keymap layering:
+    `repo-ref/zed/crates/settings`
 
 ## Decision
 

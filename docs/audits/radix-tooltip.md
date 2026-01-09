@@ -48,9 +48,29 @@ Fret models Radix tooltip outcomes by composing:
 - Pass: Opening a tooltip closes other tooltips in the same provider scope (Radix `TOOLTIP_OPEN`
   broadcast outcome), implemented via `tooltip_provider::note_opened_tooltip(...)` and
   `primitives::tooltip::tooltip_update_interaction(...)`.
+- Pass: Trigger pointer gating and close-on-pointerdown/click outcomes are modeled in the shadcn
+  tooltip recipe (`ecosystem/fret-ui-shadcn/src/tooltip.rs`):
+  - Hover-open is gated behind the first non-touch `pointermove` (Radix `hasPointerMoveOpenedRef`),
+    tracked via a lightweight `PointerRegion` wrapper (pointer moves do not stop propagation for
+    Pressables).
+  - `pointerdown` requests a close and suppresses focus-driven re-open (Radix `isPointerDownRef` +
+    `onPointerDown` close behavior), wired via `ElementContext::pressable_add_on_pointer_down_for`.
+  - Click/keyboard activation requests a close and suppresses focus-driven re-open (Radix `onClick`
+    close outcome), wired via `ElementContext::pressable_add_on_activate_for`.
+- Pass: Outside-press dismissal is supported via `DismissibleLayer` observer routing (Radix
+  `onPointerDownOutside` + `onDismiss` outcomes). The shadcn tooltip recipe installs a dismiss
+  handler on its overlay request (`OverlayRequest.dismissible_on_dismiss_request`) so an outside
+  press requests close without blocking underlay input.
+- Pass: Escape-to-dismiss is supported for focused triggers by installing an Escape key hook on the
+  trigger element (Radix `onEscapeKeyDown` outcome for the common focus-open case).
+- Pass: Provider-scoped pointer-in-transit suppression is modeled via a provider model:
+  - The currently open tooltip publishes a transit corridor geometry via
+    `tooltip_provider::set_pointer_transit_geometry(...)`.
+  - Other tooltip triggers consult `tooltip_provider::pointer_transit_geometry_model(...)` to
+    avoid setting the "pointermove opened" gate while the pointer lies inside that corridor
+    (Radix `isPointerInTransitRef`).
 
 ## Follow-ups (recommended)
 
-- Consider tightening parity with the upstream trigger event model (open-on-pointermove gating,
-  pointer-in-transit suppression, close-on-pointerdown/click) if strict behavioral matching becomes
-  a goal outside of the current shadcn recipes.
+- Consider auditing remaining tooltip content dismissal/focus edge cases if strict behavioral
+  matching becomes a goal outside of the current shadcn recipes.

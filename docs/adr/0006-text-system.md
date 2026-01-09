@@ -66,5 +66,8 @@ Scale factor note:
 
 - Implementation direction reference (GPUI-inspired pipeline and atlas strategy):
   - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- Zed/GPUI text system code anchors (non-normative):
+  - `repo-ref/zed/crates/gpui/src/text_system.rs`
+  - `repo-ref/zed/crates/gpui/src/text_system/`
 - IME: represent composition events as data in the platform input layer and keep it separate from shaping.
 - Resource lifetime: `TextBlobId` may be refcounted/interned; `release` can be delayed and drained via the app/runner loop.

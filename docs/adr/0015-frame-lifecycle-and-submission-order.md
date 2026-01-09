@@ -24,6 +24,11 @@ References:
   - Viewports via `RenderTargetId` (ADR 0007)
   - Host-provided GPU context (ADR 0010)
   - Timers/animation/redraw scheduling (`TickId` vs `FrameId`) (ADR 0034)
+- Zed/GPUI (non-normative code anchors):
+  - per-window draw vs present split (produce scene, then draw it at the platform boundary):
+    `repo-ref/zed/crates/gpui/src/window.rs` (`Window::draw`, `Window::present`)
+  - scene assembly and ordering/batching by derived order keys:
+    `repo-ref/zed/crates/gpui/src/scene.rs`
 
 ## Decision
 

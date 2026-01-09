@@ -29,6 +29,10 @@ References:
 - Threading boundary: `docs/adr/0008-threading-logging-errors.md`
 - App-owned models: `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - Model handles (strong/weak): `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
+- Zed/GPUI (non-normative):
+  - async work is driven back on the main thread and is commonly parameterized by `WeakEntity` to
+    avoid leaking model/view state:
+    `repo-ref/zed/crates/gpui/src/app/context.rs` (`spawn_in`, `spawn_in_with_priority`)
 
 ## Decision
 

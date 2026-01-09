@@ -192,3 +192,10 @@ The golden path must support:
 - Editor project assets (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`
 - Action hooks registries (policy in components): `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
 - Ecosystem integration guidance (non-binding): `docs/adr/0113-ecosystem-integration-contracts.md`
+- Zed/GPUI driver-style references (non-normative):
+  - app-owned effect cycle and deferred work:
+    `repo-ref/zed/crates/gpui/src/app.rs` (`Effect`, `App::defer`)
+  - window scheduling + draw/present and input dispatch loop:
+    `repo-ref/zed/crates/gpui/src/window.rs`
+  - integration glue and the “real app” surface:
+    `repo-ref/zed/crates/gpui_tokio`, `repo-ref/zed/crates/zed`

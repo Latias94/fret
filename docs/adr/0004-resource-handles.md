@@ -73,3 +73,10 @@ Notes:
 - Higher-level asset caches (key → async load → register → notify redraw) are expected to live above this minimal
   primitive (similar to GPUI’s `use_asset`), but the core boundary stays effects-based and portable.
 - `color_space` uses the portable `fret_core::ImageColorSpace` enum (Srgb vs Linear).
+
+Zed/GPUI reference (non-normative):
+
+- GPUI uses stable IDs for cached images and drives image loading/caching above the low-level draw
+  API (illustrative of “ID in UI, resource in renderer” separation):
+  `repo-ref/zed/crates/gpui/src/assets.rs` (`ImageId`, `RenderImage`),
+  `repo-ref/zed/crates/gpui/src/asset_cache.rs`.

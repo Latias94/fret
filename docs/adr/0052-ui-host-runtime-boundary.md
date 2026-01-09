@@ -217,3 +217,7 @@ Non-goal: redesign the entire authoring model; ADR 0028/0039 remain the authorin
 - ADR 0051: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - ADR 0053: `docs/adr/0053-external-drag-payload-portability.md`
 - ADR 0054: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+- Zed/GPUI crate split as an empirical reference (non-normative):
+  - runtime substrate: `repo-ref/zed/crates/gpui`
+  - policy-heavy UI surfaces: `repo-ref/zed/crates/ui`
+  - app integration glue and runners: `repo-ref/zed/crates/gpui_tokio`, `repo-ref/zed/crates/zed`

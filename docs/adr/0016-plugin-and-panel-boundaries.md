@@ -17,6 +17,11 @@ References:
 
 - Zed Settings model: file-scoped, strongly typed configuration:
   - https://zed.dev/blog/settings-ui
+- Zed panel + extension surfaces (non-normative code anchors):
+  - panels as workspace-integrated surfaces:
+    `repo-ref/zed/crates/panel`
+  - extension API/host split:
+    `repo-ref/zed/crates/extension_api`, `repo-ref/zed/crates/extension_host`
 - Fret docking persistence and stable identity:
   - ADR 0013
 - Fret resource handle ownership:

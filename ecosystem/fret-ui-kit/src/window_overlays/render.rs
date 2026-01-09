@@ -555,6 +555,7 @@ pub fn render<H: UiHost>(
     for req in tooltip_requests {
         seen_tooltips.insert(req.id);
 
+        let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
         let root = declarative::render_dismissible_root_with_hooks(
@@ -565,6 +566,9 @@ pub fn render<H: UiHost>(
             bounds,
             &req.root_name,
             move |cx| {
+                if let Some(on_dismiss_request) = on_dismiss_request {
+                    cx.dismissible_on_dismiss_request(on_dismiss_request);
+                }
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }

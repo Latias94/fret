@@ -139,6 +139,8 @@ emit `SvgSource::Id` directly.
 - Shape/SDF semantics (renderer implementation detail policy): `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - GPUI Component icon + assets split: `repo-ref/gpui-component/crates/ui/src/icon.rs`,
   `repo-ref/gpui-component/crates/assets/src/lib.rs`
+- Zed icon theme registry and schema (non-normative):
+  - `repo-ref/zed/crates/theme/src/icon_theme.rs`, `repo-ref/zed/crates/theme/src/icon_theme_schema.rs`
 
 ## In-repo maintenance (Lucide)
 

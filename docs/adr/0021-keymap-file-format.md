@@ -24,6 +24,8 @@ References:
 
 - Zed’s “files as the organizing principle” for configuration:
   - https://zed.dev/blog/settings-ui
+- Zed keymap format and validation (non-normative):
+  - `repo-ref/zed/crates/settings/src/keymap_file.rs`
 - Fret keyboard model and focus/command routing:
   - `docs/adr/0012-keyboard-ime-and-text-input.md`
   - `docs/adr/0018-key-codes-and-shortcuts.md`

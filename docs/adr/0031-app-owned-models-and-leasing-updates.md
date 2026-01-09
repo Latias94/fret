@@ -27,6 +27,11 @@ References:
 
 - Zed / GPUI ownership writeup:
   - https://zed.dev/blog/gpui-ownership
+- Zed/GPUI code anchors (non-normative):
+  - view/entity handles with `update` closures and weak downgrades:
+    `repo-ref/zed/crates/gpui/src/view.rs` (`Entity`, `WeakEntity`, `AnyView`)
+  - observation/notify and an app-owned effect cycle:
+    `repo-ref/zed/crates/gpui/src/app.rs` (`App::notify`, `App::defer`)
 - Model handle lifecycle (strong/weak): `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
 - Main-thread-only models (`!Send`/`!Sync`): `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
 - Fret effects queue boundary:

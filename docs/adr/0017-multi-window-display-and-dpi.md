@@ -23,6 +23,12 @@ References:
   - ADR 0002
 - Platform boundary and winit runner:
   - ADR 0003
+- Zed/GPUI (non-normative):
+  - display “visible bounds” excluding taskbar/dock and window default placement cascade:
+    `repo-ref/zed/crates/gpui/src/platform.rs` (`PlatformDisplay::visible_bounds`),
+    `repo-ref/zed/crates/gpui/src/window.rs` (`default_bounds`)
+  - Windows DPI change handling (WM_DPICHANGED) and suggested-rect placement:
+    `repo-ref/zed/crates/gpui/src/platform/windows/events.rs`
 
 ## Decision
 

@@ -33,6 +33,13 @@ Fret already supports the critical substrate primitive for this approach:
   painting and input mapping (hit-testing and pointer event coordinates), while keeping layout
   bounds authoritative.
 
+Zed/GPUI code anchors (non-normative):
+
+- `repo-ref/zed/crates/gpui/src/elements/anchored.rs` (`Anchored`, `anchored()`)
+- Usage in menu/popover surfaces:
+  - `repo-ref/zed/crates/ui/src/components/popover_menu.rs`
+  - `repo-ref/zed/crates/ui/src/components/right_click_menu.rs`
+
 ## Decision
 
 Introduce a retained/declarative mechanism-level primitive: **`Anchored`**.
@@ -108,4 +115,3 @@ During `layout`:
 2. Add ui-kit helpers that mirror Radix/shadcn patterns (popper wrapper + panel under `Anchored`).
 3. Migrate high-impact overlays in `ecosystem/fret-ui-shadcn` (`DropdownMenu`, `Select`, `Tooltip`)
    to use intrinsic sizing under `Anchored` (while keeping existing APIs stable where possible).
-

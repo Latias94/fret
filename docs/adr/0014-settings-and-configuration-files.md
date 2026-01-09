@@ -25,6 +25,13 @@ References:
 
 - Zed settings UI writeup:
   - https://zed.dev/blog/settings-ui
+- Zed code anchors (non-normative):
+  - file-backed settings store and precedence layering:
+    `repo-ref/zed/crates/settings/src/settings_store.rs` (`SettingsStore`, `SettingsFile`)
+  - file watching + update helpers:
+    `repo-ref/zed/crates/settings/src/settings_file.rs` (`watch_config_file`, `watch_config_dir`)
+  - keymap file parsing and JSON schema generation:
+    `repo-ref/zed/crates/settings/src/keymap_file.rs`
 
 ## Decision
 

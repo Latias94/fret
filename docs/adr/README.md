@@ -9,6 +9,11 @@ Notes:
 
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 
+Non-normative code references:
+
+- Zed/GPUI is pinned under `repo-ref/zed/` and is used as an implementation reference for runtime
+  substrate shapes (window/input dispatch, scheduling, overlays, theme, and settings).
+
 ## How To Use ADRs
 
 - `Status: Accepted`: stable contract; implementations should conform.
@@ -176,6 +181,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0021-keymap-file-format.md`
 - `docs/adr/0022-when-expressions.md`
 - `docs/adr/0023-command-metadata-menus-and-palette.md`
+- `docs/adr/0136-undo-redo-infrastructure-boundary.md`
 - `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - `docs/adr/0086-model-handle-lifecycle-and-weak-models.md`
 - `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
@@ -211,6 +217,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0028-declarative-elements-and-element-state.md`
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - `docs/adr/0104-layout-driven-anchored-overlays.md`
@@ -260,6 +267,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0003-platform-boundary.md`
 - `docs/adr/0091-platform-backends-native-web.md`
 - `docs/adr/0094-window-close-and-web-runner-destroy.md`
+- `docs/adr/0135-window-styles-and-utility-windows.md`
 - `docs/adr/0017-multi-window-display-and-dpi.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
