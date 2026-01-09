@@ -45,6 +45,7 @@ Notes:
   - `ui-app-driver`: enables `UiAppDriver`.
   - `ui-assets`: drives `fret-ui-assets` caches from the event pipeline (recommended if you load images/SVGs).
   - `preload-icon-svgs`: enables `preload_icon_svgs_on_gpu_ready`.
+  - `tracing`: enables `with_default_tracing` / `init_tracing` convenience.
 
 ## Minimal `Cargo.toml`
 

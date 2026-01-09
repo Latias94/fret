@@ -249,6 +249,16 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Initialize a default tracing subscriber (if one is not already installed).
+    ///
+    /// Controlled by `RUST_LOG` when set; otherwise uses a conservative default filter suitable for
+    /// app development.
+    #[cfg(feature = "tracing")]
+    pub fn with_default_tracing(self) -> Self {
+        init_tracing();
+        self
+    }
+
     /// Configure the main window title and size (logical pixels).
     pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
         let title = title.into();
@@ -304,6 +314,25 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
+pub fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+
+    const DEFAULT: &str = "info,fret=info,fret_launch=info,fret_render=info";
+
+    let filter = std::env::var("RUST_LOG")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .and_then(|v| EnvFilter::try_new(v).ok())
+        .unwrap_or_else(|| EnvFilter::try_new(DEFAULT).expect("default tracing filter is valid"));
+
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .compact()
+        .try_init();
+}
 
 /// Concrete `BootstrapBuilder` type returned by `ui_app` / `ui_app_with_app`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
