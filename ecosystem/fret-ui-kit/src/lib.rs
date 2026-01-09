@@ -38,6 +38,20 @@ pub use window_overlays::{
     DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
 };
 
+pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
+
+/// Attempts to handle a window-scoped command that targets `fret-ui-kit` overlay substrates.
+///
+/// This is intended to be called by app drivers after `UiTree::dispatch_command` returns `false`.
+pub fn try_handle_window_overlays_command<H: fret_ui::UiHost>(
+    ui: &mut fret_ui::UiTree<H>,
+    app: &mut H,
+    window: fret_core::AppWindowId,
+    command: &fret_runtime::CommandId,
+) -> bool {
+    window_overlays::try_handle_window_command(ui, app, window, command)
+}
+
 pub use tree::{
     TreeEntry, TreeItem, TreeItemId, TreeRowRenderer, TreeRowState, TreeState, flatten_tree,
 };

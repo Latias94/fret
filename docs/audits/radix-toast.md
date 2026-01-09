@@ -33,9 +33,9 @@ Fret does not use React context nor DOM events. Toast outcomes are composed via:
 - Pass: Swipe-to-dismiss supports Radix-aligned `swipeDirection` + `swipeThreshold` defaults.
 - Pass: Per-window max-toasts limiting is supported.
 - Pass: A reusable, Radix-named viewport root exists via `ToastViewport` (overlay-backed).
+- Pass: Hotkey focus-jump can be wired via the `toast.viewport.focus` command (default keymap binds
+  `F8`) and `window_overlays::try_handle_window_command(...)` (used by `fret-bootstrap`'s UI driver).
 
 ## Gaps / intentional differences
 
-- Not implemented: Radix `ToastViewport` hotkey focus-jump behavior.
-- Deferred: Radix `ToastViewport` hotkey binding surface (default `F8`) and focus-jump behavior.
 - Deferred: A11y announcement semantics (Radix uses ARIA live region patterns).
