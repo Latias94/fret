@@ -18,7 +18,6 @@ use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{TextInputStyle, element::*};
 use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
-use uuid::Uuid;
 
 use fret_node::Graph;
 use fret_node::TypeDesc;
@@ -35,8 +34,9 @@ use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
     NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    NodeGraphPortalCommandHandler, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    PortalCommandOutcome, PortalTextCommand, RegistryNodeGraphPresenter,
+    portal_cancel_text_command, portal_submit_text_command, register_node_graph_commands,
 };
 use fret_ui::element::AnyElement;
 
@@ -54,8 +54,6 @@ const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
 const WEIRD_KIND: &str = "demo.weird_layout";
-const CMD_PORTAL_FLOAT_SUBMIT_PREFIX: &str = "node_graph_demo.portal_submit_float:";
-const CMD_PORTAL_FLOAT_CANCEL_PREFIX: &str = "node_graph_demo.portal_cancel_float:";
 
 #[derive(Clone)]
 struct NodeGraphDemoMeasuredStores {
@@ -704,12 +702,91 @@ fn build_demo_graph() -> Graph {
 struct NodeGraphDemoWindowState {
     ui: UiTree<App>,
     root: fret_core::NodeId,
-    canvas_node: fret_core::NodeId,
 }
 
 #[derive(Default)]
 struct NodeGraphDemoPortalState {
     float_value_inputs: BTreeMap<NodeId, fret_runtime::Model<String>>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct DemoPortalCommandHandler;
+
+impl NodeGraphPortalCommandHandler<App> for DemoPortalCommandHandler {
+    fn handle_portal_command(
+        &mut self,
+        cx: &mut fret_ui::retained_bridge::CommandCx<'_, App>,
+        graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome {
+        let (node_id, is_submit) = match command {
+            PortalTextCommand::Submit { node } => (node, true),
+            PortalTextCommand::Cancel { node } => (node, false),
+        };
+
+        let input_model = cx
+            .app
+            .with_global_mut(NodeGraphDemoPortalState::default, |st, app| {
+                st.float_value_inputs
+                    .entry(node_id)
+                    .or_insert_with(|| {
+                        let value = graph
+                            .nodes
+                            .get(&node_id)
+                            .and_then(|n| n.data.get("value"))
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        app.models_mut().insert(format!("{value:.3}"))
+                    })
+                    .clone()
+            });
+
+        if !is_submit {
+            let value = graph
+                .nodes
+                .get(&node_id)
+                .and_then(|n| n.data.get("value"))
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let _ = input_model.update(cx.app, |s, _cx| {
+                *s = format!("{value:.3}");
+            });
+            return PortalCommandOutcome::Handled;
+        }
+
+        let text = input_model
+            .read_ref(cx.app, |s| s.clone())
+            .ok()
+            .unwrap_or_default();
+        let Ok(parsed) = text.trim().parse::<f64>() else {
+            tracing::warn!(node = ?node_id, text = %text, "portal float submit: parse failed");
+            return PortalCommandOutcome::Handled;
+        };
+
+        let from = graph
+            .nodes
+            .get(&node_id)
+            .map(|n| n.data.clone())
+            .unwrap_or(Value::Null);
+        let to = set_float_value_in_node_data(from.clone(), parsed);
+
+        let _ = input_model.update(cx.app, |s, _cx| {
+            *s = format!("{parsed:.3}");
+        });
+
+        if from == to {
+            return PortalCommandOutcome::Handled;
+        }
+
+        PortalCommandOutcome::Commit(GraphTransaction {
+            label: Some("Set Float Value".to_string()),
+            ops: vec![GraphOp::SetNodeData {
+                id: node_id,
+                from,
+                to,
+            }],
+        })
+    }
 }
 
 #[derive(Default)]
@@ -783,11 +860,6 @@ impl NodeGraphDemoDriver {
                     return Vec::new();
                 }
 
-                let submit_cmd =
-                    CommandId::new(format!("{CMD_PORTAL_FLOAT_SUBMIT_PREFIX}{}", layout.node.0));
-                let cancel_cmd =
-                    CommandId::new(format!("{CMD_PORTAL_FLOAT_CANCEL_PREFIX}{}", layout.node.0));
-
                 let model = ecx.app.with_global_mut(
                     NodeGraphDemoPortalState::default,
                     |st, app: &mut App| {
@@ -813,8 +885,8 @@ impl NodeGraphDemoDriver {
                 let chrome = TextInputStyle::from_theme(ecx.theme().snapshot());
                 let mut props = TextInputProps::new(model);
                 props.chrome = chrome;
-                props.submit_command = Some(submit_cmd);
-                props.cancel_command = Some(cancel_cmd);
+                props.submit_command = Some(portal_submit_text_command(layout.node));
+                props.cancel_command = Some(portal_cancel_text_command(layout.node));
                 props.layout = LayoutStyle {
                     position: PositionStyle::Relative,
                     size: SizeStyle {
@@ -832,18 +904,17 @@ impl NodeGraphDemoDriver {
 
                 vec![ecx.text_input(props)]
             },
-        );
+        )
+        .with_edit_queue(models.edits.clone())
+        .with_canvas_focus_target(canvas_node)
+        .with_command_handler(DemoPortalCommandHandler);
         let portal_node = ui.create_node_retained(portal);
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
         ui.set_children(root, vec![canvas_node, overlay_node, portal_node]);
         ui.set_root(root);
 
-        NodeGraphDemoWindowState {
-            ui,
-            root,
-            canvas_node,
-        }
+        NodeGraphDemoWindowState { ui, root }
     }
 }
 
@@ -910,121 +981,6 @@ impl WinitAppDriver for NodeGraphDemoDriver {
 
         if command.as_str() == "node_graph_demo.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if let Some(rest) = command
-            .as_str()
-            .strip_prefix(CMD_PORTAL_FLOAT_CANCEL_PREFIX)
-        {
-            let Ok(uuid) = Uuid::parse_str(rest) else {
-                tracing::warn!(
-                    command = command.as_str(),
-                    "failed to parse node id in cancel command"
-                );
-                return;
-            };
-            let node_id = NodeId(uuid);
-
-            let Some(portal_state) = app.global::<NodeGraphDemoPortalState>() else {
-                return;
-            };
-            let Some(model) = portal_state.float_value_inputs.get(&node_id).cloned() else {
-                return;
-            };
-
-            let value = app
-                .global::<NodeGraphDemoModels>()
-                .cloned()
-                .and_then(|models| {
-                    models
-                        .graph
-                        .read_ref(app, |g| {
-                            g.nodes
-                                .get(&node_id)
-                                .and_then(|n| n.data.get("value"))
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0)
-                        })
-                        .ok()
-                })
-                .unwrap_or(0.0);
-
-            let _ = model.update(app, |s, _cx| {
-                *s = format!("{value:.3}");
-            });
-            state.ui.set_focus(Some(state.canvas_node));
-            app.request_redraw(window);
-            return;
-        }
-
-        if let Some(rest) = command
-            .as_str()
-            .strip_prefix(CMD_PORTAL_FLOAT_SUBMIT_PREFIX)
-        {
-            let Ok(uuid) = Uuid::parse_str(rest) else {
-                tracing::warn!(
-                    command = command.as_str(),
-                    "failed to parse node id in submit command"
-                );
-                return;
-            };
-            let node_id = NodeId(uuid);
-
-            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
-                return;
-            };
-            let Some(portal_state) = app.global::<NodeGraphDemoPortalState>() else {
-                return;
-            };
-            let Some(model) = portal_state.float_value_inputs.get(&node_id).cloned() else {
-                return;
-            };
-
-            let text = model.read_ref(app, |s| s.clone()).ok().unwrap_or_default();
-            let Ok(parsed) = text.trim().parse::<f64>() else {
-                tracing::warn!(node = ?node_id, text = %text, "portal float submit: parse failed");
-                return;
-            };
-
-            let (from, to) = models
-                .graph
-                .read_ref(app, |g| {
-                    let from = g
-                        .nodes
-                        .get(&node_id)
-                        .map(|n| n.data.clone())
-                        .unwrap_or(Value::Null);
-                    let to = set_float_value_in_node_data(from.clone(), parsed);
-                    (from, to)
-                })
-                .ok()
-                .unwrap_or((Value::Null, Value::Null));
-
-            if from == to {
-                state.ui.set_focus(Some(state.canvas_node));
-                app.request_redraw(window);
-                return;
-            }
-
-            let tx = GraphTransaction {
-                label: Some("Set Float Value".to_string()),
-                ops: vec![GraphOp::SetNodeData {
-                    id: node_id,
-                    from,
-                    to,
-                }],
-            };
-            let _ = models.edits.update(app, |q, _cx| {
-                q.push(tx);
-            });
-
-            let _ = model.update(app, |s, _cx| {
-                *s = format!("{parsed:.3}");
-            });
-
-            state.ui.set_focus(Some(state.canvas_node));
-            app.request_redraw(window);
             return;
         }
 

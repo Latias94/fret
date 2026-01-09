@@ -38,7 +38,6 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-node = { path = "../../ecosystem/fret-node" }
 serde_json.workspace = true
-uuid.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
