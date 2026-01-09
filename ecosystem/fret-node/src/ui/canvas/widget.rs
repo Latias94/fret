@@ -26,12 +26,13 @@ use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint
 
 use crate::ui::commands::{
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
-    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_SELECTION,
-    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
+    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_ALL,
+    CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
+    CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
     CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER, CMD_NODE_GRAPH_OPEN_INSERT_NODE,
     CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO,
-    CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_RESET_VIEW, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -2859,6 +2860,40 @@ impl NodeGraphCanvas {
         };
         self.cached_zoom = new_zoom;
     }
+
+    fn zoom_about_center_factor(&mut self, bounds: Rect, factor: f32) {
+        let zoom = self.cached_zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+        if !factor.is_finite() || factor <= 0.0 {
+            return;
+        }
+
+        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        if (new_zoom - zoom).abs() <= 1.0e-6 {
+            return;
+        }
+
+        let cx = 0.5 * bounds.size.width.0;
+        let cy = 0.5 * bounds.size.height.0;
+        let center_screen = (cx, cy);
+
+        let pan_x = self.cached_pan.x;
+        let pan_y = self.cached_pan.y;
+
+        let g0_x = center_screen.0 / zoom - pan_x;
+        let g0_y = center_screen.1 / zoom - pan_y;
+
+        let new_pan_x = center_screen.0 / new_zoom - g0_x;
+        let new_pan_y = center_screen.1 / new_zoom - g0_y;
+
+        self.cached_pan = CanvasPoint {
+            x: new_pan_x,
+            y: new_pan_y,
+        };
+        self.cached_zoom = new_zoom;
+    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
@@ -3098,6 +3133,57 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                 }
+                true
+            }
+            CMD_NODE_GRAPH_FRAME_ALL => {
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                let nodes = self
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        graph.nodes.keys().copied().collect::<Vec<_>>()
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                let did = self.frame_nodes_in_view(cx.app, cx.window, bounds, &nodes);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_RESET_VIEW => {
+                self.update_view_state(cx.app, |s| {
+                    s.pan = CanvasPoint::default();
+                    s.zoom = 1.0;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ZOOM_IN => {
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                self.zoom_about_center_factor(bounds, 1.2);
+                let pan = self.cached_pan;
+                let zoom = self.cached_zoom;
+                self.update_view_state(cx.app, |s| {
+                    s.pan = pan;
+                    s.zoom = zoom;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ZOOM_OUT => {
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                self.zoom_about_center_factor(bounds, 1.0 / 1.2);
+                let pan = self.cached_pan;
+                let zoom = self.cached_zoom;
+                self.update_view_state(cx.app, |s| {
+                    s.pan = pan;
+                    s.zoom = zoom;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
                 true
             }
             CMD_NODE_GRAPH_UNDO => {

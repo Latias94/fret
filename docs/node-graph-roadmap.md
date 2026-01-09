@@ -66,6 +66,9 @@ Design constraints:
   - Editors:
     - `PortalTextEditor` (text input + error, stepper)
     - `PortalNumberEditor` (text input + error, stepper, drag-adjust)
+- Minimap + controls overlays (present, WIP):
+  - minimap consumes derived geometry only (`NodeGraphInternalsStore`),
+  - controls dispatch canonical view ops (zoom/fit/reset) via `node_graph.*` commands.
 
 ### Demo harness (present)
 
@@ -93,8 +96,8 @@ ShaderGraph-level workflows.
 
 ### P1 gaps (XyFlow-level editor usability parity)
 
-- Minimap / overview navigation.
-- Built-in canvas controls: zoom in/out, fit view, reset view.
+- Minimap / overview navigation polish (a11y, styling, edge cases).
+- Built-in canvas controls polish (icons, keybindings, a11y).
 - Auto-pan while connecting or dragging near canvas edges (configurable).
 - Better handle resolution policy:
   - connection radius / strict vs loose mode tunables,
@@ -181,8 +184,8 @@ Legend:
 ### Near-term (next 1–2 sprints)
 
 - [x] Add node graph interaction checklist doc (like docking arbitration): `docs/node-graph-interaction-checklist.md`.
-- [ ] Implement minimap overlay consuming derived geometry.
-- [ ] Implement canvas controls (zoom/fit/reset) and bind to commands.
+- [x] Implement minimap overlay consuming derived geometry.
+- [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [ ] Implement auto-pan during connect/drag near edges.
 - [ ] Add “drag handle tooltip/help” in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
 

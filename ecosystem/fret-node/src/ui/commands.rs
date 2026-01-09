@@ -24,6 +24,10 @@ pub const CMD_NODE_GRAPH_DUPLICATE: &str = "node_graph.duplicate";
 pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
+pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
+pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
+pub const CMD_NODE_GRAPH_ZOOM_IN: &str = "node_graph.zoom_in";
+pub const CMD_NODE_GRAPH_ZOOM_OUT: &str = "node_graph.zoom_out";
 pub const CMD_NODE_GRAPH_CREATE_GROUP: &str = "node_graph.create_group";
 pub const CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT: &str = "node_graph.group.bring_to_front";
 pub const CMD_NODE_GRAPH_GROUP_SEND_TO_BACK: &str = "node_graph.group.send_to_back";
@@ -326,6 +330,42 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Frame Selection")
             .with_category("Node Graph")
             .with_keywords(["frame", "focus", "fit", "view"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
+        CommandMeta::new("Frame All")
+            .with_category("Node Graph")
+            .with_keywords(["frame", "focus", "fit", "view", "all"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_RESET_VIEW),
+        CommandMeta::new("Reset View")
+            .with_category("Node Graph")
+            .with_keywords(["reset", "view", "pan", "zoom"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
+        CommandMeta::new("Zoom In")
+            .with_category("Node Graph")
+            .with_keywords(["zoom", "in"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
+        CommandMeta::new("Zoom Out")
+            .with_category("Node Graph")
+            .with_keywords(["zoom", "out"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );

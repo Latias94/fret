@@ -42,4 +42,7 @@ pub use presenter::{
 };
 pub use style::NodeGraphStyle;
 
-pub use overlays::{GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState};
+pub use overlays::{
+    GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,
+    NodeGraphOverlayState,
+};

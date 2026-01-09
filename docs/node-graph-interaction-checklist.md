@@ -33,9 +33,9 @@ Recommended harness:
 
 - (prototype) Scroll wheel zooms the canvas without moving focus unexpectedly.
 - (prototype) Middle-drag or right-drag pans (whatever the demo binds; document the binding).
-- (todo) “Fit view” command frames all nodes with padding.
+- (prototype) “Fit view” command frames all nodes with padding.
 - (prototype) “Fit selection” frames selected nodes with padding.
-- (todo) “Reset view” restores canonical pan/zoom.
+- (prototype) “Reset view” restores canonical pan/zoom.
 
 ### Invariants
 
@@ -161,9 +161,9 @@ Invariants:
 
 ### Manual script
 
-- (todo) Minimap renders derived node rects + viewport rect.
-- (todo) Minimap click-to-pan and drag-to-move-viewport work.
-- (todo) Controls provide zoom in/out and fit/reset.
+- (prototype) Minimap renders derived node rects + viewport rect.
+- (prototype) Minimap click-to-pan and drag-to-move-viewport work.
+- (prototype) Controls provide zoom in/out and fit/reset.
 
 ### Invariants
 

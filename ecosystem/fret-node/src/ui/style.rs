@@ -58,6 +58,32 @@ pub struct NodeGraphStyle {
     pub context_menu_text_disabled: Color,
     pub context_menu_text_style: TextStyle,
 
+    /// Minimap overlay width in screen pixels.
+    pub minimap_width: f32,
+    /// Minimap overlay height in screen pixels.
+    pub minimap_height: f32,
+    /// Minimap margin from window edge in screen pixels.
+    pub minimap_margin: f32,
+    /// Extra padding around computed world bounds in canvas units.
+    pub minimap_world_padding: f32,
+
+    /// Controls overlay button size in screen pixels.
+    pub controls_button_size: f32,
+    /// Gap between control buttons in screen pixels.
+    pub controls_gap: f32,
+    /// Controls margin from window edge in screen pixels.
+    pub controls_margin: f32,
+    /// Controls panel padding in screen pixels.
+    pub controls_padding: f32,
+    /// Controls text color.
+    pub controls_text: Color,
+    /// Controls text style.
+    pub controls_text_style: TextStyle,
+    /// Controls hover background color.
+    pub controls_hover_background: Color,
+    /// Controls pressed background color.
+    pub controls_active_background: Color,
+
     pub min_zoom: f32,
     pub max_zoom: f32,
 }
@@ -237,6 +263,38 @@ impl Default for NodeGraphStyle {
                 ..TextStyle::default()
             },
 
+            minimap_width: 220.0,
+            minimap_height: 140.0,
+            minimap_margin: 12.0,
+            minimap_world_padding: 48.0,
+
+            controls_button_size: 30.0,
+            controls_gap: 6.0,
+            controls_margin: 12.0,
+            controls_padding: 6.0,
+            controls_text: Color {
+                r: 0.92,
+                g: 0.93,
+                b: 0.94,
+                a: 1.0,
+            },
+            controls_text_style: TextStyle {
+                size: Px(12.0),
+                ..TextStyle::default()
+            },
+            controls_hover_background: Color {
+                r: 0.17,
+                g: 0.18,
+                b: 0.19,
+                a: 1.0,
+            },
+            controls_active_background: Color {
+                r: 0.20,
+                g: 0.55,
+                b: 0.95,
+                a: 0.25,
+            },
+
             min_zoom: 0.15,
             max_zoom: 4.0,
         }
@@ -329,6 +387,23 @@ impl NodeGraphStyle {
                 size: Px(font_size),
                 ..TextStyle::default()
             },
+
+            minimap_width: 220.0,
+            minimap_height: 140.0,
+            minimap_margin: padding_md.max(10.0),
+            minimap_world_padding: 48.0,
+
+            controls_button_size: 30.0,
+            controls_gap: padding_sm.max(6.0),
+            controls_margin: padding_md.max(10.0),
+            controls_padding: padding_sm.max(6.0),
+            controls_text: popover_foreground,
+            controls_text_style: TextStyle {
+                size: Px(font_size),
+                ..TextStyle::default()
+            },
+            controls_hover_background: accent,
+            controls_active_background: alpha(ring, 0.22),
 
             min_zoom: 0.15,
             max_zoom: 4.0,

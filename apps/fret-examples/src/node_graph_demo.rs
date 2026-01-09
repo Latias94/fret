@@ -31,11 +31,11 @@ use fret_node::ui::presenter::{
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphControlsOverlay,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 use fret_ui::element::AnyElement;
 
@@ -821,6 +821,7 @@ impl NodeGraphDemoDriver {
             .global::<Arc<NodeGraphInternalsStore>>()
             .expect("NodeGraphInternalsStore global must exist")
             .clone();
+        let internals_overlay = internals.clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -897,8 +898,29 @@ impl NodeGraphDemoDriver {
         ));
         let portal_node = ui.create_node_retained(portal);
 
+        let controls = NodeGraphControlsOverlay::new(canvas_node, style.clone());
+        let controls_node = ui.create_node_retained(controls);
+
+        let minimap = NodeGraphMiniMapOverlay::new(
+            canvas_node,
+            models.graph.clone(),
+            models.view.clone(),
+            internals_overlay,
+            style.clone(),
+        );
+        let minimap_node = ui.create_node_retained(minimap);
+
         let root = ui.create_node_retained(NodeGraphEditor::new());
-        ui.set_children(root, vec![canvas_node, overlay_node, portal_node]);
+        ui.set_children(
+            root,
+            vec![
+                canvas_node,
+                portal_node,
+                controls_node,
+                minimap_node,
+                overlay_node,
+            ],
+        );
         ui.set_root(root);
 
         NodeGraphDemoWindowState { ui, root }
