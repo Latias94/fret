@@ -33,8 +33,8 @@ use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
     NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalTextEditHandler, PortalTextEditSpec,
-    PortalTextEditSubmit, PortalTextEditor, RegistryNodeGraphPresenter,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalNumberEditHandler, PortalNumberEditSpec,
+    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
     register_node_graph_commands,
 };
 use fret_ui::element::AnyElement;
@@ -706,39 +706,46 @@ struct NodeGraphDemoWindowState {
 #[derive(Debug, Default, Clone, Copy)]
 struct DemoFloatPortalSpec;
 
-impl PortalTextEditSpec for DemoFloatPortalSpec {
-    fn initial_text(&self, graph: &Graph, node: NodeId) -> String {
-        let value = graph
-            .nodes
-            .get(&node)
-            .and_then(|n| n.data.get("value"))
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+impl PortalNumberEditSpec for DemoFloatPortalSpec {
+    fn initial_value(&self, graph: &Graph, node: NodeId) -> Option<f64> {
+        let node = graph.nodes.get(&node)?;
+        if node.kind.0.as_str() != "demo.float" {
+            return None;
+        }
+        Some(
+            node.data
+                .get("value")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0),
+        )
+    }
+
+    fn format_value(&self, value: f64) -> String {
         format!("{value:.3}")
     }
 
-    fn submit(&self, graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit {
-        let Ok(parsed) = text.trim().parse::<f64>() else {
-            return PortalTextEditSubmit::Error {
-                message: "Invalid number".into(),
-            };
-        };
-
+    fn submit_value(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
+        _text: &str,
+    ) -> PortalNumberEditSubmit {
         let from = graph
             .nodes
             .get(&node)
             .map(|n| n.data.clone())
             .unwrap_or(Value::Null);
-        let to = set_float_value_in_node_data(from.clone(), parsed);
-        let normalized = Some(format!("{parsed:.3}"));
+        let to = set_float_value_in_node_data(from.clone(), value);
+        let normalized = Some(format!("{value:.3}"));
 
         if from == to {
-            return PortalTextEditSubmit::Handled {
+            return PortalNumberEditSubmit::Handled {
                 normalized_text: normalized,
             };
         }
 
-        PortalTextEditSubmit::Commit {
+        PortalNumberEditSubmit::Commit {
             tx: GraphTransaction {
                 label: Some("Set Float Value".to_string()),
                 ops: vec![GraphOp::SetNodeData { id: node, from, to }],
@@ -747,33 +754,48 @@ impl PortalTextEditSpec for DemoFloatPortalSpec {
         }
     }
 
-    fn step_text_with_mode(
+    fn supports_drag(&self, graph: &Graph, node: NodeId) -> bool {
+        self.initial_value(graph, node).is_some()
+    }
+
+    fn drag_value_with_mode(
         &self,
         graph: &Graph,
         node: NodeId,
-        text: &str,
+        start_value: f64,
+        dx_px: f32,
+        mode: fret_node::ui::PortalTextStepMode,
+    ) -> Option<f64> {
+        if self.initial_value(graph, node).is_none() {
+            return None;
+        }
+
+        let per_px = match mode {
+            fret_node::ui::PortalTextStepMode::Fine => 0.001,
+            fret_node::ui::PortalTextStepMode::Normal => 0.01,
+            fret_node::ui::PortalTextStepMode::Coarse => 0.1,
+        };
+        Some(start_value + dx_px as f64 * per_px)
+    }
+
+    fn step_value_with_mode(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
         delta: i32,
         mode: fret_node::ui::PortalTextStepMode,
-    ) -> Option<String> {
-        let base = text
-            .trim()
-            .parse::<f64>()
-            .ok()
-            .or_else(|| {
-                graph
-                    .nodes
-                    .get(&node)
-                    .and_then(|n| n.data.get("value"))
-                    .and_then(|v| v.as_f64())
-            })
-            .unwrap_or(0.0);
+    ) -> Option<f64> {
+        if self.initial_value(graph, node).is_none() {
+            return None;
+        }
 
         let step = match mode {
             fret_node::ui::PortalTextStepMode::Fine => 0.025,
             fret_node::ui::PortalTextStepMode::Normal => 0.25,
             fret_node::ui::PortalTextStepMode::Coarse => 2.5,
         };
-        Some(format!("{:.3}", base + step * delta as f64))
+        Some(value + step * delta as f64)
     }
 }
 
@@ -835,7 +857,8 @@ impl NodeGraphDemoDriver {
 
         let portal_root = "node_graph_demo.portal";
         let portal_style = style.clone();
-        let portal_editor = PortalTextEditor::new(portal_root);
+        let portal_editor = PortalNumberEditor::new(portal_root);
+        let portal_graph_model = models.graph.clone();
 
         let portal = NodeGraphPortalHost::new(
             models.graph.clone(),
@@ -854,8 +877,9 @@ impl NodeGraphDemoDriver {
                     return Vec::new();
                 }
 
-                portal_editor.render_text_input_for_node(
+                portal_editor.render_number_input_for_node(
                     ecx,
+                    portal_graph_model.clone(),
                     graph,
                     layout,
                     &portal_style,
@@ -866,7 +890,10 @@ impl NodeGraphDemoDriver {
         )
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
-        .with_command_handler(PortalTextEditHandler::new(portal_root, DemoFloatPortalSpec));
+        .with_command_handler(PortalNumberEditHandler::new(
+            portal_root,
+            DemoFloatPortalSpec,
+        ));
         let portal_node = ui.create_node_retained(portal);
 
         let root = ui.create_node_retained(NodeGraphEditor::new());

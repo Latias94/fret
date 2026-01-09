@@ -156,6 +156,38 @@ impl<H: UiHost> NodeGraphPortalCommandHandler<H> for PortalNoopCommandHandler {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PortalCommandHandlerChain<A, B> {
+    pub first: A,
+    pub second: B,
+}
+
+impl<A, B> PortalCommandHandlerChain<A, B> {
+    pub fn new(first: A, second: B) -> Self {
+        Self { first, second }
+    }
+}
+
+impl<H: UiHost, A, B> NodeGraphPortalCommandHandler<H> for PortalCommandHandlerChain<A, B>
+where
+    A: NodeGraphPortalCommandHandler<H>,
+    B: NodeGraphPortalCommandHandler<H>,
+{
+    fn handle_portal_command(
+        &mut self,
+        cx: &mut CommandCx<'_, H>,
+        graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome {
+        match self.first.handle_portal_command(cx, graph, command.clone()) {
+            PortalCommandOutcome::NotHandled => {
+                self.second.handle_portal_command(cx, graph, command)
+            }
+            other => other,
+        }
+    }
+}
+
 /// Layout information for a portal-rendered node subtree.
 #[derive(Debug, Clone, Copy)]
 pub struct NodeGraphPortalNodeLayout {

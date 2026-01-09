@@ -1,18 +1,19 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Color, Corners, Edges, Px, TextStyle};
+use fret_core::{AppWindowId, Color, Edges, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
-    ColumnProps, ContainerProps, CrossAlign, InsetStyle, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, PressableState, RowProps, SizeStyle, TextInputProps, TextProps,
+    ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, RowProps,
+    SizeStyle, TextInputProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{TextInputStyle, ThemeSnapshot, UiHost};
 
 use crate::core::{Graph, NodeId};
 use crate::ops::GraphTransaction;
+use crate::ui::editors::chrome::{PortalSmallButtonUi, render_pressable_small_button};
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
     PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
@@ -24,16 +25,7 @@ use crate::ui::style::NodeGraphStyle;
 pub struct PortalTextEditorUi {
     pub max_width: f32,
     pub gap: f32,
-
-    pub stepper_button_size: f32,
-    pub stepper_button_corner_radius: f32,
-    pub stepper_button_border: f32,
-    pub stepper_button_border_color: Color,
-    pub stepper_button_background: Color,
-    pub stepper_button_background_hover: Color,
-    pub stepper_button_background_pressed: Color,
-    pub stepper_button_text_color: Color,
-    pub stepper_button_text_style: TextStyle,
+    pub stepper_button: PortalSmallButtonUi,
 
     pub error_color: Color,
     pub error_text_style: TextStyle,
@@ -41,30 +33,12 @@ pub struct PortalTextEditorUi {
 
 impl PortalTextEditorUi {
     pub fn from_theme(theme: ThemeSnapshot) -> Self {
-        fn alpha(mut c: Color, a: f32) -> Color {
-            c.a = a;
-            c
-        }
-
         let font_size = theme.metric_required("metric.font.size").0;
-        let radius_sm = theme.metric_required("metric.radius.sm").0;
 
         Self {
             max_width: 180.0,
             gap: 6.0,
-
-            stepper_button_size: 20.0,
-            stepper_button_corner_radius: (radius_sm * 0.75).max(3.0),
-            stepper_button_border: 1.0,
-            stepper_button_border_color: theme.color_required("border"),
-            stepper_button_background: theme.color_required("card"),
-            stepper_button_background_hover: theme.color_required("accent"),
-            stepper_button_background_pressed: alpha(theme.color_required("ring"), 0.22),
-            stepper_button_text_color: theme.color_required("foreground"),
-            stepper_button_text_style: TextStyle {
-                size: Px((font_size - 1.0).max(10.0)),
-                ..TextStyle::default()
-            },
+            stepper_button: PortalSmallButtonUi::from_theme(theme),
 
             error_color: theme.color_required("destructive"),
             error_text_style: TextStyle {
@@ -80,41 +54,7 @@ impl Default for PortalTextEditorUi {
         Self {
             max_width: 180.0,
             gap: 6.0,
-
-            stepper_button_size: 20.0,
-            stepper_button_corner_radius: 4.0,
-            stepper_button_border: 1.0,
-            stepper_button_border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
-            stepper_button_background: Color {
-                r: 0.16,
-                g: 0.16,
-                b: 0.18,
-                a: 1.0,
-            },
-            stepper_button_background_hover: Color {
-                r: 0.20,
-                g: 0.21,
-                b: 0.22,
-                a: 1.0,
-            },
-            stepper_button_background_pressed: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 0.22,
-            },
-            stepper_button_text_color: Color {
-                r: 0.92,
-                g: 0.93,
-                b: 0.94,
-                a: 1.0,
-            },
-            stepper_button_text_style: TextStyle::default(),
+            stepper_button: PortalSmallButtonUi::default(),
 
             error_color: Color {
                 r: 0.9,
@@ -219,19 +159,19 @@ impl PortalTextEditor {
                     let mut btn_col = ColumnProps::default();
                     btn_col.gap = Px(2.0);
                     btn_col.padding = Edges::all(Px(0.0));
-                    btn_col.layout.size.width = Length::Px(Px(ui.stepper_button_size));
+                    btn_col.layout.size.width = Length::Px(Px(ui.stepper_button.size));
 
                     let mut minus = PressableProps::default();
                     minus.focusable = false;
                     minus.a11y.label = Some(Arc::from("Decrement"));
-                    minus.layout.size.width = Length::Px(Px(ui.stepper_button_size));
-                    minus.layout.size.height = Length::Px(Px(ui.stepper_button_size));
+                    minus.layout.size.width = Length::Px(Px(ui.stepper_button.size));
+                    minus.layout.size.height = Length::Px(Px(ui.stepper_button.size));
 
                     let mut plus = PressableProps::default();
                     plus.focusable = false;
                     plus.a11y.label = Some(Arc::from("Increment"));
-                    plus.layout.size.width = Length::Px(Px(ui.stepper_button_size));
-                    plus.layout.size.height = Length::Px(Px(ui.stepper_button_size));
+                    plus.layout.size.width = Length::Px(Px(ui.stepper_button.size));
+                    plus.layout.size.height = Length::Px(Px(ui.stepper_button.size));
 
                     vec![
                         cx.text_input(props),
@@ -255,7 +195,12 @@ impl PortalTextEditor {
                                     );
                                     PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));
-                                vec![render_stepper_button(cx, &stepper_ui, state, "-")]
+                                vec![render_pressable_small_button(
+                                    cx,
+                                    &stepper_ui.stepper_button,
+                                    state,
+                                    "-",
+                                )]
                             });
 
                             let stepper_ui = ui.clone();
@@ -277,7 +222,12 @@ impl PortalTextEditor {
                                     );
                                     PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));
-                                vec![render_stepper_button(cx, &stepper_ui, state, "+")]
+                                vec![render_pressable_small_button(
+                                    cx,
+                                    &stepper_ui.stepper_button,
+                                    state,
+                                    "+",
+                                )]
                             });
 
                             vec![dec, inc]
@@ -682,42 +632,4 @@ struct PortalTextEditorSession {
     errors: HashMap<NodeId, Model<Option<Arc<str>>>>,
     last_synced: HashMap<NodeId, String>,
     last_seen: HashMap<NodeId, String>,
-}
-
-fn render_stepper_button<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    ui: &PortalTextEditorUi,
-    state: PressableState,
-    label: &'static str,
-) -> fret_ui::element::AnyElement {
-    let background = if state.pressed {
-        ui.stepper_button_background_pressed
-    } else if state.hovered {
-        ui.stepper_button_background_hover
-    } else {
-        ui.stepper_button_background
-    };
-
-    let mut chrome = ContainerProps::default();
-    chrome.layout.size.width = Length::Fill;
-    chrome.layout.size.height = Length::Fill;
-    chrome.background = Some(background);
-    chrome.border = Edges::all(Px(ui.stepper_button_border));
-    chrome.border_color = Some(ui.stepper_button_border_color);
-    chrome.corner_radii = Corners::all(Px(ui.stepper_button_corner_radius));
-
-    cx.container(chrome, |cx| {
-        let mut row = RowProps::default();
-        row.justify = MainAlign::Center;
-        row.align = CrossAlign::Center;
-        row.layout.size.width = Length::Fill;
-        row.layout.size.height = Length::Fill;
-
-        vec![cx.row(row, |cx| {
-            let mut text = TextProps::new(label);
-            text.color = Some(ui.stepper_button_text_color);
-            text.style = Some(ui.stepper_button_text_style.clone());
-            vec![cx.text_props(text)]
-        })]
-    })
 }
