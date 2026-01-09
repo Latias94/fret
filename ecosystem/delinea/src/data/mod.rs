@@ -4,6 +4,10 @@ use std::collections::BTreeMap;
 
 use crate::ids::{DatasetId, Revision, StringId};
 
+mod table_view;
+
+pub use table_view::*;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataTableAppendError {
     ColumnCountMismatch { expected: usize, actual: usize },
@@ -115,6 +119,8 @@ impl DataTable {
 
 #[cfg(test)]
 mod tests {
+    use crate::transform::RowSelection;
+
     use super::*;
 
     #[test]
@@ -171,6 +177,21 @@ mod tests {
             .expect("dataset should be present");
         assert_eq!(got.row_count, 3);
         assert_eq!(got.column_f64(0).unwrap(), &[1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn data_table_view_maps_indices_to_raw() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0, 40.0]));
+
+        let sel = RowSelection::Indices(vec![1u32, 3u32].into());
+        let view = DataTableView::new(&table, sel);
+
+        assert_eq!(view.raw_len(), 4);
+        assert_eq!(view.len(), 2);
+        assert_eq!(view.get_raw_index(0), Some(1));
+        assert_eq!(view.get_raw_index(1), Some(3));
+        assert_eq!(view.column_f64(0).unwrap(), &[10.0, 20.0, 30.0, 40.0]);
     }
 }
 

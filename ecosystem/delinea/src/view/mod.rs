@@ -68,10 +68,7 @@ impl ViewState {
         self.datasets.clear();
         self.series.clear();
         for (id, _dataset_model) in &model.datasets {
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(did, t)| (*did == *id).then_some(t));
+            let table = datasets.dataset(*id);
             let Some(table) = table else { continue };
             let mut row_range = state
                 .dataset_row_ranges
@@ -94,10 +91,7 @@ impl ViewState {
             let Some(series) = model.series.get(series_id) else {
                 continue;
             };
-            let table = datasets
-                .datasets
-                .iter()
-                .find_map(|(did, t)| (*did == series.dataset).then_some(t));
+            let table = datasets.dataset(series.dataset);
             let Some(table) = table else { continue };
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 continue;
