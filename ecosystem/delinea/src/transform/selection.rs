@@ -14,6 +14,14 @@ pub enum RowSelection {
 }
 
 impl RowSelection {
+    pub fn view_len(&self, total_len: usize) -> usize {
+        match self {
+            Self::All => total_len,
+            Self::Range(range) => range.as_std_range(total_len).len(),
+            Self::Indices(indices) => indices.len(),
+        }
+    }
+
     pub fn as_range(&self, len: usize) -> core::ops::Range<usize> {
         match self {
             Self::All => 0..len,

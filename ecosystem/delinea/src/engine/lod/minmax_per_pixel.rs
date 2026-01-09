@@ -3,6 +3,7 @@ use core::ops::Range;
 use fret_core::{Point, Px, Rect};
 
 use crate::engine::lod::DataBounds;
+use crate::transform::RowSelection;
 
 #[derive(Debug, Default, Clone)]
 pub struct LodScratch {
@@ -112,6 +113,106 @@ pub fn minmax_per_pixel_step(
         max_points_to_process,
         |i| y.get(i).copied().unwrap_or(f64::NAN),
     )
+}
+
+pub fn minmax_per_pixel_step_selection(
+    cursor: &mut MinMaxPerPixelCursor,
+    scratch: &mut LodScratch,
+    x: &[f64],
+    y: &[f64],
+    bounds: &DataBounds,
+    viewport: Rect,
+    selection: &RowSelection,
+    max_points_to_process: usize,
+) -> bool {
+    minmax_per_pixel_step_selection_with(
+        cursor,
+        scratch,
+        x,
+        bounds,
+        viewport,
+        selection,
+        max_points_to_process,
+        |i| y.get(i).copied().unwrap_or(f64::NAN),
+    )
+}
+
+pub fn minmax_per_pixel_step_selection_with(
+    cursor: &mut MinMaxPerPixelCursor,
+    scratch: &mut LodScratch,
+    x: &[f64],
+    bounds: &DataBounds,
+    viewport: Rect,
+    selection: &RowSelection,
+    max_points_to_process: usize,
+    mut y_at: impl FnMut(usize) -> f64,
+) -> bool {
+    let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
+    scratch.ensure_bucket_count(width_px);
+
+    let len = x.len();
+    let end_limit = selection.view_len(len);
+    if cursor.next_index >= end_limit {
+        return true;
+    }
+
+    let x_span = bounds.x_max - bounds.x_min;
+    if x_span <= 0.0 || !x_span.is_finite() {
+        cursor.next_index = end_limit;
+        return true;
+    }
+
+    let mut processed = 0usize;
+    while cursor.next_index < end_limit && processed < max_points_to_process {
+        let view_index = cursor.next_index;
+        cursor.next_index += 1;
+        processed += 1;
+
+        let Some(i) = selection.get_raw_index(len, view_index) else {
+            continue;
+        };
+
+        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+        let yi = y_at(i);
+        if !xi.is_finite() || !yi.is_finite() {
+            continue;
+        }
+        if xi < bounds.x_min || xi > bounds.x_max {
+            continue;
+        }
+
+        let t = (xi - bounds.x_min) / x_span;
+        if !t.is_finite() {
+            continue;
+        }
+        let bucket =
+            ((t.clamp(0.0, 1.0) * (width_px - 1) as f64).round() as usize).min(width_px - 1);
+
+        let b = &mut scratch.buckets[bucket];
+        let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let c = Candidate {
+            index: i,
+            y: yi,
+            y_clamped: yi_clamped,
+        };
+
+        if b.first.is_none() {
+            b.first = Some(c);
+        }
+        b.last = Some(c);
+
+        let min_y = b.min.map(|m| m.y_clamped).unwrap_or(yi_clamped);
+        if yi_clamped < min_y || b.min.is_none() {
+            b.min = Some(c);
+        }
+
+        let max_y = b.max.map(|m| m.y_clamped).unwrap_or(yi_clamped);
+        if yi_clamped > max_y || b.max.is_none() {
+            b.max = Some(c);
+        }
+    }
+
+    cursor.next_index >= end_limit
 }
 
 pub fn minmax_per_pixel_step_with(

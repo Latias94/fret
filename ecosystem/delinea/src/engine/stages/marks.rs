@@ -3,9 +3,10 @@ use fret_core::{Point, Px, Rect};
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::lod::{
-    BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor, compute_bounds_step,
-    compute_bounds_step_with, finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
-    minmax_per_pixel_step_with,
+    BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor,
+    compute_bounds_step_selection, compute_bounds_step_selection_with, finalize_bounds,
+    minmax_per_pixel_finalize, minmax_per_pixel_step_selection,
+    minmax_per_pixel_step_selection_with,
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
@@ -21,9 +22,9 @@ use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
 use crate::spec::StackStrategy;
 use crate::stats::EngineStats;
+use crate::transform::RowSelection;
 use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
-use core::ops::Range;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
@@ -36,7 +37,7 @@ struct StackBoundsBuild {
     cursor: BoundsCursor,
     accum: BoundsAccum,
     base: StackAccum,
-    row_range: Range<usize>,
+    selection: RowSelection,
     x_filter: crate::engine::window_policy::AxisFilter1D,
     x_mapping_window: Option<DataWindowX>,
 }
@@ -209,16 +210,16 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let (row_range, view_x_filter, view_x_mapping_window) =
+            let (selection, view_x_filter, view_x_mapping_window) =
                 if let Some(v) = view.series_view(series.id) {
                     (
-                        v.selection.as_range(table.row_count),
+                        v.selection.clone(),
                         v.x_policy.filter,
                         v.x_policy.mapping_window,
                     )
                 } else {
                     (
-                        0..table.row_count,
+                        RowSelection::All,
                         crate::engine::window_policy::AxisFilter1D::default(),
                         None,
                     )
@@ -326,7 +327,7 @@ impl MarksStage {
                                 cursor: BoundsCursor::default(),
                                 accum,
                                 base,
-                                row_range: row_range.clone(),
+                                selection: selection.clone(),
                                 x_filter: view_x_filter,
                                 x_mapping_window: view_x_mapping_window,
                             });
@@ -386,11 +387,11 @@ impl MarksStage {
                                 return false;
                             }
 
-                            let done = compute_bounds_step_with(
+                            let done = compute_bounds_step_selection_with(
                                 &mut build.cursor,
                                 &mut build.accum,
                                 x,
-                                build.row_range.clone(),
+                                &build.selection,
                                 build.x_filter,
                                 points_budget,
                                 |i| {
@@ -456,7 +457,7 @@ impl MarksStage {
                         x,
                         y0,
                         y1,
-                        row_range.clone(),
+                        &selection,
                         view_x_filter,
                         view_x_mapping_window,
                         points_budget,
@@ -516,7 +517,7 @@ impl MarksStage {
                 let mut y_window = y_window;
                 y_window.clamp_non_degenerate();
 
-                let visible_len = row_range.end.saturating_sub(row_range.start);
+                let visible_len = selection.view_len(table.row_count);
                 let use_lod = visible_len > 20_000;
 
                 if use_lod {
@@ -527,14 +528,14 @@ impl MarksStage {
                             return false;
                         }
 
-                        finished_scan = minmax_per_pixel_step(
+                        finished_scan = minmax_per_pixel_step_selection(
                             &mut self.cursor,
                             scratch,
                             x,
                             y0,
                             &bounds,
                             viewport,
-                            row_range.clone(),
+                            &selection,
                             points_budget,
                         );
                     }
@@ -592,7 +593,7 @@ impl MarksStage {
                         return false;
                     }
 
-                    self.scatter_next_index = row_range.start;
+                    self.scatter_next_index = 0;
                     self.scatter_points_start = marks.arena.points.len();
                     let range = self.scatter_points_start..self.scatter_points_start;
                     let base_order = self.series_index as u32;
@@ -615,7 +616,7 @@ impl MarksStage {
                     stats.marks_emitted += 1;
                 }
 
-                let row_end = row_range.end;
+                let row_end = selection.view_len(table.row_count);
                 while self.scatter_next_index < row_end {
                     let points_budget = budget.take_points(4096) as usize;
                     if points_budget == 0 {
@@ -638,7 +639,12 @@ impl MarksStage {
                         1.0
                     };
 
-                    for i in self.scatter_next_index..chunk_end {
+                    let data_len = x.len().min(y0.len());
+                    for view_index in self.scatter_next_index..chunk_end {
+                        let Some(i) = selection.get_raw_index(data_len, view_index) else {
+                            continue;
+                        };
+
                         let xi = x.get(i).copied().unwrap_or(f64::NAN);
                         let yi = y0.get(i).copied().unwrap_or(f64::NAN);
                         if !xi.is_finite() || !yi.is_finite() {
@@ -710,7 +716,7 @@ impl MarksStage {
                         return false;
                     }
 
-                    self.bar_next_index = row_range.start;
+                    self.bar_next_index = 0;
                     self.bar_rects_start = marks.arena.rects.len();
                     let range = self.bar_rects_start..self.bar_rects_start;
                     let base_order = self.series_index as u32;
@@ -732,7 +738,7 @@ impl MarksStage {
                     stats.marks_emitted += 1;
                 }
 
-                let row_end = row_range.end;
+                let row_end = selection.view_len(table.row_count);
                 while self.bar_next_index < row_end {
                     let points_budget = budget.take_points(4096) as usize;
                     if points_budget == 0 {
@@ -751,7 +757,12 @@ impl MarksStage {
                     rects.reserve(chunk_end - self.bar_next_index);
                     indices.reserve(chunk_end - self.bar_next_index);
 
-                    for i in self.bar_next_index..chunk_end {
+                    let data_len = x.len().min(y0.len());
+                    for view_index in self.bar_next_index..chunk_end {
+                        let Some(i) = selection.get_raw_index(data_len, view_index) else {
+                            continue;
+                        };
+
                         let xi = x.get(i).copied().unwrap_or(f64::NAN);
                         let yi = y0.get(i).copied().unwrap_or(f64::NAN);
                         if !xi.is_finite() || !yi.is_finite() {
@@ -824,13 +835,13 @@ impl MarksStage {
                     let len = x.len().min(y0.len());
                     let accum = self.stack_accum.entry(stack).or_default();
                     accum.ensure_len(len, series.stack_strategy);
-                    finished_scan = minmax_per_pixel_step_with(
+                    finished_scan = minmax_per_pixel_step_selection_with(
                         &mut self.cursor,
                         scratch,
                         x,
                         &bounds,
                         viewport,
-                        row_range.clone(),
+                        &selection,
                         points_budget,
                         |i| {
                             let yi = y0.get(i).copied().unwrap_or(f64::NAN);
@@ -844,14 +855,14 @@ impl MarksStage {
                         },
                     );
                 } else {
-                    finished_scan = minmax_per_pixel_step(
+                    finished_scan = minmax_per_pixel_step_selection(
                         &mut self.cursor,
                         scratch,
                         x,
                         y0,
                         &bounds,
                         viewport,
-                        row_range.clone(),
+                        &selection,
                         points_budget,
                     );
                 }
@@ -1132,7 +1143,7 @@ fn compute_series_bounds(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
-    row_range: Range<usize>,
+    selection: &RowSelection,
     x_filter: crate::engine::window_policy::AxisFilter1D,
     x_mapping_window: Option<DataWindowX>,
     initial_points_budget: usize,
@@ -1160,8 +1171,8 @@ fn compute_series_bounds(
             w.clamp_non_degenerate();
             (w.min, w.max)
         } else {
-            let mut bounds =
-                compute_bounds_in_range_filtered(x, y0, row_range, x_filter).unwrap_or_default();
+            let mut bounds = compute_bounds_in_selection_filtered(x, y0, selection, x_filter)
+                .unwrap_or_default();
             bounds.clamp_non_degenerate();
             (bounds.x_min, bounds.x_max)
         };
@@ -1180,11 +1191,11 @@ fn compute_series_bounds(
     if kind == crate::spec::SeriesKind::Band
         && let Some(y1) = y1
     {
-        let mut bounds0 = compute_bounds_in_range_filtered(x, y0, row_range.clone(), x_filter)
-            .unwrap_or_default();
+        let mut bounds0 =
+            compute_bounds_in_selection_filtered(x, y0, selection, x_filter).unwrap_or_default();
         bounds0.clamp_non_degenerate();
         let mut bounds1 =
-            compute_bounds_in_range_filtered(x, y1, row_range, x_filter).unwrap_or_default();
+            compute_bounds_in_selection_filtered(x, y1, selection, x_filter).unwrap_or_default();
         bounds1.clamp_non_degenerate();
 
         let mut combined = DataBounds {
@@ -1210,12 +1221,12 @@ fn compute_series_bounds(
         return Some(combined);
     }
 
-    let mut done = compute_bounds_step(
+    let mut done = compute_bounds_step_selection(
         bounds_cursor,
         bounds_accum,
         x,
         y0,
-        row_range.clone(),
+        selection,
         x_filter,
         initial_points_budget,
     )
@@ -1226,12 +1237,12 @@ fn compute_series_bounds(
         if points_budget == 0 {
             return None;
         }
-        done = compute_bounds_step(
+        done = compute_bounds_step_selection(
             bounds_cursor,
             bounds_accum,
             x,
             y0,
-            row_range.clone(),
+            selection,
             x_filter,
             points_budget,
         )
@@ -1254,16 +1265,15 @@ fn compute_series_bounds(
     Some(bounds)
 }
 
-fn compute_bounds_in_range_filtered(
+fn compute_bounds_in_selection_filtered(
     x: &[f64],
     y: &[f64],
-    row_range: core::ops::Range<usize>,
+    selection: &RowSelection,
     filter: crate::engine::window_policy::AxisFilter1D,
 ) -> Option<DataBounds> {
     let len = x.len().min(y.len());
-    let start = row_range.start.min(len);
-    let end = row_range.end.min(len);
-    if start >= end {
+    let end_limit = selection.view_len(len);
+    if end_limit == 0 {
         return None;
     }
 
@@ -1274,9 +1284,13 @@ fn compute_bounds_in_range_filtered(
         y_max: f64::NEG_INFINITY,
     };
 
-    for i in start..end {
-        let xi = x[i];
-        let yi = y[i];
+    for view_index in 0..end_limit {
+        let Some(i) = selection.get_raw_index(len, view_index) else {
+            continue;
+        };
+
+        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+        let yi = y.get(i).copied().unwrap_or(f64::NAN);
         if !xi.is_finite() || !yi.is_finite() {
             continue;
         }

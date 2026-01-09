@@ -80,6 +80,71 @@ pub fn compute_bounds_step(
     )
 }
 
+pub fn compute_bounds_step_selection(
+    cursor: &mut BoundsCursor,
+    accum: &mut BoundsAccum,
+    x: &[f64],
+    y: &[f64],
+    selection: &RowSelection,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
+    max_points_to_process: usize,
+) -> Option<bool> {
+    compute_bounds_step_selection_with(
+        cursor,
+        accum,
+        x,
+        selection,
+        x_filter,
+        max_points_to_process,
+        |i| y.get(i).copied().unwrap_or(f64::NAN),
+    )
+}
+
+pub fn compute_bounds_step_selection_with(
+    cursor: &mut BoundsCursor,
+    accum: &mut BoundsAccum,
+    x: &[f64],
+    selection: &RowSelection,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
+    max_points_to_process: usize,
+    mut y_at: impl FnMut(usize) -> f64,
+) -> Option<bool> {
+    let len = x.len();
+    let end_limit = selection.view_len(len);
+    if cursor.next_index >= end_limit {
+        return Some(true);
+    }
+
+    let mut processed = 0usize;
+    while cursor.next_index < end_limit && processed < max_points_to_process {
+        let view_index = cursor.next_index;
+        cursor.next_index += 1;
+        processed += 1;
+
+        let Some(i) = selection.get_raw_index(len, view_index) else {
+            continue;
+        };
+
+        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+        let yi = y_at(i);
+        if !xi.is_finite() || !yi.is_finite() {
+            continue;
+        }
+
+        if !x_filter.contains(xi) {
+            continue;
+        }
+
+        cursor.saw_any = true;
+        accum.x_min = accum.x_min.min(xi);
+        accum.x_max = accum.x_max.max(xi);
+        accum.y_min = accum.y_min.min(yi);
+        accum.y_max = accum.y_max.max(yi);
+    }
+
+    Some(cursor.next_index >= end_limit)
+}
+
 pub fn compute_bounds_step_with(
     cursor: &mut BoundsCursor,
     accum: &mut BoundsAccum,
@@ -134,3 +199,4 @@ pub fn finalize_bounds(accum: &BoundsAccum) -> Option<DataBounds> {
         y_max: accum.y_max,
     })
 }
+use crate::transform::RowSelection;
