@@ -259,6 +259,13 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Initialize default diagnostics (tracing + panic logging) for application development.
+    #[cfg(feature = "diagnostics")]
+    pub fn with_default_diagnostics(self) -> Self {
+        init_diagnostics();
+        self
+    }
+
     /// Configure the main window title and size (logical pixels).
     pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
         let title = title.into();
@@ -315,6 +322,12 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+pub fn init_diagnostics() {
+    init_tracing();
+    init_panic_hook();
+}
+
 #[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
 pub fn init_tracing() {
     use tracing_subscriber::EnvFilter;
@@ -332,6 +345,66 @@ pub fn init_tracing() {
         .with_target(false)
         .compact()
         .try_init();
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+pub fn init_panic_hook() {
+    use std::backtrace::Backtrace;
+    use std::sync::Once;
+
+    static INSTALLED: Once = Once::new();
+    INSTALLED.call_once(|| {
+        let default_hook = std::panic::take_hook();
+
+        std::panic::set_hook(Box::new(move |info| {
+            let thread = std::thread::current();
+            let thread_name = thread.name().unwrap_or("<unnamed>");
+
+            let message = info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic payload>".to_string());
+
+            let location = info
+                .location()
+                .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                .unwrap_or_else(|| "<unknown>".to_string());
+
+            let backtrace = Backtrace::capture();
+            match backtrace.status() {
+                std::backtrace::BacktraceStatus::Captured => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        backtrace = %backtrace,
+                        "panic"
+                    );
+                }
+                std::backtrace::BacktraceStatus::Disabled
+                | std::backtrace::BacktraceStatus::Unsupported => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
+                    );
+                }
+                _ => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        "panic"
+                    );
+                }
+            }
+
+            default_hook(info);
+        }));
+    });
 }
 
 /// Concrete `BootstrapBuilder` type returned by `ui_app` / `ui_app_with_app`.

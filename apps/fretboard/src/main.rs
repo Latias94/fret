@@ -214,7 +214,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-app = {{ path = "../../crates/fret-app" }}
-fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "tracing"{ui_assets_features}] }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "diagnostics"{ui_assets_features}] }}
 fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn" }}
 fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
 {ui_assets_deps}
@@ -255,7 +255,7 @@ struct TodoState {
 
 fn main() -> anyhow::Result<()> {
     ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
-        .with_default_tracing()
+        .with_default_diagnostics()
         .with_default_settings_json()?__UI_ASSETS_BUILDER__
         .with_main_window("todo", (560.0, 520.0))
         .init_app(|app| {

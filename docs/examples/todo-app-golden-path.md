@@ -46,6 +46,7 @@ Notes:
   - `ui-assets`: drives `fret-ui-assets` caches from the event pipeline (recommended if you load images/SVGs).
   - `preload-icon-svgs`: enables `preload_icon_svgs_on_gpu_ready`.
   - `tracing`: enables `with_default_tracing` / `init_tracing` convenience.
+  - `diagnostics`: enables `with_default_diagnostics` / `init_diagnostics` and installs a panic hook (set `RUST_BACKTRACE=1`).
 
 ## Minimal `Cargo.toml`
 
