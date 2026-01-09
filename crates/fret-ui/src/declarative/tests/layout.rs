@@ -2850,6 +2850,82 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     );
 }
 
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn scroll_translation_does_not_force_layout_engine_solves() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-wheel-solve-stats",
+        |cx| {
+            let mut p = crate::element::ScrollProps::default();
+            p.layout.size.width = crate::element::Length::Fill;
+            p.layout.size.height = crate::element::Length::Px(Px(20.0));
+            vec![cx.scroll(p, |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                )]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let before = ui.debug_node_bounds(column_node).expect("column bounds");
+
+    let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: wheel_pos,
+            delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let after = ui
+        .debug_node_bounds(column_node)
+        .expect("column bounds after scroll");
+
+    assert!(
+        after.origin.y.0 < before.origin.y.0,
+        "expected content to move up after wheel scroll: before={:?} after={:?}",
+        before.origin.y,
+        after.origin.y
+    );
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "expected scroll translation to avoid triggering layout engine solves"
+    );
+}
+
 #[test]
 fn scroll_thumb_drag_updates_offset() {
     let mut app = TestHost::new();

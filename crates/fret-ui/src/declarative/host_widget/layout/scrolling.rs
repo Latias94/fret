@@ -267,7 +267,7 @@ impl ElementHostWidget {
                 let app = &mut *cx.app;
                 let services = &mut *cx.services;
                 let tree = &mut *cx.tree;
-                tree.precompute_flow_root_island(app, services, *child, child_bounds, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, *child, child_bounds, sf);
             }
 
             let _ = cx.layout_in(*child, child_bounds);
@@ -401,7 +401,7 @@ impl ElementHostWidget {
             let services = &mut *cx.services;
             let tree = &mut *cx.tree;
             for &child in cx.children {
-                tree.precompute_flow_root_island(app, services, child, shifted, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, child, shifted, sf);
             }
         }
 

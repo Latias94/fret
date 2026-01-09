@@ -300,6 +300,35 @@ impl<H: UiHost> UiTree<H> {
 
         self.put_layout_engine(engine);
     }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn precompute_flow_root_island_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(node) = self.nodes.get(root) else {
+            return;
+        };
+
+        let needs_layout = node.invalidation.layout || node.bounds != root_bounds;
+        if !needs_layout {
+            return;
+        }
+
+        let is_translation_only = !node.invalidation.layout
+            && node.bounds.size == root_bounds.size
+            && node.bounds.origin != root_bounds.origin
+            && node.measured_size != Size::default();
+        if is_translation_only {
+            return;
+        }
+
+        self.precompute_flow_root_island(app, services, root, root_bounds, scale_factor);
+    }
     fn layout_node(
         &mut self,
         app: &mut H,
