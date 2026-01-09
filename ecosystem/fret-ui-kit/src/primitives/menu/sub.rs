@@ -1234,6 +1234,14 @@ pub fn focus_first_available_on_open<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_runtime::Effect;
+    use fret_ui::GlobalElementId;
+    use fret_ui::action::{ActionCx, UiActionHost, UiFocusActionHost};
+
     #[test]
     fn default_pointer_grace_timeout_matches_radix() {
         assert_eq!(
@@ -1251,5 +1259,216 @@ mod tests {
             Duration::from_millis(3),
         );
         assert_eq!(cfg.pointer_grace_timeout, DEFAULT_POINTER_GRACE_TIMEOUT);
+    }
+
+    struct Host<'a> {
+        app: &'a mut App,
+    }
+
+    impl UiActionHost for Host<'_> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+    }
+
+    impl UiFocusActionHost for Host<'_> {
+        fn request_focus(&mut self, _target: GlobalElementId) {}
+    }
+
+    fn new_models(app: &mut App) -> MenuSubmenuModels {
+        MenuSubmenuModels {
+            open_value: app.models_mut().insert(None),
+            trigger: app.models_mut().insert(None),
+            last_pointer: app.models_mut().insert(None),
+            geometry: app.models_mut().insert(None),
+            close_timer: app.models_mut().insert(None),
+            pointer_dir: app.models_mut().insert(None),
+            pointer_grace_intent: app.models_mut().insert(None),
+            pointer_grace_timer: app.models_mut().insert(None),
+            focus_target: app.models_mut().insert(None),
+            focus_timer: app.models_mut().insert(None),
+            pending_open_value: app.models_mut().insert(None),
+            pending_open_trigger: app.models_mut().insert(None),
+            open_timer: app.models_mut().insert(None),
+        }
+    }
+
+    fn right_side_grace_intent() -> pointer_grace_intent::GraceIntent {
+        let reference = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+        let floating = Rect::new(Point::new(Px(20.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+        pointer_grace_intent::grace_intent_from_exit_point(
+            Point::new(Px(12.0), Px(5.0)),
+            pointer_grace_intent::PointerGraceIntentGeometry {
+                reference,
+                floating,
+            },
+            Px(5.0),
+        )
+        .expect("expected grace intent")
+    }
+
+    #[test]
+    fn submenu_trigger_hover_does_not_switch_while_pointer_in_grace_polygon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host { app: &mut app };
+
+        let models = new_models(&mut host.app);
+        let cfg = MenuSubmenuConfig::default();
+
+        let _ = host
+            .models_mut()
+            .update(&models.open_value, |v| *v = Some(Arc::from("a")));
+        let _ = host.models_mut().update(&models.last_pointer, |v| {
+            *v = Some(Point::new(Px(12.0), Px(5.0)))
+        });
+        let _ = host.models_mut().update(&models.pointer_dir, |v| {
+            *v = Some(pointer_grace_intent::GraceSide::Right)
+        });
+        let _ = host.models_mut().update(&models.pointer_grace_intent, |v| {
+            *v = Some(right_side_grace_intent())
+        });
+
+        handle_sub_trigger_hover_change(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            &models,
+            cfg,
+            GlobalElementId(2),
+            true,
+            Arc::from("b"),
+        );
+
+        let open_value = host
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let pending_open = host
+            .models_mut()
+            .read(&models.pending_open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let open_timer = host
+            .models_mut()
+            .read(&models.open_timer, |v| *v)
+            .ok()
+            .flatten();
+
+        assert_eq!(open_value.as_deref(), Some("a"));
+        assert!(pending_open.is_none());
+        assert!(open_timer.is_none());
+    }
+
+    #[test]
+    fn submenu_open_timer_defers_switch_while_pointer_in_grace_polygon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host { app: &mut app };
+
+        let models = new_models(&mut host.app);
+        let cfg = MenuSubmenuConfig::default();
+
+        let _ = host
+            .models_mut()
+            .update(&models.open_value, |v| *v = Some(Arc::from("a")));
+        let _ = host
+            .models_mut()
+            .update(&models.pending_open_value, |v| *v = Some(Arc::from("b")));
+        let _ = host.models_mut().update(&models.last_pointer, |v| {
+            *v = Some(Point::new(Px(12.0), Px(5.0)))
+        });
+        let _ = host.models_mut().update(&models.pointer_dir, |v| {
+            *v = Some(pointer_grace_intent::GraceSide::Right)
+        });
+        let _ = host.models_mut().update(&models.pointer_grace_intent, |v| {
+            *v = Some(right_side_grace_intent())
+        });
+
+        let token = host.next_timer_token();
+        let _ = host
+            .models_mut()
+            .update(&models.open_timer, |v| *v = Some(token));
+
+        let on_timer = on_timer_handler(models.clone(), cfg);
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            token
+        ));
+
+        let open_value = host
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let open_timer = host
+            .models_mut()
+            .read(&models.open_timer, |v| *v)
+            .ok()
+            .flatten();
+
+        assert_eq!(open_value.as_deref(), Some("a"));
+        assert!(open_timer.is_some_and(|t| t != token));
+    }
+
+    #[test]
+    fn pointer_grace_timer_clears_grace_intent() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host { app: &mut app };
+
+        let models = new_models(&mut host.app);
+        let cfg = MenuSubmenuConfig::default();
+
+        let token = host.next_timer_token();
+        let _ = host
+            .models_mut()
+            .update(&models.pointer_grace_timer, |v| *v = Some(token));
+        let _ = host.models_mut().update(&models.pointer_grace_intent, |v| {
+            *v = Some(right_side_grace_intent())
+        });
+
+        let on_timer = on_timer_handler(models.clone(), cfg);
+        assert!(on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            token
+        ));
+
+        let intent = host
+            .models_mut()
+            .read(&models.pointer_grace_intent, |v| *v)
+            .ok()
+            .flatten();
+        let armed = host
+            .models_mut()
+            .read(&models.pointer_grace_timer, |v| *v)
+            .ok()
+            .flatten();
+
+        assert!(intent.is_none());
+        assert!(armed.is_none());
     }
 }

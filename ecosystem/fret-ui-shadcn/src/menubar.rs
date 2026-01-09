@@ -8,6 +8,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
@@ -699,6 +700,7 @@ pub struct Menubar {
     disabled: bool,
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for Menubar {
@@ -707,6 +709,7 @@ impl std::fmt::Debug for Menubar {
             .field("menus_len", &self.menus.len())
             .field("disabled", &self.disabled)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -718,6 +721,7 @@ impl Menubar {
             disabled: false,
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
+            on_dismiss_request: None,
         }
     }
 
@@ -736,6 +740,15 @@ impl Menubar {
         self
     }
 
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
+    /// default", do not close the open model inside the handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -750,6 +763,7 @@ impl Menubar {
             let menus = self.menus;
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
             let align_leading_icons = self.align_leading_icons;
+            let on_dismiss_request = self.on_dismiss_request.clone();
 
             let trigger_labels: Arc<[Arc<str>]> = Arc::from(
                 menus
@@ -765,6 +779,11 @@ impl Menubar {
                     .collect::<Vec<_>>()
                     .into_boxed_slice(),
             );
+
+            let menus: Vec<MenubarMenuEntries> = menus
+                .into_iter()
+                .map(|menu| menu.on_dismiss_request(on_dismiss_request.clone()))
+                .collect();
 
             cx.semantics(
                 SemanticsProps {
@@ -872,6 +891,7 @@ impl MenubarMenu {
             menu: self,
             entries: Arc::from(entries.into_boxed_slice()),
             align_leading_icons: true,
+            on_dismiss_request: None,
         }
     }
 
@@ -901,6 +921,7 @@ pub struct MenubarMenuEntries {
     menu: MenubarMenu,
     entries: Arc<[MenubarEntry]>,
     align_leading_icons: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for MenubarMenuEntries {
@@ -909,6 +930,7 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("label", &self.menu.label)
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -919,11 +941,17 @@ impl MenubarMenuEntries {
         self
     }
 
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
         let align_leading_icons = self.align_leading_icons;
+        let on_dismiss_request = self.on_dismiss_request.clone();
         cx.keyed(key, |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
@@ -2622,7 +2650,8 @@ impl MenubarMenuEntries {
                         (children, Some(dismissible_on_pointer_move))
                     });
 
-                    let request = menu::root::dismissible_menu_request_with_modal(
+                    let request =
+                        menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                         cx,
                         trigger_id,
                         trigger_id,
@@ -2631,6 +2660,7 @@ impl MenubarMenuEntries {
                         overlay_children,
                         overlay_root_name,
                         content_focus_id.get(),
+                        on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
                         false,
                     );

@@ -15,6 +15,7 @@ use fret_ui::action::{OnPointerDown, PointerDownCx, UiPointerActionHost};
 pub use crate::primitives::menu::*;
 
 pub use crate::primitives::menu::root::dismissible_menu_request as context_menu_dismissible_request;
+pub use crate::primitives::menu::root::dismissible_menu_request_with_dismiss_handler as context_menu_dismissible_request_with_dismiss_handler;
 pub use crate::primitives::menu::root::menu_overlay_root_name as context_menu_root_name;
 pub use crate::primitives::menu::root::with_root_name_sync_root_open_and_ensure_submenu as context_menu_sync_root_open_and_ensure_submenu;
 pub use crate::primitives::menu::trigger::wire_open_on_shift_f10 as wire_context_menu_open_on_shift_f10;

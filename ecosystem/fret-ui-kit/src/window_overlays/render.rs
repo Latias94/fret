@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D, WindowMetricsService};
 use fret_runtime::DragKind;
-use fret_ui::action::{DismissReason, UiActionHostExt};
+use fret_ui::action::{ActionCx, DismissReason, UiActionHostAdapter, UiActionHostExt};
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
@@ -261,6 +261,7 @@ pub fn render<H: UiHost>(
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
+        let on_dismiss_request_for_root = on_dismiss_request.clone();
         let children = req.children;
 
         let pointer_barrier_root = disable_outside_pointer_events.then(|| {
@@ -287,6 +288,7 @@ pub fn render<H: UiHost>(
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
+                let on_dismiss_request = on_dismiss_request_for_root.clone();
                 cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
                     Arc::new(move |host, _cx, _reason: DismissReason| {
                         let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
@@ -347,8 +349,25 @@ pub fn render<H: UiHost>(
                     &dismissable_branch_nodes,
                 )
             {
-                let _ = app.models_mut().update(&open, |v| *v = false);
-                open_now = false;
+                if let Some(on_dismiss_request) = on_dismiss_request.as_ref() {
+                    let mut host = UiActionHostAdapter { app };
+                    on_dismiss_request(
+                        &mut host,
+                        ActionCx {
+                            window,
+                            target: trigger,
+                        },
+                        DismissReason::FocusOutside,
+                    );
+                    open_now = app
+                        .models_mut()
+                        .read(&open, |v| *v)
+                        .ok()
+                        .unwrap_or(open_now);
+                } else {
+                    let _ = app.models_mut().update(&open, |v| *v = false);
+                    open_now = false;
+                }
             }
 
             let dismissable_branches = if open_now {

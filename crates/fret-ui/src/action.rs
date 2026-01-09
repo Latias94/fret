@@ -36,6 +36,8 @@ pub enum PressablePointerDownResult {
 pub enum DismissReason {
     Escape,
     OutsidePress,
+    /// Focus moved outside the dismissable layer subtree (Radix `onFocusOutside` outcome).
+    FocusOutside,
     /// The trigger (or another registered subtree) was scrolled.
     ///
     /// This is used for Radix-aligned tooltip semantics: a tooltip should close when its trigger

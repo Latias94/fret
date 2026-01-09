@@ -14,7 +14,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::UiTree;
-use fret_ui::action::UiActionHostAdapter;
+use fret_ui::action::{DismissReason, UiActionHostAdapter};
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
     PressableProps, SizeStyle,
@@ -1052,6 +1052,148 @@ fn dismissible_popover_closes_on_focus_change_outside() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: base layer, open via trigger click.
+    let (_trigger, underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: Default::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request the popover and render it.
+    begin_frame(&mut app, window);
+    let (trigger, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Simulate a focus change outside of the overlay subtree (e.g. Tab navigation).
+    let underlay_node =
+        fret_ui::elements::node_for_element(&mut app, window, underlay).expect("underlay node");
+    ui.set_focus(Some(underlay_node));
+
+    let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+        Arc::new(std::sync::Mutex::new(None));
+    let reason_cell_for_handler = reason_cell.clone();
+    let handler: fret_ui::action::OnDismissRequest =
+        Arc::new(move |_host, _cx, reason: DismissReason| {
+            let mut lock = reason_cell_for_handler.lock().unwrap();
+            *lock = Some(reason);
+        });
+
+    // Third frame: focus-outside should route through the dismiss handler. The handler chooses not
+    // to close `open`, mirroring Radix `preventDefault` behavior.
+    begin_frame(&mut app, window);
+    let (trigger, _underlay3) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: Some(handler),
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&open), Some(true));
+    assert_eq!(
+        *reason_cell.lock().unwrap(),
+        Some(DismissReason::FocusOutside)
+    );
 }
 
 #[test]

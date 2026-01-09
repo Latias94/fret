@@ -51,6 +51,7 @@ Upstream exports a thin wrapper around `vaul`:
   content (default on).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `Drawer::on_dismiss_request(...)` (delegates to `Sheet`).
+- Pass: Bottom drawers support Vaul-style drag-to-dismiss from a small handle affordance region.
 
 ### Focus behavior
 
@@ -59,7 +60,7 @@ Upstream exports a thin wrapper around `vaul`:
 
 ## Known gaps / intentional differences
 
-- Vaul-specific drag-to-dismiss and snap-points are not modeled yet.
+- Vaul-specific snap-points are not modeled yet.
 - `DrawerPortal` / `DrawerOverlay` are not currently exposed as standalone building blocks in Fret
   because the overlay manager owns portal mounting and the barrier is authored by the recipe layer.
 
@@ -67,4 +68,3 @@ Upstream exports a thin wrapper around `vaul`:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn drawer::tests`
-
