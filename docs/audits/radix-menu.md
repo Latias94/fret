@@ -50,6 +50,7 @@ composing:
   providing an `OnDismissRequest` handler on the overlay request via
   `dismissible_menu_request_with_dismiss_handler(...)` (or
   `dismissible_menu_request_with_modal_and_dismiss_handler(...)`).
+  - Focus-outside dismissal routes through the same handler with `DismissReason::FocusOutside`.
 - Pass: Trigger `expanded`/`controls` relationships can be stamped via
   `menu::trigger::apply_menu_trigger_a11y(...)` (used by shadcn menu recipes).
 
@@ -71,4 +72,3 @@ composing:
   `modal=true`.
 - ARIA hiding (`hideOthers`) is not currently modeled for menus; this is tracked alongside broader
   semantics-bridge work.
-

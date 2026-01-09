@@ -64,6 +64,7 @@ Fret mapping:
   `dismissible_on_dismiss_request`).
 - If a handler is present, Fret does not close models automatically. The handler decides whether
   to close the `open` model, implementing the same outcome as "preventDefault".
+  - Focus-outside dismissal routes through the same handler with `DismissReason::FocusOutside`.
 
 This is intentionally the only stable contract; it avoids encoding the handler inside option
 structs that want `Copy/Eq` semantics.
@@ -129,4 +130,3 @@ Fret mapping:
 - DOM-specific details (capture/bubble ordering, touch delayed click) are not mirrored directly;
   only the observable outcomes (dismiss request routing + underlay blocking/consumption) are
   treated as alignment targets.
-
