@@ -36,6 +36,8 @@ pub(super) struct EncodeState<'a> {
 }
 
 impl<'a> EncodeState<'a> {
+    const MAX_CLIP_STACK_DEPTH: u32 = 64;
+
     pub(super) fn new(
         encoding: &'a mut SceneEncoding,
         scale_factor: f32,
@@ -98,7 +100,7 @@ impl<'a> EncodeState<'a> {
         self.uniforms.push(ViewportUniform {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
-            clip_count,
+            clip_count: clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
             output_is_srgb: self.output_is_srgb,
             _pad: [0; 3],
         });

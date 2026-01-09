@@ -926,17 +926,17 @@ fn append_pixelate_in_place_single_scratch(
     }
 
     let down_size = downsampled_size(full_size, scale);
-    let down_scissor = map_scissor_downsample_nearest(scissor, scale, down_size);
-    if scissor.is_some() && down_scissor.is_none() {
-        return;
-    }
 
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
         src: srcdst,
         dst: scratch,
         src_size: full_size,
         dst_size: down_size,
-        dst_scissor: down_scissor,
+        // Pixelation blocks are aligned to the framebuffer origin. When the effect bounds start or
+        // end in the middle of a block, scissoring the downsample pass can omit texels that are
+        // still sampled during the upscale pass, producing clear-colored "holes". Downsample
+        // targets are small, so prefer correctness over this micro-optimization.
+        dst_scissor: None,
         mask_uniform_index: None,
         mode: ScaleMode::Downsample,
         scale,

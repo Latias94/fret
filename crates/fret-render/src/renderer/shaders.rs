@@ -147,7 +147,10 @@ fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -294,7 +297,10 @@ fn saturate(x: f32) -> f32 {
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -553,7 +559,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -748,7 +757,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1010,7 +1022,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1157,7 +1172,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1304,7 +1322,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1436,7 +1457,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1570,7 +1594,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1707,7 +1734,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
@@ -1844,7 +1874,10 @@ fn quad_sdf(point: vec2<f32>, rect_origin: vec2<f32>, rect_size: vec2<f32>, corn
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
-  for (var i = 0u; i < viewport.clip_count; i = i + 1u) {
+  for (var i = 0u; i < 64u; i = i + 1u) {
+    if (i >= viewport.clip_count) {
+      break;
+    }
     if (idx == 0xffffffffu) {
       break;
     }
