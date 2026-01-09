@@ -25,6 +25,12 @@ GPUI’s ecosystem demonstrates a healthy split:
 
 We want the same outcome for Fret, while keeping the framework/editor-app scope boundary explicit (ADR 0027).
 
+Zed/GPUI code anchors (non-normative):
+
+- Zed’s monorepo also reflects a similar “runtime substrate vs policy UI surfaces” split:
+  - runtime substrate: `repo-ref/zed/crates/gpui`
+  - policy-heavy UI surfaces: `repo-ref/zed/crates/ui`
+
 Current workspace note:
 
 - `fret-core` is kept layout-engine-free. Layout engines such as `taffy` are allowed only in `fret-ui` and/or
