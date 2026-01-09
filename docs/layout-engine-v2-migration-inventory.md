@@ -38,7 +38,7 @@ Related roadmap:
 
 Run these periodically (and update this file with new hits):
 
-- Find large-probe patterns: `rg -n "Px\\(1\\.0e9\\)|\\b1\\.0e9\\b|\\b1e9\\b|>=\\s*1\\.0e8|is_probe_layout" crates/fret-ui/src docs -S`
+- Find large-probe patterns (should be test-only): `rg -n "Px\\(1\\.0e9\\)|\\b1\\.0e9\\b|\\b1e9\\b" crates/fret-ui/src docs -S`
 - Find remaining v2-incompatible probe layout calls: `rg -n "layout_in\\(.*Px\\(1\\.0e9\\)" crates/fret-ui/src -S`
 
 ## Notes (What We Intentionally Do Not Support)
