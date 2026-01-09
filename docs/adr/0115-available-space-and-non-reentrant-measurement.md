@@ -338,9 +338,10 @@ Component layer (follow-up, not required for the mechanism refactor):
 - Cache keys: bake `scale_factor` + theme revision + `TextFontStackKey` into text measurement
   caches; prefer small stable globals over backend-specific internals.
 - Wrapper representation: represent wrappers as pass-through nodes by default to keep a single flow
-  island; skipping boxes requires an explicit validated “contents-like” opt-in.
+  island; skipping boxes is not supported by default and requires an explicit validated
+  "layout-transparent wrapper" opt-in if introduced later (see ADR 0116, ADR 0117).
 - Cycle policy: debug/test builds panic; release builds return `Size::default()` and emit a
   rate-limited diagnostic counter.
-- Contents-like mode (optional, future): validate single-child and forbid geometry-affecting
-  properties (padding/margin/overflow/position); this is strictly about box introduction/removal
-  and does not imply any Slot/prop-merging mechanism (see ADR 0117).
+- Layout-transparent wrapper (optional, future): validate single-child and forbid geometry-affecting
+  properties (padding/margin/overflow/position/size/min/max/flex/grid/transform); this is strictly
+  about box introduction/removal and does not imply any Slot/prop-merging mechanism (see ADR 0117).

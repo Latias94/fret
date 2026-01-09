@@ -249,6 +249,37 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Initialize a default tracing subscriber (if one is not already installed).
+    ///
+    /// Controlled by `RUST_LOG` when set; otherwise uses a conservative default filter suitable for
+    /// app development.
+    #[cfg(feature = "tracing")]
+    pub fn with_default_tracing(self) -> Self {
+        init_tracing();
+        self
+    }
+
+    /// Initialize default diagnostics (tracing + panic logging) for application development.
+    #[cfg(feature = "diagnostics")]
+    pub fn with_default_diagnostics(self) -> Self {
+        init_diagnostics();
+        self
+    }
+
+    /// Configure the main window title and size (logical pixels).
+    pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
+        let title = title.into();
+        let (width, height) = size;
+
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_title = title.clone();
+            config.main_window_size.width = width;
+            config.main_window_size.height = height;
+        });
+
+        self
+    }
+
     pub fn init_app(mut self, f: impl FnOnce(&mut App)) -> Self {
         self.inner = self.inner.init_app(f);
         self
@@ -291,11 +322,113 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+pub fn init_diagnostics() {
+    init_tracing();
+    init_panic_hook();
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "tracing"))]
+pub fn init_tracing() {
+    use tracing_subscriber::EnvFilter;
+
+    const DEFAULT: &str = "info,fret=info,fret_launch=info,fret_render=info";
+
+    let filter = std::env::var("RUST_LOG")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .and_then(|v| EnvFilter::try_new(v).ok())
+        .unwrap_or_else(|| EnvFilter::try_new(DEFAULT).expect("default tracing filter is valid"));
+
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .compact()
+        .try_init();
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
+pub fn init_panic_hook() {
+    use std::backtrace::Backtrace;
+    use std::sync::Once;
+
+    static INSTALLED: Once = Once::new();
+    INSTALLED.call_once(|| {
+        let default_hook = std::panic::take_hook();
+
+        std::panic::set_hook(Box::new(move |info| {
+            let thread = std::thread::current();
+            let thread_name = thread.name().unwrap_or("<unnamed>");
+
+            let message = info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic payload>".to_string());
+
+            let location = info
+                .location()
+                .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                .unwrap_or_else(|| "<unknown>".to_string());
+
+            let backtrace = Backtrace::capture();
+            match backtrace.status() {
+                std::backtrace::BacktraceStatus::Captured => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        backtrace = %backtrace,
+                        "panic"
+                    );
+                }
+                std::backtrace::BacktraceStatus::Disabled
+                | std::backtrace::BacktraceStatus::Unsupported => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        "panic (set RUST_BACKTRACE=1 to capture a backtrace)"
+                    );
+                }
+                _ => {
+                    tracing::error!(
+                        thread = thread_name,
+                        location = location,
+                        message = message,
+                        "panic"
+                    );
+                }
+            }
+
+            default_hook(info);
+        }));
+    });
+}
+
 /// Concrete `BootstrapBuilder` type returned by `ui_app` / `ui_app_with_app`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
     fret_launch::FnDriver<ui_app_driver::UiAppDriver<S>, ui_app_driver::UiAppWindowState<S>>,
 >;
+
+/// Create a “golden path” native UI app builder, using `App::new()` by default and allowing a
+/// hook to configure the driver before it is wrapped into `FnDriver`.
+///
+/// Prefer passing a non-capturing closure so it can coerce to a `fn` pointer (hotpatch-friendly).
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app_with_hooks<S: 'static>(
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+    configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
+) -> UiAppBootstrapBuilder<S> {
+    ui_app_with_app_and_hooks(App::new(), root_name, init_window, view, configure)
+}
 
 /// Create a “golden path” native UI app builder, using `App::new()` by default.
 ///
@@ -323,6 +456,27 @@ pub fn ui_app_with_app<S: 'static>(
         &mut S,
     ) -> Vec<fret_ui::element::AnyElement>,
 ) -> UiAppBootstrapBuilder<S> {
-    let driver = ui_app_driver::UiAppDriver::new(root_name, init_window, view).into_fn_driver();
+    ui_app_with_app_and_hooks(app, root_name, init_window, view, |d| d)
+}
+
+/// Same as `ui_app_with_app`, but allows a hook to configure the driver before it is wrapped into
+/// `FnDriver`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app_with_app_and_hooks<S: 'static>(
+    app: App,
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+    configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
+) -> UiAppBootstrapBuilder<S> {
+    let driver = configure(ui_app_driver::UiAppDriver::new(
+        root_name,
+        init_window,
+        view,
+    ))
+    .into_fn_driver();
     BootstrapBuilder::new(app, driver)
 }

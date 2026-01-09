@@ -22,7 +22,7 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, LayoutStyle};
+use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -147,6 +147,70 @@ pub fn apply_select_trigger_a11y(
         Some(expanded),
         listbox_element,
     )
+}
+
+/// A11y metadata for a Radix-style select trigger pressable.
+pub fn select_trigger_a11y(
+    label: Option<Arc<str>>,
+    expanded: bool,
+    listbox_element: Option<GlobalElementId>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(fret_core::SemanticsRole::ComboBox),
+        label,
+        expanded: Some(expanded),
+        controls_element: listbox_element.map(|id| id.0),
+        ..Default::default()
+    }
+}
+
+fn select_listbox_semantics_id_in_scope<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> GlobalElementId {
+    select_listbox_pressable_with_id_props::<H>(cx, |_cx, _st, _id| {
+        (
+            PressableProps {
+                layout: LayoutStyle::default(),
+                enabled: true,
+                focusable: false,
+                ..Default::default()
+            },
+            Vec::new(),
+        )
+    })
+    .id
+}
+
+/// Returns the stable semantics element id for a select listbox.
+///
+/// This mirrors Radix `SelectTrigger` / `SelectContent` behavior where the trigger advertises a
+/// `controls` relationship (`aria-controls`) to the listbox content.
+///
+/// Callers should use this root-name-scoped helper rather than trying to capture the listbox id
+/// from the mounted overlay subtree: the trigger needs a stable content id even when the listbox
+/// is not mounted yet.
+pub fn select_listbox_semantics_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    overlay_root_name: &str,
+) -> GlobalElementId {
+    cx.with_root_name(overlay_root_name, |cx| {
+        select_listbox_semantics_id_in_scope::<H>(cx)
+    })
+}
+
+/// Builds the select listbox element using a stable call path.
+///
+/// Use this instead of calling `ElementContext::pressable_with_id_props` directly when you need to
+/// derive a stable listbox element id (e.g. for trigger `aria-controls` relationships).
+pub fn select_listbox_pressable_with_id_props<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(
+        &mut ElementContext<'_, H>,
+        PressableState,
+        GlobalElementId,
+    ) -> (PressableProps, Vec<AnyElement>),
+) -> AnyElement {
+    cx.pressable_with_id_props(f)
 }
 
 /// Radix Select trigger "open keys" (`OPEN_KEYS`).
@@ -811,6 +875,33 @@ mod tests {
             assert_eq!(a11y.expanded, Some(true));
             assert_eq!(a11y.controls_element, Some(listbox.0));
             assert_eq!(a11y.label.as_deref(), Some("Select"));
+        });
+    }
+
+    #[test]
+    fn select_listbox_semantics_id_matches_mounted_listbox_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let overlay_root_name = "select-overlay";
+            let expected = select_listbox_semantics_id::<App>(cx, overlay_root_name);
+            let actual = cx.with_root_name(overlay_root_name, |cx| {
+                select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
+                    (
+                        PressableProps {
+                            layout: LayoutStyle::default(),
+                            enabled: true,
+                            focusable: false,
+                            ..Default::default()
+                        },
+                        Vec::new(),
+                    )
+                })
+                .id
+            });
+            assert_eq!(expected, actual);
         });
     }
 

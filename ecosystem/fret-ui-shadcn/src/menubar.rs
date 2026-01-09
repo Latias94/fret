@@ -1694,25 +1694,22 @@ impl MenubarMenuEntries {
                                                                         focusable,
                                                                         focus_ring: Some(item_ring),
                                                                         a11y: {
-                                                                            let mut a11y =
-                                                                                menu::item::menu_item_a11y(
-                                                                                    a11y_label.or_else(|| {
-                                                                                        Some(label.clone())
-                                                                                    }),
-                                                                                    expanded,
-                                                                                );
-                                                                            if has_submenu {
-                                                                                a11y.controls_element = Some(
-                                                                                    menu::sub_content::submenu_content_semantics_id(
-                                                                                        cx,
-                                                                                        overlay_root_name_for_controls
-                                                                                            .as_ref(),
-                                                                                        &value,
-                                                                                    )
-                                                                                    .0,
-                                                                                );
-                                                                            }
-                                                                            a11y.with_collection_position(
+                                                                            let controls = has_submenu.then(|| {
+                                                                                menu::sub_content::submenu_content_semantics_id(
+                                                                                    cx,
+                                                                                    overlay_root_name_for_controls
+                                                                                        .as_ref(),
+                                                                                    &value,
+                                                                                )
+                                                                            });
+                                                                            menu::item::menu_item_a11y_with_controls(
+                                                                                a11y_label.or_else(|| {
+                                                                                    Some(label.clone())
+                                                                                }),
+                                                                                expanded,
+                                                                                controls,
+                                                                            )
+                                                                            .with_collection_position(
                                                                                 collection_index,
                                                                                 item_count,
                                                                             )

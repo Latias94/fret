@@ -14,6 +14,7 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::UiTree;
+use fret_ui::action::UiActionHostAdapter;
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
     PressableProps, SizeStyle,
@@ -1167,6 +1168,67 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert_eq!(app.models().get_copied(&open), Some(true));
+}
+
+#[test]
+fn toast_viewport_focus_command_focuses_active_toast_layer() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello"),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .toast_layers
+            .get(&(window, viewport_id))
+            .map(|l| l.layer)
+            .expect("toast layer installed")
+    });
+    let expected = ui.layer_root(layer).expect("layer root");
+
+    assert!(try_handle_window_command(
+        &mut ui,
+        &mut app,
+        window,
+        &fret_runtime::CommandId::from(TOAST_VIEWPORT_FOCUS_COMMAND),
+    ));
+    assert_eq!(ui.focus(), Some(expected));
 }
 
 #[test]

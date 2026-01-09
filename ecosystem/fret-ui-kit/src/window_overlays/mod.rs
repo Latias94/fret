@@ -13,6 +13,9 @@ mod toast;
 #[cfg(test)]
 mod tests;
 
+use fret_core::AppWindowId;
+use fret_ui::{Invalidation, UiHost, UiTree};
+
 pub use frame::{
     begin_frame, request_dismissible_popover_for_window, request_hover_overlay_for_window,
     request_modal_for_window, request_toast_layer_for_window, request_tooltip_for_window,
@@ -32,6 +35,52 @@ pub use requests::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
 pub use toast::{
-    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
-    ToastVariant, dismiss_toast_action, toast_action, toast_store,
+    DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
+    DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
+    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_toast_action, toast_action,
+    toast_store,
 };
+
+/// Radix `ToastViewport` focus-jump command (default hotkey: `F8`).
+pub const TOAST_VIEWPORT_FOCUS_COMMAND: &str = "toast.viewport.focus";
+
+/// Attempts to handle a window-scoped command that targets overlay substrates.
+///
+/// This lives in `fret-ui-kit` (not `fret-ui`) because it needs access to overlay controller
+/// state (e.g. active toast layers).
+pub fn try_handle_window_command<H: UiHost>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    command: &fret_runtime::CommandId,
+) -> bool {
+    if command.as_str() != TOAST_VIEWPORT_FOCUS_COMMAND {
+        return false;
+    }
+
+    let layer = app.with_global_mut(state::WindowOverlays::default, |overlays, _app| {
+        overlays
+            .toast_layers
+            .iter()
+            .find_map(|((w, _id), active)| (*w == window).then_some(active.layer))
+    });
+
+    let Some(layer) = layer else {
+        return false;
+    };
+    if !ui.is_layer_visible(layer) {
+        return false;
+    }
+
+    let Some(root) = ui.layer_root(layer) else {
+        return false;
+    };
+
+    if let Some(prev) = ui.focus() {
+        ui.invalidate(prev, Invalidation::Paint);
+    }
+    ui.set_focus(Some(root));
+    ui.invalidate(root, Invalidation::Paint);
+    app.request_redraw(window);
+    true
+}

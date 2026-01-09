@@ -32,6 +32,8 @@ Fret does not use React context. Instead, accordion behavior is composed via:
   `accordion_use_single_model(...)` / `accordion_use_multiple_model(...)` (thin helpers), used by
   `AccordionRoot::{single_controllable,multiple_controllable}`.
 - Pass: `collapsible` behavior in single mode matches Radix (toggle-off only when enabled).
+- Pass: Trigger can model Radix `aria-controls` via the `controls_element` relationship when given
+  a stable content element id.
 - Note: Fret uses `RovingFlex` for keyboard navigation rather than a collection of triggers.
 
 ## Follow-ups (recommended)

@@ -10,11 +10,12 @@ use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
-use fret_ui::element::{PressableA11y, SemanticsProps};
+use fret_ui::element::{AnyElement, PressableA11y, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::primitives::trigger_a11y;
 
 /// Returns an open-state model that behaves like Radix `useControllableState` (`open` /
 /// `defaultOpen`).
@@ -91,6 +92,19 @@ pub fn collapsible_trigger_a11y(label: Option<Arc<str>>, open: bool) -> Pressabl
         expanded: Some(open),
         ..Default::default()
     }
+}
+
+/// Stamps Radix-like trigger relationships:
+/// - `controls_element` mirrors `aria-controls` (by element id).
+///
+/// In Radix Collapsible, the trigger points at the content by id. In Fret we model this via a
+/// portable element-id relationship that resolves into `SemanticsNode.controls` when the content
+/// is mounted.
+pub fn apply_collapsible_trigger_controls(
+    trigger: AnyElement,
+    content_element: GlobalElementId,
+) -> AnyElement {
+    trigger_a11y::apply_trigger_controls(trigger, Some(content_element))
 }
 
 /// Read the last cached open height for a collapsible content subtree.
@@ -215,6 +229,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -242,5 +257,30 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn apply_collapsible_trigger_controls_sets_controls_on_pressable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let content = GlobalElementId(0xbeef);
+            let trigger = apply_collapsible_trigger_controls(trigger, content);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.controls_element, Some(content.0));
+        });
     }
 }

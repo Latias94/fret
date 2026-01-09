@@ -202,4 +202,30 @@ pub use tooltip::{
     TooltipTrigger,
 };
 
-pub use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};
+pub use fret_ui_kit::declarative::style as decl_style;
+/// Re-exported “authoring glue” for app/component code.
+///
+/// shadcn/ui recipes assume a lightweight layout/styling vocabulary (Tailwind on the web).
+/// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
+/// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
+pub use fret_ui_kit::declarative::{icon, stack};
+pub use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+};
+
+/// Common imports for application code using `fret-ui-shadcn`.
+///
+/// This keeps the “golden path” small: app code can typically depend on `fret-bootstrap` +
+/// `fret-ui-shadcn` and `use fret_ui_shadcn::prelude::*;`.
+pub mod prelude {
+    pub use crate::{
+        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+    };
+    pub use crate::{decl_style, icon, stack};
+
+    pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
+    pub use fret_icons::IconId;
+    pub use fret_runtime::Model;
+    pub use fret_ui::element::{AnyElement, TextProps};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
+}

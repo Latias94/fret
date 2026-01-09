@@ -31,7 +31,10 @@ Fret does not use React context or CSS variables. Collapsible outcomes are compo
   `CollapsibleRoot` (recommended) or `collapsible_use_open_model(...)` (thin helper), backed by the
   shared controllable-state substrate.
 - Pass: Trigger exposes an "expanded" a11y outcome (mapped to `PressableA11y.expanded`).
-- Note: Fret does not currently model `aria-controls` wiring (content id references).
+- Pass: Trigger can model Radix `aria-controls` via the `controls_element` relationship (mapped to
+  `SemanticsNode.controls`) when given a stable content element id.
+  - Helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (`apply_collapsible_trigger_controls(...)`)
+  - Reference usage: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
 - Pass: Dimension-driven collapse animations are modeled via a cached height clip driven by a
   deterministic transition timeline (no CSS variables).
   - Shared helper (primitives surface): `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`

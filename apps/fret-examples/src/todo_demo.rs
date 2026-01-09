@@ -1,19 +1,12 @@
 use std::sync::Arc;
 
 use fret_app::{App, CommandId, Effect};
-use fret_bootstrap::BootstrapBuilder;
-use fret_bootstrap::ui_app_driver::UiAppDriver;
+use fret_bootstrap::ui_app_with_hooks;
 use fret_core::{AppWindowId, UiServices};
 use fret_core::{TextOverflow, TextWrap};
-use fret_icons::IconId;
-use fret_launch::WinitRunnerConfig;
-use fret_runtime::Model;
-use fret_ui::element::{AnyElement, HoverRegionProps, TextProps};
-use fret_ui::{ElementContext, Invalidation, Theme};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
-use fret_ui_shadcn as shadcn;
+use fret_ui::element::{HoverRegionProps, TextProps};
+use fret_ui::{Invalidation, Theme};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 const CMD_ADD: &str = "todo.add";
 const CMD_CLEAR_DONE: &str = "todo.clear_done";
@@ -41,16 +34,9 @@ enum TodoFilter {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let driver = UiAppDriver::new("todo-demo", init_window, view)
-        .on_command(on_command)
-        .into_fn_driver();
-
-    let mut config = WinitRunnerConfig::default();
-    config.main_window_title = "todo_demo".to_string();
-    config.main_window_size = winit::dpi::LogicalSize::new(560.0, 520.0);
-
-    BootstrapBuilder::new(App::new(), driver)
-        .configure(|c| *c = config)
+    ui_app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))
+        .with_default_diagnostics()
+        .with_main_window("todo_demo", (560.0, 520.0))
         .with_default_settings_json()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
@@ -113,10 +99,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .variant(shadcn::ButtonVariant::Default)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children(vec![fret_ui_kit::declarative::icon::icon(
-            cx,
-            IconId::new("lucide.plus"),
-        )])
+        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
 
     let input = shadcn::Input::new(st.draft.clone())
@@ -178,7 +161,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
                             .justify_center()
                             .items_center(),
                         |cx| {
-                            vec![fret_ui_kit::declarative::icon::icon_with(
+                            vec![icon::icon_with(
                                 cx,
                                 IconId::new("lucide.calendar"),
                                 Some(fret_core::Px(16.0)),
@@ -423,10 +406,7 @@ fn todo_row(
         .size(shadcn::ButtonSize::Icon)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd(it.id))
-        .children(vec![fret_ui_kit::declarative::icon::icon(
-            cx,
-            IconId::new("lucide.trash-2"),
-        )])
+        .children(vec![icon::icon(cx, IconId::new("lucide.trash-2"))])
         .into_element(cx);
 
     cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {

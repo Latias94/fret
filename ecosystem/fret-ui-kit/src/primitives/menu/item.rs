@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use fret_core::SemanticsRole;
 use fret_ui::element::PressableA11y;
+use fret_ui::elements::GlobalElementId;
 
 /// Build default a11y metadata for a menu item-like pressable.
 pub fn menu_item_a11y(label: Option<Arc<str>>, expanded: Option<bool>) -> PressableA11y {
@@ -14,6 +15,22 @@ pub fn menu_item_a11y(label: Option<Arc<str>>, expanded: Option<bool>) -> Pressa
         role: Some(SemanticsRole::MenuItem),
         label,
         expanded,
+        ..Default::default()
+    }
+}
+
+/// Build default a11y metadata for a menu item-like pressable, including an optional `controls`
+/// relationship (Radix `aria-controls` outcome).
+pub fn menu_item_a11y_with_controls(
+    label: Option<Arc<str>>,
+    expanded: Option<bool>,
+    controls_element: Option<GlobalElementId>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::MenuItem),
+        label,
+        expanded,
+        controls_element: controls_element.map(|id| id.0),
         ..Default::default()
     }
 }

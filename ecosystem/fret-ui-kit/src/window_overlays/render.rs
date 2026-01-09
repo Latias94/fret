@@ -776,7 +776,7 @@ pub fn render<H: UiHost>(
                             let toast_id = toast.id;
                             let open = toast.open;
                             let position = position;
-                            let drag_x = toast.drag_x;
+                            let drag_offset = toast.drag_offset;
                             let drag_active = toast.dragging;
 
                             let bg_default = theme
@@ -1169,8 +1169,10 @@ pub fn render<H: UiHost>(
                                     | ToastPosition::BottomCenter
                                     | ToastPosition::BottomRight => slide_px,
                                 };
-                                let slide =
-                                    Transform2D::translation(Point::new(Px(dx.0 + drag_x.0), dy));
+                                let slide = Transform2D::translation(Point::new(
+                                    Px(dx.0 + drag_offset.x.0),
+                                    Px(dy.0 + drag_offset.y.0),
+                                ));
 
                                 let mut toast_layout = fret_ui::element::LayoutStyle::default();
                                 toast_layout.size.min_width =
@@ -1306,7 +1308,7 @@ pub fn render<H: UiHost>(
 
                                                         if end.dragging {
                                                             host.release_pointer_capture();
-                                                            if end.dx.0.abs() >= 80.0 {
+                                                            if end.dismiss {
                                                                 let _ = dismiss_toast_action(
                                                                     host,
                                                                     store.clone(),

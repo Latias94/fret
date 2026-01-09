@@ -465,6 +465,10 @@ fn ui_app_handle_command<S>(
         return;
     }
 
+    if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
+        return;
+    }
+
     if let Some(on_command) = driver.on_command {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {

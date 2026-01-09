@@ -319,6 +319,15 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
+                    command: Some("toast.viewport.focus".into()),
+                    platform: None,
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec![],
+                        key: "F8".into(),
+                    },
+                },
+                BindingV1 {
                     command: Some("text.copy".into()),
                     platform: Some("windows".into()),
                     when: None,

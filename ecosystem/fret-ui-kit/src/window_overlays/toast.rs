@@ -9,6 +9,9 @@ use fret_ui::UiHost;
 pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
 pub(super) const TOAST_AUTO_CLOSE_TICK: Duration = Duration::from_millis(100);
 pub const DEFAULT_MAX_TOASTS: usize = 3;
+pub const DEFAULT_SWIPE_THRESHOLD_PX: f32 = 50.0;
+pub const DEFAULT_SWIPE_MAX_DRAG_PX: f32 = 240.0;
+pub const DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX: f32 = 4.0;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
@@ -31,6 +34,35 @@ pub enum ToastVariant {
     Warning,
     Error,
     Loading,
+}
+
+/// Mirrors Radix toast `swipeDirection` (`left`/`right`/`up`/`down`).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ToastSwipeDirection {
+    Left,
+    #[default]
+    Right,
+    Up,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ToastSwipeConfig {
+    pub direction: ToastSwipeDirection,
+    pub threshold: Px,
+    pub max_drag: Px,
+    pub dragging_threshold: Px,
+}
+
+impl Default for ToastSwipeConfig {
+    fn default() -> Self {
+        Self {
+            direction: ToastSwipeDirection::default(),
+            threshold: Px(DEFAULT_SWIPE_THRESHOLD_PX),
+            max_drag: Px(DEFAULT_SWIPE_MAX_DRAG_PX),
+            dragging_threshold: Px(DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -132,7 +164,7 @@ pub(super) struct ToastEntry {
     pub(super) auto_close_token: Option<TimerToken>,
     pub(super) remove_token: Option<TimerToken>,
     pub(super) drag_start: Option<Point>,
-    pub(super) drag_x: Px,
+    pub(super) drag_offset: Point,
     pub(super) dragging: bool,
 }
 
@@ -150,6 +182,7 @@ pub struct ToastStore {
     by_window: HashMap<AppWindowId, Vec<ToastEntry>>,
     by_token: HashMap<TimerToken, ToastTimerRef>,
     max_toasts_by_window: HashMap<AppWindowId, usize>,
+    swipe_by_window: HashMap<AppWindowId, ToastSwipeConfig>,
 }
 
 impl ToastStore {
@@ -180,6 +213,45 @@ impl ToastStore {
 
     fn max_toasts_for_window(&self, window: AppWindowId) -> Option<usize> {
         self.max_toasts_by_window.get(&window).copied()
+    }
+
+    pub fn set_window_swipe_config(
+        &mut self,
+        window: AppWindowId,
+        direction: ToastSwipeDirection,
+        threshold: Px,
+    ) -> bool {
+        let cfg = ToastSwipeConfig {
+            direction,
+            threshold: Px(threshold.0.max(1.0)),
+            ..Default::default()
+        };
+        let prev = self.swipe_by_window.get(&window).copied();
+        if prev == Some(cfg) {
+            return false;
+        }
+        self.swipe_by_window.insert(window, cfg);
+        true
+    }
+
+    pub fn set_window_swipe_config_ex(
+        &mut self,
+        window: AppWindowId,
+        config: ToastSwipeConfig,
+    ) -> bool {
+        let prev = self.swipe_by_window.get(&window).copied();
+        if prev == Some(config) {
+            return false;
+        }
+        self.swipe_by_window.insert(window, config);
+        true
+    }
+
+    fn swipe_config_for_window(&self, window: AppWindowId) -> ToastSwipeConfig {
+        self.swipe_by_window
+            .get(&window)
+            .copied()
+            .unwrap_or_default()
     }
 
     fn add_toast(
@@ -220,7 +292,7 @@ impl ToastStore {
             auto_close_token,
             remove_token: None,
             drag_start: None,
-            drag_x: Px(0.0),
+            drag_offset: Point::new(Px(0.0), Px(0.0)),
             dragging: false,
         });
 
@@ -255,7 +327,7 @@ impl ToastStore {
                     toast.cancel = request.cancel;
                     toast.dismissible = request.dismissible;
                     toast.drag_start = None;
-                    toast.drag_x = Px(0.0);
+                    toast.drag_offset = Point::new(Px(0.0), Px(0.0));
                     toast.dragging = false;
 
                     let schedule_auto = match (wants_timer, auto_close_token) {
@@ -379,7 +451,7 @@ impl ToastStore {
         toast.open = false;
         toast.auto_close_remaining = None;
         toast.drag_start = None;
-        toast.drag_x = Px(0.0);
+        toast.drag_offset = Point::new(Px(0.0), Px(0.0));
         toast.dragging = false;
         let cancel_auto = toast.auto_close_token.take();
         if let Some(token) = cancel_auto {
@@ -451,9 +523,52 @@ impl ToastStore {
             return false;
         }
         toast.drag_start = Some(start);
-        toast.drag_x = Px(0.0);
+        toast.drag_offset = Point::new(Px(0.0), Px(0.0));
         toast.dragging = false;
         true
+    }
+
+    fn toast_drag_offset(start: Point, position: Point, config: ToastSwipeConfig) -> Point {
+        let dx = Px(position.x.0 - start.x.0);
+        let dy = Px(position.y.0 - start.y.0);
+        let max = config.max_drag.0.max(1.0);
+
+        match config.direction {
+            ToastSwipeDirection::Left => {
+                let dx = Px(dx.0.clamp(-max, 0.0));
+                Point::new(dx, Px(0.0))
+            }
+            ToastSwipeDirection::Right => {
+                let dx = Px(dx.0.clamp(0.0, max));
+                Point::new(dx, Px(0.0))
+            }
+            ToastSwipeDirection::Up => {
+                let dy = Px(dy.0.clamp(-max, 0.0));
+                Point::new(Px(0.0), dy)
+            }
+            ToastSwipeDirection::Down => {
+                let dy = Px(dy.0.clamp(0.0, max));
+                Point::new(Px(0.0), dy)
+            }
+        }
+    }
+
+    fn toast_drag_is_active(offset: Point, config: ToastSwipeConfig) -> bool {
+        let px = match config.direction {
+            ToastSwipeDirection::Left | ToastSwipeDirection::Right => offset.x.0.abs(),
+            ToastSwipeDirection::Up | ToastSwipeDirection::Down => offset.y.0.abs(),
+        };
+        px >= config.dragging_threshold.0.max(0.0)
+    }
+
+    fn toast_drag_should_dismiss(offset: Point, config: ToastSwipeConfig) -> bool {
+        let threshold = config.threshold.0.max(1.0);
+        match config.direction {
+            ToastSwipeDirection::Left => offset.x.0 <= -threshold,
+            ToastSwipeDirection::Right => offset.x.0 >= threshold,
+            ToastSwipeDirection::Up => offset.y.0 <= -threshold,
+            ToastSwipeDirection::Down => offset.y.0 >= threshold,
+        }
     }
 
     pub(super) fn drag_move(
@@ -462,6 +577,7 @@ impl ToastStore {
         id: ToastId,
         position: Point,
     ) -> Option<ToastDragMove> {
+        let cfg = self.swipe_config_for_window(window);
         let toasts = self.by_window.get_mut(&window)?;
         let toast = toasts.iter_mut().find(|t| t.id == id)?;
         let start = toast.drag_start?;
@@ -469,13 +585,12 @@ impl ToastStore {
             return None;
         }
 
-        let dx = Px(position.x.0 - start.x.0);
-        let dx = Px(dx.0.clamp(-240.0, 240.0));
+        let offset = Self::toast_drag_offset(start, position, cfg);
         let was_dragging = toast.dragging;
-        if !toast.dragging && dx.0.abs() >= 4.0 {
+        if !toast.dragging && Self::toast_drag_is_active(offset, cfg) {
             toast.dragging = true;
         }
-        toast.drag_x = dx;
+        toast.drag_offset = offset;
 
         Some(ToastDragMove {
             dragging: toast.dragging,
@@ -484,6 +599,7 @@ impl ToastStore {
     }
 
     pub(super) fn end_drag(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastDragEnd> {
+        let cfg = self.swipe_config_for_window(window);
         let toasts = self.by_window.get_mut(&window)?;
         let toast = toasts.iter_mut().find(|t| t.id == id)?;
         if toast.drag_start.is_none() {
@@ -491,11 +607,11 @@ impl ToastStore {
         }
 
         let result = ToastDragEnd {
-            dx: toast.drag_x,
             dragging: toast.dragging,
+            dismiss: toast.dragging && Self::toast_drag_should_dismiss(toast.drag_offset, cfg),
         };
         toast.drag_start = None;
-        toast.drag_x = Px(0.0);
+        toast.drag_offset = Point::new(Px(0.0), Px(0.0));
         toast.dragging = false;
         Some(result)
     }
@@ -599,8 +715,8 @@ pub(super) struct ToastDragMove {
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ToastDragEnd {
-    pub(super) dx: Px,
     pub(super) dragging: bool,
+    pub(super) dismiss: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -795,16 +911,162 @@ mod tests {
         let request = ToastRequest::new("Drag").duration(None);
         let id = store.add_toast(window, request, None);
 
+        store.set_window_swipe_config(window, ToastSwipeDirection::Right, Px(50.0));
         assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
 
         let moved = store.drag_move(window, id, Point::new(Px(30.0), Px(10.0)));
         assert!(moved.is_some());
-        assert!(store.toasts_for_window(window)[0].drag_x.0 > 0.0);
+        assert!(store.toasts_for_window(window)[0].drag_offset.x.0 > 0.0);
 
         let end = store.end_drag(window, id);
         assert!(end.is_some());
-        assert_eq!(store.toasts_for_window(window)[0].drag_x, Px(0.0));
+        assert_eq!(
+            store.toasts_for_window(window)[0].drag_offset,
+            Point::new(Px(0.0), Px(0.0))
+        );
         assert_eq!(store.toasts_for_window(window)[0].drag_start, None);
+    }
+
+    #[test]
+    fn toast_drag_dismiss_uses_swipe_config_direction_and_threshold() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe").duration(None), None);
+
+        store.set_window_swipe_config(window, ToastSwipeDirection::Right, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(70.0), Px(10.0)))
+                .is_some()
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss, "expected swipe-right to dismiss");
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe2").duration(None), None);
+        store.set_window_swipe_config(window, ToastSwipeDirection::Left, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(60.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(20.0), Px(10.0)))
+                .is_some()
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(
+            !end.dismiss,
+            "expected swipe-left below threshold to not dismiss"
+        );
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe3").duration(None), None);
+        store.set_window_swipe_config(window, ToastSwipeDirection::Up, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(60.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(10.0), Px(0.0)))
+                .is_some()
+        );
+        assert!(
+            store
+                .toasts_for_window(window)
+                .iter()
+                .find(|t| t.id == id)
+                .expect("toast entry")
+                .drag_offset
+                .y
+                .0
+                < 0.0
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss, "expected swipe-up to dismiss");
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe4").duration(None), None);
+        store.set_window_swipe_config(window, ToastSwipeDirection::Down, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(10.0), Px(70.0)))
+                .is_some()
+        );
+        assert!(
+            store
+                .toasts_for_window(window)
+                .iter()
+                .find(|t| t.id == id)
+                .expect("toast entry")
+                .drag_offset
+                .y
+                .0
+                > 0.0
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss, "expected swipe-down to dismiss");
+    }
+
+    #[test]
+    fn toast_drag_clamps_to_max_drag_for_swipe_axis() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(window, ToastRequest::new("Clamp").duration(None), None);
+        store.set_window_swipe_config_ex(
+            window,
+            ToastSwipeConfig {
+                direction: ToastSwipeDirection::Right,
+                threshold: Px(50.0),
+                max_drag: Px(16.0),
+                dragging_threshold: Px(0.0),
+            },
+        );
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(200.0), Px(200.0)))
+                .is_some()
+        );
+
+        let toast = store
+            .toasts_for_window(window)
+            .iter()
+            .find(|t| t.id == id)
+            .expect("toast entry");
+        assert_eq!(toast.drag_offset.x, Px(16.0));
+        assert_eq!(toast.drag_offset.y, Px(0.0));
+    }
+
+    #[test]
+    fn toast_dragging_threshold_controls_capture_arming() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(window, ToastRequest::new("Threshold").duration(None), None);
+        store.set_window_swipe_config_ex(
+            window,
+            ToastSwipeConfig {
+                direction: ToastSwipeDirection::Right,
+                threshold: Px(50.0),
+                max_drag: Px(240.0),
+                dragging_threshold: Px(40.0),
+            },
+        );
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        let moved = store.drag_move(window, id, Point::new(Px(45.0), Px(10.0)));
+        assert!(
+            moved.is_some_and(|m| !m.dragging),
+            "expected below dragging threshold"
+        );
+
+        let moved = store.drag_move(window, id, Point::new(Px(55.0), Px(10.0)));
+        assert!(
+            moved.is_some_and(|m| m.dragging && m.capture_pointer),
+            "expected to arm pointer capture once dragging begins"
+        );
     }
 
     #[test]

@@ -26,7 +26,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ### A11y behavior
 
 - Pass: Trigger exposes an expanded outcome (`expanded=true/false`).
-- Note: Fret does not currently model `aria-controls` (content id wiring).
+- Pass: Trigger can model Radix `aria-controls` via the `controls_element` relationship when the
+  content wrapper is mounted.
 
 ### Content mount/unmount
 

@@ -898,6 +898,16 @@ impl NavigationMenu {
                     selected_for_overlay.as_deref(),
                     args,
                     move |cx, layout| {
+                        let Some(selected_value_key) =
+                            selected_value_for_content_id.as_deref()
+                        else {
+                            return radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
+                                opacity,
+                                transform: shadcn_zoom_transform(layout.transform_origin, scale),
+                                children: Vec::new(),
+                            };
+                        };
+
                         let root_state_for_hover = root_state_for_viewport.clone();
                         let value_for_hover = value_for_hover.clone();
                         let viewport_props = viewport_props;
@@ -905,15 +915,11 @@ impl NavigationMenu {
                         let content_switch = content_switch;
                         let content_switch_slide_px = content_switch_slide_px;
 
-                        let content = cx.pressable(
-                            PressableProps {
-                                layout: LayoutStyle::default(),
-                                enabled: true,
-                                focusable: false,
-                                focus_ring: None,
-                                a11y: PressableA11y::default(),
-                            },
-                            move |cx, _st| {
+                        let content =
+                            radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
+                                cx,
+                                selected_value_key,
+                                move |cx, _st, _content_id| {
                                 let root_state_for_hover = root_state_for_hover.clone();
                                 let value_for_hover = value_for_hover.clone();
                                 cx.pressable_on_hover_change(Arc::new(
@@ -934,7 +940,7 @@ impl NavigationMenu {
                                     },
                                 ));
 
-                                vec![cx.container(viewport_props, move |cx| {
+                                let children = vec![cx.container(viewport_props, move |cx| {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
                                         return viewport_children.clone();
@@ -1015,7 +1021,18 @@ impl NavigationMenu {
                                             vec![from, to]
                                         },
                                     )]
-                                })]
+                                })];
+
+                                (
+                                    PressableProps {
+                                        layout: LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        focus_ring: None,
+                                        a11y: PressableA11y::default(),
+                                    },
+                                    children,
+                                )
                             },
                         );
 
