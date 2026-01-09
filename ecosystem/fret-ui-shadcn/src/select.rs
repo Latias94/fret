@@ -1031,7 +1031,7 @@ fn select_impl<H: UiHost>(
                                 overlay::anchor_bounds_for_element(cx, selected_item),
                                 overlay::anchor_bounds_for_element(cx, selected_item_text),
                             ) {
-                                let out = item_aligned::select_item_aligned_position(
+                                let layout = radix_select::select_item_aligned_layout(
                                     item_aligned::SelectItemAlignedInputs {
                                         direction: LayoutDirection::Ltr,
                                         window: cx.bounds,
@@ -1051,7 +1051,7 @@ fn select_impl<H: UiHost>(
                                     },
                                 );
 
-                                if let Some(scroll_to) = out.scroll_to_y
+                                if let Some(scroll_to) = layout.outputs.scroll_to_y
                                     && !did_scroll
                                 {
                                     let mut state = trigger_state
@@ -1061,26 +1061,8 @@ fn select_impl<H: UiHost>(
                                     state.did_item_aligned_scroll = true;
                                 }
 
-                                let margin = item_aligned::SELECT_ITEM_ALIGNED_CONTENT_MARGIN;
-                                let inset_left = out.left.unwrap_or(margin);
-                                let inset_top = if out.top.is_some() {
-                                    margin
-                                } else if out.bottom.is_some() {
-                                    Px(cx.bounds.size.height.0 - margin.0 - out.height.0)
-                                } else {
-                                    margin
-                                };
-
-                                let placed = Rect::new(
-                                    Point::new(inset_left, inset_top),
-                                    fret_core::Size::new(out.width, out.height),
-                                );
-                                motion_side = if placed.origin.y.0 >= anchor.origin.y.0 {
-                                    Side::Bottom
-                                } else {
-                                    Side::Top
-                                };
-                                item_aligned_rect = Some(placed);
+                                motion_side = layout.side;
+                                item_aligned_rect = Some(layout.rect);
                             }
                         }
                     }

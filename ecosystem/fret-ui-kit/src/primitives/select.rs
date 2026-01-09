@@ -17,13 +17,14 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, KeyCode, Modifiers, Point, PointerType};
+use fret_core::{AppWindowId, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState};
 use fret_ui::elements::GlobalElementId;
+use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
@@ -239,6 +240,56 @@ pub fn select_mouse_open_is_within_click_slop(down: Point, up: Point) -> bool {
     let dx = (down.x.0 - up.x.0).abs();
     let dy = (down.y.0 - up.y.0).abs();
     dx <= SELECT_TRIGGER_CLICK_SLOP_PX && dy <= SELECT_TRIGGER_CLICK_SLOP_PX
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectItemAlignedLayout {
+    pub outputs: SelectItemAlignedOutputs,
+    pub rect: Rect,
+    pub side: Side,
+}
+
+/// Returns a window-space content rect for Radix Select's `item-aligned` positioning mode.
+///
+/// Upstream Radix computes CSS `left/right` + `top/bottom` style values. In Fret we convert that
+/// output into a concrete `Rect` in window space so renderer backends and non-shadcn recipes can
+/// reuse the same contract without reimplementing the mapping logic.
+pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItemAlignedLayout {
+    let outputs = select_item_aligned_position(inputs);
+
+    let margin = SELECT_ITEM_ALIGNED_CONTENT_MARGIN;
+    let window_left = inputs.window.origin.x;
+    let window_top = inputs.window.origin.y;
+    let window_right = Px(window_left.0 + inputs.window.size.width.0);
+    let window_bottom = Px(window_top.0 + inputs.window.size.height.0);
+
+    let x = if let Some(left) = outputs.left {
+        left
+    } else if let Some(right) = outputs.right {
+        Px(window_right.0 - right.0 - outputs.width.0)
+    } else {
+        Px(window_left.0 + margin.0)
+    };
+
+    let y = if outputs.top.is_some() {
+        Px(window_top.0 + margin.0)
+    } else if outputs.bottom.is_some() {
+        Px(window_bottom.0 - margin.0 - outputs.height.0)
+    } else {
+        Px(window_top.0 + margin.0)
+    };
+
+    let side = if outputs.bottom.is_some() {
+        Side::Bottom
+    } else {
+        Side::Top
+    };
+
+    SelectItemAlignedLayout {
+        outputs,
+        rect: Rect::new(Point::new(x, y), Size::new(outputs.width, outputs.height)),
+        side,
+    }
 }
 
 /// Radix-like select typeahead clear timeout (in milliseconds).
