@@ -214,6 +214,8 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP public semantics: `SceneOp::PushEffect/PopEffect` are encoded as explicit markers and compiled into
       `RenderPlan` as bounded, scissored `Backdrop` + `FilterContent` blur (ordering preserved).
     - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
+    - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
+    - GPU conformance tests cover scissored pixelate for both effect modes.
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.

@@ -143,27 +143,40 @@ impl RenderPlan {
     ) -> Self {
         let mut postprocess = postprocess;
 
-        let has_backdrop_supported_effect = encoding.effect_markers.iter().any(|m| {
-            let EffectMarkerKind::Push { mode, chain, .. } = m.kind else {
+        let backdrop_effect_enabled = encoding.effect_markers.iter().any(|m| {
+            let EffectMarkerKind::Push {
+                mode,
+                chain,
+                quality,
+                ..
+            } = m.kind
+            else {
                 return false;
             };
-            mode == fret_core::EffectMode::Backdrop
-                && (effect_chain_has_gaussian_blur(chain) || effect_chain_has_color_adjust(chain))
+            if mode != fret_core::EffectMode::Backdrop {
+                return false;
+            }
+
+            chain.iter().any(|step| match step {
+                fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+                    choose_effect_blur_downsample_scale(
+                        viewport_size,
+                        format,
+                        intermediate_budget_bytes,
+                        downsample,
+                        quality,
+                    )
+                    .is_some()
+                }
+                fret_core::EffectStep::ColorAdjust { .. } => {
+                    color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+                }
+                fret_core::EffectStep::Pixelate { scale } => {
+                    pixelate_enabled(viewport_size, format, intermediate_budget_bytes, scale)
+                }
+                fret_core::EffectStep::Dither { .. } => false,
+            })
         });
-        let backdrop_effect_enabled = if !has_backdrop_supported_effect {
-            false
-        } else {
-            let blur_ok = choose_effect_blur_downsample_scale(
-                viewport_size,
-                format,
-                intermediate_budget_bytes,
-                2,
-                fret_core::EffectQuality::Auto,
-            )
-            .is_some();
-            let color_ok = color_adjust_enabled(viewport_size, format, intermediate_budget_bytes);
-            blur_ok || color_ok
-        };
 
         let needs_intermediate = backdrop_effect_enabled
             || matches!(
@@ -432,9 +445,31 @@ impl RenderPlan {
                             clear,
                         );
                     }
-                    fret_core::EffectStep::Pixelate { .. }
-                    | fret_core::EffectStep::Dither { .. } => {
-                        // Not yet implemented in effect chains (debug-only postprocesses exist).
+                    fret_core::EffectStep::Pixelate { scale } => {
+                        if !pixelate_enabled(
+                            viewport_size,
+                            format,
+                            intermediate_budget_bytes,
+                            scale,
+                        ) {
+                            continue;
+                        }
+                        let scratch = available_scratch_targets(draw_scopes, srcdst);
+                        let Some(&scratch) = scratch.first() else {
+                            continue;
+                        };
+                        append_pixelate_in_place_single_scratch(
+                            passes,
+                            srcdst,
+                            scratch,
+                            viewport_size,
+                            Some(scissor),
+                            scale,
+                            clear,
+                        );
+                    }
+                    fret_core::EffectStep::Dither { .. } => {
+                        // Not yet implemented in effect chains (debug-only postprocess exists).
                     }
                 }
             }
@@ -610,18 +645,6 @@ impl RenderPlan {
     }
 }
 
-fn effect_chain_has_gaussian_blur(chain: fret_core::EffectChain) -> bool {
-    chain
-        .iter()
-        .any(|step| matches!(step, fret_core::EffectStep::GaussianBlur { .. }))
-}
-
-fn effect_chain_has_color_adjust(chain: fret_core::EffectChain) -> bool {
-    chain
-        .iter()
-        .any(|step| matches!(step, fret_core::EffectStep::ColorAdjust { .. }))
-}
-
 fn choose_effect_blur_downsample_scale(
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
@@ -667,6 +690,25 @@ fn color_adjust_enabled(
     }
     let full = estimate_texture_bytes(viewport_size, format, 1);
     full.saturating_mul(2) <= budget_bytes
+}
+
+fn pixelate_enabled(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+    scale: u32,
+) -> bool {
+    if budget_bytes == 0 {
+        return false;
+    }
+    let scale = scale.max(1);
+    if scale <= 1 {
+        return true;
+    }
+
+    let full = estimate_texture_bytes(viewport_size, format, 1);
+    let down = estimate_texture_bytes(downsampled_size(viewport_size, scale), format, 1);
+    full.saturating_add(down) <= budget_bytes
 }
 
 fn append_scissored_blur_in_place_two_scratch(
@@ -834,6 +876,57 @@ fn append_color_adjust_in_place_single_scratch(
         dst_size: size,
         dst_scissor: None,
         load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+fn append_pixelate_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    full_size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    scale: u32,
+    clear: wgpu::Color,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    let scale = scale.max(1);
+    if scale <= 1 {
+        return;
+    }
+
+    let down_size = downsampled_size(full_size, scale);
+    let down_scissor = map_scissor_to_size(scissor, full_size, down_size);
+    if scissor.is_some() && down_scissor.is_none() {
+        return;
+    }
+
+    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: full_size,
+        dst_size: down_size,
+        dst_scissor: down_scissor,
+        mode: ScaleMode::Downsample,
+        scale,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+
+    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: down_size,
+        dst_size: full_size,
+        dst_scissor: scissor,
+        mode: ScaleMode::Upscale,
+        scale,
+        load: if scissor.is_some() {
+            wgpu::LoadOp::Load
+        } else {
+            wgpu::LoadOp::Clear(clear)
+        },
     }));
 }
 
