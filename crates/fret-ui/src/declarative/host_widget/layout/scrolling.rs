@@ -73,10 +73,7 @@ impl ElementHostWidget {
         // effectively-unbounded available height (e.g. Stack/Pressable measuring with
         // `Px(1.0e9)`). Those passes are not the final viewport constraints and would
         // otherwise clear the request before the real layout happens.
-        let is_probe_layout = match axis {
-            fret_core::Axis::Vertical => cx.available.height.0 >= 1.0e8,
-            fret_core::Axis::Horizontal => cx.available.width.0 >= 1.0e8,
-        };
+        let is_probe_layout = crate::layout_probe::is_probe_layout_axis(axis, cx.available);
 
         if !is_probe_layout
             && viewport.0 > 0.0
@@ -413,7 +410,7 @@ impl ElementHostWidget {
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available height (e.g. Stack/Pressable measuring with
         // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
-        let is_probe_layout = cx.available.height.0 >= 1.0e8 || cx.available.width.0 >= 1.0e8;
+        let is_probe_layout = crate::layout_probe::is_probe_layout_any_axis(cx.available);
         let external_handle = props.scroll_handle.clone();
         let offset = crate::elements::with_element_state(
             &mut *cx.app,

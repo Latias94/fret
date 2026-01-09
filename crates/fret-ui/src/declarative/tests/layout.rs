@@ -967,6 +967,154 @@ fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn positioned_container_precomputes_flow_islands_for_multiple_children() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![
+            cx.pointer_region(crate::element::PointerRegionProps::default(), |cx| {
+                vec![
+                    cx.hover_region(
+                        crate::element::HoverRegionProps::default(),
+                        |cx, _hovered| vec![cx.text("left")],
+                    ),
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("right")],
+                    ),
+                ]
+            }),
+        ]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "positioned-container-multi-child-flow-islands",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let hover = ui.children(region)[0];
+    let flex = ui.children(region)[1];
+    let hover_text = ui.children(hover)[0];
+    let flex_text = ui.children(flex)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(hover).is_some());
+    assert!(engine.layout_id_for_node(hover_text).is_some());
+    assert!(engine.layout_id_for_node(flex).is_some());
+    assert!(engine.layout_id_for_node(flex_text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn hover_region_precomputes_flow_islands_for_multiple_children() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.hover_region(
+            crate::element::HoverRegionProps::default(),
+            |cx, _hovered| {
+                vec![
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("a")],
+                    ),
+                    cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle {
+                                size: crate::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("b")],
+                    ),
+                ]
+            },
+        )]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "hover-region-multi-child-flow-islands",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let hover = ui.children(root)[0];
+    let flex_a = ui.children(hover)[0];
+    let flex_b = ui.children(hover)[1];
+    let text_a = ui.children(flex_a)[0];
+    let text_b = ui.children(flex_b)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(flex_a).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(flex_b).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,

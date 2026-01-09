@@ -29,7 +29,9 @@ Related roadmap:
 | VirtualList (barrier + virtualization) | Done | Measured mode uses `measure_in` + `MaxContent` in v2, then precomputes a flow island per visible item root before final layout. | `declarative::tests::virtual_list_wraps_visible_items_in_engine_tree` in `crates/fret-ui/src/declarative/tests/virtual_list.rs`. |
 | ResizablePanelGroup (barrier + custom layout) | Done | After splitting the viewport into definite panel rects, v2 precomputes one flow island per panel root. | `declarative::tests::resizable_panel_group_precomputes_flow_islands_for_panels` in `crates/fret-ui/src/declarative/tests/interactions.rs`. |
 | Overlay roots / dismissible layers (barrier) | Done | Overlay roots precompute flow islands for static/relative subtrees so engine rect fast paths apply within overlays. | `crates/fret-ui/src/declarative/host_widget/layout.rs` (DismissibleLayer). |
-| "Probe layout" heuristics | In progress | Some sites still use `>= 1.0e8` as the "effectively unbounded" sentinel to avoid consuming deferred scroll or doing precompute during probe passes. Consider centralizing this rule. | Grep for `is_probe_layout`. |
+| Positioned containers (PointerRegion/WheelRegion multi-child) | Done | These containers compute definite child rects; v2 precomputes flow islands for non-absolute children so subtrees can use engine fast paths. | `declarative::tests::layout::positioned_container_precomputes_flow_islands_for_multiple_children` in `crates/fret-ui/src/declarative/tests/layout.rs`. |
+| HoverRegion (multi-child) | Done | Multi-child hover regions now precompute flow islands for non-absolute children, enabling engine-backed flow inside hover tracking regions. | `declarative::tests::layout::hover_region_precomputes_flow_islands_for_multiple_children` in `crates/fret-ui/src/declarative/tests/layout.rs`. |
+| "Probe layout" heuristics | In progress | Sentinel/heuristics are centralized in `crates/fret-ui/src/layout_probe.rs`, but more call sites may still need migration. | Grep for `layout_probe::` and `is_probe_layout`. |
 | Remaining `1e9` usage (code) | In progress | v2 paths must not approximate `Min/MaxContent` as huge definite bounds. `1e9` should only survive in legacy/non-v2 paths or tests where explicitly justified. | Run the audit commands below. |
 
 ## Audit Commands
@@ -42,4 +44,3 @@ Run these periodically (and update this file with new hits):
 ## Notes (What We Intentionally Do Not Support)
 
 - No general-purpose "display: contents" or Radix `Slot/asChild` prop merging (see `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`).
-

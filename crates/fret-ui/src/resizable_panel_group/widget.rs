@@ -267,7 +267,7 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
         {
             // Avoid precomputing flow islands during "probe" layout passes that use an
             // effectively-unbounded available size (important for scroll/virtualized descendants).
-            let is_probe_layout = cx.available.width.0 >= 1.0e8 || cx.available.height.0 >= 1.0e8;
+            let is_probe_layout = crate::layout_probe::is_probe_layout_any_axis(cx.available);
             if !is_probe_layout {
                 let sf = cx.scale_factor;
                 let app = &mut *cx.app;

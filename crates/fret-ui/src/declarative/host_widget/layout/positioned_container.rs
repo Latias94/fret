@@ -29,6 +29,38 @@ impl ElementHostWidget {
 
         let desired = clamp_to_constraints(max_child, layout, cx.available);
         let base = Rect::new(cx.bounds.origin, desired);
+
+        #[cfg(feature = "layout-engine-v2")]
+        if !crate::layout_probe::is_probe_layout_any_axis(cx.available) {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            for &child in cx.children {
+                let child_style = layout_style_for_node(app, window, child);
+                if child_style.position == crate::element::PositionStyle::Absolute {
+                    continue;
+                }
+
+                let child_bounds = match positioned_layout_style(child_style) {
+                    PositionedLayoutStyle::Static => base,
+                    PositionedLayoutStyle::Relative(inset) => {
+                        let dx = inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
+                        let dy = inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+                        let origin = fret_core::Point::new(
+                            Px(base.origin.x.0 + dx),
+                            Px(base.origin.y.0 + dy),
+                        );
+                        Rect::new(origin, base.size)
+                    }
+                    PositionedLayoutStyle::Absolute(_) => continue,
+                };
+
+                tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+            }
+        }
+
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
@@ -96,6 +128,38 @@ impl ElementHostWidget {
 
         let desired = clamp_to_constraints(max_child, layout, cx.available);
         let base = Rect::new(cx.bounds.origin, desired);
+
+        #[cfg(feature = "layout-engine-v2")]
+        if !crate::layout_probe::is_probe_layout_any_axis(cx.available) {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            for &child in cx.children {
+                let child_style = layout_style_for_node(app, window, child);
+                if child_style.position == crate::element::PositionStyle::Absolute {
+                    continue;
+                }
+
+                let child_bounds = match positioned_layout_style(child_style) {
+                    PositionedLayoutStyle::Static => base,
+                    PositionedLayoutStyle::Relative(inset) => {
+                        let dx = inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
+                        let dy = inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+                        let origin = fret_core::Point::new(
+                            Px(base.origin.x.0 + dx),
+                            Px(base.origin.y.0 + dy),
+                        );
+                        Rect::new(origin, base.size)
+                    }
+                    PositionedLayoutStyle::Absolute(_) => continue,
+                };
+
+                tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+            }
+        }
+
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
