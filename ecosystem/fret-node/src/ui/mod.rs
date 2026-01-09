@@ -6,6 +6,7 @@ pub mod canvas;
 pub mod commands;
 pub mod edit_queue;
 pub mod editor;
+pub mod editors;
 pub mod internals;
 pub mod measured;
 pub mod overlays;
@@ -17,6 +18,10 @@ pub use canvas::NodeGraphCanvas;
 pub use commands::register_node_graph_commands;
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
+pub use editors::{
+    PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextEditor,
+    PortalTextEditorUi,
+};
 pub use internals::{
     NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
