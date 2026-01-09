@@ -602,8 +602,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_on_activate_for(&mut self, element: GlobalElementId, handler: OnActivate) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_activate = Some(handler);
+        });
+    }
+
     pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
         self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate = match hooks.on_activate.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_activate_for(&mut self, element: GlobalElementId, handler: OnActivate) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_activate = match hooks.on_activate.clone() {
                 None => Some(handler),
                 Some(prev) => {
@@ -633,8 +654,46 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_on_pointer_down_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerDown,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_down = Some(handler);
+        });
+    }
+
     pub fn pressable_add_on_pointer_down(&mut self, handler: OnPressablePointerDown) {
         self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        let prev_result = prev(host, cx, down);
+                        let next_result = next(host, cx, down);
+                        use crate::action::PressablePointerDownResult as R;
+                        match (prev_result, next_result) {
+                            (R::SkipDefaultAndStopPropagation, _)
+                            | (_, R::SkipDefaultAndStopPropagation) => {
+                                R::SkipDefaultAndStopPropagation
+                            }
+                            (R::SkipDefault, _) | (_, R::SkipDefault) => R::SkipDefault,
+                            _ => R::Continue,
+                        }
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_pointer_down_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnPressablePointerDown,
+    ) {
+        self.with_state_for(element, PressableActionHooks::default, |hooks| {
             hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
                 None => Some(handler),
                 Some(prev) => {

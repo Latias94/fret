@@ -153,6 +153,7 @@ pub fn tooltip_update_interaction<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     trigger_hovered: bool,
     trigger_focused: bool,
+    force_close: bool,
     last_pointer: Model<Option<Point>>,
     anchor_bounds: Option<Rect>,
     floating_bounds: Option<Rect>,
@@ -171,6 +172,8 @@ pub fn tooltip_update_interaction<H: UiHost>(
     }
 
     let now = cx.app.frame_id().0;
+
+    let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
 
     let (close_delay_ticks, blurred) = cx.with_state(TooltipFocusEdgeState::default, |st| {
         let was = st.was_focused;
@@ -198,7 +201,17 @@ pub fn tooltip_update_interaction<H: UiHost>(
 
     let intent_cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
 
-    let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
+    if force_close {
+        cx.with_state(HoverIntentState::default, |st| st.set_open(false));
+        if was_open {
+            note_closed(cx, now);
+        }
+        return TooltipInteractionUpdate {
+            open: false,
+            wants_continuous_ticks: false,
+        };
+    }
+
     if was_open && !cfg.disable_hoverable_content && !blurred {
         cx.observe_model(&last_pointer, Invalidation::Paint);
     }

@@ -48,9 +48,18 @@ Fret models Radix tooltip outcomes by composing:
 - Pass: Opening a tooltip closes other tooltips in the same provider scope (Radix `TOOLTIP_OPEN`
   broadcast outcome), implemented via `tooltip_provider::note_opened_tooltip(...)` and
   `primitives::tooltip::tooltip_update_interaction(...)`.
+- Pass: Trigger pointer gating and close-on-pointerdown/click outcomes are modeled in the shadcn
+  tooltip recipe (`ecosystem/fret-ui-shadcn/src/tooltip.rs`):
+  - Hover-open is gated behind the first non-touch `pointermove` (Radix `hasPointerMoveOpenedRef`),
+    tracked via a lightweight `PointerRegion` wrapper (pointer moves do not stop propagation for
+    Pressables).
+  - `pointerdown` requests a close and suppresses focus-driven re-open (Radix `isPointerDownRef` +
+    `onPointerDown` close behavior), wired via `ElementContext::pressable_add_on_pointer_down_for`.
+  - Click/keyboard activation requests a close and suppresses focus-driven re-open (Radix `onClick`
+    close outcome), wired via `ElementContext::pressable_add_on_activate_for`.
 
 ## Follow-ups (recommended)
 
 - Consider tightening parity with the upstream trigger event model (open-on-pointermove gating,
-  pointer-in-transit suppression, close-on-pointerdown/click) if strict behavioral matching becomes
-  a goal outside of the current shadcn recipes.
+  pointer-in-transit suppression) if strict behavioral matching becomes a goal outside of the
+  current shadcn recipes.
