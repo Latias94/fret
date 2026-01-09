@@ -81,3 +81,10 @@ expectations during MVP development, without requiring a full modality state mac
   code.
 - Widgets can transition away from "focused border color" as the primary focus affordance, keeping
   borders stable and applying the ring as a consistent decoration.
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI tracks an `InputModality` (mouse vs keyboard) on the window and uses it as a focus-visible
+  style signal (`Window::last_input_was_keyboard`), updated during event dispatch:
+  `repo-ref/zed/crates/gpui/src/window.rs` (`InputModality`, `dispatch_event`,
+  `last_input_was_keyboard`).

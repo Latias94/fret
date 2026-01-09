@@ -108,3 +108,14 @@ Forwarding rules must respect modal gating (e.g. a modal dialog prevents viewpor
 - Specify the concrete command handler API and how handlers are registered (app/window/widget scopes).
 - Define a canonical keymap file format and conflict resolution strategy (see ADR 0014 + ADR 0018).
 - Define focus traversal (tab order, focus scopes) across roots and widgets.
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI builds a per-frame dispatch tree with explicit capture/bubble phases, and treats “commands”
+  as typed actions routed via the dispatch path rather than raw key events:
+  `repo-ref/zed/crates/gpui/src/key_dispatch.rs` (`DispatchTree`),
+  `repo-ref/zed/crates/gpui/src/window.rs` (`dispatch_event`, `dispatch_key_down_up_event`,
+  `is_action_available`).
+- GPUI also tracks pending multi-stroke bindings (“pending input”) on the window and exposes it for
+  UX/diagnostics (`repo-ref/zed/crates/gpui/src/window.rs`), which aligns with Fret’s goal of
+  keeping shortcut resolution explicit and debuggable.

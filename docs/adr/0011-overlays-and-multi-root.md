@@ -19,6 +19,11 @@ References:
 
 - Dear ImGui docking + multi-viewport UX (conceptual target for editor workflows):
   - https://github.com/ocornut/imgui (Docking branch / viewports)
+- Zed/GPUI (non-normative implementation reference for overlay-style behavior):
+  - content masks and painting outside parent bounds: `repo-ref/zed/crates/gpui/src/window.rs`
+    (`Window::with_content_mask`), `repo-ref/zed/crates/gpui/src/element.rs`
+  - mouse occlusion semantics for overlays (block underlay hover/click, optionally allow scroll):
+    `repo-ref/zed/crates/gpui/src/window.rs` (`HitboxBehavior::{BlockMouse, BlockMouseExceptScroll}`)
 
 ## Decision
 

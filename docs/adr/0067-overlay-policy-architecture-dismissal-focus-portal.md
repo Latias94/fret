@@ -164,3 +164,8 @@ Invariants:
 - Non-modal outside press (click-through): `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - Authoritative behavior target: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`) via shadcn/ui (`repo-ref/ui`)
 - Modal barrier conceptual model: Flutter `ModalBarrier` / WPF-style overlay barrier
+- Zed/GPUI (non-normative):
+  - managed overlay views that dismiss via an explicit `DismissEvent`:
+    `repo-ref/zed/crates/gpui/src/window.rs` (`ManagedView`, `DismissEvent`)
+  - overlay-style input blocking via hitbox occlusion:
+    `repo-ref/zed/crates/gpui/src/window.rs` (`HitboxBehavior::{BlockMouse, BlockMouseExceptScroll}`)

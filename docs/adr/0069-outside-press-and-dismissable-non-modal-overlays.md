@@ -199,3 +199,7 @@ The current shadcn-aligned defaults in this repo:
 - Shadcn recipes: `repo-ref/ui`
 - Overlay placement contract: `docs/adr/0064-overlay-placement-contract.md`
 - Overlay policy architecture: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
+- Zed/GPUI (non-normative):
+  - overlay-style “disable underlay pointer interactions” implemented via hitbox occlusion
+    primitives, with a dedicated mode that still allows scroll to route to underlay scrollables:
+    `repo-ref/zed/crates/gpui/src/window.rs` (`HitboxBehavior::{BlockMouse, BlockMouseExceptScroll}`)

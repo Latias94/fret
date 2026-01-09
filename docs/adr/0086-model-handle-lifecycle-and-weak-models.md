@@ -26,6 +26,11 @@ References:
 - ADR 0031 (model store + leasing updates): `docs/adr/0031-app-owned-models-and-leasing-updates.md`
 - Main-thread-only models (`!Send`/`!Sync`): `docs/adr/0087-models-are-main-thread-only-and-not-send.md`
 - Zed / GPUI ownership writeup: https://zed.dev/blog/gpui-ownership
+- Zed/GPUI handle pattern (non-normative code anchors):
+  - strong/weak entity handles and view downgrades:
+    `repo-ref/zed/crates/gpui/src/view.rs` (`Entity`, `WeakEntity`, `AnyView`)
+  - weak handles used for long-lived async work to avoid leaks:
+    `repo-ref/zed/crates/gpui/src/app/context.rs` (`spawn_in`, `spawn_in_with_priority`)
 
 ## Decision
 

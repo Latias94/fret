@@ -28,6 +28,9 @@ References:
   - `docs/adr/0015-frame-lifecycle-and-submission-order.md`
 - Zed/GPUI performance and frame scheduling lessons:
   - https://zed.dev/blog/120fps
+- Zed/GPUI scheduling primitives (non-normative code anchors):
+  - `Window::refresh` (mark dirty) and the draw/present split:
+    `repo-ref/zed/crates/gpui/src/window.rs` (`Window::refresh`, `Window::draw`, `Window::present`)
 
 ## Decision
 

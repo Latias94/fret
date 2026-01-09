@@ -29,6 +29,10 @@ References:
   - `docs/adr/0022-when-expressions.md`
 - Zed ownership + app-owned entities and effects-driven update loop (design inspiration):
   - https://zed.dev/blog/gpui-ownership
+- Zed/GPUI command/action system (non-normative code anchors):
+  - typed actions and action registry: `repo-ref/zed/crates/gpui/src/action.rs`
+  - dispatch + keymap resolution pipeline: `repo-ref/zed/crates/gpui/src/key_dispatch.rs`
+  - command palette surface: `repo-ref/zed/crates/command_palette`
 
 ## Decision
 

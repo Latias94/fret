@@ -139,3 +139,8 @@ We expect two follow-ups once the runtime substrate grows:
 - Overlay policy architecture (FocusScope belongs to components): `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - Focus-visible heuristic + rings: `docs/adr/0061-focus-rings-and-focus-visible.md`
 - Behavior reference stack (APG/Radix): `docs/reference-stack-ui-behavior.md`
+- Zed/GPUI (non-normative):
+  - tab-stop based traversal with stable ordering groups:
+    `repo-ref/zed/crates/gpui/src/tab_stop.rs` (`TabStopMap`)
+  - window-level traversal entry points:
+    `repo-ref/zed/crates/gpui/src/window.rs` (`focus_next`, `focus_prev`)

@@ -55,3 +55,10 @@ Examples of “non-minimal” effects already in use:
 - Add additional effect types (clipboard, cursor, drag-and-drop, IME requests).
 - Add more window operations (set title, set cursor, set window placement, native menu integration).
 - Add scheduling hooks (timers/animations) as effects or as a sibling subsystem.
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI also uses an explicit “effect cycle” and provides `App::defer` / `Window::defer` to schedule
+  work at the end of the current cycle (avoiding re-entrancy and borrow hazards):
+  `repo-ref/zed/crates/gpui/src/app.rs` (`App::defer`, `Effect::Defer`),
+  `repo-ref/zed/crates/gpui/src/window.rs` (`Window::defer`).

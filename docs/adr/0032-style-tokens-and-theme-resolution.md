@@ -24,6 +24,10 @@ References / inspiration:
 
 - Zed settings UX and strong-typed configuration motivation:
   - https://zed.dev/blog/settings-ui
+- Zed theme system (non-normative code anchors):
+  - theme registry + loading and theme schema content:
+    `repo-ref/zed/crates/theme/src/registry.rs`,
+    `repo-ref/zed/crates/theme/src/schema.rs`
 - Framework vs app scope boundary:
   - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - Settings files and layering:

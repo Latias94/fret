@@ -70,3 +70,9 @@ Current `SceneOp` primitives include:
 - Formalize the vector path contract (fill/stroke semantics, AA expectations, caching keys, and
   transform interaction) now that `PathService` + `SceneOp::Path` exist:
   - `docs/adr/0080-vector-path-contract.md`
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI’s internal `Scene` records ordered paint operations and then derives an order key used for
+  batching without breaking visible ordering (including replay/range reuse):
+  `repo-ref/zed/crates/gpui/src/scene.rs` (`Scene`, `PaintOperation`, `Scene::finish`, `Scene::replay`).
