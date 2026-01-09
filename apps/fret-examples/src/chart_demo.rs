@@ -126,6 +126,7 @@ impl ChartDemoDriver {
                     y_axis: y_left_axis,
                     stack: Some(stack_id),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: Some(AreaBaseline::Zero),
                 },
                 SeriesSpec {
@@ -142,6 +143,7 @@ impl ChartDemoDriver {
                     y_axis: y_left_axis,
                     stack: Some(stack_id),
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: Some(AreaBaseline::Zero),
                 },
                 SeriesSpec {
@@ -158,6 +160,7 @@ impl ChartDemoDriver {
                     y_axis: y_right_axis,
                     stack: None,
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
             ],
