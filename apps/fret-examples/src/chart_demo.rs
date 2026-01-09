@@ -11,8 +11,8 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
-use delinea::ids::{AxisId, FieldId};
-use delinea::{AxisKind, AxisRange, SeriesKind};
+use delinea::ids::{AxisId, FieldId, StackId};
+use delinea::{AreaBaseline, AxisKind, AxisPosition, AxisRange, SeriesKind};
 use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
 use fret_chart::retained::{ChartCanvas, ChartStyle};
 
@@ -36,11 +36,16 @@ impl ChartDemoDriver {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
         let x_axis = AxisId::new(1);
-        let y_axis = AxisId::new(2);
-        let series_id = delinea::ids::SeriesId::new(1);
+        let y_left_axis = AxisId::new(2);
+        let y_right_axis = AxisId::new(3);
+        let stack_id = StackId::new(1);
+        let series_a_id = delinea::ids::SeriesId::new(1);
+        let series_b_id = delinea::ids::SeriesId::new(2);
+        let series_c_id = delinea::ids::SeriesId::new(3);
         let x_field = FieldId::new(1);
-        let y_low_field = FieldId::new(2);
-        let y_high_field = FieldId::new(3);
+        let y_a_field = FieldId::new(2);
+        let y_b_field = FieldId::new(3);
+        let y_c_field = FieldId::new(4);
 
         let spec = ChartSpec {
             id: delinea::ids::ChartId::new(1),
@@ -53,12 +58,16 @@ impl ChartDemoDriver {
                         column: 0,
                     },
                     FieldSpec {
-                        id: y_low_field,
+                        id: y_a_field,
                         column: 1,
                     },
                     FieldSpec {
-                        id: y_high_field,
+                        id: y_b_field,
                         column: 2,
+                    },
+                    FieldSpec {
+                        id: y_c_field,
+                        column: 3,
                     },
                 ],
             }],
@@ -74,11 +83,20 @@ impl ChartDemoDriver {
                     range: Some(AxisRange::Auto),
                 },
                 delinea::AxisSpec {
-                    id: y_axis,
-                    name: Some("Value".to_string()),
+                    id: y_left_axis,
+                    name: Some("Left".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
                     position: None,
+                    scale: Default::default(),
+                    range: Some(AxisRange::Auto),
+                },
+                delinea::AxisSpec {
+                    id: y_right_axis,
+                    name: Some("Right".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: Some(AxisPosition::Right),
                     scale: Default::default(),
                     range: Some(AxisRange::Auto),
                 },
@@ -91,22 +109,56 @@ impl ChartDemoDriver {
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,
             }),
-            series: vec![SeriesSpec {
-                id: series_id,
-                name: Some("Band".to_string()),
-                kind: SeriesKind::Band,
-                dataset: dataset_id,
-                encode: SeriesEncode {
-                    x: x_field,
-                    y: y_low_field,
-                    y2: Some(y_high_field),
+            series: vec![
+                SeriesSpec {
+                    id: series_a_id,
+                    name: Some("Stack A (area)".to_string()),
+                    kind: SeriesKind::Area,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_left_axis,
+                    stack: Some(stack_id),
+                    stack_strategy: Default::default(),
+                    area_baseline: Some(AreaBaseline::Zero),
                 },
-                x_axis,
-                y_axis,
-                stack: None,
-                stack_strategy: Default::default(),
-                area_baseline: None,
-            }],
+                SeriesSpec {
+                    id: series_b_id,
+                    name: Some("Stack B (area)".to_string()),
+                    kind: SeriesKind::Area,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_left_axis,
+                    stack: Some(stack_id),
+                    stack_strategy: Default::default(),
+                    area_baseline: Some(AreaBaseline::Zero),
+                },
+                SeriesSpec {
+                    id: series_c_id,
+                    name: Some("Right axis (line)".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_c_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_right_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    area_baseline: None,
+                },
+            ],
         };
 
         let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
@@ -117,21 +169,27 @@ impl ChartDemoDriver {
 
         let n = 65_536usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y0: Vec<f64> = Vec::with_capacity(n);
-        let mut y1: Vec<f64> = Vec::with_capacity(n);
+        let mut y_a: Vec<f64> = Vec::with_capacity(n);
+        let mut y_b: Vec<f64> = Vec::with_capacity(n);
+        let mut y_c: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
             let t = i as f64 / (n - 1) as f64;
             let xi = t * 1000.0;
-            let yi = (t * std::f64::consts::TAU * 8.0).sin();
+            let theta = t * std::f64::consts::TAU;
+            let yi_a = (theta * 8.0).sin() * 0.8;
+            let yi_b = (theta * 6.0).cos() * 0.6 + 0.1;
+            let yi_c = (theta * 1.5).sin() * 50.0 + 100.0;
             x.push(xi);
-            y0.push(yi);
-            y1.push(yi + 0.25);
+            y_a.push(yi_a);
+            y_b.push(yi_b);
+            y_c.push(yi_c);
         }
 
         let mut table = DataTable::default();
         table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y0));
-        table.push_column(Column::F64(y1));
+        table.push_column(Column::F64(y_a));
+        table.push_column(Column::F64(y_b));
+        table.push_column(Column::F64(y_c));
         canvas
             .engine_mut()
             .datasets_mut()
