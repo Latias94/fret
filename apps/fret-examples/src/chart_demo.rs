@@ -12,7 +12,9 @@ use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
-use delinea::{AreaBaseline, AxisKind, AxisPosition, AxisRange, SeriesKind};
+use delinea::{
+    AreaBaseline, AxisKind, AxisPosition, AxisRange, AxisScale, SeriesKind, TimeAxisScale,
+};
 use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
 use fret_chart::retained::{ChartCanvas, ChartStyle};
 
@@ -79,7 +81,7 @@ impl ChartDemoDriver {
                     kind: AxisKind::X,
                     grid: grid_id,
                     position: None,
-                    scale: Default::default(),
+                    scale: AxisScale::Time(TimeAxisScale),
                     range: Some(AxisRange::Auto),
                 },
                 delinea::AxisSpec {
@@ -167,6 +169,10 @@ impl ChartDemoDriver {
             ..ChartStyle::default()
         });
 
+        // 2025-01-01T00:00:00Z in epoch milliseconds.
+        let base_ms = 1_735_689_600_000.0;
+        let interval_ms = 60_000.0;
+
         let n = 65_536usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
         let mut y_a: Vec<f64> = Vec::with_capacity(n);
@@ -174,7 +180,7 @@ impl ChartDemoDriver {
         let mut y_c: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
             let t = i as f64 / (n - 1) as f64;
-            let xi = t * 1000.0;
+            let xi = base_ms + interval_ms * i as f64;
             let theta = t * std::f64::consts::TAU;
             let yi_a = (theta * 8.0).sin() * 0.8;
             let yi_b = (theta * 6.0).cos() * 0.6 + 0.1;

@@ -9,6 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 publish = false
+default-run = "fret-demo"
 
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
