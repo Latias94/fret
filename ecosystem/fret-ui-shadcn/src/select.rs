@@ -1,7 +1,7 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -978,14 +978,7 @@ fn select_impl<H: UiHost>(
 
                     let border_width = resolved.border_width;
 
-                    let mut wrapper_insets = Edges::all(Px(0.0));
-                    let mut motion_side: Side = side.into();
-                    let mut popper_layout: Option<fret_ui::overlay_placement::AnchoredPanelLayout> =
-                        None;
-                    let mut transform_origin: Point = Point::new(Px(0.0), Px(0.0));
-
-                    let mut item_aligned_rect: Option<Rect> = None;
-                    if position == SelectPosition::ItemAligned {
+                    let item_aligned = if position == SelectPosition::ItemAligned {
                         let (value_node, viewport, listbox, content_panel, selected_item, selected_item_text, did_scroll) =
                             {
                                 let state = trigger_state
@@ -1017,8 +1010,7 @@ fn select_impl<H: UiHost>(
                             selected_item,
                             selected_item_text,
                         ) {
-                            let layout = radix_select::select_item_aligned_layout_from_elements(
-                                cx,
+                            Some((
                                 radix_select::SelectItemAlignedElementInputs {
                                     direction: LayoutDirection::Ltr,
                                     window: cx.bounds,
@@ -1036,66 +1028,59 @@ fn select_impl<H: UiHost>(
                                     selected_item,
                                     selected_item_text,
                                 },
-                            );
-                            if let Some(layout) = layout {
-
-                                if let Some(scroll_to) = layout.outputs.scroll_to_y
-                                    && !did_scroll
-                                {
-                                    let mut state = trigger_state
-                                        .lock()
-                                        .unwrap_or_else(|e| e.into_inner());
-                                    state.pending_item_aligned_scroll_to_y = Some(scroll_to);
-                                    state.did_item_aligned_scroll = true;
-                                }
-
-                                let placement =
-                                    radix_select::select_content_placement_item_aligned(
-                                        anchor,
-                                        layout,
-                                    );
-                                wrapper_insets = placement.wrapper_insets;
-                                motion_side = placement.side;
-                                transform_origin = placement.transform_origin;
-                                popper_layout = placement.popper_layout;
-                                item_aligned_rect = Some(placement.placed);
-                            }
+                                did_scroll,
+                            ))
+                        } else {
+                            None
                         }
-                    }
-
-                    let placed = if let Some(placed) = item_aligned_rect {
-                        placed
                     } else {
-                        let side_offset = side_offset_override.unwrap_or_else(|| {
-                            theme
-                                .metric_by_key("component.select.popover_offset")
-                                .unwrap_or(Px(6.0))
-                        });
-
-                        let (arrow_options, arrow_protrusion) =
-                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-
-                        let placement_policy = popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side.into(),
-                            align.into(),
-                            side_offset,
-                        )
-                        .with_align_offset(align_offset)
-                        .with_arrow(arrow_options, arrow_protrusion);
-                        let placement = radix_select::select_content_placement_popper(
-                            outer,
-                            anchor,
-                            desired,
-                            placement_policy,
-                            arrow.then_some(arrow_size),
-                        );
-                        wrapper_insets = placement.wrapper_insets;
-                        motion_side = placement.side;
-                        transform_origin = placement.transform_origin;
-                        popper_layout = placement.popper_layout;
-                        placement.placed
+                        None
                     };
+
+                    let side_offset = side_offset_override.unwrap_or_else(|| {
+                        theme
+                            .metric_by_key("component.select.popover_offset")
+                            .unwrap_or(Px(6.0))
+                    });
+                    let (arrow_options, arrow_protrusion) =
+                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    let popper_placement = popper::PopperContentPlacement::new(
+                        LayoutDirection::Ltr,
+                        side.into(),
+                        align.into(),
+                        side_offset,
+                    )
+                    .with_align_offset(align_offset)
+                    .with_arrow(arrow_options, arrow_protrusion);
+
+                    let (item_aligned_inputs, did_scroll) = match item_aligned {
+                        Some((inputs, did_scroll)) => (Some(inputs), did_scroll),
+                        None => (None, false),
+                    };
+                    let resolved = radix_select::select_resolve_content_placement_from_elements(
+                        cx,
+                        anchor,
+                        outer,
+                        desired,
+                        popper_placement,
+                        arrow.then_some(arrow_size),
+                        item_aligned_inputs,
+                    );
+                    if let Some(layout) = resolved.item_aligned_layout
+                        && let Some(scroll_to) = layout.outputs.scroll_to_y
+                        && !did_scroll
+                    {
+                        let mut state =
+                            trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                        state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                        state.did_item_aligned_scroll = true;
+                    }
+                    let placement = resolved.placement;
+                    let wrapper_insets = placement.wrapper_insets;
+                    let motion_side = placement.side;
+                    let transform_origin = placement.transform_origin;
+                    let popper_layout = placement.popper_layout;
+                    let placed = placement.placed;
 
                     let opacity = motion.opacity;
                     let scale = motion.scale;

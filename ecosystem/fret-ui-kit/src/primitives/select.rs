@@ -348,6 +348,60 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectResolvedContentPlacement {
+    pub placement: SelectContentPlacement,
+    pub item_aligned_layout: Option<SelectItemAlignedLayout>,
+}
+
+pub fn select_resolve_content_placement(
+    anchor: Rect,
+    outer: Rect,
+    desired: Size,
+    popper_placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+    item_aligned_layout: Option<SelectItemAlignedLayout>,
+) -> SelectResolvedContentPlacement {
+    if let Some(item_aligned_layout) = item_aligned_layout {
+        return SelectResolvedContentPlacement {
+            placement: select_content_placement_item_aligned(anchor, item_aligned_layout),
+            item_aligned_layout: Some(item_aligned_layout),
+        };
+    }
+
+    SelectResolvedContentPlacement {
+        placement: select_content_placement_popper(
+            outer,
+            anchor,
+            desired,
+            popper_placement,
+            arrow_size,
+        ),
+        item_aligned_layout: None,
+    }
+}
+
+pub fn select_resolve_content_placement_from_elements<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    anchor: Rect,
+    outer: Rect,
+    desired: Size,
+    popper_placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+    item_aligned: Option<SelectItemAlignedElementInputs>,
+) -> SelectResolvedContentPlacement {
+    let item_aligned_layout =
+        item_aligned.and_then(|inputs| select_item_aligned_layout_from_elements(cx, inputs));
+    select_resolve_content_placement(
+        anchor,
+        outer,
+        desired,
+        popper_placement,
+        arrow_size,
+        item_aligned_layout,
+    )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SelectContentPlacement {
     pub placed: Rect,
     pub wrapper_insets: Edges,
@@ -1171,6 +1225,67 @@ mod tests {
                 || out.wrapper_insets.left.0 > 0.0
                 || out.wrapper_insets.right.0 > 0.0
         );
+    }
+
+    #[test]
+    fn select_resolve_content_placement_prefers_item_aligned_layout_when_provided() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(120.0), Px(40.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+        let desired = Size::new(Px(180.0), Px(120.0));
+
+        let item_layout = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: popper::LayoutDirection::Ltr,
+            window: outer,
+            trigger: anchor,
+            content: Rect::new(Point::new(Px(0.0), Px(0.0)), desired),
+            value_node: Rect::new(
+                Point::new(Px(130.0), Px(44.0)),
+                Size::new(Px(60.0), Px(16.0)),
+            ),
+            selected_item_text: Rect::new(
+                Point::new(Px(20.0), Px(40.0)),
+                Size::new(Px(80.0), Px(16.0)),
+            ),
+            selected_item: Rect::new(
+                Point::new(Px(10.0), Px(36.0)),
+                Size::new(Px(140.0), Px(24.0)),
+            ),
+            viewport: Rect::new(
+                Point::new(Px(10.0), Px(30.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            items_height: Px(240.0),
+        });
+
+        let popper_placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(6.0),
+        );
+        let resolved = select_resolve_content_placement(
+            anchor,
+            outer,
+            desired,
+            popper_placement,
+            None,
+            Some(item_layout),
+        );
+
+        assert!(resolved.item_aligned_layout.is_some());
+        assert!(resolved.placement.popper_layout.is_none());
     }
 
     #[test]
