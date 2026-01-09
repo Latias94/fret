@@ -1,7 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event, Px};
+use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
@@ -16,7 +16,7 @@ use delinea::{
     AreaBaseline, AxisKind, AxisPosition, AxisRange, AxisScale, SeriesKind, TimeAxisScale,
 };
 use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
-use fret_chart::retained::{ChartCanvas, ChartStyle};
+use fret_chart::retained::ChartCanvas;
 
 struct ChartDemoWindowState {
     ui: UiTree<App>,
@@ -164,10 +164,6 @@ impl ChartDemoDriver {
         };
 
         let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
-        canvas.set_style(ChartStyle {
-            stroke_width: Px(1.5),
-            ..ChartStyle::default()
-        });
 
         // 2025-01-01T00:00:00Z in epoch milliseconds.
         let base_ms = 1_735_689_600_000.0;

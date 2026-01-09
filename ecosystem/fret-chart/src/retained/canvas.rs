@@ -14,6 +14,7 @@ use fret_core::{
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
     Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
+use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 
@@ -127,6 +128,8 @@ struct ChartLayout {
 pub struct ChartCanvas {
     engine: ChartEngine,
     style: ChartStyle,
+    style_source: ChartStyleSource,
+    last_theme_revision: u64,
     input_map: ChartInputMap,
     last_bounds: Rect,
     last_layout: ChartLayout,
@@ -151,6 +154,12 @@ pub struct ChartCanvas {
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChartStyleSource {
+    Theme,
+    Fixed,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct AxisExtentCacheEntry {
     spec_rev: delinea::ids::Revision,
@@ -166,6 +175,8 @@ impl ChartCanvas {
         Ok(Self {
             engine: ChartEngine::new(spec)?,
             style: ChartStyle::default(),
+            style_source: ChartStyleSource::Theme,
+            last_theme_revision: 0,
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
             last_layout: ChartLayout::default(),
@@ -201,10 +212,30 @@ impl ChartCanvas {
 
     pub fn set_style(&mut self, style: ChartStyle) {
         self.style = style;
+        self.style_source = ChartStyleSource::Fixed;
+    }
+
+    pub fn set_style_source(&mut self, source: ChartStyleSource) {
+        self.style_source = source;
     }
 
     pub fn set_input_map(&mut self, map: ChartInputMap) {
         self.input_map = map;
+    }
+
+    fn sync_style_from_theme(&mut self, theme: &Theme) -> bool {
+        if self.style_source != ChartStyleSource::Theme {
+            return false;
+        }
+
+        let rev = theme.revision();
+        if self.last_theme_revision == rev {
+            return false;
+        }
+
+        self.last_theme_revision = rev;
+        self.style = ChartStyle::from_theme(theme);
+        true
     }
 
     fn compute_layout(&self, bounds: Rect) -> ChartLayout {
@@ -2474,6 +2505,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
+        let theme = Theme::global(&*cx.app);
+        self.sync_style_from_theme(theme);
+
         self.last_bounds = cx.bounds;
         self.last_layout = self.compute_layout(cx.bounds);
         self.sync_viewport(self.last_layout.plot);
@@ -2481,6 +2515,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        let theme = Theme::global(&*cx.app);
+        let style_changed = self.sync_style_from_theme(theme);
+        if style_changed {
+            self.last_bounds = cx.bounds;
+            self.last_layout = self.compute_layout(cx.bounds);
+            self.sync_viewport(self.last_layout.plot);
+        }
+
         if self.last_bounds != cx.bounds
             || self.last_layout.plot.size.width.0 <= 0.0
             || self.last_layout.plot.size.height.0 <= 0.0
