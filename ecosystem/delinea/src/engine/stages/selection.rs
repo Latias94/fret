@@ -10,30 +10,44 @@ use crate::view::ViewState;
 
 #[derive(Debug, Default, Clone)]
 pub struct SelectionStage {
-    desired: Vec<SelectionKey>,
+    desired: Vec<DataViewKey>,
     cursor: usize,
-    cache: BTreeMap<SelectionKey, SelectionEntry>,
+    cache: BTreeMap<DataViewKey, SelectionEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct SelectionKey {
+pub struct DataViewKey {
     dataset: DatasetId,
-    x_col: usize,
-    start: u32,
-    end: u32,
-    min_bits: u64,
-    max_bits: u64,
+    kind: DataViewKind,
 }
 
-impl SelectionKey {
-    fn new(dataset: DatasetId, x_col: usize, range: RowRange, filter: AxisFilter1D) -> Self {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DataViewKind {
+    XFilter {
+        x_col: usize,
+        start: u32,
+        end: u32,
+        min_bits: u64,
+        max_bits: u64,
+    },
+}
+
+impl DataViewKey {
+    pub fn x_filter(
+        dataset: DatasetId,
+        x_col: usize,
+        range: RowRange,
+        filter: AxisFilter1D,
+    ) -> Self {
         Self {
             dataset,
-            x_col,
-            start: range.start.min(u32::MAX as usize) as u32,
-            end: range.end.min(u32::MAX as usize) as u32,
-            min_bits: filter.min.map(|v| v.to_bits()).unwrap_or(u64::MAX),
-            max_bits: filter.max.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+            kind: DataViewKind::XFilter {
+                x_col,
+                start: range.start.min(u32::MAX as usize) as u32,
+                end: range.end.min(u32::MAX as usize) as u32,
+                min_bits: filter.min.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+                max_bits: filter.max.map(|v| v.to_bits()).unwrap_or(u64::MAX),
+            },
         }
     }
 }
@@ -67,7 +81,7 @@ impl SelectionStage {
         // - and the selection is "large enough" to benefit from an index view.
         //
         // This is intentionally conservative: indices are an optimization carrier, not required for correctness.
-        let mut desired_set: BTreeSet<SelectionKey> = BTreeSet::new();
+        let mut desired_set: BTreeSet<DataViewKey> = BTreeSet::new();
 
         for series_id in &model.series_order {
             let Some(series) = model.series.get(series_id) else {
@@ -116,7 +130,7 @@ impl SelectionStage {
                 continue;
             }
 
-            let key = SelectionKey::new(series.dataset, x_col, selection_range, filter);
+            let key = DataViewKey::x_filter(series.dataset, x_col, selection_range, filter);
             if desired_set.insert(key) {
                 self.desired.push(key);
             }
@@ -134,12 +148,13 @@ impl SelectionStage {
             let Some(table) = table else {
                 continue;
             };
+            let DataViewKind::XFilter { start, end, .. } = key.kind;
             self.cache.insert(
                 *key,
                 SelectionEntry::Building {
                     data_rev: table.revision,
-                    next: key.start as usize,
-                    end: key.end as usize,
+                    next: start as usize,
+                    end: end as usize,
                     indices: Vec::new(),
                 },
             );
@@ -178,10 +193,11 @@ impl SelectionStage {
             match entry {
                 SelectionEntry::Ready { data_rev: r, .. } => {
                     if *r != data_rev {
+                        let DataViewKind::XFilter { start, end, .. } = key.kind;
                         *entry = SelectionEntry::Building {
                             data_rev,
-                            next: key.start as usize,
-                            end: key.end as usize,
+                            next: start as usize,
+                            end: end as usize,
                             indices: Vec::new(),
                         };
                     } else {
@@ -196,8 +212,9 @@ impl SelectionStage {
                     ..
                 } => {
                     if *r != data_rev {
+                        let DataViewKind::XFilter { start, .. } = key.kind;
                         *r = data_rev;
-                        *next = key.start as usize;
+                        *next = start as usize;
                         indices.clear();
                     }
                 }
@@ -211,15 +228,22 @@ impl SelectionStage {
                 continue;
             };
 
-            let Some(x_values) = table.column_f64(key.x_col) else {
+            let DataViewKind::XFilter {
+                x_col,
+                min_bits,
+                max_bits,
+                ..
+            } = key.kind;
+
+            let Some(x_values) = table.column_f64(x_col) else {
                 self.cache.remove(&key);
                 self.cursor += 1;
                 continue;
             };
 
             let filter = AxisFilter1D {
-                min: (key.min_bits != u64::MAX).then(|| f64::from_bits(key.min_bits)),
-                max: (key.max_bits != u64::MAX).then(|| f64::from_bits(key.max_bits)),
+                min: (min_bits != u64::MAX).then(|| f64::from_bits(min_bits)),
+                max: (max_bits != u64::MAX).then(|| f64::from_bits(max_bits)),
             };
 
             let points_budget = budget.take_points(4096) as usize;
@@ -276,7 +300,7 @@ impl SelectionStage {
         filter: AxisFilter1D,
         table_rev: Revision,
     ) -> Option<RowSelection> {
-        let key = SelectionKey::new(dataset, x_col, selection_range, filter);
+        let key = DataViewKey::x_filter(dataset, x_col, selection_range, filter);
         match self.cache.get(&key) {
             Some(SelectionEntry::Ready { data_rev, indices }) if *data_rev == table_rev => {
                 Some(RowSelection::Indices(indices.clone()))
@@ -318,15 +342,16 @@ mod tests {
         filter: AxisFilter1D,
         data_rev: Revision,
     ) -> SelectionStage {
-        let key = SelectionKey::new(dataset_id, x_col, range, filter);
+        let key = DataViewKey::x_filter(dataset_id, x_col, range, filter);
         let mut stage = SelectionStage::default();
         stage.desired.push(key);
+        let DataViewKind::XFilter { start, end, .. } = key.kind;
         stage.cache.insert(
             key,
             SelectionEntry::Building {
                 data_rev,
-                next: key.start as usize,
-                end: key.end as usize,
+                next: start as usize,
+                end: end as usize,
                 indices: Vec::new(),
             },
         );
