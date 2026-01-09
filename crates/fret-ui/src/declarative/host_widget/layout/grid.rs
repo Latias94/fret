@@ -382,7 +382,7 @@ impl ElementHostWidget {
                     ),
                     layout_rect.size,
                 );
-                tree.precompute_flow_root_island(app, services, child, rect, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
             }
         }
 

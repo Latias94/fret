@@ -61,7 +61,7 @@ impl ElementHostWidget {
                     PositionedLayoutStyle::Absolute(_) => continue,
                 };
 
-                tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, child, child_bounds, sf);
             }
         }
 
@@ -162,7 +162,7 @@ impl ElementHostWidget {
                     PositionedLayoutStyle::Absolute(_) => continue,
                 };
 
-                tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, child, child_bounds, sf);
             }
         }
 

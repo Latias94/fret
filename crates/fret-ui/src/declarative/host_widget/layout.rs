@@ -246,7 +246,13 @@ impl ElementHostWidget {
                             PositionedLayoutStyle::Absolute(_) => continue,
                         };
 
-                        tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+                        tree.precompute_flow_root_island_if_needed(
+                            app,
+                            services,
+                            child,
+                            child_bounds,
+                            sf,
+                        );
                     }
                 }
 
@@ -438,7 +444,13 @@ impl ElementHostWidget {
                             PositionedLayoutStyle::Absolute(_) => continue,
                         };
 
-                        tree.precompute_flow_root_island(app, services, child, child_bounds, sf);
+                        tree.precompute_flow_root_island_if_needed(
+                            app,
+                            services,
+                            child,
+                            child_bounds,
+                            sf,
+                        );
                     }
                 }
 
@@ -498,7 +510,9 @@ impl ElementHostWidget {
                     for &child in cx.children {
                         let child_style = layout_style_for_node(app, window, child);
                         if child_style.position != crate::element::PositionStyle::Absolute {
-                            tree.precompute_flow_root_island(app, services, child, base, sf);
+                            tree.precompute_flow_root_island_if_needed(
+                                app, services, child, base, sf,
+                            );
                         }
                     }
                 }

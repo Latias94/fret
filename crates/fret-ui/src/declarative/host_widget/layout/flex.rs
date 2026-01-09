@@ -645,7 +645,7 @@ impl ElementHostWidget {
                 let app = &mut *cx.app;
                 let services = &mut *cx.services;
                 let tree = &mut *cx.tree;
-                tree.precompute_flow_root_island(app, services, child, rect, sf);
+                tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
             }
 
             let _ = cx.layout_in(child, rect);
