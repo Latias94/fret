@@ -127,3 +127,7 @@ Acceptance:
    - Virtualization (`VirtualList`) (ADR 0042) — measures item extents via `measure_in`, precomputes only visible item subtrees, and never demands solver-time re-entry.
    - Resizable splits (`ResizablePanelGroup`) — computes definite panel rects, then registers each panel as a viewport root in v2.
    - Viewport surfaces (`RenderTargetId`) (ADR 0007) — treat as rendering/clip boundary; never try to "merge" multiple surfaces into a single flow tree.
+
+## Known Gaps / Cautions
+
+- Root-level precompute of flow islands (solving a full layer root in one shot) is intentionally **not** enabled yet. A naive "solve the entire root upfront" changes shrink/percent interactions in overlay wrappers (e.g. `Stack` + `Semantics` + `PointerRegion`), which can break hit testing and interaction conformance. Current direction: keep precompute at points where child bounds are already definite (viewport roots, split panels, positioned wrappers, and now `Container`).
