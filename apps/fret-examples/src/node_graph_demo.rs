@@ -18,6 +18,8 @@ use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
 
+use crate::node_graph_tuning_overlay::NodeGraphTuningOverlay;
+
 use fret_node::Graph;
 use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
@@ -902,6 +904,9 @@ impl NodeGraphDemoDriver {
             NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone());
         let controls_node = ui.create_node_retained(controls);
 
+        let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone());
+        let tuning_node = ui.create_node_retained(tuning);
+
         let minimap = NodeGraphMiniMapOverlay::new(
             canvas_node,
             models.graph.clone(),
@@ -918,6 +923,7 @@ impl NodeGraphDemoDriver {
                 canvas_node,
                 portal_node,
                 controls_node,
+                tuning_node,
                 minimap_node,
                 overlay_node,
             ],

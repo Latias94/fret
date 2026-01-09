@@ -55,6 +55,8 @@ pub mod node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod node_graph_domain_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod node_graph_tuning_overlay;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;
 pub mod plot_image_demo;
