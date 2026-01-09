@@ -2,12 +2,32 @@ use fret_core::{Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
+use crate::io::NodeGraphDragHandleMode;
 
 use super::super::state::{
     EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
     PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
 use super::NodeGraphCanvas;
+
+fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
+    let zoom = if zoom.is_finite() && zoom > 0.0 {
+        zoom
+    } else {
+        1.0
+    };
+    let header_h = (header_height_screen / zoom).max(0.0);
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = rect.origin.x.0 + rect.size.width.0;
+    let y1 = rect.origin.y.0 + header_h.min(rect.size.height.0.max(0.0));
+
+    position.x.0 >= x0
+        && position.y.0 >= y0
+        && position.x.0 <= x1
+        && position.y.0 <= y1
+        && header_h > 0.0
+}
 
 pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
@@ -187,6 +207,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -275,12 +296,19 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let nodes_for_drag = (already_selected && snapshot.selected_nodes.len() > 1)
                 .then(|| snapshot.selected_nodes.clone())
                 .unwrap_or_else(|| vec![node]);
+            let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
+                NodeGraphDragHandleMode::Any => true,
+                NodeGraphDragHandleMode::Header => {
+                    node_header_hit(rect, canvas.style.node_header_height, zoom, position)
+                }
+            };
             canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
                 primary: node,
                 nodes: nodes_for_drag,
                 grab_offset: offset,
                 start_pos: position,
                 select_action,
+                drag_enabled,
             });
             cx.capture_pointer(cx.node);
 

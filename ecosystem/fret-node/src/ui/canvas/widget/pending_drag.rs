@@ -25,6 +25,14 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
         return true;
     }
 
+    if !pending.drag_enabled {
+        canvas.interaction.pending_node_drag = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     canvas.interaction.pending_node_drag = None;
 
     if pending.select_action != PendingNodeSelectAction::None {

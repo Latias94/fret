@@ -195,6 +195,22 @@ impl Default for NodeGraphConnectionMode {
     }
 }
 
+/// Where node dragging can start from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphDragHandleMode {
+    /// Start dragging from anywhere inside the node bounds.
+    Any,
+    /// Start dragging only from the node header region.
+    Header,
+}
+
+impl Default for NodeGraphDragHandleMode {
+    fn default() -> Self {
+        Self::Any
+    }
+}
+
 /// Auto-pan tuning for drag/connect/focus workflows.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphAutoPanTuning {
@@ -273,6 +289,10 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
 
+    /// Where node dragging can start (XyFlow `node.dragHandle` mental model).
+    #[serde(default)]
+    pub node_drag_handle_mode: NodeGraphDragHandleMode,
+
     /// Click tolerance in screen pixels for node selection gestures.
     ///
     /// When a pointer-down on a node does not exceed this distance before pointer-up, the action
@@ -330,6 +350,7 @@ impl Default for NodeGraphInteractionState {
             snaplines: default_snaplines(),
             snaplines_threshold: default_snaplines_threshold(),
             node_drag_threshold: default_node_drag_threshold(),
+            node_drag_handle_mode: NodeGraphDragHandleMode::default(),
             node_click_distance: default_node_click_distance(),
             connection_drag_threshold: default_connection_drag_threshold(),
             connect_on_click: false,

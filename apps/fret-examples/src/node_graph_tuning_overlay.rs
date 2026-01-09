@@ -5,7 +5,7 @@ use fret_core::{
 use fret_runtime::{CommandId, Model};
 use fret_ui::{UiHost, retained_bridge::*};
 
-use fret_node::io::{NodeGraphConnectionMode, NodeGraphViewState};
+use fret_node::io::{NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphViewState};
 use fret_node::ui::style::NodeGraphStyle;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,8 +17,10 @@ enum TuningHit {
     EdgeWidthInc,
     ConnThresholdDec,
     ConnThresholdInc,
+    ToggleConnectOnClick,
     NodeDragThresholdDec,
     NodeDragThresholdInc,
+    ToggleNodeDragHandle,
     NodeClickDistanceDec,
     NodeClickDistanceInc,
     ToggleTranslateExtent,
@@ -194,7 +196,15 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 4: node_drag_threshold
+        // Row 4: connect_on_click
+        let connect_on_click_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::ToggleConnectOnClick, connect_on_click_btn));
+        cy += row_h + gap;
+
+        // Row 5: node_drag_threshold
         let _ = add_row(
             &mut hits,
             cy,
@@ -207,7 +217,15 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 5: node_click_distance
+        // Row 6: node_drag_handle_mode
+        let drag_handle_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::ToggleNodeDragHandle, drag_handle_btn));
+        cy += row_h + gap;
+
+        // Row 7: node_click_distance
         let _ = add_row(
             &mut hits,
             cy,
@@ -220,7 +238,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 6: translate_extent
+        // Row 8: translate_extent
         let _ = add_row3(
             &mut hits,
             cy,
@@ -234,7 +252,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 7: node_extent
+        // Row 9: node_extent
         let _ = add_row3(
             &mut hits,
             cy,
@@ -248,7 +266,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 8: auto_pan.margin
+        // Row 10: auto_pan.margin
         let _ = add_row(
             &mut hits,
             cy,
@@ -261,7 +279,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 9: auto_pan.speed
+        // Row 11: auto_pan.speed
         let _ = add_row(
             &mut hits,
             cy,
@@ -383,6 +401,9 @@ impl NodeGraphTuningOverlay {
                 s.interaction.connection_drag_threshold =
                     (s.interaction.connection_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
             }
+            TuningHit::ToggleConnectOnClick => {
+                s.interaction.connect_on_click = !s.interaction.connect_on_click;
+            }
             TuningHit::NodeDragThresholdDec => {
                 s.interaction.node_drag_threshold =
                     (s.interaction.node_drag_threshold - 0.5 * step_scale).clamp(0.0, 24.0);
@@ -390,6 +411,12 @@ impl NodeGraphTuningOverlay {
             TuningHit::NodeDragThresholdInc => {
                 s.interaction.node_drag_threshold =
                     (s.interaction.node_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::ToggleNodeDragHandle => {
+                s.interaction.node_drag_handle_mode = match s.interaction.node_drag_handle_mode {
+                    NodeGraphDragHandleMode::Any => NodeGraphDragHandleMode::Header,
+                    NodeGraphDragHandleMode::Header => NodeGraphDragHandleMode::Any,
+                };
             }
             TuningHit::NodeClickDistanceDec => {
                 s.interaction.node_click_distance =
@@ -755,6 +782,47 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
+        let connect_on_click_text = if state.interaction.connect_on_click {
+            "On"
+        } else {
+            "Off"
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Connect on click", connect_on_click_text),
+            self.style.context_menu_text,
+        );
+        let connect_on_click_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let connect_on_click_bg = if self.hovered == Some(TuningHit::ToggleConnectOnClick) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: connect_on_click_btn_rect,
+            background: connect_on_click_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(connect_on_click_btn_rect.origin.x.0 + 4.0),
+                Px(connect_on_click_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            connect_on_click_text,
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
         draw_step_row(
             self,
             cx,
@@ -763,6 +831,50 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             format!("{:.2}", state.interaction.node_drag_threshold),
             TuningHit::NodeDragThresholdDec,
             TuningHit::NodeDragThresholdInc,
+        );
+        cy += row_h + gap;
+
+        let drag_handle_str = match state.interaction.node_drag_handle_mode {
+            NodeGraphDragHandleMode::Any => "any",
+            NodeGraphDragHandleMode::Header => "header",
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Node drag handle", drag_handle_str),
+            self.style.context_menu_text,
+        );
+        let drag_handle_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let drag_handle_bg = if self.hovered == Some(TuningHit::ToggleNodeDragHandle) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: drag_handle_btn_rect,
+            background: drag_handle_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        let drag_handle_short = match state.interaction.node_drag_handle_mode {
+            NodeGraphDragHandleMode::Any => "A",
+            NodeGraphDragHandleMode::Header => "H",
+        };
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(drag_handle_btn_rect.origin.x.0 + 0.5 * (btn - 8.0)),
+                Px(drag_handle_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            drag_handle_short,
+            self.style.controls_text,
         );
         cy += row_h + gap;
 

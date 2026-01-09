@@ -208,9 +208,13 @@ High-level layering (ADR 0135):
 
 ## 4.2 Drag handle (restrict drag start area)
 
-- [ ] **Drag handle selector / region**
+- [x] **Drag handle selector / region**
   - XyFlow: `node.dragHandle` passed into `useDrag` via `handleSelector`
-  - fret-node: not implemented; should be a presenter hint or portal-provided “drag region” contract
+  - fret-node:
+    - persisted toggle: `NodeGraphInteractionState.node_drag_handle_mode` (`ecosystem/fret-node/src/io/mod.rs`)
+    - drag start gating: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` +
+      `ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs`
+    - future: can be extended with presenter hints / portal-measured drag regions (per-node parity)
 
 ## 4.3 Snap to grid and snaplines
 
@@ -272,9 +276,13 @@ High-level layering (ADR 0135):
 
 ## 5.5 Click-to-connect
 
-- [ ] **Connect-on-click**
+- [x] **Connect-on-click**
   - XyFlow: `connectOnClick` and click-to-connect pipeline in `packages/react/src/components/Handle/index.tsx`
-  - fret-node: not implemented
+  - fret-node:
+    - persisted toggle: `NodeGraphInteractionState.connect_on_click` (`ecosystem/fret-node/src/io/mod.rs`)
+    - click-start is created from a "no-move" port click (`PendingWireDrag` on pointer-up)
+    - click-end reuses the existing connect/reconnect pipeline by forcing the clicked target port
+      (`handle_wire_left_up_with_forced_target`) so invalid clicks do not open the "drop on empty" picker
 
 ## 5.6 Connection validation hook
 

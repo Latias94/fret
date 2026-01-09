@@ -63,6 +63,9 @@ Recommended harness:
 ### Manual script
 
 - (implemented) Dragging a selected node moves it.
+- (prototype) Drag handle gating:
+  - When `node_drag_handle_mode = header`, dragging starts only from the header area.
+  - Dragging from the body does not start a node drag (but selection still works).
 - (prototype) Dragging multiple selected nodes preserves relative offsets.
 - (implemented) Snaplines appear and apply predictable snapping deltas.
 - (prototype) Drag thresholds are screen-space:
@@ -83,6 +86,10 @@ Recommended harness:
 - (prototype) Hover a compatible target port and release:
   - a connection is created (or reconnection performed),
   - `GraphTransaction` is committed (undoable).
+- (prototype) Connect-on-click (if enabled):
+  - click a port handle to start a connection preview,
+  - click another handle to attempt the connection,
+  - the click-connect session ends regardless of validity (no “stuck connecting” state).
 - (prototype) Toggle connection mode (strict/loose) and verify targeting behavior changes.
 - (prototype) Release on empty space:
   - a menu/searcher appears,

@@ -102,6 +102,7 @@ pub(crate) struct PendingNodeDrag {
     pub(crate) grab_offset: Point,
     pub(crate) start_pos: Point,
     pub(crate) select_action: PendingNodeSelectAction,
+    pub(crate) drag_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
