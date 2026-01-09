@@ -605,6 +605,21 @@ impl ElementHostWidget {
             ElementInstance::DismissibleLayer(props) => {
                 let desired = clamp_to_constraints(cx.available, props.layout, cx.available);
                 let base = cx.bounds;
+
+                #[cfg(feature = "layout-engine-v2")]
+                {
+                    let sf = cx.scale_factor;
+                    let app = &mut *cx.app;
+                    let services = &mut *cx.services;
+                    let tree = &mut *cx.tree;
+                    for &child in cx.children {
+                        let child_style = layout_style_for_node(app, window, child);
+                        if child_style.position != crate::element::PositionStyle::Absolute {
+                            tree.precompute_flow_root_island(app, services, child, base, sf);
+                        }
+                    }
+                }
+
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));

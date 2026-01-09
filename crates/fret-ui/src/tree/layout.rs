@@ -43,7 +43,7 @@ impl<H: UiHost> UiTree<H> {
             while viewport_cursor < self.viewport_roots.len() {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
-                self.precompute_viewport_root_flow_island(
+                self.precompute_flow_root_island(
                     app,
                     services,
                     viewport_root,
@@ -90,13 +90,14 @@ impl<H: UiHost> UiTree<H> {
             while viewport_cursor < self.viewport_roots.len() {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
-                self.precompute_viewport_root_flow_island(
+                self.precompute_flow_root_island(
                     app,
                     services,
                     viewport_root,
                     viewport_bounds,
                     scale_factor,
                 );
+
                 let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
             }
 
@@ -133,12 +134,12 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    fn precompute_viewport_root_flow_island(
+    pub(crate) fn precompute_flow_root_island(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
-        viewport_root: NodeId,
-        viewport_bounds: Rect,
+        root: NodeId,
+        root_bounds: Rect,
         scale_factor: f32,
     ) {
         let Some(window) = self.window else {
@@ -151,17 +152,17 @@ impl<H: UiHost> UiTree<H> {
             app,
             &*self,
             window,
-            viewport_root,
-            viewport_bounds.size,
+            root,
+            root_bounds.size,
         );
-        let Some(root_id) = engine.layout_id_for_node(viewport_root) else {
+        let Some(root_id) = engine.layout_id_for_node(root) else {
             self.put_layout_engine(engine);
             return;
         };
 
         let available = LayoutSize::new(
-            AvailableSpace::Definite(viewport_bounds.size.width),
-            AvailableSpace::Definite(viewport_bounds.size.height),
+            AvailableSpace::Definite(root_bounds.size.width),
+            AvailableSpace::Definite(root_bounds.size.height),
         );
 
         let sf = scale_factor;
