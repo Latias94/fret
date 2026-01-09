@@ -10,7 +10,8 @@ use crate::view::ViewState;
 
 #[derive(Debug, Default, Clone)]
 pub struct DataViewStage {
-    desired: Vec<DataViewKey>,
+    requested: Vec<DataViewKey>,
+    requested_set: BTreeSet<DataViewKey>,
     cursor: usize,
     cache: BTreeMap<DataViewKey, DataViewEntry>,
 }
@@ -67,12 +68,27 @@ enum DataViewEntry {
 }
 
 impl DataViewStage {
-    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore, view: &ViewState) {
-        self.desired.clear();
+    pub fn begin_frame(&mut self) {
+        self.requested.clear();
+        self.requested_set.clear();
         self.cursor = 0;
+    }
 
-        // Keep only selections that are still relevant for the current inputs.
-        //
+    pub fn request(&mut self, key: DataViewKey) -> bool {
+        if !self.requested_set.insert(key) {
+            return false;
+        }
+        self.requested.push(key);
+        true
+    }
+
+    pub fn request_x_filter_for_series(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        series_id: crate::ids::SeriesId,
+    ) -> bool {
         // v1 policy: build indices only when:
         // - the series is visible,
         // - filter mode is "filter" (so `x_policy.filter` is active),
@@ -81,66 +97,66 @@ impl DataViewStage {
         // - and the selection is "large enough" to benefit from an index view.
         //
         // This is intentionally conservative: indices are an optimization carrier, not required for correctness.
-        let mut desired_set: BTreeSet<DataViewKey> = BTreeSet::new();
 
-        for series_id in &model.series_order {
-            let Some(series) = model.series.get(series_id) else {
-                continue;
-            };
-            if !series.visible {
-                continue;
-            }
-
-            let Some(series_view) = view.series_view(*series_id) else {
-                continue;
-            };
-
-            let table = datasets.dataset(series.dataset);
-            let Some(table) = table else {
-                continue;
-            };
-
-            let selection_range = series_view.selection.as_range(table.row_count);
-            let selection_range = RowRange {
-                start: selection_range.start,
-                end: selection_range.end,
-            };
-            let visible_len = selection_range.end.saturating_sub(selection_range.start);
-            if visible_len < 50_000 {
-                continue;
-            }
-
-            let filter = series_view.x_policy.filter;
-            if filter.min.is_none() && filter.max.is_none() {
-                continue;
-            }
-
-            let Some(dataset) = model.datasets.get(&series.dataset) else {
-                continue;
-            };
-            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
-                continue;
-            };
-            let Some(x_values) = table.column_f64(x_col) else {
-                continue;
-            };
-
-            if crate::transform::is_probably_monotonic_in_range(x_values, selection_range).is_some()
-            {
-                continue;
-            }
-
-            let key = DataViewKey::x_filter(series.dataset, x_col, selection_range, filter);
-            if desired_set.insert(key) {
-                self.desired.push(key);
-            }
+        let Some(series) = model.series.get(&series_id) else {
+            return false;
+        };
+        if !series.visible {
+            return false;
         }
 
+        let Some(series_view) = view.series_view(series_id) else {
+            return false;
+        };
+
+        let table = datasets.dataset(series.dataset);
+        let Some(table) = table else {
+            return false;
+        };
+
+        let selection_range = series_view.selection.as_range(table.row_count);
+        let selection_range = RowRange {
+            start: selection_range.start,
+            end: selection_range.end,
+        };
+        let visible_len = selection_range.end.saturating_sub(selection_range.start);
+        if visible_len < 50_000 {
+            return false;
+        }
+
+        let filter = series_view.x_policy.filter;
+        if filter.min.is_none() && filter.max.is_none() {
+            return false;
+        }
+
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            return false;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            return false;
+        };
+        let Some(x_values) = table.column_f64(x_col) else {
+            return false;
+        };
+
+        if crate::transform::is_probably_monotonic_in_range(x_values, selection_range).is_some() {
+            return false;
+        }
+
+        self.request(DataViewKey::x_filter(
+            series.dataset,
+            x_col,
+            selection_range,
+            filter,
+        ))
+    }
+
+    pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
         // Prune cache entries that are no longer desired.
-        self.cache.retain(|k, _| desired_set.contains(k));
+        self.cache.retain(|k, _| self.requested_set.contains(k));
 
         // Ensure desired entries exist (as placeholders) so step() can build them deterministically.
-        for key in &self.desired {
+        for key in &self.requested {
             if self.cache.contains_key(key) {
                 continue;
             }
@@ -166,15 +182,15 @@ impl DataViewStage {
         datasets: &DatasetStore,
         budget: &mut crate::scheduler::WorkBudget,
     ) -> bool {
-        if self.desired.is_empty() {
+        if self.requested.is_empty() {
             return true;
         }
 
         let mut points_consumed = 0usize;
         let max_points_per_step = 16_384usize;
 
-        while self.cursor < self.desired.len() {
-            let key = self.desired[self.cursor];
+        while self.cursor < self.requested.len() {
+            let key = self.requested[self.cursor];
 
             let table = datasets.dataset(key.dataset);
             let Some(table) = table else {
@@ -285,7 +301,7 @@ impl DataViewStage {
             }
 
             if points_consumed >= max_points_per_step {
-                return self.cursor >= self.desired.len();
+                return self.cursor >= self.requested.len();
             }
         }
 
@@ -344,7 +360,8 @@ mod tests {
     ) -> DataViewStage {
         let key = DataViewKey::x_filter(dataset_id, x_col, range, filter);
         let mut stage = DataViewStage::default();
-        stage.desired.push(key);
+        stage.requested.push(key);
+        stage.requested_set.insert(key);
         let DataViewKind::XFilter { start, end, .. } = key.kind;
         stage.cache.insert(
             key,
