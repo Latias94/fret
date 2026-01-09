@@ -51,7 +51,7 @@ GPUI reference (implementation, not contract):
 
 - P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
 - P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
-- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; more migration remains.)
+- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; more migration remains.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
