@@ -9,6 +9,11 @@ Notes:
 
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 
+Non-normative code references:
+
+- Zed/GPUI is pinned under `repo-ref/zed/` and is used as an implementation reference for runtime
+  substrate shapes (window/input dispatch, scheduling, overlays, theme, and settings).
+
 ## How To Use ADRs
 
 - `Status: Accepted`: stable contract; implementations should conform.

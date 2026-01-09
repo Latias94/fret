@@ -24,6 +24,12 @@ preserving kernel stability and Subsecond-friendly hot reload boundaries (ADR 01
 
 This ADR is intentionally **non-binding** and may evolve as patterns stabilize.
 
+Zed/GPUI code anchors (non-normative):
+
+- command/action dispatch substrate: `repo-ref/zed/crates/gpui/src/action.rs`, `repo-ref/zed/crates/gpui/src/key_dispatch.rs`
+- theme registry + schema: `repo-ref/zed/crates/theme`
+- asset caching convenience: `repo-ref/zed/crates/gpui/src/asset_cache.rs`, `repo-ref/zed/crates/gpui/src/assets.rs`
+
 ## Goals
 
 - Define a stable mental model for how ecosystem crates integrate with apps and with each other.

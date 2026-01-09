@@ -91,3 +91,8 @@ This demo exists to validate the “golden path” experience end-to-end.
 - Crate layering: `docs/adr/0093-crate-structure-core-backends-apps.md`
 - Bootstrap + ui-assets story: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Golden-path driver/pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- Zed/GPUI asset convenience layer (non-normative):
+  - async asset fetching + caching entry points:
+    `repo-ref/zed/crates/gpui/src/app.rs` (`fetch_asset`, `remove_asset`)
+  - asset abstractions and IDs:
+    `repo-ref/zed/crates/gpui/src/asset_cache.rs`, `repo-ref/zed/crates/gpui/src/assets.rs`

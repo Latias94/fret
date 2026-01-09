@@ -36,6 +36,9 @@ Reference baseline (local, pinned):
 
 - shadcn/ui v4 site and registry: `repo-ref/ui/apps/v4/`
 - new-york base variables (light/dark): `repo-ref/ui/apps/v4/styles/globals.css`
+- Zed theme system (non-normative engineering reference):
+  - theme schema + registry: `repo-ref/zed/crates/theme/src/schema.rs`, `repo-ref/zed/crates/theme/src/registry.rs`
+  - syntax/theme style tables: `repo-ref/zed/crates/theme/src/styles`
 
 ## Decision
 
