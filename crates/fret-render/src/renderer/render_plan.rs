@@ -393,10 +393,38 @@ impl RenderPlan {
                     return;
                 }
 
+                let scratch_targets = available_scratch_targets(draw_scopes, srcdst);
+                let forced_quarter_blur = scratch_targets.len() >= 2
+                    && chain.iter().any(|step| match step {
+                        fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+                            let requested_downsample = if downsample >= 4 { 4 } else { 2 };
+                            let desired_downsample =
+                                effect_blur_desired_downsample(requested_downsample, quality);
+                            if desired_downsample != 2 {
+                                return false;
+                            }
+                            let Some(chosen) = choose_effect_blur_downsample_scale(
+                                viewport_size,
+                                format,
+                                intermediate_budget_bytes,
+                                requested_downsample,
+                                quality,
+                            ) else {
+                                return false;
+                            };
+                            chosen == 4
+                        }
+                        _ => false,
+                    });
+                let mask_tier_cap = forced_quarter_blur.then_some(PlanTarget::Mask2);
+
                 let mask_target = if let Some(uniform_index) = mask_uniform_index
-                    && let Some(mask_target) =
-                        choose_clip_mask_target(viewport_size, intermediate_budget_bytes, quality)
-                {
+                    && let Some(mask_target) = choose_clip_mask_target_capped(
+                        viewport_size,
+                        intermediate_budget_bytes,
+                        quality,
+                        mask_tier_cap,
+                    ) {
                     let mask_size = mask_target_size(viewport_size, mask_target);
                     let mask_scissor = map_scissor_to_size(Some(scissor), viewport_size, mask_size);
                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
@@ -417,8 +445,7 @@ impl RenderPlan {
                             downsample,
                         } => {
                             let downsample = if downsample >= 4 { 4 } else { 2 };
-                            let scratch = available_scratch_targets(draw_scopes, srcdst);
-                            if scratch.len() >= 2 {
+                            if scratch_targets.len() >= 2 {
                                 let Some(downsample_scale) = choose_effect_blur_downsample_scale(
                                     viewport_size,
                                     format,
@@ -431,8 +458,8 @@ impl RenderPlan {
                                 append_scissored_blur_in_place_two_scratch(
                                     passes,
                                     srcdst,
-                                    scratch[0],
-                                    scratch[1],
+                                    scratch_targets[0],
+                                    scratch_targets[1],
                                     viewport_size,
                                     downsample_scale,
                                     scissor,
@@ -443,7 +470,7 @@ impl RenderPlan {
                                 continue;
                             }
 
-                            let Some(&scratch) = scratch.first() else {
+                            let Some(&scratch) = scratch_targets.first() else {
                                 continue;
                             };
                             if intermediate_budget_bytes == 0 {
@@ -477,8 +504,7 @@ impl RenderPlan {
                             ) {
                                 continue;
                             }
-                            let scratch = available_scratch_targets(draw_scopes, srcdst);
-                            let Some(&scratch) = scratch.first() else {
+                            let Some(&scratch) = scratch_targets.first() else {
                                 continue;
                             };
                             append_color_adjust_in_place_single_scratch(
@@ -504,8 +530,7 @@ impl RenderPlan {
                             ) {
                                 continue;
                             }
-                            let scratch = available_scratch_targets(draw_scopes, srcdst);
-                            let Some(&scratch) = scratch.first() else {
+                            let Some(&scratch) = scratch_targets.first() else {
                                 continue;
                             };
                             append_pixelate_in_place_single_scratch(
@@ -739,13 +764,7 @@ fn choose_effect_blur_downsample_scale(
     let required_half = full.saturating_add(half.saturating_mul(2));
     let required_quarter = full.saturating_add(quarter.saturating_mul(2));
 
-    let mut desired = match quality {
-        fret_core::EffectQuality::Low => 4,
-        fret_core::EffectQuality::Medium | fret_core::EffectQuality::High => 2,
-        fret_core::EffectQuality::Auto => requested_downsample,
-    };
-
-    desired = if desired >= 4 { 4 } else { 2 };
+    let desired = effect_blur_desired_downsample(requested_downsample, quality);
 
     if desired == 2 && required_half <= budget_bytes {
         return Some(2);
@@ -754,6 +773,18 @@ fn choose_effect_blur_downsample_scale(
         return Some(4);
     }
     None
+}
+
+fn effect_blur_desired_downsample(
+    requested_downsample: u32,
+    quality: fret_core::EffectQuality,
+) -> u32 {
+    let desired = match quality {
+        fret_core::EffectQuality::Low => 4,
+        fret_core::EffectQuality::Medium | fret_core::EffectQuality::High => 2,
+        fret_core::EffectQuality::Auto => requested_downsample,
+    };
+    if desired >= 4 { 4 } else { 2 }
 }
 
 fn color_adjust_enabled(
@@ -792,16 +823,33 @@ fn choose_clip_mask_target(
     budget_bytes: u64,
     quality: fret_core::EffectQuality,
 ) -> Option<PlanTarget> {
+    choose_clip_mask_target_capped(viewport_size, budget_bytes, quality, None)
+}
+
+fn choose_clip_mask_target_capped(
+    viewport_size: (u32, u32),
+    budget_bytes: u64,
+    quality: fret_core::EffectQuality,
+    tier_cap: Option<PlanTarget>,
+) -> Option<PlanTarget> {
     if budget_bytes == 0 {
         return None;
     }
 
-    let desired = match quality {
+    let mut desired = match quality {
         fret_core::EffectQuality::High => PlanTarget::Mask0,
         fret_core::EffectQuality::Medium => PlanTarget::Mask1,
         fret_core::EffectQuality::Low => PlanTarget::Mask2,
         fret_core::EffectQuality::Auto => PlanTarget::Mask0,
     };
+
+    if let Some(tier_cap) = tier_cap {
+        desired = match (desired, tier_cap) {
+            (PlanTarget::Mask0, PlanTarget::Mask1 | PlanTarget::Mask2) => tier_cap,
+            (PlanTarget::Mask1, PlanTarget::Mask2) => PlanTarget::Mask2,
+            _ => desired,
+        };
+    }
 
     for candidate in match desired {
         PlanTarget::Mask0 => [PlanTarget::Mask0, PlanTarget::Mask1, PlanTarget::Mask2].as_slice(),
@@ -1999,6 +2047,78 @@ mod tests {
             };
             assert_eq!(composite.mask_target, Some(expected_mask_target));
         }
+    }
+
+    #[test]
+    fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() {
+        let viewport_size = (128, 128);
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+        let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+
+        let full = estimate_texture_bytes(viewport_size, format, 1);
+        let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
+        let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
+        let required_half = full.saturating_add(half.saturating_mul(2));
+        let required_quarter = full.saturating_add(quarter.saturating_mul(2));
+        let budget = required_quarter.saturating_add(1);
+        assert!(budget < required_half, "budget must force quarter blur");
+
+        let mut encoding = SceneEncoding::default();
+        encoding.effect_markers = vec![
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Push {
+                    scissor,
+                    uniform_index: 0,
+                    mode: fret_core::EffectMode::Backdrop,
+                    chain: fret_core::EffectChain::from_steps(&[
+                        fret_core::EffectStep::GaussianBlur {
+                            radius_px: fret_core::geometry::Px(4.0),
+                            downsample: 2,
+                        },
+                    ]),
+                    quality: fret_core::EffectQuality::High,
+                },
+            },
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Pop,
+            },
+        ];
+
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            format,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::None,
+            budget,
+        );
+
+        let core = strip_releases(&plan.passes);
+        let Some(mask_pass) = core.iter().find_map(|p| {
+            let RenderPlanPass::ClipMask(p) = p else {
+                return None;
+            };
+            Some(*p)
+        }) else {
+            panic!("expected ClipMask pass");
+        };
+        assert_eq!(mask_pass.dst, PlanTarget::Mask2);
+
+        let Some(upscale_pass) = core.iter().find_map(|p| {
+            let RenderPlanPass::ScaleNearest(p) = p else {
+                return None;
+            };
+            if p.mode != ScaleMode::Upscale {
+                return None;
+            }
+            Some(*p)
+        }) else {
+            panic!("expected ScaleNearest upscale pass");
+        };
+        assert_eq!(upscale_pass.mask_target, Some(PlanTarget::Mask2));
     }
 
     #[test]

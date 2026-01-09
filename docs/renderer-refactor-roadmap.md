@@ -222,7 +222,9 @@ This section is intentionally lightweight and should be updated as work lands.
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
     - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by effect writeback/composite passes.
     - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter) with deterministic sampling.
-    - Next: use mask tiers as part of effect quality selection (blur/pixelate downsample paths) and keep the policy stable (ADR 0135).
+    - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
+      forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
+    - Next: share SDF/coverage helpers across quads + clip masks (ADR 0030) and consider region/tiled masks to reduce peak bytes.
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).

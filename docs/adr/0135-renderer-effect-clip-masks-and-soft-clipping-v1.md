@@ -212,6 +212,9 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 - `ClipMaskPass` can generate `Mask0` (full-resolution `R8Unorm` coverage) from the effective clip stack.
 - `ClipMaskPass` can also generate `Mask1`/`Mask2` (half/quarter) and the plan chooses the best tier within
   `intermediate_budget_bytes`.
+- When a blur step is forced to a quarter-resolution path under budgets (i.e. cannot afford the half-resolution
+  scratch chain), the plan may cap the clip mask tier to `Mask2` to avoid allocating a full-resolution mask that
+  would dominate the remaining budget.
 - `ScaleNearest` and `CompositePremul` can sample `Mask0` (`mask_target`) to gate writes without per-pixel clip-stack iteration.
 - Mask-sampling shaders map viewport pixel coordinates into the mask texture dimensions, enabling tiered masks.
 - `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.
