@@ -742,6 +742,103 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes() {
+    struct PrecomputeThenTranslate {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenTranslate {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            let rect = if self.calls == 0 {
+                tree.precompute_flow_root_island(app, services, self.child, self.rect_a, sf);
+                self.rect_a
+            } else {
+                tree.precompute_flow_root_island_if_needed(
+                    app,
+                    services,
+                    self.child,
+                    self.rect_b,
+                    sf,
+                );
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-translate-child",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("a"), cx.text("b")])],
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(10.0), Px(15.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenTranslate {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "expected the first precompute to solve at least once"
+    );
+
+    // Force the parent to re-run layout within the same frame, while keeping the child subtree
+    // clean. A translation-only bounds change for the child should not trigger an engine solve.
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "expected translation-only layout to avoid triggering engine solves"
+    );
+
+    let child_bounds = ui.debug_node_bounds(child).expect("child bounds");
+    assert!((child_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
