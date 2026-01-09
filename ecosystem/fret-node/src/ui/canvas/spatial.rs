@@ -23,14 +23,6 @@ fn cell_key(cell: Cell) -> u64 {
     (x << 32) | y
 }
 
-fn point_to_cell(pos: Point, cell_size: f32) -> Cell {
-    let s = cell_size.max(1.0e-6);
-    Cell {
-        x: (pos.x.0 / s).floor() as i32,
-        y: (pos.y.0 / s).floor() as i32,
-    }
-}
-
 fn cell_range_around(pos: Point, cell_size: f32, radius: f32) -> (i32, i32, i32, i32) {
     let s = cell_size.max(1.0e-6);
     let r = radius.max(0.0);
@@ -129,8 +121,21 @@ impl CanvasSpatialIndex {
                 let Some(handle) = geom.ports.get(&port_id) else {
                     continue;
                 };
-                let cell = point_to_cell(handle.center, cell_size);
-                out.ports.entry(cell_key(cell)).or_default().push(port_id);
+                let b = handle.bounds;
+                let min_x = b.origin.x.0.min(b.origin.x.0 + b.size.width.0);
+                let min_y = b.origin.y.0.min(b.origin.y.0 + b.size.height.0);
+                let max_x = b.origin.x.0.max(b.origin.x.0 + b.size.width.0);
+                let max_y = b.origin.y.0.max(b.origin.y.0 + b.size.height.0);
+                let (cx0, cx1, cy0, cy1) =
+                    cell_range_for_aabb(min_x, min_y, max_x, max_y, cell_size);
+                for y in cy0..=cy1 {
+                    for x in cx0..=cx1 {
+                        out.ports
+                            .entry(cell_key(Cell { x, y }))
+                            .or_default()
+                            .push(port_id);
+                    }
+                }
             }
         }
 

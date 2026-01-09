@@ -148,10 +148,10 @@ High-level layering (ADR 0135):
 - [~] **Handle/port bounds in window coordinates**
   - XyFlow: `handleBounds` is part of internal node update pipeline (`updateNodeInternalsSystem(...)`)
   - fret-node: ports use presenter hints + measured geometry; candidate resolution uses spatial index
-  - TODO: standardize a single “port anchor rect” source of truth feeding:
-    - hover/connection hit-testing
-    - minimap (optional)
-    - future a11y focus rings
+  - Implemented baseline “single source of truth”:
+    - `CanvasGeometry.ports[*].bounds` is the canonical port anchor rect in canvas space.
+    - `NodeGraphInternalsStore.snapshot().ports_window` is the canonical port anchor rect in window space.
+    - hit-testing and connection candidate selection use the derived port anchor rect (not ad-hoc center-only heuristics).
 
 ## 2.3 Z-order (draw order) and elevation
 

@@ -1361,6 +1361,38 @@ impl NodeGraphCanvas {
     // NOTE: Node bounds and port anchors must come from derived geometry (`CanvasGeometry`),
     // not ad-hoc layout guesses. See ADR 0135.
 
+    fn rect_contains_point(rect: Rect, pos: Point) -> bool {
+        let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
+        let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
+        let max_x = rect.origin.x.0.max(rect.origin.x.0 + rect.size.width.0);
+        let max_y = rect.origin.y.0.max(rect.origin.y.0 + rect.size.height.0);
+        pos.x.0 >= min_x && pos.x.0 <= max_x && pos.y.0 >= min_y && pos.y.0 <= max_y
+    }
+
+    fn distance_sq_point_to_rect(pos: Point, rect: Rect) -> f32 {
+        let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
+        let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
+        let max_x = rect.origin.x.0.max(rect.origin.x.0 + rect.size.width.0);
+        let max_y = rect.origin.y.0.max(rect.origin.y.0 + rect.size.height.0);
+
+        let dx = if pos.x.0 < min_x {
+            min_x - pos.x.0
+        } else if pos.x.0 > max_x {
+            pos.x.0 - max_x
+        } else {
+            0.0
+        };
+        let dy = if pos.y.0 < min_y {
+            min_y - pos.y.0
+        } else if pos.y.0 > max_y {
+            pos.y.0 - max_y
+        } else {
+            0.0
+        };
+
+        dx * dx + dy * dy
+    }
+
     fn hit_port(
         &self,
         geom: &CanvasGeometry,
@@ -1375,38 +1407,29 @@ impl NodeGraphCanvas {
         }
 
         index.query_ports(pos, r, scratch);
+        scratch.sort_unstable();
+        scratch.dedup();
 
-        let r2 = r * r;
-        let mut best: Option<(PortId, f32, u32)> = None;
-        let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
+        let mut best: Option<(PortId, u32)> = None;
         for &port_id in scratch.iter() {
-            let Some(center) = geom.port_center(port_id) else {
+            let Some(handle) = geom.ports.get(&port_id) else {
                 continue;
             };
-            let dx = center.x.0 - pos.x.0;
-            let dy = center.y.0 - pos.y.0;
-            let d2 = dx * dx + dy * dy;
-            if d2 > r2 {
+            if !Self::rect_contains_point(handle.bounds, pos) {
                 continue;
             }
-            let rank = geom
-                .ports
-                .get(&port_id)
-                .and_then(|h| geom.node_rank.get(&h.node).copied())
-                .unwrap_or(0);
+            let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
             match best {
-                Some((_id, best_d2, best_rank)) => {
-                    if d2 + eps < best_d2 {
-                        best = Some((port_id, d2, rank));
-                    } else if (d2 - best_d2).abs() <= eps && rank > best_rank {
-                        best = Some((port_id, d2, rank));
+                Some((best_id, best_rank)) => {
+                    if rank > best_rank || (rank == best_rank && port_id < best_id) {
+                        best = Some((port_id, rank));
                     }
                 }
-                None => best = Some((port_id, d2, rank)),
+                None => best = Some((port_id, rank)),
             }
         }
 
-        best.map(|(id, _, _)| id)
+        best.map(|(id, _)| id)
     }
 
     fn pick_target_port(
@@ -1445,6 +1468,8 @@ impl NodeGraphCanvas {
 
                 let mut best: Option<(PortId, f32, bool, u32)> = None;
                 index.query_ports(pos, r, scratch);
+                scratch.sort_unstable();
+                scratch.dedup();
                 for &port_id in scratch.iter() {
                     if port_id == from {
                         continue;
@@ -1452,10 +1477,7 @@ impl NodeGraphCanvas {
                     let Some(handle) = geom.ports.get(&port_id) else {
                         continue;
                     };
-                    let center = handle.center;
-                    let dx = center.x.0 - pos.x.0;
-                    let dy = center.y.0 - pos.y.0;
-                    let d2 = dx * dx + dy * dy;
+                    let d2 = Self::distance_sq_point_to_rect(pos, handle.bounds);
                     if d2 > r2 {
                         continue;
                     }
@@ -5696,6 +5718,7 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use fret_core::{Point, Px, Rect, Size};
     use serde_json::Value;
 
     use crate::core::{
@@ -5705,6 +5728,24 @@ mod tests {
     use crate::rules::EdgeEndpoint;
 
     use super::NodeGraphCanvas;
+
+    #[test]
+    fn distance_sq_point_to_rect_is_zero_inside_and_positive_outside() {
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(100.0), Px(50.0)),
+        );
+        let inside = Point::new(Px(50.0), Px(40.0));
+        assert!(NodeGraphCanvas::rect_contains_point(rect, inside));
+        assert_eq!(
+            NodeGraphCanvas::distance_sq_point_to_rect(inside, rect),
+            0.0
+        );
+
+        let outside = Point::new(Px(0.0), Px(0.0));
+        assert!(!NodeGraphCanvas::rect_contains_point(rect, outside));
+        assert!(NodeGraphCanvas::distance_sq_point_to_rect(outside, rect) > 0.0);
+    }
 
     #[test]
     fn yank_edges_from_port_returns_all_incident_edges() {
