@@ -746,6 +746,24 @@ impl PortalTextEditSpec for DemoFloatPortalSpec {
             normalized_text: normalized,
         }
     }
+
+    fn step_text(&self, graph: &Graph, node: NodeId, text: &str, delta: i32) -> Option<String> {
+        let base = text
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .or_else(|| {
+                graph
+                    .nodes
+                    .get(&node)
+                    .and_then(|n| n.data.get("value"))
+                    .and_then(|v| v.as_f64())
+            })
+            .unwrap_or(0.0);
+
+        let step = 0.25;
+        Some(format!("{:.3}", base + step * delta as f64))
+    }
 }
 
 #[derive(Default)]
