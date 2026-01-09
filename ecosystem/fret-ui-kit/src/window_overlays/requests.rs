@@ -1,6 +1,6 @@
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::action::OnDismissiblePointerMove;
+use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 
@@ -111,6 +111,7 @@ impl std::fmt::Debug for HoverOverlayRequest {
 pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
 }
@@ -120,6 +121,7 @@ impl std::fmt::Debug for TooltipRequest {
         f.debug_struct("TooltipRequest")
             .field("id", &self.id)
             .field("root_name", &self.root_name)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())
             .finish()

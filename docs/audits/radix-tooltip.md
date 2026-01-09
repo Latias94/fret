@@ -57,6 +57,10 @@ Fret models Radix tooltip outcomes by composing:
     `onPointerDown` close behavior), wired via `ElementContext::pressable_add_on_pointer_down_for`.
   - Click/keyboard activation requests a close and suppresses focus-driven re-open (Radix `onClick`
     close outcome), wired via `ElementContext::pressable_add_on_activate_for`.
+- Pass: Outside-press dismissal is supported via `DismissibleLayer` observer routing (Radix
+  `onPointerDownOutside` + `onDismiss` outcomes). The shadcn tooltip recipe installs a dismiss
+  handler on its overlay request (`OverlayRequest.dismissible_on_dismiss_request`) so an outside
+  press requests close without blocking underlay input.
 - Pass: Provider-scoped pointer-in-transit suppression is modeled via a provider model:
   - The currently open tooltip publishes a transit corridor geometry via
     `tooltip_provider::set_pointer_transit_geometry(...)`.
