@@ -51,7 +51,7 @@ GPUI reference (implementation, not contract):
 
 - P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
 - P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
-- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; viewport-root coverage now locks wrapper + region nodes (Pressable/Semantics/FocusScope/Opacity/VisualTransform/InteractivityGate/PointerRegion/WheelRegion); host widget v2 "engine fast path" checks are deduped via `try_layout_children_from_engine_or_manual_absolute`.)
+- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; Flex/Grid v2 root solves are centralized and redundant precompute is guarded when subtrees are already engine-backed; viewport-root coverage now locks wrapper + region nodes (Pressable/Semantics/FocusScope/Opacity/VisualTransform/InteractivityGate/PointerRegion/WheelRegion), including absolute-only children that must still fill the region; host widget v2 "engine fast path" checks are deduped via `try_layout_children_from_engine_or_manual_absolute`.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
