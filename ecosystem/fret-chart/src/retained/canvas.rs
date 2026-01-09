@@ -515,6 +515,20 @@ impl ChartCanvas {
             .apply_action(Action::SetDataWindowY { axis, window });
     }
 
+    fn view_window_2d_action(
+        x_axis: delinea::AxisId,
+        y_axis: delinea::AxisId,
+        x: Option<DataWindow>,
+        y: Option<DataWindow>,
+    ) -> Action {
+        Action::SetViewWindow2D {
+            x_axis,
+            y_axis,
+            x,
+            y,
+        }
+    }
+
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
         if self.axis_is_fixed(x_axis).is_none() {
             self.set_data_window_x(x_axis, None);
@@ -1776,6 +1790,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let w = (start_local.x.0 - end_local.x.0).abs();
                         let h = (start_local.y.0 - end_local.y.0).abs();
                         if w >= 4.0 && h >= 4.0 {
+                            let mut x_window = None;
                             if self.axis_is_fixed(drag.x_axis).is_none() {
                                 let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
                                 let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
@@ -1785,12 +1800,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     delinea::engine::axis::data_at_px(drag.start_x, x1, 0.0, width);
                                 let mut window = DataWindow { min, max };
                                 window.clamp_non_degenerate();
-                                self.engine.apply_action(Action::SetDataWindowXFromZoom {
-                                    axis: drag.x_axis,
-                                    window,
-                                });
+                                x_window = Some(window);
                             }
 
+                            let mut y_window = None;
                             if self.axis_is_fixed(drag.y_axis).is_none() {
                                 let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
                                 let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
@@ -1810,11 +1823,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 );
                                 let mut window = DataWindow { min, max };
                                 window.clamp_non_degenerate();
-                                self.engine.apply_action(Action::SetDataWindowYFromZoom {
-                                    axis: drag.y_axis,
-                                    window,
-                                });
+                                y_window = Some(window);
                             }
+
+                            self.engine.apply_action(Self::view_window_2d_action(
+                                drag.x_axis,
+                                drag.y_axis,
+                                x_window,
+                                y_window,
+                            ));
                         }
                     }
 
@@ -2564,5 +2581,35 @@ mod tests {
         let (x, y) = canvas.active_axes(&layout).expect("expected active axes");
         assert_eq!(x, AxisId::new(1));
         assert_eq!(y, AxisId::new(3));
+    }
+
+    #[test]
+    fn view_window_2d_action_is_atomic() {
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x = DataWindow {
+            min: 10.0,
+            max: 20.0,
+        };
+        let y = DataWindow {
+            min: -5.0,
+            max: 5.0,
+        };
+
+        let action = ChartCanvas::view_window_2d_action(x_axis, y_axis, Some(x), Some(y));
+        match action {
+            Action::SetViewWindow2D {
+                x_axis: ax,
+                y_axis: ay,
+                x: Some(wx),
+                y: Some(wy),
+            } => {
+                assert_eq!(ax, x_axis);
+                assert_eq!(ay, y_axis);
+                assert_eq!(wx, x);
+                assert_eq!(wy, y);
+            }
+            _ => panic!("expected SetViewWindow2D"),
+        }
     }
 }
