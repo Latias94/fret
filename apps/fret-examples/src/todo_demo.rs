@@ -4,7 +4,6 @@ use fret_app::{App, CommandId, Effect};
 use fret_bootstrap::ui_app_with_hooks;
 use fret_core::{AppWindowId, UiServices};
 use fret_core::{TextOverflow, TextWrap};
-use fret_launch::WinitRunnerConfig;
 use fret_ui::element::{HoverRegionProps, TextProps};
 use fret_ui::{Invalidation, Theme};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -35,12 +34,8 @@ enum TodoFilter {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let mut config = WinitRunnerConfig::default();
-    config.main_window_title = "todo_demo".to_string();
-    config.main_window_size = winit::dpi::LogicalSize::new(560.0, 520.0);
-
     ui_app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))
-        .configure(move |c| *c = config)
+        .with_main_window("todo_demo", (560.0, 520.0))
         .with_default_settings_json()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {

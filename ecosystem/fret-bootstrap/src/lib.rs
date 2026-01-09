@@ -249,6 +249,20 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Configure the main window title and size (logical pixels).
+    pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
+        let title = title.into();
+        let (width, height) = size;
+
+        self.inner = self.inner.configure(move |config| {
+            config.main_window_title = title.clone();
+            config.main_window_size.width = width;
+            config.main_window_size.height = height;
+        });
+
+        self
+    }
+
     pub fn init_app(mut self, f: impl FnOnce(&mut App)) -> Self {
         self.inner = self.inner.init_app(f);
         self
