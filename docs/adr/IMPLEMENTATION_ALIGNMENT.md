@@ -17,10 +17,10 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-09
 - ADR count (numbered): 139
 
-- Aligned: 34
-- Aligned (with known gaps): 2
+- Aligned: 37
+- Aligned (with known gaps): 4
 - N/A (superseded): 1
-- Not audited: 92
+- Not audited: 87
 - Not implemented: 3
 - Partially aligned: 7
 
@@ -67,13 +67,13 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0037-workspace-boundaries-and-components-repository.md`](0037-workspace-boundaries-and-components-repository.md) | Accepted | Not audited |  |
 | [`0038-engine-render-hook-and-submission-coordinator.md`](0038-engine-render-hook-and-submission-coordinator.md) | Accepted | Aligned | Engine frame recording + target updates: `crates/fret-launch/src/runner/common.rs` (`EngineFrameUpdate`, `RenderTargetUpdate`); runner applies updates before UI submits: desktop `crates/fret-launch/src/runner/desktop/app_handler.rs`, web `crates/fret-launch/src/runner/web.rs`. |
 | [`0039-component-authoring-model-render-renderonce-and-intoelement.md`](0039-component-authoring-model-render-renderonce-and-intoelement.md) | Accepted | Aligned (with known gaps) | Authoring traits exist in `crates/fret-ui/src/element.rs` (`IntoElement`, `RenderOnce`); derive-macro ergonomics (`fret-macros`) not implemented yet. |
-| [`0040-color-management-and-compositing-contracts.md`](0040-color-management-and-compositing-contracts.md) | Accepted | Not audited |  |
-| [`0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`](0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md) | Accepted | Not audited |  |
+| [`0040-color-management-and-compositing-contracts.md`](0040-color-management-and-compositing-contracts.md) | Accepted | Aligned (with known gaps) | Linear shading + conditional output encoding: `crates/fret-render/src/renderer/shaders.rs` (`encode_output_premul`, `output_is_srgb`); swapchain prefers sRGB: `crates/fret-render/src/surface.rs`; viewport target encoding via view format + `RenderTargetColorSpace`: `crates/fret-render/src/targets.rs`. Gap: render target alpha semantics (opaque vs premul) not modeled yet. |
+| [`0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`](0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md) | Accepted | Aligned (with known gaps) | App-scoped internal drag session: `crates/fret-runtime/src/drag.rs` + stored on app (`crates/fret-app/src/app.rs`); internal drag routing override: `crates/fret-ui/src/drag_route.rs` + dispatch rules in `crates/fret-ui/src/tree/dispatch.rs`; external file drag/drop events + tokenized reads: `crates/fret-core/src/input.rs` (`ExternalDrag*`, `ExternalDropData`), effects in `crates/fret-runtime/src/effect.rs` (`ExternalDropReadAll*`, `ExternalDropRelease`), runner wiring in `crates/fret-launch/src/runner/desktop/app_handler.rs` + `crates/fret-platform-web/src/wasm.rs`. Gap: external drag initiation (`Effect::StartExternalDrag`) is still deferred; `DragSessionId`/phase/pointer id are not modeled yet. |
 | [`0042-virtualization-and-large-lists.md`](0042-virtualization-and-large-lists.md) | Accepted | Aligned | VirtualList container + scroll model: `crates/fret-ui/src/element.rs` (`VirtualListProps`, `VirtualListState`), implementation in `crates/fret-ui/src/declarative/host_widget/layout.rs`; tests: `crates/fret-ui/src/declarative/tests/virtual_list.rs`; demos: `apps/fret-examples/src/virtual_list_*`. |
 | [`0043-shortcut-arbitration-pending-bindings-and-altgr.md`](0043-shortcut-arbitration-pending-bindings-and-altgr.md) | Accepted | Not audited |  |
-| [`0044-text-editing-state-and-commands.md`](0044-text-editing-state-and-commands.md) | Accepted | Not audited |  |
-| [`0045-text-geometry-queries-hit-testing-and-caret-metrics.md`](0045-text-geometry-queries-hit-testing-and-caret-metrics.md) | Accepted | Not audited |  |
-| [`0046-multiline-text-layout-and-geometry-queries.md`](0046-multiline-text-layout-and-geometry-queries.md) | Accepted | Not audited |  |
+| [`0044-text-editing-state-and-commands.md`](0044-text-editing-state-and-commands.md) | Accepted | Aligned | UTF-8 byte offsets clamped to char boundaries: `crates/fret-ui/src/text_edit.rs` (`utf8::*`); core `text.*` command vocabulary: `crates/fret-ui/src/text_edit.rs`, `crates/fret-ui/src/text_surface.rs`, widgets `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs`; IME cursor area effect: `Effect::ImeSetCursorArea` emitted by text widgets. |
+| [`0045-text-geometry-queries-hit-testing-and-caret-metrics.md`](0045-text-geometry-queries-hit-testing-and-caret-metrics.md) | Accepted | Aligned | Geometry query hooks in `crates/fret-core/src/text.rs` (`TextService::{caret_x,hit_test_x,caret_rect,hit_test_point}`); renderer implementation: `crates/fret-render/src/text.rs` + `crates/fret-render/src/renderer/services.rs`; widgets use caret rect/hit testing: `crates/fret-ui/src/text_input/widget.rs`, `crates/fret-ui/src/text_area/mod.rs`. |
+| [`0046-multiline-text-layout-and-geometry-queries.md`](0046-multiline-text-layout-and-geometry-queries.md) | Accepted | Aligned | Affinity + hit-test result types: `crates/fret-core/src/text.rs` (`CaretAffinity`, `HitTestResult`); multiline caret/hit-test implementation: `crates/fret-render/src/text.rs` (`caret_rect`, `hit_test_point`); multiline widget uses affinity for selection/IME: `crates/fret-ui/src/text_area/mod.rs`. |
 | [`0047-virtual-list-data-source-and-stable-item-keys.md`](0047-virtual-list-data-source-and-stable-item-keys.md) | Accepted | Not audited |  |
 | [`0048-inspector-property-protocol-and-editor-registry.md`](0048-inspector-property-protocol-and-editor-registry.md) | Accepted | Not audited |  |
 | [`0049-viewport-tools-input-capture-and-overlays.md`](0049-viewport-tools-input-capture-and-overlays.md) | Deferred | Not audited |  |
