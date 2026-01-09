@@ -285,3 +285,126 @@ impl SelectionStage {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::data::{Column, DataTable, DatasetStore};
+    use crate::engine::window_policy::AxisFilter1D;
+    use crate::ids::DatasetId;
+    use crate::scheduler::WorkBudget;
+    use crate::transform::RowRange;
+
+    use super::*;
+
+    fn build_stage_with_single_key(
+        dataset_id: DatasetId,
+        x_col: usize,
+        range: RowRange,
+        filter: AxisFilter1D,
+        data_rev: Revision,
+    ) -> SelectionStage {
+        let key = SelectionKey::new(dataset_id, x_col, range, filter);
+        let mut stage = SelectionStage::default();
+        stage.desired.push(key);
+        stage.cache.insert(
+            key,
+            SelectionEntry::Building {
+                data_rev,
+                next: key.start as usize,
+                end: key.end as usize,
+                indices: Vec::new(),
+            },
+        );
+        stage
+    }
+
+    #[test]
+    fn selection_stage_builds_indices_incrementally_and_exposes_row_selection() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 10.0, 5.0, 7.0, 2.0]));
+        store.insert(dataset_id, table.clone());
+
+        let filter = AxisFilter1D {
+            min: Some(4.0),
+            max: Some(8.0),
+        };
+
+        let range = RowRange { start: 0, end: 100 };
+
+        let mut stage = build_stage_with_single_key(dataset_id, 0, range, filter, table.revision);
+
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(!stage.step(&store, &mut budget));
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for(dataset_id, 0, range, filter, table.revision)
+            .expect("selection should be ready");
+
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
+
+        // Values in [4,8] are 5.0 (idx 2) and 7.0 (idx 3).
+        assert_eq!(&indices[..], &[2u32, 3u32]);
+    }
+
+    #[test]
+    fn selection_stage_invalidates_indices_on_data_revision_change() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 10.0, 5.0, 7.0, 2.0]));
+        store.insert(dataset_id, table);
+
+        let filter = AxisFilter1D {
+            min: Some(4.0),
+            max: Some(8.0),
+        };
+        let range = RowRange { start: 0, end: 100 };
+
+        let data_rev = store.dataset(dataset_id).unwrap().revision;
+        let mut stage = build_stage_with_single_key(dataset_id, 0, range, filter, data_rev);
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for(dataset_id, 0, range, filter, data_rev)
+            .expect("selection should be ready");
+        assert!(matches!(sel, RowSelection::Indices(_)));
+
+        let old_rev = data_rev;
+        let table = store.dataset_mut(dataset_id).unwrap();
+        table.append_row_f64(&[6.0]).unwrap();
+        let new_rev = table.revision;
+        assert_ne!(old_rev, new_rev);
+
+        // The cached selection should be considered stale when queried with the new data revision.
+        assert!(
+            stage
+                .selection_for(dataset_id, 0, range, filter, new_rev)
+                .is_none()
+        );
+
+        // A step should rebuild the selection for the same key, now including the appended row.
+        stage.cursor = 0;
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let sel = stage
+            .selection_for(dataset_id, 0, range, filter, new_rev)
+            .expect("selection should be rebuilt");
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
+
+        assert_eq!(&indices[..], &[2u32, 3u32, 5u32]);
+    }
+}
