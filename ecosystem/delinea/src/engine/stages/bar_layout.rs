@@ -4,7 +4,7 @@ use crate::data::DatasetStore;
 use crate::engine::model::ChartModel;
 use crate::ids::{DatasetId, Revision, SeriesId};
 use crate::scheduler::WorkBudget;
-use crate::spec::SeriesKind;
+use crate::spec::{BarWidthSpec, SeriesKind};
 
 #[derive(Debug, Default, Clone)]
 pub struct BarLayoutStage {
@@ -36,6 +36,18 @@ pub struct BarSeriesLayout {
     pub offset_x: f64,
     /// Bar width in data space (category bands have width 1.0).
     pub width_x: f64,
+    /// Slot index within the group (0..slot_count-1).
+    pub slot_index: u16,
+    /// Slot count within the group.
+    pub slot_count: u16,
+    /// Resolved bar width preference for the group.
+    ///
+    /// `None` means auto width.
+    pub bar_width: Option<BarWidthSpec>,
+    /// Resolved bar gap ratio for the group.
+    pub bar_gap: f64,
+    /// Resolved category gap ratio for the group.
+    pub bar_category_gap: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -141,7 +153,7 @@ fn build_layouts_for_group(
     key: BarLayoutGroupKey,
 ) -> BTreeMap<SeriesId, BarSeriesLayout> {
     let mut series_in_group = Vec::new();
-    let mut requested_bar_width: Option<f64> = None;
+    let mut requested_bar_width: Option<BarWidthSpec> = None;
     let mut requested_bar_gap: Option<f64> = None;
     let mut requested_category_gap: Option<f64> = None;
     for series in model.series_in_order() {
@@ -169,7 +181,7 @@ fn build_layouts_for_group(
         series_in_group.push(series.id);
 
         if requested_bar_width.is_none() {
-            requested_bar_width = sanitize_band_fraction(series.bar_layout.bar_width);
+            requested_bar_width = sanitize_bar_width(series.bar_layout.bar_width);
         }
         if requested_bar_gap.is_none() {
             requested_bar_gap = sanitize_gap_ratio(series.bar_layout.bar_gap);
@@ -230,6 +242,11 @@ fn build_layouts_for_group(
             BarSeriesLayout {
                 offset_x,
                 width_x: bar_width,
+                slot_index: slot_index.min(u16::MAX as usize) as u16,
+                slot_count: slot_count.min(u16::MAX as usize) as u16,
+                bar_width: requested_bar_width,
+                bar_gap,
+                bar_category_gap: category_gap,
             },
         );
     }
@@ -237,12 +254,23 @@ fn build_layouts_for_group(
     layouts
 }
 
-fn sanitize_band_fraction(value: Option<f64>) -> Option<f64> {
+fn sanitize_bar_width(value: Option<BarWidthSpec>) -> Option<BarWidthSpec> {
     let v = value?;
-    if v.is_finite() && v > 0.0 {
-        Some(v.min(1.0))
-    } else {
-        None
+    match v {
+        BarWidthSpec::Px(px) => {
+            if px.is_finite() && px > 0.0 {
+                Some(BarWidthSpec::Px(px))
+            } else {
+                None
+            }
+        }
+        BarWidthSpec::Band(r) => {
+            if r.is_finite() && r > 0.0 {
+                Some(BarWidthSpec::Band(r.min(1.0)))
+            } else {
+                None
+            }
+        }
     }
 }
 
@@ -268,13 +296,18 @@ fn compute_slot_widths(
     group_width: f64,
     slot_count: usize,
     bar_gap: f64,
-    requested_bar_width: Option<f64>,
+    requested_bar_width: Option<BarWidthSpec>,
 ) -> (f64, f64) {
     if slot_count == 0 {
         return (0.0, 0.0);
     }
 
-    let requested = requested_bar_width.unwrap_or(f64::NAN);
+    let requested_band = match requested_bar_width {
+        Some(BarWidthSpec::Band(r)) => Some(r),
+        _ => None,
+    };
+
+    let requested = requested_band.unwrap_or(f64::NAN);
     let mut bar_width = if requested.is_finite() {
         requested
     } else {
@@ -466,7 +499,7 @@ mod tests {
         let b = SeriesId::new(2);
 
         let bar_layout = BarLayoutSpec {
-            bar_width: Some(0.4),
+            bar_width: Some(crate::spec::BarWidthSpec::Band(0.4)),
             bar_gap: Some(0.0),
             bar_category_gap: Some(0.0),
         };
@@ -575,5 +608,134 @@ mod tests {
         assert!((layout_a.width_x - 0.4).abs() < 1e-6);
         assert!((layout_b.width_x - 0.4).abs() < 1e-6);
         assert!(layout_a.offset_x < layout_b.offset_x);
+    }
+
+    #[test]
+    fn bar_layout_keeps_px_width_as_group_preference() {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_a_field = FieldId::new(2);
+        let y_b_field = FieldId::new(3);
+        let a = SeriesId::new(1);
+        let b = SeriesId::new(2);
+
+        let bar_layout = BarLayoutSpec {
+            bar_width: Some(crate::spec::BarWidthSpec::Px(12.0)),
+            bar_gap: Some(0.3),
+            bar_category_gap: Some(0.2),
+        };
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                        categories: vec!["A".into()],
+                    }),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: a,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout,
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: b,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout,
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut datasets = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0]));
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+        datasets.insert(dataset_id, table);
+
+        let mut stage = BarLayoutStage::default();
+        stage.begin_frame();
+        stage.request_for_visible_bars(&model);
+        stage.prepare_requests();
+        assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
+
+        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
+        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+
+        assert_eq!(
+            layout_a.bar_width,
+            Some(crate::spec::BarWidthSpec::Px(12.0))
+        );
+        assert_eq!(
+            layout_b.bar_width,
+            Some(crate::spec::BarWidthSpec::Px(12.0))
+        );
     }
 }

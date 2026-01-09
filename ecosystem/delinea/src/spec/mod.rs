@@ -230,25 +230,129 @@ pub enum SeriesKind {
     Scatter,
 }
 
+/// Bar width specification (ECharts-inspired).
+///
+/// ECharts semantics:
+/// - number: pixels,
+/// - percent string (e.g. `"30%"`): fraction of category band width.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BarWidthSpec {
+    Px(f64),
+    Band(f64),
+}
+
 /// Bar layout parameters (ECharts-inspired).
 ///
-/// v1: values are specified in **band ratios** (category width = 1.0 in data space).
-/// Pixel units and percent strings are intentionally deferred to a later revision.
+/// v1:
+/// - `bar_width` supports ECharts-style px/percent, but is currently only used for category axes.
+/// - `bar_gap` and `bar_category_gap` are expressed as ratios (percent strings are accepted when
+///   `serde` is enabled).
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BarLayoutSpec {
-    /// Fraction of the category band occupied by a bar.
+    /// Bar width (`series.barWidth`).
     ///
-    /// If `None`, the engine chooses a width based on `bar_gap` and `bar_category_gap`.
-    pub bar_width: Option<f64>,
+    /// - `None` means auto width based on group slot count and gaps.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_bar_width_opt")
+    )]
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_bar_width_opt"))]
+    pub bar_width: Option<BarWidthSpec>,
     /// Gap between adjacent bar slots, expressed as a multiple of `bar_width`.
     ///
     /// Example: `0.3` means the gap is `0.3 * bar_width`.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_ratio_opt")
+    )]
     pub bar_gap: Option<f64>,
     /// Outer padding inside each category band, expressed as a fraction of band width.
     ///
     /// Example: `0.2` means 20% of the band is reserved as padding.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_ratio_opt")
+    )]
     pub bar_category_gap: Option<f64>,
+}
+
+#[cfg(feature = "serde")]
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum BarWidthInput {
+    Num(f64),
+    Str(String),
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_bar_width_opt<'de, D>(deserializer: D) -> Result<Option<BarWidthSpec>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input = Option::<BarWidthInput>::deserialize(deserializer)?;
+    let Some(input) = input else {
+        return Ok(None);
+    };
+    match input {
+        BarWidthInput::Num(v) => Ok(Some(BarWidthSpec::Px(v))),
+        BarWidthInput::Str(s) => {
+            let Some(r) = parse_percent_ratio(&s) else {
+                return Err(serde::de::Error::custom("invalid barWidth percent string"));
+            };
+            Ok(Some(BarWidthSpec::Band(r)))
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+fn serialize_bar_width_opt<S>(
+    value: &Option<BarWidthSpec>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        None => serializer.serialize_none(),
+        Some(BarWidthSpec::Px(v)) => serializer.serialize_some(v),
+        Some(BarWidthSpec::Band(r)) => serializer.serialize_some(&format!("{:.6}%", r * 100.0)),
+    }
+}
+
+#[cfg(feature = "serde")]
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum RatioInput {
+    Num(f64),
+    Str(String),
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_ratio_opt<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input = Option::<RatioInput>::deserialize(deserializer)?;
+    let Some(input) = input else {
+        return Ok(None);
+    };
+    match input {
+        RatioInput::Num(v) => Ok(Some(v)),
+        RatioInput::Str(s) => parse_percent_ratio(&s)
+            .ok_or_else(|| serde::de::Error::custom("invalid percent string")),
+    }
+}
+
+#[cfg(feature = "serde")]
+fn parse_percent_ratio(s: &str) -> Option<f64> {
+    let s = s.trim();
+    let (number, suffix) = s.split_at(s.len().saturating_sub(1));
+    if suffix != "%" {
+        return None;
+    }
+    let v: f64 = number.trim().parse().ok()?;
+    if v.is_finite() { Some(v / 100.0) } else { None }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

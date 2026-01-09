@@ -20,6 +20,7 @@ use crate::marks::{
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
+use crate::spec::BarWidthSpec;
 use crate::stats::EngineStats;
 use crate::transform::RowSelection;
 use crate::view::ViewState;
@@ -731,8 +732,36 @@ impl MarksStage {
                     let chunk_end = (self.bar_next_index + points_budget).min(row_end);
 
                     let x_span = x_window.span();
-                    let bar_w = ((layout.width_x / x_span.max(1.0)) * viewport.size.width.0 as f64)
-                        .max(1.0) as f32;
+                    let band_px = (viewport.size.width.0 as f64 / x_span.max(1.0)).max(1.0);
+                    let mut bar_w = (layout.width_x * band_px).max(1.0) as f32;
+                    let mut slot_offset_px: Option<f64> = None;
+
+                    if let Some(BarWidthSpec::Px(px)) = layout.bar_width {
+                        let slot_count = layout.slot_count.max(1) as usize;
+                        let slot_index = (layout.slot_index as usize).min(slot_count - 1);
+                        let group_width_px =
+                            (1.0 - layout.bar_category_gap).clamp(0.0, 1.0) * band_px;
+                        let mut bar_w_px = px.max(1.0);
+                        let mut gap_px = bar_w_px * layout.bar_gap.max(0.0);
+                        let mut total_px = (slot_count as f64) * bar_w_px
+                            + (slot_count.saturating_sub(1) as f64) * gap_px;
+
+                        if group_width_px.is_finite()
+                            && group_width_px > 0.0
+                            && total_px > group_width_px
+                        {
+                            let scale = group_width_px / total_px;
+                            bar_w_px *= scale;
+                            gap_px *= scale;
+                            total_px = group_width_px;
+                        }
+
+                        let group_left_px = -0.5 * total_px;
+                        let slot_left_px =
+                            group_left_px + (slot_index as f64) * (bar_w_px + gap_px);
+                        slot_offset_px = Some(slot_left_px + 0.5 * bar_w_px);
+                        bar_w = bar_w_px.max(1.0) as f32;
+                    }
 
                     let mut rects = Vec::new();
                     let mut indices = Vec::new();
@@ -765,12 +794,18 @@ impl MarksStage {
                             continue;
                         }
 
-                        let x_center = xi + layout.offset_x;
-                        let tx = ((x_center - x_window.min) / x_window.span()).clamp(0.0, 1.0);
+                        let tx0 = ((xi - x_window.min) / x_window.span()).clamp(0.0, 1.0);
                         let ty = ((y_top - y_window.min) / y_window.span()).clamp(0.0, 1.0);
                         let ty0 = ((y_base - y_window.min) / y_window.span()).clamp(0.0, 1.0);
 
-                        let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        let mut px_x = viewport.origin.x.0 + (tx0 as f32) * viewport.size.width.0;
+                        if let Some(offset_px) = slot_offset_px {
+                            px_x += offset_px as f32;
+                        } else {
+                            let x_center = xi + layout.offset_x;
+                            let tx = ((x_center - x_window.min) / x_window.span()).clamp(0.0, 1.0);
+                            px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        }
                         let px_y =
                             viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
                         let px_y0 =
