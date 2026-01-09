@@ -262,6 +262,68 @@ fn append_downsample_chain(
     (current_target, current_size, stack)
 }
 
+#[derive(Debug, Clone)]
+struct DownsampleHalfQuarter {
+    half_target: PlanTarget,
+    quarter_target: PlanTarget,
+    quarter_size: (u32, u32),
+    stack: Vec<((u32, u32), u32)>,
+}
+
+impl DownsampleHalfQuarter {
+    fn half_size(&self) -> (u32, u32) {
+        self.stack
+            .get(1)
+            .map(|(size, _)| *size)
+            .expect("half size must exist")
+    }
+}
+
+fn append_downsample_half_quarter(
+    plan: &mut RenderPlan,
+    src_target: PlanTarget,
+    src_size: (u32, u32),
+    half_target: PlanTarget,
+    quarter_target: PlanTarget,
+    clear: wgpu::Color,
+) -> DownsampleHalfQuarter {
+    debug_assert_ne!(src_target, PlanTarget::Output);
+    debug_assert_ne!(half_target, PlanTarget::Output);
+    debug_assert_ne!(quarter_target, PlanTarget::Output);
+    debug_assert_ne!(half_target, quarter_target);
+
+    let half_size = downsampled_size(src_size, 2);
+    push_scale_nearest(
+        plan,
+        src_target,
+        half_target,
+        src_size,
+        half_size,
+        ScaleMode::Downsample,
+        2,
+        clear,
+    );
+
+    let quarter_size = downsampled_size(half_size, 2);
+    push_scale_nearest(
+        plan,
+        half_target,
+        quarter_target,
+        half_size,
+        quarter_size,
+        ScaleMode::Downsample,
+        2,
+        clear,
+    );
+
+    DownsampleHalfQuarter {
+        half_target,
+        quarter_target,
+        quarter_size,
+        stack: vec![(src_size, 2), (half_size, 2)],
+    }
+}
+
 fn append_upsample_chain(
     plan: &mut RenderPlan,
     mut current_target: PlanTarget,
@@ -313,15 +375,41 @@ fn append_postprocess(
         }
         DebugPostprocess::Pixelate { scale } => {
             let steps = decompose_pixelate_scale(scale);
-            let (current_target, current_size, stack) = append_downsample_chain(
-                plan,
-                PlanTarget::Intermediate0,
-                viewport_size,
-                &steps,
-                PlanTarget::Intermediate2,
-                PlanTarget::Intermediate1,
-                clear,
-            );
+            let (current_target, current_size, stack) =
+                if steps.len() >= 2 && steps[0] == 2 && steps[1] == 2 {
+                    let half_quarter = append_downsample_half_quarter(
+                        plan,
+                        PlanTarget::Intermediate0,
+                        viewport_size,
+                        PlanTarget::Intermediate2,
+                        PlanTarget::Intermediate1,
+                        clear,
+                    );
+                    let _ = half_quarter.half_size();
+
+                    let mut stack = half_quarter.stack;
+                    let (current_target, current_size, rest_stack) = append_downsample_chain(
+                        plan,
+                        half_quarter.quarter_target,
+                        half_quarter.quarter_size,
+                        &steps[2..],
+                        half_quarter.half_target,
+                        half_quarter.quarter_target,
+                        clear,
+                    );
+                    stack.extend(rest_stack);
+                    (current_target, current_size, stack)
+                } else {
+                    append_downsample_chain(
+                        plan,
+                        PlanTarget::Intermediate0,
+                        viewport_size,
+                        &steps,
+                        PlanTarget::Intermediate2,
+                        PlanTarget::Intermediate1,
+                        clear,
+                    )
+                };
             let (current_target, _current_size) =
                 append_upsample_chain(plan, current_target, current_size, stack, clear);
             push_fullscreen_blit(
@@ -448,5 +536,43 @@ mod tests {
         assert_eq!(blit.dst, PlanTarget::Output);
         assert_eq!(blit.src_size, viewport_size);
         assert_eq!(blit.dst_size, viewport_size);
+    }
+
+    #[test]
+    fn downsample_half_quarter_helper_emits_two_passes() {
+        let mut plan = RenderPlan { passes: Vec::new() };
+        let info = append_downsample_half_quarter(
+            &mut plan,
+            PlanTarget::Intermediate0,
+            (128, 64),
+            PlanTarget::Intermediate2,
+            PlanTarget::Intermediate1,
+            wgpu::Color::TRANSPARENT,
+        );
+
+        assert_eq!(info.quarter_size, (32, 16));
+        assert_eq!(info.stack, vec![((128, 64), 2), ((64, 32), 2)]);
+        assert_eq!(info.half_size(), (64, 32));
+
+        assert_eq!(plan.passes.len(), 2);
+        let RenderPlanPass::ScaleNearest(pass0) = &plan.passes[0] else {
+            panic!("expected ScaleNearest pass 0");
+        };
+        assert_eq!(pass0.src, PlanTarget::Intermediate0);
+        assert_eq!(pass0.dst, PlanTarget::Intermediate2);
+        assert_eq!(pass0.src_size, (128, 64));
+        assert_eq!(pass0.dst_size, (64, 32));
+        assert_eq!(pass0.mode, ScaleMode::Downsample);
+        assert_eq!(pass0.scale, 2);
+
+        let RenderPlanPass::ScaleNearest(pass1) = &plan.passes[1] else {
+            panic!("expected ScaleNearest pass 1");
+        };
+        assert_eq!(pass1.src, PlanTarget::Intermediate2);
+        assert_eq!(pass1.dst, PlanTarget::Intermediate1);
+        assert_eq!(pass1.src_size, (64, 32));
+        assert_eq!(pass1.dst_size, (32, 16));
+        assert_eq!(pass1.mode, ScaleMode::Downsample);
+        assert_eq!(pass1.scale, 2);
     }
 }

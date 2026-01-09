@@ -69,7 +69,7 @@ Deliverables:
   - Keep a shared fullscreen pass runner utility that owns render-pass boilerplate (to avoid N copies as effects grow).
 - Add internal utilities for common postprocess patterns:
   - ping-pong between A/B intermediates
-  - downsample chain helpers (half/quarter res)
+  - downsample chain helpers (half/quarter res; chain sizing metadata in `RenderPlan`)
 
 Acceptance criteria:
 
