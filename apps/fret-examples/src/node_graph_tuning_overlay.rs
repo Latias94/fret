@@ -5,12 +5,18 @@ use fret_core::{
 use fret_runtime::{CommandId, Model};
 use fret_ui::{UiHost, retained_bridge::*};
 
-use fret_node::io::{NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphViewState};
+use fret_node::io::{
+    NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphViewState,
+    NodeGraphZoomActivationKey,
+};
 use fret_node::ui::style::NodeGraphStyle;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TuningHit {
     ToggleMode,
+    TogglePanOnScroll,
+    ToggleZoomOnScroll,
+    CycleZoomActivationKey,
     ConnRadiusDec,
     ConnRadiusInc,
     EdgeWidthDec,
@@ -75,7 +81,7 @@ impl NodeGraphTuningOverlay {
         let btn = self.style.controls_button_size.max(22.0);
 
         let panel_w = 340.0;
-        let rows = 12.0;
+        let rows = 15.0;
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -157,7 +163,31 @@ impl NodeGraphTuningOverlay {
         hits.push((TuningHit::ToggleMode, mode_btn));
         cy += row_h + gap;
 
-        // Row 1: connection_radius
+        // Row 1: wheel pan_on_scroll
+        let pan_on_scroll_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::TogglePanOnScroll, pan_on_scroll_btn));
+        cy += row_h + gap;
+
+        // Row 2: wheel zoom_on_scroll
+        let zoom_on_scroll_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::ToggleZoomOnScroll, zoom_on_scroll_btn));
+        cy += row_h + gap;
+
+        // Row 3: wheel zoom_activation_key
+        let zoom_key_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::CycleZoomActivationKey, zoom_key_btn));
+        cy += row_h + gap;
+
+        // Row 4: connection_radius
         let _ = add_row(
             &mut hits,
             cy,
@@ -170,7 +200,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 2: edge_interaction_width
+        // Row 5: edge_interaction_width
         let _ = add_row(
             &mut hits,
             cy,
@@ -183,7 +213,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 3: connection_drag_threshold
+        // Row 6: connection_drag_threshold
         let _ = add_row(
             &mut hits,
             cy,
@@ -196,7 +226,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 4: connect_on_click
+        // Row 7: connect_on_click
         let connect_on_click_btn = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
@@ -204,7 +234,7 @@ impl NodeGraphTuningOverlay {
         hits.push((TuningHit::ToggleConnectOnClick, connect_on_click_btn));
         cy += row_h + gap;
 
-        // Row 5: node_drag_threshold
+        // Row 8: node_drag_threshold
         let _ = add_row(
             &mut hits,
             cy,
@@ -217,7 +247,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 6: node_drag_handle_mode
+        // Row 9: node_drag_handle_mode
         let drag_handle_btn = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
@@ -225,7 +255,7 @@ impl NodeGraphTuningOverlay {
         hits.push((TuningHit::ToggleNodeDragHandle, drag_handle_btn));
         cy += row_h + gap;
 
-        // Row 7: node_click_distance
+        // Row 10: node_click_distance
         let _ = add_row(
             &mut hits,
             cy,
@@ -238,7 +268,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 8: translate_extent
+        // Row 11: translate_extent
         let _ = add_row3(
             &mut hits,
             cy,
@@ -252,7 +282,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 9: node_extent
+        // Row 12: node_extent
         let _ = add_row3(
             &mut hits,
             cy,
@@ -266,7 +296,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 10: auto_pan.margin
+        // Row 13: auto_pan.margin
         let _ = add_row(
             &mut hits,
             cy,
@@ -279,7 +309,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 11: auto_pan.speed
+        // Row 14: auto_pan.speed
         let _ = add_row(
             &mut hits,
             cy,
@@ -375,6 +405,20 @@ impl NodeGraphTuningOverlay {
                 s.interaction.connection_mode = match s.interaction.connection_mode {
                     NodeGraphConnectionMode::Strict => NodeGraphConnectionMode::Loose,
                     NodeGraphConnectionMode::Loose => NodeGraphConnectionMode::Strict,
+                };
+            }
+            TuningHit::TogglePanOnScroll => {
+                s.interaction.pan_on_scroll = !s.interaction.pan_on_scroll;
+            }
+            TuningHit::ToggleZoomOnScroll => {
+                s.interaction.zoom_on_scroll = !s.interaction.zoom_on_scroll;
+            }
+            TuningHit::CycleZoomActivationKey => {
+                s.interaction.zoom_activation_key = match s.interaction.zoom_activation_key {
+                    NodeGraphZoomActivationKey::CtrlOrMeta => NodeGraphZoomActivationKey::None,
+                    NodeGraphZoomActivationKey::None => NodeGraphZoomActivationKey::Shift,
+                    NodeGraphZoomActivationKey::Shift => NodeGraphZoomActivationKey::Alt,
+                    NodeGraphZoomActivationKey::Alt => NodeGraphZoomActivationKey::CtrlOrMeta,
                 };
             }
             TuningHit::ConnRadiusDec => {
@@ -757,6 +801,136 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             format!("{:.1}", state.interaction.connection_radius),
             TuningHit::ConnRadiusDec,
             TuningHit::ConnRadiusInc,
+        );
+        cy += row_h + gap;
+
+        let wheel_pan_text = if state.interaction.pan_on_scroll {
+            "On"
+        } else {
+            "Off"
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Pan on scroll", wheel_pan_text),
+            self.style.context_menu_text,
+        );
+        let wheel_pan_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let wheel_pan_bg = if self.hovered == Some(TuningHit::TogglePanOnScroll) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: wheel_pan_btn_rect,
+            background: wheel_pan_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(wheel_pan_btn_rect.origin.x.0 + 4.0),
+                Px(wheel_pan_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            wheel_pan_text,
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        let wheel_zoom_text = if state.interaction.zoom_on_scroll {
+            "On"
+        } else {
+            "Off"
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Zoom on scroll", wheel_zoom_text),
+            self.style.context_menu_text,
+        );
+        let wheel_zoom_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let wheel_zoom_bg = if self.hovered == Some(TuningHit::ToggleZoomOnScroll) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: wheel_zoom_btn_rect,
+            background: wheel_zoom_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(wheel_zoom_btn_rect.origin.x.0 + 4.0),
+                Px(wheel_zoom_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            wheel_zoom_text,
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        let zoom_key_str = match state.interaction.zoom_activation_key {
+            NodeGraphZoomActivationKey::None => "none",
+            NodeGraphZoomActivationKey::CtrlOrMeta => "ctrl",
+            NodeGraphZoomActivationKey::Shift => "shift",
+            NodeGraphZoomActivationKey::Alt => "alt",
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Zoom activation", zoom_key_str),
+            self.style.context_menu_text,
+        );
+        let zoom_key_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let zoom_key_bg = if self.hovered == Some(TuningHit::CycleZoomActivationKey) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: zoom_key_btn_rect,
+            background: zoom_key_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        let zoom_key_short = match state.interaction.zoom_activation_key {
+            NodeGraphZoomActivationKey::None => "N",
+            NodeGraphZoomActivationKey::CtrlOrMeta => "C",
+            NodeGraphZoomActivationKey::Shift => "S",
+            NodeGraphZoomActivationKey::Alt => "A",
+        };
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(zoom_key_btn_rect.origin.x.0 + 0.5 * (btn - 8.0)),
+                Px(zoom_key_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            zoom_key_short,
+            self.style.controls_text,
         );
         cy += row_h + gap;
 

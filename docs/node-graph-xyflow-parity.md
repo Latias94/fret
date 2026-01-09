@@ -87,14 +87,19 @@ High-level layering (ADR 0135):
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
   - fret-node: `NodeGraphCanvas` supports wheel zoom; pinch/double-click parity TBD
 
-- [ ] **Pan on scroll**
+- [x] **Pan on scroll**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnScroll`, `panOnScrollMode`, `panOnScrollSpeed`)
-  - fret-node: not implemented as a dedicated mode (wheel currently used for zoom)
-  - Notes: should be a policy layer toggle; keep substrate primitive `pan_by(delta_window)` + `zoom_by(anchor, delta)`
+  - fret-node:
+    - persisted toggle: `NodeGraphInteractionState.pan_on_scroll` (`ecosystem/fret-node/src/io/mod.rs`)
+    - speed knob: `NodeGraphInteractionState.pan_on_scroll_speed`
+    - implementation: wheel without zoom activation pans (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
 
-- [ ] **Zoom activation key**
+- [x] **Zoom activation key**
   - XyFlow: `ZoomPane` passes `zoomActivationKeyPressed` into `XYPanZoom.update(...)`
-  - fret-node: not implemented (should be a command/keymap policy)
+  - fret-node:
+    - persisted config: `NodeGraphInteractionState.zoom_activation_key` (`ecosystem/fret-node/src/io/mod.rs`)
+    - enable/disable: `NodeGraphInteractionState.zoom_on_scroll` + `zoom_on_scroll_speed`
+    - implementation: wheel zoom is gated by `zoom_activation_key.is_pressed(modifiers)` (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
 
 ## 1.3 View constraints and persistence
 

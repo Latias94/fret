@@ -32,6 +32,9 @@ Recommended harness:
 ### Manual script
 
 - (prototype) Scroll wheel zooms the canvas without moving focus unexpectedly.
+- (prototype) Pan/zoom wheel gating (if enabled by interaction config):
+  - When `zoom_on_scroll=true` and `zoom_activation_key=ctrl_or_meta`, wheel zooms only while Ctrl/Meta is held.
+  - When `pan_on_scroll=true`, wheel pans when zoom is not active.
 - (prototype) Middle-drag or right-drag pans (whatever the demo binds; document the binding).
 - (prototype) “Fit view” command frames all nodes with padding.
 - (prototype) “Fit selection” frames selected nodes with padding.

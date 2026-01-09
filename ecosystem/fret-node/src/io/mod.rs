@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use fret_core::Modifiers;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{CanvasRect, CanvasSize, EdgeId, Graph, GraphId, GroupId, NodeId};
@@ -211,6 +212,37 @@ impl Default for NodeGraphDragHandleMode {
     }
 }
 
+/// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey` mental model).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphZoomActivationKey {
+    /// Wheel zoom is always active (no activation modifier required).
+    None,
+    /// Wheel zoom is active only while Ctrl or Meta is held (recommended default).
+    CtrlOrMeta,
+    /// Wheel zoom is active only while Shift is held.
+    Shift,
+    /// Wheel zoom is active only while Alt is held.
+    Alt,
+}
+
+impl NodeGraphZoomActivationKey {
+    pub fn is_pressed(self, modifiers: Modifiers) -> bool {
+        match self {
+            Self::None => true,
+            Self::CtrlOrMeta => modifiers.ctrl || modifiers.meta,
+            Self::Shift => modifiers.shift,
+            Self::Alt => modifiers.alt || modifiers.alt_gr,
+        }
+    }
+}
+
+impl Default for NodeGraphZoomActivationKey {
+    fn default() -> Self {
+        Self::CtrlOrMeta
+    }
+}
+
 /// Auto-pan tuning for drag/connect/focus workflows.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphAutoPanTuning {
@@ -285,6 +317,26 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_snaplines_threshold")]
     pub snaplines_threshold: f32,
 
+    /// Enables panning the canvas via wheel / touchpad scroll (XyFlow `panOnScroll`).
+    #[serde(default = "default_pan_on_scroll")]
+    pub pan_on_scroll: bool,
+
+    /// Wheel panning speed multiplier.
+    #[serde(default = "default_pan_on_scroll_speed")]
+    pub pan_on_scroll_speed: f32,
+
+    /// Whether wheel zoom is enabled at all.
+    #[serde(default = "default_zoom_on_scroll")]
+    pub zoom_on_scroll: bool,
+
+    /// Wheel zoom speed multiplier.
+    #[serde(default = "default_zoom_on_scroll_speed")]
+    pub zoom_on_scroll_speed: f32,
+
+    /// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey`).
+    #[serde(default)]
+    pub zoom_activation_key: NodeGraphZoomActivationKey,
+
     /// Drag threshold in screen pixels before a node drag starts.
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
@@ -349,6 +401,11 @@ impl Default for NodeGraphInteractionState {
             snap_grid: default_snap_grid(),
             snaplines: default_snaplines(),
             snaplines_threshold: default_snaplines_threshold(),
+            pan_on_scroll: default_pan_on_scroll(),
+            pan_on_scroll_speed: default_pan_on_scroll_speed(),
+            zoom_on_scroll: default_zoom_on_scroll(),
+            zoom_on_scroll_speed: default_zoom_on_scroll_speed(),
+            zoom_activation_key: NodeGraphZoomActivationKey::default(),
             node_drag_threshold: default_node_drag_threshold(),
             node_drag_handle_mode: NodeGraphDragHandleMode::default(),
             node_click_distance: default_node_click_distance(),
@@ -359,6 +416,22 @@ impl Default for NodeGraphInteractionState {
             node_extent: None,
         }
     }
+}
+
+fn default_pan_on_scroll() -> bool {
+    true
+}
+
+fn default_pan_on_scroll_speed() -> f32 {
+    1.0
+}
+
+fn default_zoom_on_scroll() -> bool {
+    true
+}
+
+fn default_zoom_on_scroll_speed() -> f32 {
+    1.0
 }
 
 fn default_connection_radius() -> f32 {

@@ -3805,8 +3805,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if modifiers.ctrl || modifiers.meta {
-                    let delta_screen_y = delta.y.0 * zoom;
+                let zoom_active = snapshot
+                    .interaction
+                    .zoom_activation_key
+                    .is_pressed(*modifiers);
+                if snapshot.interaction.zoom_on_scroll && zoom_active {
+                    let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
+                    let delta_screen_y = delta.y.0 * zoom * speed;
                     self.zoom_about_center(cx.bounds, delta_screen_y);
                     let pan = self.cached_pan;
                     let zoom = self.cached_zoom;
@@ -3816,10 +3821,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     });
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
-                } else {
+                } else if snapshot.interaction.pan_on_scroll {
+                    let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
                     self.update_view_state(cx.app, |s| {
-                        s.pan.x += delta.x.0;
-                        s.pan.y += delta.y.0;
+                        s.pan.x += delta.x.0 * speed;
+                        s.pan.y += delta.y.0 * speed;
                     });
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
