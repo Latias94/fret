@@ -419,6 +419,12 @@ impl ElementHostWidget {
             Px((outer_avail_h.0 - pad_h).max(0.0)),
         );
 
+        let sf = if cx.scale_factor.is_finite() && cx.scale_factor > 0.0 {
+            cx.scale_factor
+        } else {
+            1.0
+        };
+
         let root_style = TaffyStyle {
             display: Display::Flex,
             flex_direction: match props.direction {
@@ -433,24 +439,24 @@ impl ElementHostWidget {
             justify_content: Some(taffy_justify(props.justify)),
             align_items: Some(taffy_align_items(props.align)),
             gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(props.gap.0.max(0.0) * sf),
+                height: LengthPercentage::length(props.gap.0.max(0.0) * sf),
             },
             size: TaffySize {
                 width: match props.layout.size.width {
-                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0)),
+                    Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0) * sf),
+                    Length::Fill => Dimension::length(inner_avail.width.0.max(0.0) * sf),
                     Length::Auto => Dimension::auto(),
                 },
                 height: match props.layout.size.height {
-                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
-                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0)),
+                    Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0) * sf),
+                    Length::Fill => Dimension::length(inner_avail.height.0.max(0.0) * sf),
                     Length::Auto => Dimension::auto(),
                 },
             },
             max_size: TaffySize {
-                width: Dimension::length(inner_avail.width.0.max(0.0)),
-                height: Dimension::length(inner_avail.height.0.max(0.0)),
+                width: Dimension::length(inner_avail.width.0.max(0.0) * sf),
+                height: Dimension::length(inner_avail.height.0.max(0.0) * sf),
             },
             ..Default::default()
         };
@@ -470,6 +476,7 @@ impl ElementHostWidget {
                 cx.app,
                 &*cx.tree,
                 window,
+                sf,
                 ParentLayoutKind::Flex {
                     direction: props.direction,
                 },
@@ -477,7 +484,6 @@ impl ElementHostWidget {
             );
         }
 
-        let sf = cx.scale_factor;
         let app = &mut *cx.app;
         let services = &mut *cx.services;
         engine.compute_root_with_measure(root_id, available, sf, |child, constraints| {

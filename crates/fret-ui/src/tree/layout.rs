@@ -152,6 +152,7 @@ impl<H: UiHost> UiTree<H> {
             app,
             &*self,
             window,
+            scale_factor,
             root,
             root_bounds.size,
         );

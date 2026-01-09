@@ -38,10 +38,20 @@ pub(crate) fn build_flow_subtree<H: UiHost>(
     app: &mut H,
     tree: &UiTree<H>,
     window: AppWindowId,
+    scale_factor: f32,
     parent_kind: ParentLayoutKind,
     node: NodeId,
 ) {
-    build_flow_subtree_impl(engine, app, tree, window, parent_kind, node, None);
+    build_flow_subtree_impl(
+        engine,
+        app,
+        tree,
+        window,
+        scale_factor,
+        parent_kind,
+        node,
+        None,
+    );
 }
 
 pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
@@ -49,6 +59,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     app: &mut H,
     tree: &UiTree<H>,
     window: AppWindowId,
+    scale_factor: f32,
     viewport_root: NodeId,
     viewport_size: Size,
 ) {
@@ -57,6 +68,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
         app,
         tree,
         window,
+        scale_factor,
         ParentLayoutKind::Root,
         viewport_root,
         Some(viewport_size),
@@ -68,15 +80,18 @@ fn build_flow_subtree_impl<H: UiHost>(
     app: &mut H,
     tree: &UiTree<H>,
     window: AppWindowId,
+    scale_factor: f32,
     parent_kind: ParentLayoutKind,
     node: NodeId,
     root_override_size: Option<Size>,
 ) {
+    let sf = sanitize_scale_factor(scale_factor);
     let _ = engine.request_layout_node(node);
     if let Some(child) = passthrough_wrapper_child(app, tree, window, node) {
         let mut style = style_for_item_in_parent(
             app,
             window,
+            sf,
             parent_kind,
             node,
             Display::Flex,
@@ -94,10 +109,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             }
         }) {
             style.padding = TaffyRect {
-                left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
         }
 
@@ -109,6 +124,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             app,
             tree,
             window,
+            sf,
             ParentLayoutKind::Flex {
                 direction: fret_core::Axis::Vertical,
             },
@@ -123,6 +139,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Block,
@@ -136,6 +153,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let mut style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Flex,
@@ -153,14 +171,14 @@ fn build_flow_subtree_impl<H: UiHost>(
             style.justify_content = Some(taffy_justify(props.justify));
             style.align_items = Some(taffy_align_items(props.align));
             style.gap = TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
+                height: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
             };
             style.padding = TaffyRect {
-                left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
 
             let children = tree.children(node).to_vec();
@@ -173,6 +191,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     app,
                     tree,
                     window,
+                    sf,
                     ParentLayoutKind::Flex {
                         direction: props.direction,
                     },
@@ -185,6 +204,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let mut style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Flex,
@@ -202,14 +222,14 @@ fn build_flow_subtree_impl<H: UiHost>(
             style.justify_content = Some(taffy_justify(props.justify));
             style.align_items = Some(taffy_align_items(props.align));
             style.gap = TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
+                height: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
             };
             style.padding = TaffyRect {
-                left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
 
             let children = tree.children(node).to_vec();
@@ -222,6 +242,7 @@ fn build_flow_subtree_impl<H: UiHost>(
                     app,
                     tree,
                     window,
+                    sf,
                     ParentLayoutKind::Flex {
                         direction: props.direction,
                     },
@@ -233,6 +254,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let mut style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Grid,
@@ -241,14 +263,14 @@ fn build_flow_subtree_impl<H: UiHost>(
             style.justify_content = Some(taffy_justify(props.justify));
             style.align_items = Some(taffy_align_items(props.align));
             style.gap = TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
+                height: LengthPercentage::length(scale_nonneg_px(props.gap, sf)),
             };
             style.padding = TaffyRect {
-                left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
             };
             style.grid_template_columns = taffy::style_helpers::evenly_sized_tracks(props.cols);
             style.grid_template_rows = props
@@ -261,7 +283,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, &children);
             engine.set_measured(node, false);
             for child in children {
-                build_flow_subtree(engine, app, tree, window, ParentLayoutKind::Grid, child);
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Grid, child);
             }
         }
         Some(
@@ -277,6 +299,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             let mut style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Grid,
@@ -297,10 +320,10 @@ fn build_flow_subtree_impl<H: UiHost>(
                 }
             }) {
                 style.padding = TaffyRect {
-                    left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                    right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                    top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                    bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                    left: LengthPercentage::length(scale_nonneg_px(props.padding.left, sf)),
+                    right: LengthPercentage::length(scale_nonneg_px(props.padding.right, sf)),
+                    top: LengthPercentage::length(scale_nonneg_px(props.padding.top, sf)),
+                    bottom: LengthPercentage::length(scale_nonneg_px(props.padding.bottom, sf)),
                 };
             }
 
@@ -309,13 +332,22 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, &children);
             engine.set_measured(node, false);
             for child in children {
-                build_flow_subtree(engine, app, tree, window, ParentLayoutKind::Overlay, child);
+                build_flow_subtree(
+                    engine,
+                    app,
+                    tree,
+                    window,
+                    sf,
+                    ParentLayoutKind::Overlay,
+                    child,
+                );
             }
         }
         _ => {
             let style = style_for_item_in_parent(
                 app,
                 window,
+                sf,
                 parent_kind,
                 node,
                 Display::Block,
@@ -331,11 +363,13 @@ fn build_flow_subtree_impl<H: UiHost>(
 fn style_for_item_in_parent<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
+    scale_factor: f32,
     parent_kind: ParentLayoutKind,
     node: NodeId,
     display: Display,
     root_override_size: Option<Size>,
 ) -> Style {
+    let sf = sanitize_scale_factor(scale_factor);
     let layout_style = layout_style_for_node(app, window, node);
 
     let mut min_w = layout_style.size.min_width.map(|p| p.0);
@@ -364,29 +398,33 @@ fn style_for_item_in_parent<H: UiHost>(
     let mut style = Style {
         display,
         position: taffy_position(layout_style.position),
-        inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
+        inset: taffy_rect_lpa_from_inset(scale_factor, layout_style.position, layout_style.inset),
         size: TaffySize {
-            width: taffy_dimension(layout_style.size.width),
-            height: taffy_dimension(layout_style.size.height),
+            width: taffy_dimension(scale_factor, layout_style.size.width),
+            height: taffy_dimension(scale_factor, layout_style.size.height),
         },
         aspect_ratio: layout_style.aspect_ratio,
         min_size: TaffySize {
-            width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-            height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
+            width: min_w
+                .map(|v| Dimension::length(v * sf))
+                .unwrap_or_else(Dimension::auto),
+            height: min_h
+                .map(|v| Dimension::length(v * sf))
+                .unwrap_or_else(Dimension::auto),
         },
         max_size: TaffySize {
             width: layout_style
                 .size
                 .max_width
-                .map(|p| Dimension::length(p.0))
+                .map(|p| Dimension::length(p.0 * sf))
                 .unwrap_or_else(Dimension::auto),
             height: layout_style
                 .size
                 .max_height
-                .map(|p| Dimension::length(p.0))
+                .map(|p| Dimension::length(p.0 * sf))
                 .unwrap_or_else(Dimension::auto),
         },
-        margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
+        margin: taffy_rect_lpa_from_margin_edges(scale_factor, layout_style.margin),
         ..Default::default()
     };
 
@@ -394,7 +432,7 @@ fn style_for_item_in_parent<H: UiHost>(
         ParentLayoutKind::Flex { .. } => {
             style.flex_grow = layout_style.flex.grow;
             style.flex_shrink = layout_style.flex.shrink;
-            style.flex_basis = taffy_dimension(layout_style.flex.basis);
+            style.flex_basis = taffy_dimension(scale_factor, layout_style.flex.basis);
             style.align_self = layout_style.flex.align_self.map(taffy_align_self);
         }
         ParentLayoutKind::Grid => {
@@ -409,10 +447,10 @@ fn style_for_item_in_parent<H: UiHost>(
     }
 
     if let Some(size) = root_override_size {
-        style.size.width = Dimension::length(size.width.0.max(0.0));
-        style.size.height = Dimension::length(size.height.0.max(0.0));
-        style.max_size.width = Dimension::length(size.width.0.max(0.0));
-        style.max_size.height = Dimension::length(size.height.0.max(0.0));
+        style.size.width = Dimension::length(scale_nonneg(size.width.0, scale_factor));
+        style.size.height = Dimension::length(scale_nonneg(size.height.0, scale_factor));
+        style.max_size.width = Dimension::length(scale_nonneg(size.width.0, scale_factor));
+        style.max_size.height = Dimension::length(scale_nonneg(size.height.0, scale_factor));
     }
 
     style
@@ -480,22 +518,25 @@ fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {
     }
 }
 
-fn taffy_dimension(length: crate::element::Length) -> Dimension {
+fn taffy_dimension(scale_factor: f32, length: crate::element::Length) -> Dimension {
+    let sf = sanitize_scale_factor(scale_factor);
     match length {
         crate::element::Length::Auto => Dimension::auto(),
         crate::element::Length::Fill => Dimension::percent(1.0),
-        crate::element::Length::Px(px) => Dimension::length(px.0),
+        crate::element::Length::Px(px) => Dimension::length(px.0 * sf),
     }
 }
 
-fn taffy_lpa(px: Option<Px>) -> LengthPercentageAuto {
+fn taffy_lpa(scale_factor: f32, px: Option<Px>) -> LengthPercentageAuto {
+    let sf = sanitize_scale_factor(scale_factor);
     match px {
-        Some(px) => LengthPercentageAuto::length(px.0),
+        Some(px) => LengthPercentageAuto::length(px.0 * sf),
         None => LengthPercentageAuto::auto(),
     }
 }
 
 fn taffy_rect_lpa_from_inset(
+    scale_factor: f32,
     position: crate::element::PositionStyle,
     inset: crate::element::InsetStyle,
 ) -> TaffyRect<LengthPercentageAuto> {
@@ -508,28 +549,33 @@ fn taffy_rect_lpa_from_inset(
         };
     }
     TaffyRect {
-        left: taffy_lpa(inset.left),
-        right: taffy_lpa(inset.right),
-        top: taffy_lpa(inset.top),
-        bottom: taffy_lpa(inset.bottom),
+        left: taffy_lpa(scale_factor, inset.left),
+        right: taffy_lpa(scale_factor, inset.right),
+        top: taffy_lpa(scale_factor, inset.top),
+        bottom: taffy_lpa(scale_factor, inset.bottom),
     }
 }
 
-fn taffy_lpa_margin_edge(edge: crate::element::MarginEdge) -> LengthPercentageAuto {
+fn taffy_lpa_margin_edge(
+    scale_factor: f32,
+    edge: crate::element::MarginEdge,
+) -> LengthPercentageAuto {
+    let sf = sanitize_scale_factor(scale_factor);
     match edge {
-        crate::element::MarginEdge::Px(px) => LengthPercentageAuto::length(px.0),
+        crate::element::MarginEdge::Px(px) => LengthPercentageAuto::length(px.0 * sf),
         crate::element::MarginEdge::Auto => LengthPercentageAuto::auto(),
     }
 }
 
 fn taffy_rect_lpa_from_margin_edges(
+    scale_factor: f32,
     margin: crate::element::MarginEdges,
 ) -> TaffyRect<LengthPercentageAuto> {
     TaffyRect {
-        left: taffy_lpa_margin_edge(margin.left),
-        right: taffy_lpa_margin_edge(margin.right),
-        top: taffy_lpa_margin_edge(margin.top),
-        bottom: taffy_lpa_margin_edge(margin.bottom),
+        left: taffy_lpa_margin_edge(scale_factor, margin.left),
+        right: taffy_lpa_margin_edge(scale_factor, margin.right),
+        top: taffy_lpa_margin_edge(scale_factor, margin.top),
+        bottom: taffy_lpa_margin_edge(scale_factor, margin.bottom),
     }
 }
 
@@ -572,4 +618,21 @@ fn taffy_justify(justify: crate::element::MainAlign) -> JustifyContent {
         crate::element::MainAlign::SpaceAround => JustifyContent::SpaceAround,
         crate::element::MainAlign::SpaceEvenly => JustifyContent::SpaceEvenly,
     }
+}
+
+fn sanitize_scale_factor(scale_factor: f32) -> f32 {
+    if scale_factor.is_finite() && scale_factor > 0.0 {
+        scale_factor
+    } else {
+        1.0
+    }
+}
+
+fn scale_nonneg(value: f32, scale_factor: f32) -> f32 {
+    let sf = sanitize_scale_factor(scale_factor);
+    value.max(0.0) * sf
+}
+
+fn scale_nonneg_px(value: Px, scale_factor: f32) -> f32 {
+    scale_nonneg(value.0, scale_factor)
 }

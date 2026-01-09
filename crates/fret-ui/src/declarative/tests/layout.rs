@@ -857,6 +857,118 @@ fn viewport_roots_do_not_couple_fill_layout() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn layout_engine_v2_scales_px_styles_with_scale_factor() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    fn run(scale_factor: f32) -> (Rect, Rect) {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(140.0)),
+        );
+        let viewport = Rect::new(
+            fret_core::Point::new(Px(5.0), Px(3.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let mut text = FakeTextService::default();
+
+        let child_root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "scale-factor-px-style",
+            |cx| {
+                let flex = crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(8.0),
+                    padding: fret_core::Edges::all(Px(10.0)),
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                let child = |cx: &mut ElementContext<'_, TestHost>| {
+                    let props = crate::element::ContainerProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(10.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    cx.container(props, |_cx| vec![])
+                };
+
+                vec![cx.flex(flex, |cx| vec![child(cx), child(cx)])]
+            },
+        );
+
+        let base = ui.create_node(RegistersViewportRoot { viewport });
+        ui.set_children(base, vec![child_root]);
+        ui.set_root(base);
+
+        ui.layout_all(&mut app, &mut text, bounds, scale_factor);
+
+        let flex_node = ui.children(child_root)[0];
+        let first = ui.children(flex_node)[0];
+        let second = ui.children(flex_node)[1];
+
+        (
+            ui.debug_node_bounds(first).expect("first bounds"),
+            ui.debug_node_bounds(second).expect("second bounds"),
+        )
+    }
+
+    let (first_1x, second_1x) = run(1.0);
+    let (first_2x, second_2x) = run(2.0);
+
+    assert_eq!(first_1x, first_2x, "expected scale-factor invariant bounds");
+    assert_eq!(
+        second_1x, second_2x,
+        "expected scale-factor invariant bounds"
+    );
+
+    let expected_first = Rect::new(
+        fret_core::Point::new(Px(15.0), Px(13.0)),
+        Size::new(Px(180.0), Px(10.0)),
+    );
+    let expected_second = Rect::new(
+        fret_core::Point::new(Px(15.0), Px(31.0)),
+        Size::new(Px(180.0), Px(10.0)),
+    );
+
+    assert_eq!(first_1x, expected_first);
+    assert_eq!(second_1x, expected_second);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_nested_flow_is_solved_once() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,
