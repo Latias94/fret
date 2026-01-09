@@ -1,6 +1,6 @@
 # ADR 0143: `delinea` Derived Dimensions (Calculated Columns) and Stack Transform (ECharts-Inspired)
 
-Status: Proposed (P0 decision gate)
+Status: Accepted (P0)
 
 ## Context
 

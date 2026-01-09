@@ -43,7 +43,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `line` | DONE | `SeriesKind::Line` |
 | `area` (line with areaStyle) | DONE | `SeriesKind::Area` + `AreaBaseline` |
 | `band` (custom, common in finance) | DONE | `SeriesKind::Band` (`encode.y` + `encode.y2`) |
-| `line/area` + `stack` | DONE | `SeriesSpec.stack` + `stack_strategy` for `Line` and `Area` (P0: implemented; follow-up ADR 0143 proposes refactoring stacking into derived dimensions). |
+| `line/area` + `stack` | DONE | `SeriesSpec.stack` + `stack_strategy` for `Line` and `Area` (P0: implemented; stack base values are cached via a derived-dim stage, see ADR 0143). |
 | `scatter` | PARTIAL | Point marks + hit test + pixel-bounded large mode; missing symbol/size options. |
 | `bar` | PARTIAL | `SeriesKind::Bar` (requires Category X axis in v1). |
 | `candlestick` | PLANNED | Needs OHLC encode + mark layout. |

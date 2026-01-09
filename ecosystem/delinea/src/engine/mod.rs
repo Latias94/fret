@@ -5,7 +5,7 @@ use crate::data::DatasetStore;
 use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
-use crate::engine::stages::{DataViewStage, MarksStage};
+use crate::engine::stages::{DataViewStage, MarksStage, StackDimsStage};
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
@@ -110,6 +110,7 @@ pub struct ChartEngine {
     stats: EngineStats,
     view: ViewState,
     data_view_stage: DataViewStage,
+    stack_dims_stage: StackDimsStage,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
     axis_pointer_cache: AxisPointerCache,
@@ -151,6 +152,7 @@ impl ChartEngine {
             stats: EngineStats::default(),
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
+            stack_dims_stage: StackDimsStage::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
@@ -593,6 +595,15 @@ impl ChartEngine {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
         }
 
+        self.stack_dims_stage.begin_frame();
+        self.stack_dims_stage
+            .request_for_visible_stacks(&self.model);
+        self.stack_dims_stage
+            .prepare_requests(&self.model, &self.datasets);
+        let stack_dims_done = self
+            .stack_dims_stage
+            .step(&self.model, &self.datasets, &mut budget);
+
         self.data_view_stage.begin_frame();
         self.marks_stage.request_data_views(
             &self.model,
@@ -623,6 +634,7 @@ impl ChartEngine {
             &self.state,
             &self.view,
             &self.data_view_stage,
+            &self.stack_dims_stage,
             viewport,
             &mut budget,
             &mut self.lod_scratch,
@@ -647,7 +659,7 @@ impl ChartEngine {
             }
         }
 
-        let unfinished = !done || !selection_done;
+        let unfinished = !done || !selection_done || !stack_dims_done;
 
         let hover_px = self.state.hover_px;
         let marks_rev = self.output.marks.revision;
@@ -683,6 +695,7 @@ impl ChartEngine {
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
+                                    &self.stack_dims_stage,
                                 );
                                 self.axis_pointer_cache.hit = hit;
                                 self.axis_pointer_cache.output = compute_item_axis_pointer_output(
@@ -699,6 +712,7 @@ impl ChartEngine {
                                     &self.datasets,
                                     &self.output.marks,
                                     hover_px,
+                                    &self.stack_dims_stage,
                                 );
                                 self.axis_pointer_cache.hit = hit;
                                 self.axis_pointer_cache.output = compute_axis_axis_pointer_output(
@@ -706,6 +720,7 @@ impl ChartEngine {
                                     &self.datasets,
                                     &self.view,
                                     &self.data_view_stage,
+                                    &self.stack_dims_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
@@ -818,6 +833,7 @@ fn compute_axis_axis_pointer_output(
     datasets: &DatasetStore,
     view: &ViewState,
     data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     hover_px: Point,
@@ -930,10 +946,35 @@ fn compute_axis_axis_pointer_output(
             base_selection,
         );
 
+        let model_rev = model.revs.marks;
+        let table_rev = table.revision;
         let Some(sample) = (if series.kind == crate::spec::SeriesKind::Scatter {
-            sample_scatter_at_x_view(model, datasets, series.id, x_value, x, y0, &table_view)
+            sample_scatter_at_x_view(
+                model,
+                datasets,
+                stack_dims,
+                model_rev,
+                table_rev,
+                series.id,
+                x_value,
+                x,
+                y0,
+                &table_view,
+            )
         } else {
-            sample_series_at_x_view(model, datasets, series.id, x_value, x, y0, y1, &table_view)
+            sample_series_at_x_view(
+                model,
+                datasets,
+                stack_dims,
+                model_rev,
+                table_rev,
+                series.id,
+                x_value,
+                x,
+                y0,
+                y1,
+                &table_view,
+            )
         }) else {
             continue;
         };
@@ -978,6 +1019,9 @@ const MAX_UNSORTED_AXIS_SCAN_POINTS: usize = 200_000;
 fn sample_nearest_at_x_view(
     model: &ChartModel,
     datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
     series_id: crate::ids::SeriesId,
     x_value: f64,
     x: &[f64],
@@ -1023,8 +1067,9 @@ fn sample_nearest_at_x_view(
         .get(&series_id)
         .is_some_and(|s| s.stack.is_some())
     {
-        let base = stack_base_at_index(model, datasets, series_id, raw_index, y)?.base;
-        y += base;
+        y += stack_base_cached(
+            model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y,
+        );
     }
 
     let y1_out = y1.and_then(|s| s.get(raw_index).copied());
@@ -1034,6 +1079,9 @@ fn sample_nearest_at_x_view(
 fn sample_scatter_at_x_view(
     model: &ChartModel,
     datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
     series_id: crate::ids::SeriesId,
     x_value: f64,
     x: &[f64],
@@ -1090,8 +1138,9 @@ fn sample_scatter_at_x_view(
             .get(&series_id)
             .is_some_and(|s| s.stack.is_some())
         {
-            let base = stack_base_at_index(model, datasets, series_id, i, y)?.base;
-            y + base
+            y + stack_base_cached(
+                model, datasets, stack_dims, model_rev, table_rev, series_id, i, y,
+            )
         } else {
             y
         };
@@ -1099,12 +1148,18 @@ fn sample_scatter_at_x_view(
         return Some(SampledSeriesValue { y0: y, y1: None });
     }
 
-    sample_nearest_at_x_view(model, datasets, series_id, x_value, x, y0, None, table_view)
+    sample_nearest_at_x_view(
+        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, None,
+        table_view,
+    )
 }
 
 fn sample_series_at_x_view(
     model: &ChartModel,
     datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
     series_id: crate::ids::SeriesId,
     x_value: f64,
     x: &[f64],
@@ -1160,8 +1215,12 @@ fn sample_series_at_x_view(
             .get(&series_id)
             .is_some_and(|s| s.stack.is_some())
         {
-            let base0 = stack_base_at_index(model, datasets, series_id, i0, y0a)?.base;
-            let base1 = stack_base_at_index(model, datasets, series_id, i1, y0b)?.base;
+            let base0 = stack_base_cached(
+                model, datasets, stack_dims, model_rev, table_rev, series_id, i0, y0a,
+            );
+            let base1 = stack_base_cached(
+                model, datasets, stack_dims, model_rev, table_rev, series_id, i1, y0b,
+            );
             let y_eff0 = y0a + base0;
             let y_eff1 = y0b + base1;
             y_eff0 + t * (y_eff1 - y_eff0)
@@ -1183,7 +1242,33 @@ fn sample_series_at_x_view(
         return Some(SampledSeriesValue { y0: y, y1: y1_out });
     }
 
-    sample_nearest_at_x_view(model, datasets, series_id, x_value, x, y0, y1, table_view)
+    sample_nearest_at_x_view(
+        model, datasets, stack_dims, model_rev, table_rev, series_id, x_value, x, y0, y1,
+        table_view,
+    )
+}
+
+fn stack_base_cached(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
+    series_id: crate::ids::SeriesId,
+    raw_index: usize,
+    y: f64,
+) -> f64 {
+    let Some(stack) = model.series.get(&series_id).and_then(|s| s.stack) else {
+        return 0.0;
+    };
+
+    stack_dims
+        .stack_base(stack, series_id, raw_index, model_rev, table_rev)
+        .unwrap_or_else(|| {
+            stack_base_at_index(model, datasets, series_id, raw_index, y)
+                .map(|b| b.base)
+                .unwrap_or(0.0)
+        })
 }
 
 fn lower_bound(xs: &[f64], value: f64) -> usize {

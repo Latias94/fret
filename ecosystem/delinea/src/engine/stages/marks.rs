@@ -27,7 +27,7 @@ use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
-use super::DataViewStage;
+use super::{DataViewStage, StackDimsStage};
 
 #[derive(Debug, Clone)]
 struct StackBoundsBuild {
@@ -204,6 +204,7 @@ impl MarksStage {
         state: &ChartState,
         view: &ViewState,
         selection_stage: &DataViewStage,
+        stack_dims: &StackDimsStage,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -1035,11 +1036,23 @@ impl MarksStage {
                         if !xi.is_finite() || !yi.is_finite() {
                             continue;
                         }
-                        let Some(base) = stack_base_at_index(model, datasets, series.id, i, yi)
-                        else {
-                            continue;
-                        };
-                        let y_base = base.base;
+
+                        let y_base = series
+                            .stack
+                            .and_then(|stack| {
+                                stack_dims.stack_base(
+                                    stack,
+                                    series.id,
+                                    i,
+                                    model.revs.marks,
+                                    table.revision,
+                                )
+                            })
+                            .unwrap_or_else(|| {
+                                stack_base_at_index(model, datasets, series.id, i, yi)
+                                    .map(|b| b.base)
+                                    .unwrap_or(0.0)
+                            });
 
                         let y_base = y_base.clamp(bounds.y_min, bounds.y_max);
                         let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);

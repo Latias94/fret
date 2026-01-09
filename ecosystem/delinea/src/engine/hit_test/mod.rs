@@ -3,6 +3,7 @@ use fret_core::Point;
 use crate::data::DatasetStore;
 use crate::engine::HoverHit;
 use crate::engine::model::ChartModel;
+use crate::engine::stages::StackDimsStage;
 use crate::marks::{MarkKind, MarkPayloadRef, MarkTree};
 use crate::spec::SeriesKind;
 use crate::transform::stack_base_at_index;
@@ -12,6 +13,7 @@ pub fn hover_hit_test(
     datasets: &DatasetStore,
     marks: &MarkTree,
     hover_px: Point,
+    stack_dims: &StackDimsStage,
 ) -> Option<HoverHit> {
     let mut best: Option<HoverHit> = None;
 
@@ -112,21 +114,27 @@ pub fn hover_hit_test(
                         continue;
                     }
 
-                    let y_eff_a = if series.stack.is_some() {
-                        let Some(base) = stack_base_at_index(model, datasets, series_id, ia, y0a)
-                        else {
-                            continue;
-                        };
-                        y0a + base.base
+                    let y_eff_a = if let Some(stack) = series.stack {
+                        let base = stack_dims
+                            .stack_base(stack, series_id, ia, model.revs.marks, table.revision)
+                            .unwrap_or_else(|| {
+                                stack_base_at_index(model, datasets, series_id, ia, y0a)
+                                    .map(|b| b.base)
+                                    .unwrap_or(0.0)
+                            });
+                        y0a + base
                     } else {
                         y0a
                     };
-                    let y_eff_b = if series.stack.is_some() {
-                        let Some(base) = stack_base_at_index(model, datasets, series_id, ib, y0b)
-                        else {
-                            continue;
-                        };
-                        y0b + base.base
+                    let y_eff_b = if let Some(stack) = series.stack {
+                        let base = stack_dims
+                            .stack_base(stack, series_id, ib, model.revs.marks, table.revision)
+                            .unwrap_or_else(|| {
+                                stack_base_at_index(model, datasets, series_id, ib, y0b)
+                                    .map(|b| b.base)
+                                    .unwrap_or(0.0)
+                            });
+                        y0b + base
                     } else {
                         y0b
                     };
@@ -174,12 +182,15 @@ pub fn hover_hit_test(
 
                     let x_value = x[idx];
                     let y0 = y[idx];
-                    let y_value = if series.stack.is_some() {
-                        let Some(base) = stack_base_at_index(model, datasets, series_id, idx, y0)
-                        else {
-                            continue;
-                        };
-                        y0 + base.base
+                    let y_value = if let Some(stack) = series.stack {
+                        let base = stack_dims
+                            .stack_base(stack, series_id, idx, model.revs.marks, table.revision)
+                            .unwrap_or_else(|| {
+                                stack_base_at_index(model, datasets, series_id, idx, y0)
+                                    .map(|b| b.base)
+                                    .unwrap_or(0.0)
+                            });
+                        y0 + base
                     } else {
                         y0
                     };
@@ -390,6 +401,7 @@ mod tests {
                 x: fret_core::Px(50.0),
                 y: fret_core::Px(10.0),
             },
+            &StackDimsStage::default(),
         )
         .unwrap();
 
@@ -537,6 +549,7 @@ mod tests {
             &store,
             &marks,
             Point::new(fret_core::Px(50.0), fret_core::Px(0.0)),
+            &StackDimsStage::default(),
         )
         .expect("expected a hit");
 
