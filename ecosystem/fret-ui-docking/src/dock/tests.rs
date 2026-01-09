@@ -372,6 +372,73 @@ impl<H: UiHost> Widget<H> for OverlayAssertsWindowScopedBoundsForElement {
 }
 
 #[cfg(feature = "layout-engine-v2")]
+struct OverlayAssertsWindowLocalOverlayPlacement {
+    window_a: AppWindowId,
+    window_b: AppWindowId,
+    element_a: fret_ui::elements::GlobalElementId,
+    element_b: fret_ui::elements::GlobalElementId,
+    expected_a_last: Rect,
+    expected_b_last: Rect,
+    outer: Rect,
+    desired: Size,
+    side_offset: Px,
+    side: OverlaySide,
+    align: OverlayAlign,
+    ok: Arc<AtomicBool>,
+}
+
+#[cfg(feature = "layout-engine-v2")]
+impl<H: UiHost> Widget<H> for OverlayAssertsWindowLocalOverlayPlacement {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let anchor_b = fret_ui::elements::bounds_for_element(cx.app, self.window_b, self.element_b);
+        let anchor_a_wrong =
+            fret_ui::elements::bounds_for_element(cx.app, self.window_b, self.element_a);
+        let anchor_a_other_window =
+            fret_ui::elements::bounds_for_element(cx.app, self.window_a, self.element_a);
+
+        assert_eq!(
+            anchor_b,
+            Some(self.expected_b_last),
+            "expected element_b bounds_for_element to return last-frame bounds"
+        );
+        assert!(
+            anchor_a_wrong.is_none(),
+            "expected bounds_for_element to be window-scoped (window_b must not see window_a elements)"
+        );
+        assert_eq!(
+            anchor_a_other_window,
+            Some(self.expected_a_last),
+            "expected window_a bounds_for_element to return last-frame bounds"
+        );
+
+        let placed_b = anchored_panel_bounds(
+            self.outer,
+            anchor_b.expect("anchor b exists"),
+            self.desired,
+            self.side_offset,
+            self.side,
+            self.align,
+        );
+        let expected_placed_b = anchored_panel_bounds(
+            self.outer,
+            self.expected_b_last,
+            self.desired,
+            self.side_offset,
+            self.side,
+            self.align,
+        );
+        assert_eq!(
+            placed_b, expected_placed_b,
+            "expected overlay placement to use window-local anchor bounds"
+        );
+
+        self.ok.store(true, Ordering::Relaxed);
+
+        cx.available
+    }
+}
+
+#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_fill() {
     let window = AppWindowId::default();
@@ -1108,6 +1175,241 @@ fn bounds_for_element_is_window_scoped_across_multi_window_docking() {
     assert!(
         ok.load(Ordering::Relaxed),
         "expected bounds_for_element to be window-scoped across multi-window docking"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn overlay_placement_must_use_window_local_anchor_bounds() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(42));
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(240.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(480.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut services = FakeTextService::default();
+
+    let panel_a = PanelKey::new("mw.viewport.a");
+    let panel_b = PanelKey::new("mw.viewport.b");
+    let target_a = fret_core::RenderTargetId::from(KeyData::from_ffi(10));
+    let target_b = fret_core::RenderTargetId::from(KeyData::from_ffi(11));
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel_a, || DockPanel {
+            title: "A".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_a,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        dock.ensure_panel(&panel_b, || DockPanel {
+            title: "B".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_b,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+
+        let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, tabs_a);
+
+        let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_b.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_b, tabs_b);
+    });
+
+    let root_a_name = "mw-panel-a";
+    let root_b_name = "mw-panel-b";
+
+    let anchor_a_id: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+        Arc::new(Mutex::new(None));
+    let anchor_b_id: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+        Arc::new(Mutex::new(None));
+
+    let mut ui_a: UiTree<TestHost> = UiTree::new();
+    ui_a.set_window(window_a);
+    let anchor_a_id_setter = anchor_a_id.clone();
+    let node_a = declarative::render_root(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds_a,
+        root_a_name,
+        move |cx| {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.position = fret_ui::element::PositionStyle::Absolute;
+            layout.inset.top = Some(Px(20.0));
+            layout.inset.left = Some(Px(240.0));
+            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
+            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+
+            let props = fret_ui::element::SemanticsProps {
+                layout,
+                ..Default::default()
+            };
+            vec![cx.semantics_with_id(props, move |cx, id| {
+                *anchor_a_id_setter.lock().expect("anchor mutex") = Some(id);
+                vec![cx.text("a")]
+            })]
+        },
+    );
+    let dock_space_a = ui_a
+        .create_node_retained(DockSpace::new(window_a).with_panel_content(panel_a.clone(), node_a));
+    ui_a.set_children(dock_space_a, vec![node_a]);
+    ui_a.set_root(dock_space_a);
+
+    let mut ui_b: UiTree<TestHost> = UiTree::new();
+    ui_b.set_window(window_b);
+    let anchor_b_id_setter = anchor_b_id.clone();
+    let node_b = declarative::render_root(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds_b,
+        root_b_name,
+        move |cx| {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.position = fret_ui::element::PositionStyle::Absolute;
+            layout.inset.top = Some(Px(20.0));
+            layout.inset.left = Some(Px(40.0));
+            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
+            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+
+            let props = fret_ui::element::SemanticsProps {
+                layout,
+                ..Default::default()
+            };
+            vec![cx.semantics_with_id(props, move |cx, id| {
+                *anchor_b_id_setter.lock().expect("anchor mutex") = Some(id);
+                vec![cx.text("b")]
+            })]
+        },
+    );
+    let dock_space_b = ui_b
+        .create_node_retained(DockSpace::new(window_b).with_panel_content(panel_b.clone(), node_b));
+    ui_b.set_children(dock_space_b, vec![node_b]);
+    ui_b.set_root(dock_space_b);
+
+    let element_a = anchor_a_id.lock().expect("anchor mutex").unwrap();
+    let element_b = anchor_b_id.lock().expect("anchor mutex").unwrap();
+
+    // Frame 0: record current bounds into the element runtime's "cur" storage.
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let node_a_anchor = fret_ui::elements::node_for_element(&mut app, window_a, element_a)
+        .expect("expected window a anchor node");
+    let node_b_anchor = fret_ui::elements::node_for_element(&mut app, window_b, element_b)
+        .expect("expected window b anchor node");
+
+    let expected_a_0 = ui_a
+        .debug_node_bounds(node_a_anchor)
+        .expect("expected window a anchor bounds");
+    let expected_b_0 = ui_b
+        .debug_node_bounds(node_b_anchor)
+        .expect("expected window b anchor bounds");
+
+    app.advance_frame();
+    let anchor_a_id_setter = anchor_a_id.clone();
+    let _ = declarative::render_root(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds_a,
+        root_a_name,
+        move |cx| {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.position = fret_ui::element::PositionStyle::Absolute;
+            layout.inset.top = Some(Px(20.0));
+            layout.inset.left = Some(Px(240.0));
+            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
+            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+
+            let props = fret_ui::element::SemanticsProps {
+                layout,
+                ..Default::default()
+            };
+            vec![cx.semantics_with_id(props, move |cx, id| {
+                *anchor_a_id_setter.lock().expect("anchor mutex") = Some(id);
+                vec![cx.text("a")]
+            })]
+        },
+    );
+    let anchor_b_id_setter = anchor_b_id.clone();
+    let _ = declarative::render_root(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds_b,
+        root_b_name,
+        move |cx| {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.position = fret_ui::element::PositionStyle::Absolute;
+            layout.inset.top = Some(Px(20.0));
+            layout.inset.left = Some(Px(40.0));
+            layout.size.width = fret_ui::element::Length::Px(Px(100.0));
+            layout.size.height = fret_ui::element::Length::Px(Px(30.0));
+
+            let props = fret_ui::element::SemanticsProps {
+                layout,
+                ..Default::default()
+            };
+            vec![cx.semantics_with_id(props, move |cx, id| {
+                *anchor_b_id_setter.lock().expect("anchor mutex") = Some(id);
+                vec![cx.text("b")]
+            })]
+        },
+    );
+    ui_a.invalidate(dock_space_a, Invalidation::Layout);
+    ui_b.invalidate(dock_space_b, Invalidation::Layout);
+
+    let ok = Arc::new(AtomicBool::new(false));
+    let overlay = ui_b.create_node_retained(OverlayAssertsWindowLocalOverlayPlacement {
+        window_a,
+        window_b,
+        element_a,
+        element_b,
+        expected_a_last: expected_a_0,
+        expected_b_last: expected_b_0,
+        outer: bounds_b,
+        desired: Size::new(Px(80.0), Px(24.0)),
+        side_offset: Px(6.0),
+        side: OverlaySide::Bottom,
+        align: OverlayAlign::End,
+        ok: ok.clone(),
+    });
+    ui_b.push_overlay_root(overlay, false);
+
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    assert!(
+        ok.load(Ordering::Relaxed),
+        "expected overlay placement to only use window-local anchor bounds"
     );
 }
 
