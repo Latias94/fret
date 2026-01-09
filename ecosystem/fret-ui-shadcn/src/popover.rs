@@ -261,6 +261,9 @@ impl Popover {
                 Rc::new(Cell::new(None));
 
             if overlay_presence.present {
+                let on_dismiss_request_for_children = self.on_dismiss_request.clone();
+                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+
                 let align = self.align;
                 let side = self.side;
                 let align_offset = self.align_offset;
@@ -426,9 +429,10 @@ impl Popover {
                     );
 
                     if modal {
-                        radix_popover::popover_modal_layer_children(
+                        radix_popover::popover_modal_layer_children_with_dismiss_handler(
                             cx,
                             open_for_barrier.clone(),
+                            on_dismiss_request_for_children.clone(),
                             Vec::new(),
                             overlay_content,
                         )
@@ -459,7 +463,7 @@ impl Popover {
                     self.open,
                     overlay_presence,
                     options,
-                    self.on_dismiss_request.clone(),
+                    on_dismiss_request_for_request,
                     overlay_children,
                 );
                 radix_popover::request_popover(cx, request);

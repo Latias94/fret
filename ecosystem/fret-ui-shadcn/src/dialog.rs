@@ -156,6 +156,9 @@ impl Dialog {
             > = std::cell::Cell::new(None);
 
             if overlay_presence.present {
+                let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
+                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
@@ -251,10 +254,11 @@ impl Dialog {
                             opacity,
                         },
                         move |cx| {
-                            radix_dialog::modal_dialog_layer_children(
+                            radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
                                 cx,
                                 open_for_children.clone(),
                                 dialog_options,
+                                on_dismiss_request_for_barrier.clone(),
                                 barrier_children,
                                 dialog,
                             )
@@ -274,7 +278,7 @@ impl Dialog {
                     self.open,
                     overlay_presence,
                     dialog_options,
-                    self.on_dismiss_request.clone(),
+                    on_dismiss_request_for_request,
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);

@@ -336,7 +336,25 @@ pub fn popover_modal_barrier<H: UiHost>(
     dismiss_on_press: bool,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    dialog_prim::modal_barrier(cx, open, dismiss_on_press, children)
+    popover_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
+}
+
+/// Builds a full-window modal barrier for Radix-like popover overlays, routing presses through an
+/// optional dismiss handler.
+pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    dialog_prim::modal_barrier_with_dismiss_handler(
+        cx,
+        open,
+        dismiss_on_press,
+        on_dismiss_request,
+        children,
+    )
 }
 
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order: barrier
@@ -352,6 +370,27 @@ pub fn popover_modal_layer_children<H: UiHost>(
 ) -> Vec<AnyElement> {
     vec![
         popover_modal_barrier(cx, open, true, barrier_children),
+        content,
+    ]
+}
+
+/// Convenience helper to assemble modal popover overlay children in a Radix-like order (barrier
+/// then content), while routing barrier presses through an optional dismiss handler.
+pub fn popover_modal_layer_children_with_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        popover_modal_barrier_with_dismiss_handler(
+            cx,
+            open,
+            true,
+            on_dismiss_request,
+            barrier_children,
+        ),
         content,
     ]
 }

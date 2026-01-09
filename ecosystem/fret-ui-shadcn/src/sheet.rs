@@ -4,6 +4,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
@@ -49,6 +50,7 @@ pub struct Sheet {
     size_override: Option<Px>,
     overlay_closable: bool,
     overlay_color: Option<Color>,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for Sheet {
@@ -59,6 +61,7 @@ impl std::fmt::Debug for Sheet {
             .field("size_override", &self.size_override)
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -71,6 +74,7 @@ impl Sheet {
             size_override: None,
             overlay_closable: true,
             overlay_color: None,
+            on_dismiss_request: None,
         }
     }
 
@@ -113,6 +117,16 @@ impl Sheet {
         self
     }
 
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape dismissals (overlay root) and overlay-click dismissals (barrier press) are
+    /// routed through this handler. To "prevent default", do not close the `open` model inside the
+    /// handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -140,6 +154,9 @@ impl Sheet {
             };
 
             if overlay_presence.present {
+                let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
+                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+
                 let open = self.open;
                 let open_for_children = open.clone();
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -293,10 +310,11 @@ impl Sheet {
                                 move |_cx| vec![wrapper],
                             );
 
-                            radix_dialog::modal_dialog_layer_children(
+                            radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
                                 cx,
                                 open_for_children.clone(),
                                 dialog_options,
+                                on_dismiss_request_for_barrier.clone(),
                                 vec![barrier_fill],
                                 content,
                             )
@@ -304,12 +322,13 @@ impl Sheet {
                     )]
                 });
 
-                let request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
                     id,
                     open,
                     overlay_presence,
                     dialog_options,
+                    on_dismiss_request_for_request,
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);

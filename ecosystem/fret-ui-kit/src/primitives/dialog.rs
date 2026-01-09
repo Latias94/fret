@@ -14,8 +14,10 @@
 //! This module is intentionally thin: it provides Radix-named entry points for trigger a11y and
 //! modal overlay request wiring, without forcing a visual skin.
 
+use std::sync::Arc;
+
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{DismissReason, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
     SizeStyle,
@@ -271,6 +273,21 @@ pub fn modal_barrier<H: UiHost>(
     dismiss_on_press: bool,
     children: Vec<AnyElement>,
 ) -> AnyElement {
+    modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
+}
+
+/// Builds a modal overlay barrier element that can optionally route dismissals through a custom
+/// dismiss handler.
+///
+/// When `on_dismiss_request` is provided and `dismiss_on_press` is enabled, barrier presses invoke
+/// the handler with `DismissReason::OutsidePress` and do not close `open` automatically.
+pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
     let layout = modal_barrier_layout();
 
     if dismiss_on_press {
@@ -282,7 +299,14 @@ pub fn modal_barrier<H: UiHost>(
                 ..Default::default()
             },
             move |cx, _st| {
-                cx.pressable_set_bool(&open, false);
+                if let Some(on_dismiss_request) = on_dismiss_request.clone() {
+                    cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                        on_dismiss_request(host, action_cx, DismissReason::OutsidePress);
+                    }));
+                } else {
+                    cx.pressable_set_bool(&open, false);
+                }
+
                 children
             },
         )
@@ -308,6 +332,28 @@ pub fn modal_dialog_layer_children<H: UiHost>(
 ) -> Vec<AnyElement> {
     vec![
         modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
+        content,
+    ]
+}
+
+/// Convenience helper to assemble modal overlay children in a Radix-like order (barrier then
+/// content), while routing barrier presses through an optional dismiss handler.
+pub fn modal_dialog_layer_children_with_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    options: DialogOptions,
+    on_dismiss_request: Option<OnDismissRequest>,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        modal_barrier_with_dismiss_handler(
+            cx,
+            open,
+            options.dismiss_on_overlay_press,
+            on_dismiss_request,
+            barrier_children,
+        ),
         content,
     ]
 }
@@ -623,6 +669,90 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn modal_barrier_can_route_dismissals_through_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "base",
+            |_cx| Vec::new(),
+        );
+        ui.set_root(base);
+
+        let open = app.models_mut().insert(true);
+        let modal_id = GlobalElementId(0xabc);
+
+        let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        });
+
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
+                vec![modal_barrier_with_dismiss_handler(
+                    cx,
+                    open.clone(),
+                    true,
+                    Some(handler.clone()),
+                    Vec::new(),
+                )]
+            });
+
+        let req = modal_dialog_request(
+            modal_id,
+            modal_id,
+            open.clone(),
+            OverlayPresence::instant(true),
+            overlay_children,
+        );
+        OverlayController::request_for_window(&mut app, window, req);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::OutsidePress)
+        );
     }
 
     #[test]
