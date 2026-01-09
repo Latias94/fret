@@ -610,6 +610,14 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
+        let Some(&child) = self.children(root).first() else {
+            return false;
+        };
+        self.layout_engine_child_local_rect(root, child).is_some()
+    }
+
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
         let mut out: Vec<NodeId> = Vec::new();
         let mut current = Some(node);

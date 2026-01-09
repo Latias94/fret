@@ -361,12 +361,7 @@ impl ElementHostWidget {
                 if tree.children(child).is_empty() {
                     continue;
                 }
-                let grandchild_is_engine_backed =
-                    tree.children(child).first().is_some_and(|&grandchild| {
-                        tree.layout_engine_child_local_rect(child, grandchild)
-                            .is_some()
-                    });
-                if grandchild_is_engine_backed {
+                if tree.flow_subtree_is_engine_backed(child) {
                     continue;
                 }
 
