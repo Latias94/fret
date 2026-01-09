@@ -822,43 +822,39 @@ impl ElementHostWidget {
             }
             ElementInstance::PointerRegion(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                {
+                    let has_absolute_child = cx.children.iter().copied().any(|child| {
+                        layout_style_for_node(cx.app, window, child).position
+                            == crate::element::PositionStyle::Absolute
+                    });
+                    if !has_absolute_child
+                        && let Some(size) =
+                            crate::layout_engine::layout_children_from_engine_if_solved(cx)
                     {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
+                        return size;
                     }
                 }
                 self.layout_hover_region_impl(cx, window, props.layout)
             }
             ElementInstance::WheelRegion(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
