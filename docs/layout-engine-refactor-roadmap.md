@@ -118,7 +118,7 @@ Acceptance:
 ## Open Decisions (Track Here)
 
 1. **"Contents-like" wrappers**: **Decision (v1)**: no general-purpose contents-like / `Slot/asChild` prop merging (ADR 0117). Prefer GPUI-aligned single-root components; if needed later, add a restricted, validated "layout-transparent wrapper" opt-in (layout-only, no prop merging).
-2. **Root solve orchestration**: which roots we precompute (viewport only vs additional layer roots) and the required ordering relative to overlay roots (ADR 0011, ADR 0064).
+2. **Root solve orchestration**: **Decision (v1)**: viewport roots are registered during the parent/root layout pass and flushed immediately after that root, before continuing to subsequent overlay roots. This preserves the ADR 0011 ordering expectation ("viewport content before overlays") without coupling viewports into a shared solve. (Implementation: `UiTree::layout_all` viewport flush loop.)
 3. **Engine cache keys + invalidation**: exact environment keys for measurement caching (scale factor, theme revision, font stack key, model revisions).
-4. **Rounding policy**: whether/where to enable engine-level pixel rounding, and how it composes with hit-testing and paint.
+4. **Rounding policy**: **Decision (v1)**: solve in device-pixel space (`* scale_factor`) with Taffy rounding enabled, then convert results back to logical pixels (`/ scale_factor`) so hit-testing and paint share snapped bounds (GPUI-aligned).
 5. **"Not all containers use Taffy" boundary**: list-like/virtualized surfaces and other perf-critical containers that should remain specialized algorithms, and the conformance tests that keep them interoperable.
