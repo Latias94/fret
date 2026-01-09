@@ -26,3 +26,42 @@ pub(super) fn run_fullscreen_triangle_pass(
     rp.set_bind_group(0, bind_group0, &[]);
     rp.draw(0..3, 0..1);
 }
+
+pub(super) fn create_texture_bind_group(
+    device: &wgpu::Device,
+    label: &str,
+    layout: &wgpu::BindGroupLayout,
+    texture_view: &wgpu::TextureView,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(label),
+        layout,
+        entries: &[wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::TextureView(texture_view),
+        }],
+    })
+}
+
+pub(super) fn create_texture_uniform_bind_group(
+    device: &wgpu::Device,
+    label: &str,
+    layout: &wgpu::BindGroupLayout,
+    texture_view: &wgpu::TextureView,
+    uniform_binding: wgpu::BindingResource<'_>,
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(label),
+        layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(texture_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: uniform_binding,
+            },
+        ],
+    })
+}

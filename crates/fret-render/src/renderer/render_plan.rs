@@ -192,6 +192,107 @@ fn decompose_pixelate_scale(scale: u32) -> Vec<u32> {
     steps
 }
 
+fn push_scale_nearest(
+    plan: &mut RenderPlan,
+    src: PlanTarget,
+    dst: PlanTarget,
+    src_size: (u32, u32),
+    dst_size: (u32, u32),
+    mode: ScaleMode,
+    scale: u32,
+    clear: wgpu::Color,
+) {
+    plan.passes
+        .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+            src,
+            dst,
+            src_size,
+            dst_size,
+            mode,
+            scale,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+}
+
+fn push_fullscreen_blit(
+    plan: &mut RenderPlan,
+    src: PlanTarget,
+    dst: PlanTarget,
+    src_size: (u32, u32),
+    dst_size: (u32, u32),
+    clear: wgpu::Color,
+) {
+    plan.passes
+        .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src,
+            dst,
+            src_size,
+            dst_size,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+}
+
+fn append_downsample_chain(
+    plan: &mut RenderPlan,
+    mut current_target: PlanTarget,
+    mut current_size: (u32, u32),
+    steps: &[u32],
+    mut dst_a: PlanTarget,
+    mut dst_b: PlanTarget,
+    clear: wgpu::Color,
+) -> (PlanTarget, (u32, u32), Vec<((u32, u32), u32)>) {
+    let mut stack: Vec<((u32, u32), u32)> = Vec::with_capacity(steps.len());
+    for step in steps.iter().copied() {
+        let dst_size = downsampled_size(current_size, step);
+        push_scale_nearest(
+            plan,
+            current_target,
+            dst_a,
+            current_size,
+            dst_size,
+            ScaleMode::Downsample,
+            step,
+            clear,
+        );
+        stack.push((current_size, step));
+        current_target = dst_a;
+        current_size = dst_size;
+        std::mem::swap(&mut dst_a, &mut dst_b);
+    }
+    (current_target, current_size, stack)
+}
+
+fn append_upsample_chain(
+    plan: &mut RenderPlan,
+    mut current_target: PlanTarget,
+    mut current_size: (u32, u32),
+    mut stack: Vec<((u32, u32), u32)>,
+    clear: wgpu::Color,
+) -> (PlanTarget, (u32, u32)) {
+    while let Some((dst_size, step)) = stack.pop() {
+        let dst_target = match current_target {
+            PlanTarget::Intermediate1 => PlanTarget::Intermediate2,
+            PlanTarget::Intermediate2 => PlanTarget::Intermediate1,
+            PlanTarget::Intermediate0 | PlanTarget::Output => {
+                unreachable!("upsample chain must read from Intermediate1/2")
+            }
+        };
+        push_scale_nearest(
+            plan,
+            current_target,
+            dst_target,
+            current_size,
+            dst_size,
+            ScaleMode::Upscale,
+            step,
+            clear,
+        );
+        current_target = dst_target;
+        current_size = dst_size;
+    }
+    (current_target, current_size)
+}
+
 fn append_postprocess(
     plan: &mut RenderPlan,
     viewport_size: (u32, u32),
@@ -201,71 +302,36 @@ fn append_postprocess(
     match postprocess {
         DebugPostprocess::None => {}
         DebugPostprocess::OffscreenBlit => {
-            plan.passes
-                .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: PlanTarget::Intermediate0,
-                    dst: PlanTarget::Output,
-                    src_size: viewport_size,
-                    dst_size: viewport_size,
-                    load: wgpu::LoadOp::Clear(clear),
-                }));
+            push_fullscreen_blit(
+                plan,
+                PlanTarget::Intermediate0,
+                PlanTarget::Output,
+                viewport_size,
+                viewport_size,
+                clear,
+            );
         }
         DebugPostprocess::Pixelate { scale } => {
             let steps = decompose_pixelate_scale(scale);
-            let mut current_target = PlanTarget::Intermediate0;
-            let mut current_size = viewport_size;
-            let mut down_dst = PlanTarget::Intermediate2;
-            let mut down_alt = PlanTarget::Intermediate1;
-            let mut stack: Vec<((u32, u32), u32)> = Vec::with_capacity(steps.len());
-
-            for step in steps.iter().copied() {
-                let dst_size = downsampled_size(current_size, step);
-                plan.passes
-                    .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
-                        src: current_target,
-                        dst: down_dst,
-                        src_size: current_size,
-                        dst_size,
-                        mode: ScaleMode::Downsample,
-                        scale: step,
-                        load: wgpu::LoadOp::Clear(clear),
-                    }));
-                stack.push((current_size, step));
-                current_target = down_dst;
-                current_size = dst_size;
-                std::mem::swap(&mut down_dst, &mut down_alt);
-            }
-
-            while let Some((dst_size, step)) = stack.pop() {
-                let dst_target = match current_target {
-                    PlanTarget::Intermediate1 => PlanTarget::Intermediate2,
-                    PlanTarget::Intermediate2 => PlanTarget::Intermediate1,
-                    PlanTarget::Intermediate0 | PlanTarget::Output => unreachable!(
-                        "pixelate chain must not read from Intermediate0/Output at this stage"
-                    ),
-                };
-                plan.passes
-                    .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
-                        src: current_target,
-                        dst: dst_target,
-                        src_size: current_size,
-                        dst_size,
-                        mode: ScaleMode::Upscale,
-                        scale: step,
-                        load: wgpu::LoadOp::Clear(clear),
-                    }));
-                current_target = dst_target;
-                current_size = dst_size;
-            }
-
-            plan.passes
-                .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: current_target,
-                    dst: PlanTarget::Output,
-                    src_size: viewport_size,
-                    dst_size: viewport_size,
-                    load: wgpu::LoadOp::Clear(clear),
-                }));
+            let (current_target, current_size, stack) = append_downsample_chain(
+                plan,
+                PlanTarget::Intermediate0,
+                viewport_size,
+                &steps,
+                PlanTarget::Intermediate2,
+                PlanTarget::Intermediate1,
+                clear,
+            );
+            let (current_target, _current_size) =
+                append_upsample_chain(plan, current_target, current_size, stack, clear);
+            push_fullscreen_blit(
+                plan,
+                current_target,
+                PlanTarget::Output,
+                viewport_size,
+                viewport_size,
+                clear,
+            );
         }
     }
 }

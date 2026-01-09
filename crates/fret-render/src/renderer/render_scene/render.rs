@@ -772,20 +772,13 @@ impl Renderer {
                             frame_targets.require_target(pass.src, pass.src_size)
                         }
                     };
-                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("fret scale-nearest bind group"),
+                    let bind_group = create_texture_uniform_bind_group(
+                        device,
+                        "fret scale-nearest bind group",
                         layout,
-                        entries: &[
-                            wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: wgpu::BindingResource::TextureView(&src_view),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
-                                resource: self.scale_param_buffer.as_entire_binding(),
-                            },
-                        ],
-                    });
+                        &src_view,
+                        self.scale_param_buffer.as_entire_binding(),
+                    );
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
@@ -832,14 +825,12 @@ impl Renderer {
                             frame_targets.require_target(pass.src, pass.src_size)
                         }
                     };
-                    let blit_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("fret blit bind group"),
+                    let blit_bind_group = create_texture_bind_group(
+                        device,
+                        "fret blit bind group",
                         layout,
-                        entries: &[wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::TextureView(&src_view),
-                        }],
-                    });
+                        &src_view,
+                    );
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
