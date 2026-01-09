@@ -33,6 +33,12 @@ fretboard init todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
+To enable UI render asset caches (images/SVG), add `--ui-assets`:
+
+```bash
+fretboard init todo --name my-todo --ui-assets
+```
+
 Notes:
 
 - `fret-bootstrap` features:
