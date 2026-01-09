@@ -4,7 +4,7 @@ use fret_ui::UiHost;
 use crate::core::GroupId;
 use crate::ops::GraphOp;
 
-use super::super::state::ViewSnapshot;
+use super::super::state::{PendingNodeSelectAction, ViewSnapshot};
 use super::NodeGraphCanvas;
 
 pub(super) fn handle_pointer_up<H: UiHost>(
@@ -304,9 +304,45 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
-    if canvas.interaction.pending_node_drag.take().is_some() {
+    if let Some(pending) = canvas.interaction.pending_node_drag.take() {
         canvas.interaction.pending_node_resize = None;
         canvas.interaction.snap_guides = None;
+
+        if pending.select_action != PendingNodeSelectAction::None {
+            let dx = position.x.0 - pending.start_pos.x.0;
+            let dy = position.y.0 - pending.start_pos.y.0;
+            let click_distance = snapshot.interaction.node_click_distance.max(0.0);
+            let is_click =
+                click_distance == 0.0 || (dx * dx + dy * dy) <= click_distance * click_distance;
+
+            if is_click {
+                let node = pending.primary;
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_groups.clear();
+
+                    match pending.select_action {
+                        PendingNodeSelectAction::Toggle => {
+                            if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node) {
+                                s.selected_nodes.remove(ix);
+                            } else {
+                                s.selected_nodes.push(node);
+                            }
+                        }
+                        PendingNodeSelectAction::Add => {
+                            if !s.selected_nodes.iter().any(|id| *id == node) {
+                                s.selected_nodes.push(node);
+                            }
+                        }
+                        PendingNodeSelectAction::None => {}
+                    }
+
+                    s.draw_order.retain(|id| *id != node);
+                    s.draw_order.push(node);
+                });
+            }
+        }
+
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

@@ -21,10 +21,9 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost>(
     };
 
     let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    let threshold_graph = threshold_screen / zoom.max(1.0e-6);
     let dx = position.x.0 - pending.start_pos.x.0;
     let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_graph > 0.0 && dx * dx + dy * dy < threshold_graph * threshold_graph {
+    if threshold_screen > 0.0 && dx * dx + dy * dy < threshold_screen * threshold_screen {
         return true;
     }
 

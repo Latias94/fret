@@ -133,7 +133,7 @@ pub enum GraphFileError {
 /// Node graph editor view-state.
 ///
 /// This is intentionally separate from graph semantics and may be stored per-user/per-project.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeGraphViewState {
     /// Canvas pan in graph space.
     #[serde(default)]
@@ -160,6 +160,21 @@ pub struct NodeGraphViewState {
     /// Optional interaction tuning (snap, connection mode, auto-pan, etc.).
     #[serde(default, skip_serializing_if = "NodeGraphInteractionState::is_default")]
     pub interaction: NodeGraphInteractionState,
+}
+
+impl Default for NodeGraphViewState {
+    fn default() -> Self {
+        Self {
+            pan: crate::core::CanvasPoint::default(),
+            zoom: default_zoom(),
+            selected_nodes: Vec::new(),
+            selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
+            draw_order: Vec::new(),
+            group_draw_order: Vec::new(),
+            interaction: NodeGraphInteractionState::default(),
+        }
+    }
 }
 
 fn default_zoom() -> f32 {
@@ -220,7 +235,7 @@ impl Default for NodeGraphAutoPanTuning {
 }
 
 /// Optional interaction tuning persisted as part of editor view state.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
     /// Connection targeting strategy.
     #[serde(default)]
@@ -258,6 +273,15 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
 
+    /// Click tolerance in screen pixels for node selection gestures.
+    ///
+    /// When a pointer-down on a node does not exceed this distance before pointer-up, the action
+    /// is treated as a click (useful for modifier-based selection toggles).
+    ///
+    /// This is similar to XyFlow's `nodeClickDistance` (d3-drag `clickDistance`).
+    #[serde(default = "default_node_click_distance")]
+    pub node_click_distance: f32,
+
     /// Drag threshold in screen pixels before a connection drag starts.
     #[serde(default = "default_connection_drag_threshold")]
     pub connection_drag_threshold: f32,
@@ -284,6 +308,27 @@ pub struct NodeGraphInteractionState {
 impl NodeGraphInteractionState {
     fn is_default(this: &Self) -> bool {
         this == &Self::default()
+    }
+}
+
+impl Default for NodeGraphInteractionState {
+    fn default() -> Self {
+        Self {
+            connection_mode: NodeGraphConnectionMode::default(),
+            connection_radius: default_connection_radius(),
+            reconnect_radius: default_reconnect_radius(),
+            edge_interaction_width: default_edge_interaction_width(),
+            snap_to_grid: false,
+            snap_grid: default_snap_grid(),
+            snaplines: default_snaplines(),
+            snaplines_threshold: default_snaplines_threshold(),
+            node_drag_threshold: default_node_drag_threshold(),
+            node_click_distance: default_node_click_distance(),
+            connection_drag_threshold: default_connection_drag_threshold(),
+            auto_pan: NodeGraphAutoPanTuning::default(),
+            translate_extent: None,
+            node_extent: None,
+        }
     }
 }
 
@@ -316,6 +361,10 @@ fn default_snaplines_threshold() -> f32 {
 
 fn default_node_drag_threshold() -> f32 {
     1.0
+}
+
+fn default_node_click_distance() -> f32 {
+    2.0
 }
 
 fn default_connection_drag_threshold() -> f32 {

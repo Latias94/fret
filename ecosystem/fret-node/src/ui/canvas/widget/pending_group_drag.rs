@@ -9,7 +9,7 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    zoom: f32,
+    _zoom: f32,
 ) -> bool {
     if canvas.interaction.group_drag.is_some() {
         return false;
@@ -19,10 +19,9 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost>(
     };
 
     let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-    let threshold_graph = threshold_screen / zoom;
     let dx = position.x.0 - pending.start_pos.x.0;
     let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_graph > 0.0 && dx * dx + dy * dy < threshold_graph * threshold_graph {
+    if threshold_screen > 0.0 && dx * dx + dy * dy < threshold_screen * threshold_screen {
         return true;
     }
 

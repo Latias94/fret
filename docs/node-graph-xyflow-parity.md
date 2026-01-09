@@ -198,13 +198,13 @@ High-level layering (ADR 0135):
 
 ## 4.1 Drag threshold + click distance
 
-- [x] **Node drag threshold**
+- [~] **Node drag threshold**
   - XyFlow: store `nodeDragThreshold`; used by `XYDrag` (`packages/system/src/xydrag/XYDrag.ts`)
-  - fret-node: implemented for wire drag (`connection_drag_threshold`) and portal number drag; node-drag threshold parity TBD
+  - fret-node: `NodeGraphInteractionState.node_drag_threshold` (screen px), used by pending node/group/resize/connect workflows
 
-- [ ] **Node click distance**
+- [~] **Node click distance**
   - XyFlow: `nodeClickDistance` (per-node) passed to `useDrag(...)` by `NodeWrapper`
-  - fret-node: not implemented (recommended to add to `NodeGraphInteractionState`)
+  - fret-node: `NodeGraphInteractionState.node_click_distance` (screen px), used to treat modifier gestures as clicks
 
 ## 4.2 Drag handle (restrict drag start area)
 

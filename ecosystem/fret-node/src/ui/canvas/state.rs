@@ -77,12 +77,26 @@ pub(crate) struct SearcherState {
     pub(crate) scroll: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PendingNodeSelectAction {
+    None,
+    Toggle,
+    Add,
+}
+
+impl Default for PendingNodeSelectAction {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct PendingNodeDrag {
     pub(crate) primary: GraphNodeId,
     pub(crate) nodes: Vec<GraphNodeId>,
     pub(crate) grab_offset: Point,
     pub(crate) start_pos: Point,
+    pub(crate) select_action: PendingNodeSelectAction,
 }
 
 #[derive(Debug, Clone)]

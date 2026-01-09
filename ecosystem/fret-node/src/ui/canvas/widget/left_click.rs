@@ -5,7 +5,7 @@ use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 
 use super::super::state::{
     EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
-    PendingWireDrag, ViewSnapshot, WireDragKind,
+    PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -228,36 +228,40 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             );
             let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
             let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
-
-            canvas.update_view_state(cx.app, |s| {
-                s.selected_edges.clear();
-                s.selected_groups.clear();
-                if multi_mod {
-                    if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node) {
-                        s.selected_nodes.remove(ix);
-                    } else {
-                        s.selected_nodes.push(node);
-                    }
-                } else if !s.selected_nodes.iter().any(|id| *id == node) {
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node);
+            let select_action = if multi_mod {
+                if modifiers.shift && !(modifiers.ctrl || modifiers.meta) {
+                    PendingNodeSelectAction::Add
+                } else {
+                    PendingNodeSelectAction::Toggle
                 }
-                s.draw_order.retain(|id| *id != node);
-                s.draw_order.push(node);
-            });
+            } else {
+                PendingNodeSelectAction::None
+            };
 
             if !multi_mod {
-                let nodes_for_drag = (already_selected && snapshot.selected_nodes.len() > 1)
-                    .then(|| snapshot.selected_nodes.clone())
-                    .unwrap_or_else(|| vec![node]);
-                canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
-                    primary: node,
-                    nodes: nodes_for_drag,
-                    grab_offset: offset,
-                    start_pos: position,
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_groups.clear();
+                    if !s.selected_nodes.iter().any(|id| *id == node) {
+                        s.selected_nodes.clear();
+                        s.selected_nodes.push(node);
+                    }
+                    s.draw_order.retain(|id| *id != node);
+                    s.draw_order.push(node);
                 });
-                cx.capture_pointer(cx.node);
             }
+
+            let nodes_for_drag = (already_selected && snapshot.selected_nodes.len() > 1)
+                .then(|| snapshot.selected_nodes.clone())
+                .unwrap_or_else(|| vec![node]);
+            canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
+                primary: node,
+                nodes: nodes_for_drag,
+                grab_offset: offset,
+                start_pos: position,
+                select_action,
+            });
+            cx.capture_pointer(cx.node);
 
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

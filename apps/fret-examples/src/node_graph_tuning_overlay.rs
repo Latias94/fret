@@ -17,6 +17,10 @@ enum TuningHit {
     EdgeWidthInc,
     ConnThresholdDec,
     ConnThresholdInc,
+    NodeDragThresholdDec,
+    NodeDragThresholdInc,
+    NodeClickDistanceDec,
+    NodeClickDistanceInc,
     AutoPanMarginDec,
     AutoPanMarginInc,
     AutoPanSpeedDec,
@@ -63,7 +67,7 @@ impl NodeGraphTuningOverlay {
         let btn = self.style.controls_button_size.max(22.0);
 
         let panel_w = 280.0;
-        let rows = 6.0;
+        let rows = 8.0;
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -152,7 +156,33 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 4: auto_pan.margin
+        // Row 4: node_drag_threshold
+        let _ = add_row(
+            &mut hits,
+            cy,
+            left,
+            right,
+            row_h,
+            btn,
+            TuningHit::NodeDragThresholdDec,
+            TuningHit::NodeDragThresholdInc,
+        );
+        cy += row_h + gap;
+
+        // Row 5: node_click_distance
+        let _ = add_row(
+            &mut hits,
+            cy,
+            left,
+            right,
+            row_h,
+            btn,
+            TuningHit::NodeClickDistanceDec,
+            TuningHit::NodeClickDistanceInc,
+        );
+        cy += row_h + gap;
+
+        // Row 6: auto_pan.margin
         let _ = add_row(
             &mut hits,
             cy,
@@ -165,7 +195,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 5: auto_pan.speed
+        // Row 7: auto_pan.speed
         let _ = add_row(
             &mut hits,
             cy,
@@ -236,6 +266,22 @@ impl NodeGraphTuningOverlay {
             TuningHit::ConnThresholdInc => {
                 s.interaction.connection_drag_threshold =
                     (s.interaction.connection_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::NodeDragThresholdDec => {
+                s.interaction.node_drag_threshold =
+                    (s.interaction.node_drag_threshold - 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::NodeDragThresholdInc => {
+                s.interaction.node_drag_threshold =
+                    (s.interaction.node_drag_threshold + 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::NodeClickDistanceDec => {
+                s.interaction.node_click_distance =
+                    (s.interaction.node_click_distance - 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::NodeClickDistanceInc => {
+                s.interaction.node_click_distance =
+                    (s.interaction.node_click_distance + 0.5 * step_scale).clamp(0.0, 24.0);
             }
             TuningHit::AutoPanMarginDec => {
                 s.interaction.auto_pan.margin =
@@ -544,6 +590,28 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             format!("{:.2}", state.interaction.connection_drag_threshold),
             TuningHit::ConnThresholdDec,
             TuningHit::ConnThresholdInc,
+        );
+        cy += row_h + gap;
+
+        draw_step_row(
+            self,
+            cx,
+            cy,
+            "Node drag threshold",
+            format!("{:.2}", state.interaction.node_drag_threshold),
+            TuningHit::NodeDragThresholdDec,
+            TuningHit::NodeDragThresholdInc,
+        );
+        cy += row_h + gap;
+
+        draw_step_row(
+            self,
+            cx,
+            cy,
+            "Node click distance",
+            format!("{:.2}", state.interaction.node_click_distance),
+            TuningHit::NodeClickDistanceDec,
+            TuningHit::NodeClickDistanceInc,
         );
         cy += row_h + gap;
 
