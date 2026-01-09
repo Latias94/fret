@@ -55,6 +55,7 @@ pub(super) enum RenderPlanPass {
 pub(super) struct ClipMaskPass {
     pub(super) dst: PlanTarget,
     pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) uniform_index: u32,
 }
 
@@ -396,6 +397,7 @@ impl RenderPlan {
                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
                         dst: PlanTarget::Mask0,
                         dst_size: viewport_size,
+                        dst_scissor: Some(scissor),
                         uniform_index,
                     }));
                     Some(PlanTarget::Mask0)
@@ -631,6 +633,7 @@ impl RenderPlan {
                                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
                                         dst: PlanTarget::Mask0,
                                         dst_size: viewport_size,
+                                        dst_scissor: None,
                                         uniform_index: scope.uniform_index,
                                     }));
                                     Some(PlanTarget::Mask0)

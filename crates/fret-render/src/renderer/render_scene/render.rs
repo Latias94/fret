@@ -1679,6 +1679,11 @@ impl Renderer {
                     });
                     rp.set_pipeline(pipeline);
                     rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    if let Some(scissor) = pass.dst_scissor {
+                        if scissor.w != 0 && scissor.h != 0 {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        }
+                    }
                     rp.draw(0..3, 0..1);
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
