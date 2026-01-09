@@ -2538,6 +2538,7 @@ mod tests {
             Rc::new(Cell::new(None));
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
+        let scroll_handle = fret_ui::scroll::ScrollHandle::default();
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -2552,7 +2553,7 @@ mod tests {
             )
         }
 
-        fn render_frame(
+        fn render_scroll_frame(
             ui: &mut UiTree<App>,
             app: &mut App,
             services: &mut dyn fret_core::UiServices,
@@ -2560,6 +2561,7 @@ mod tests {
             bounds: Rect,
             trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
             content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            scroll_handle: &fret_ui::scroll::ScrollHandle,
         ) {
             OverlayController::begin_frame(app, window);
             let root = fret_ui::declarative::render_root(
@@ -2583,7 +2585,7 @@ mod tests {
                                         layout
                                     },
                                     axis: fret_ui::element::ScrollAxis::Y,
-                                    scroll_handle: None,
+                                    scroll_handle: Some(scroll_handle.clone()),
                                     probe_unbounded: true,
                                 },
                                 |cx| {
@@ -2618,13 +2620,26 @@ mod tests {
                                     .into_element(cx);
                                     content_id_out.set(Some(content.id));
 
-                                    vec![
-                                        Tooltip::new(trigger, content)
-                                            .open_delay_frames(0)
-                                            .close_delay_frames(0)
-                                            .disable_hoverable_content(false)
-                                            .into_element(cx),
-                                    ]
+                                    vec![cx.column(
+                                        fret_ui::element::ColumnProps {
+                                            gap: Px(0.0),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            let mut out: Vec<AnyElement> = Vec::new();
+                                            out.push(
+                                                Tooltip::new(trigger, content)
+                                                    .open_delay_frames(0)
+                                                    .close_delay_frames(0)
+                                                    .disable_hoverable_content(false)
+                                                    .into_element(cx),
+                                            );
+                                            for _ in 0..50 {
+                                                out.push(cx.text("filler"));
+                                            }
+                                            out
+                                        },
+                                    )]
                                 },
                             );
 
@@ -2638,7 +2653,7 @@ mod tests {
 
         // Frame 1: layout and read trigger bounds.
         app.set_frame_id(FrameId(1));
-        render_frame(
+        render_scroll_frame(
             &mut ui,
             &mut app,
             &mut services,
@@ -2646,6 +2661,7 @@ mod tests {
             bounds,
             trigger_id.clone(),
             content_id.clone(),
+            &scroll_handle,
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -2672,7 +2688,7 @@ mod tests {
 
         // Frame 2: tooltip should be open.
         app.set_frame_id(FrameId(2));
-        render_frame(
+        render_scroll_frame(
             &mut ui,
             &mut app,
             &mut services,
@@ -2680,6 +2696,7 @@ mod tests {
             bounds,
             trigger_id.clone(),
             content_id.clone(),
+            &scroll_handle,
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -2697,14 +2714,18 @@ mod tests {
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
                 position: trigger_point,
-                delta: Point::new(Px(0.0), Px(40.0)),
+                delta: Point::new(Px(0.0), Px(-40.0)),
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );
+        assert!(
+            scroll_handle.offset().y.0 > 0.01,
+            "expected the trigger scroll container to consume wheel input"
+        );
 
         app.set_frame_id(FrameId(3));
-        render_frame(
+        render_scroll_frame(
             &mut ui,
             &mut app,
             &mut services,
@@ -2712,6 +2733,7 @@ mod tests {
             bounds,
             trigger_id.clone(),
             content_id.clone(),
+            &scroll_handle,
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -2741,6 +2763,8 @@ mod tests {
             Rc::new(Cell::new(None));
         let scroll_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
+        let scroll_with_trigger_handle = fret_ui::scroll::ScrollHandle::default();
+        let other_scroll_handle = fret_ui::scroll::ScrollHandle::default();
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -2764,6 +2788,8 @@ mod tests {
             trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
             content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
             scroll_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            scroll_with_trigger_handle: fret_ui::scroll::ScrollHandle,
+            other_scroll_handle: fret_ui::scroll::ScrollHandle,
         ) {
             OverlayController::begin_frame(app, window);
             let root = fret_ui::declarative::render_root(
@@ -2799,7 +2825,7 @@ mod tests {
                                                 layout
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
-                                            scroll_handle: None,
+                                            scroll_handle: Some(scroll_with_trigger_handle.clone()),
                                             probe_unbounded: true,
                                         },
                                         |cx| {
@@ -2835,13 +2861,26 @@ mod tests {
                                             .into_element(cx);
                                             content_id_out.set(Some(content.id));
 
-                                            vec![
-                                                Tooltip::new(trigger, content)
-                                                    .open_delay_frames(0)
-                                                    .close_delay_frames(0)
-                                                    .disable_hoverable_content(false)
-                                                    .into_element(cx),
-                                            ]
+                                            vec![cx.column(
+                                                fret_ui::element::ColumnProps {
+                                                    gap: Px(0.0),
+                                                    ..Default::default()
+                                                },
+                                                |cx| {
+                                                    let mut out: Vec<AnyElement> = Vec::new();
+                                                    out.push(
+                                                        Tooltip::new(trigger, content)
+                                                            .open_delay_frames(0)
+                                                            .close_delay_frames(0)
+                                                            .disable_hoverable_content(false)
+                                                            .into_element(cx),
+                                                    );
+                                                    for _ in 0..50 {
+                                                        out.push(cx.text("filler"));
+                                                    }
+                                                    out
+                                                },
+                                            )]
                                         },
                                     );
 
@@ -2854,10 +2893,24 @@ mod tests {
                                                 layout
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
-                                            scroll_handle: None,
+                                            scroll_handle: Some(other_scroll_handle.clone()),
                                             probe_unbounded: true,
                                         },
-                                        |_cx| Vec::new(),
+                                        |cx| {
+                                            vec![cx.column(
+                                                fret_ui::element::ColumnProps {
+                                                    gap: Px(0.0),
+                                                    ..Default::default()
+                                                },
+                                                |cx| {
+                                                    let mut out: Vec<AnyElement> = Vec::new();
+                                                    for _ in 0..50 {
+                                                        out.push(cx.text("filler"));
+                                                    }
+                                                    out
+                                                },
+                                            )]
+                                        },
                                     );
                                     scroll_id_out.set(Some(other_scroll.id));
 
@@ -2882,6 +2935,8 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
             scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -2926,6 +2981,8 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
             scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -2942,10 +2999,14 @@ mod tests {
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
                 position: other_scroll_point,
-                delta: Point::new(Px(0.0), Px(40.0)),
+                delta: Point::new(Px(0.0), Px(-40.0)),
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
             }),
+        );
+        assert!(
+            other_scroll_handle.offset().y.0 > 0.01,
+            "expected the unrelated scroll container to consume wheel input"
         );
 
         app.set_frame_id(FrameId(3));
@@ -2958,6 +3019,8 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
             scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
