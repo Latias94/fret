@@ -17,12 +17,12 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-09
 - ADR count (numbered): 139
 
-- Aligned: 37
-- Aligned (with known gaps): 4
+- Aligned: 36
+- Aligned (with known gaps): 5
 - N/A (superseded): 1
-- Not audited: 87
+- Not audited: 86
 - Not implemented: 3
-- Partially aligned: 7
+- Partially aligned: 8
 
 ## Matrix
 
@@ -131,7 +131,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0101-headless-table-engine.md`](0101-headless-table-engine.md) | Accepted | Not audited |  |
 | [`0102-semantic-theme-keys-and-extensible-token-registry.md`](0102-semantic-theme-keys-and-extensible-token-registry.md) | Accepted | Not audited |  |
 | [`0103-text-decorations-and-markdown-theme-tokens.md`](0103-text-decorations-and-markdown-theme-tokens.md) | Proposed | Not audited |  |
-| [`0104-layout-driven-anchored-overlays.md`](0104-layout-driven-anchored-overlays.md) | Accepted | Aligned | Anchored primitive: `crates/fret-ui/src/element.rs` (`AnchoredProps`); tests: `crates/fret-ui/src/declarative/tests/anchored.rs`. |
+| [`0104-layout-driven-anchored-overlays.md`](0104-layout-driven-anchored-overlays.md) | Accepted | Aligned (with known gaps) | `Anchored` primitive exists: `crates/fret-ui/src/element.rs` (`AnchoredProps`), layout-driven placement + render-transform mapping: `crates/fret-ui/src/declarative/host_widget/layout.rs` (`ElementInstance::Anchored`) + `crates/fret-ui/src/declarative/host_widget.rs` (`render_transform`); tests: `crates/fret-ui/src/declarative/tests/anchored.rs`. Gap: ecosystem overlays still mostly compute placement from last-frame bounds (`ecosystem/fret-ui-kit/src/overlay.rs`, `ecosystem/fret-ui-kit/src/primitives/popper.rs`) instead of using intrinsic sizing under `Anchored`. |
 | [`0106-node-graph-editor-and-typed-connections.md`](0106-node-graph-editor-and-typed-connections.md) | Proposed | Not audited |  |
 | [`0106-plot-overlays-and-annotations.md`](0106-plot-overlays-and-annotations.md) | Accepted | Not audited |  |
 | [`0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`](0107-dev-hotpatch-subsecond-and-hot-reload-safety.md) | Accepted | Not audited |  |
@@ -144,7 +144,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0113-ecosystem-integration-contracts.md`](0113-ecosystem-integration-contracts.md) | Accepted | Not audited |  |
 | [`0114-ui-assets-facade-and-golden-path-wiring.md`](0114-ui-assets-facade-and-golden-path-wiring.md) | Accepted | Not audited |  |
 | [`0115-available-space-and-non-reentrant-measurement.md`](0115-available-space-and-non-reentrant-measurement.md) | Proposed | Not audited |  |
-| [`0116-window-scoped-layout-engine-and-viewport-roots.md`](0116-window-scoped-layout-engine-and-viewport-roots.md) | Proposed | Not audited |  |
+| [`0116-window-scoped-layout-engine-and-viewport-roots.md`](0116-window-scoped-layout-engine-and-viewport-roots.md) | Proposed | Partially aligned | Prototype window-owned engine + viewport roots exist behind `layout-engine-v2`: engine core `crates/fret-ui/src/layout_engine.rs` + flow builder `crates/fret-ui/src/layout_engine/flow.rs`; viewport root registration + independent solves: `crates/fret-ui/src/tree/layout.rs` (`register_viewport_root`, `precompute_viewport_root_flow_island`) + tests `crates/fret-ui/src/declarative/tests/layout.rs` (viewport roots do not couple fill). Gaps vs ADR: not yet a full window-wide “request/build then compute/apply” graph; current usage is still container-driven islands that temporarily take/put the engine (e.g. `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`, `grid.rs`). |
 | [`0117-trigger-composition-and-no-slot-aschild.md`](0117-trigger-composition-and-no-slot-aschild.md) | Proposed | Not audited |  |
 | [`0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`](0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md) | Proposed | Not audited |  |
 | [`0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`](0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md) | Proposed | Not audited |  |
