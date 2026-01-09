@@ -9,10 +9,10 @@ use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
 
 #[derive(Debug, Default, Clone)]
-pub struct SelectionStage {
+pub struct DataViewStage {
     desired: Vec<DataViewKey>,
     cursor: usize,
-    cache: BTreeMap<DataViewKey, SelectionEntry>,
+    cache: BTreeMap<DataViewKey, DataViewEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -53,7 +53,7 @@ impl DataViewKey {
 }
 
 #[derive(Debug, Clone)]
-enum SelectionEntry {
+enum DataViewEntry {
     Ready {
         data_rev: Revision,
         indices: Arc<[u32]>,
@@ -66,7 +66,7 @@ enum SelectionEntry {
     },
 }
 
-impl SelectionStage {
+impl DataViewStage {
     pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore, view: &ViewState) {
         self.desired.clear();
         self.cursor = 0;
@@ -151,7 +151,7 @@ impl SelectionStage {
             let DataViewKind::XFilter { start, end, .. } = key.kind;
             self.cache.insert(
                 *key,
-                SelectionEntry::Building {
+                DataViewEntry::Building {
                     data_rev: table.revision,
                     next: start as usize,
                     end: end as usize,
@@ -191,10 +191,10 @@ impl SelectionStage {
 
             let data_rev = table.revision;
             match entry {
-                SelectionEntry::Ready { data_rev: r, .. } => {
+                DataViewEntry::Ready { data_rev: r, .. } => {
                     if *r != data_rev {
                         let DataViewKind::XFilter { start, end, .. } = key.kind;
-                        *entry = SelectionEntry::Building {
+                        *entry = DataViewEntry::Building {
                             data_rev,
                             next: start as usize,
                             end: end as usize,
@@ -205,7 +205,7 @@ impl SelectionStage {
                         continue;
                     }
                 }
-                SelectionEntry::Building {
+                DataViewEntry::Building {
                     data_rev: r,
                     next,
                     indices,
@@ -220,7 +220,7 @@ impl SelectionStage {
                 }
             }
 
-            let SelectionEntry::Building {
+            let DataViewEntry::Building {
                 next, end, indices, ..
             } = entry
             else {
@@ -277,7 +277,7 @@ impl SelectionStage {
 
             if *next >= end_limit {
                 let frozen: Arc<[u32]> = std::mem::take(indices).into();
-                *entry = SelectionEntry::Ready {
+                *entry = DataViewEntry::Ready {
                     data_rev,
                     indices: frozen,
                 };
@@ -302,7 +302,7 @@ impl SelectionStage {
     ) -> Option<RowSelection> {
         let key = DataViewKey::x_filter(dataset, x_col, selection_range, filter);
         match self.cache.get(&key) {
-            Some(SelectionEntry::Ready { data_rev, indices }) if *data_rev == table_rev => {
+            Some(DataViewEntry::Ready { data_rev, indices }) if *data_rev == table_rev => {
                 Some(RowSelection::Indices(indices.clone()))
             }
             _ => None,
@@ -341,14 +341,14 @@ mod tests {
         range: RowRange,
         filter: AxisFilter1D,
         data_rev: Revision,
-    ) -> SelectionStage {
+    ) -> DataViewStage {
         let key = DataViewKey::x_filter(dataset_id, x_col, range, filter);
-        let mut stage = SelectionStage::default();
+        let mut stage = DataViewStage::default();
         stage.desired.push(key);
         let DataViewKind::XFilter { start, end, .. } = key.kind;
         stage.cache.insert(
             key,
-            SelectionEntry::Building {
+            DataViewEntry::Building {
                 data_rev,
                 next: start as usize,
                 end: end as usize,

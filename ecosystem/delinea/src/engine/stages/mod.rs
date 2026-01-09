@@ -1,5 +1,5 @@
+mod data_view;
 mod marks;
-mod selection;
 
+pub use data_view::*;
 pub use marks::*;
-pub use selection::*;

@@ -189,7 +189,7 @@ impl MarksStage {
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
-        selection_stage: &crate::engine::stages::SelectionStage,
+        selection_stage: &crate::engine::stages::DataViewStage,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,

@@ -5,7 +5,7 @@ use crate::data::DatasetStore;
 use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
-use crate::engine::stages::{MarksStage, SelectionStage};
+use crate::engine::stages::{DataViewStage, MarksStage};
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
@@ -109,7 +109,7 @@ pub struct ChartEngine {
     output: ChartOutput,
     stats: EngineStats,
     view: ViewState,
-    selection_stage: SelectionStage,
+    data_view_stage: DataViewStage,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
     axis_pointer_cache: AxisPointerCache,
@@ -150,7 +150,7 @@ impl ChartEngine {
             output: ChartOutput::default(),
             stats: EngineStats::default(),
             view: ViewState::default(),
-            selection_stage: SelectionStage::default(),
+            data_view_stage: DataViewStage::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
@@ -593,9 +593,9 @@ impl ChartEngine {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
         }
 
-        self.selection_stage
+        self.data_view_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
-        let selection_done = self.selection_stage.step(&self.datasets, &mut budget);
+        let selection_done = self.data_view_stage.step(&self.datasets, &mut budget);
 
         self.marks_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
@@ -616,7 +616,7 @@ impl ChartEngine {
             &self.datasets,
             &self.state,
             &self.view,
-            &self.selection_stage,
+            &self.data_view_stage,
             viewport,
             &mut budget,
             &mut self.lod_scratch,
