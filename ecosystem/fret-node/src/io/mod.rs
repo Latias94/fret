@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{CanvasSize, EdgeId, Graph, GraphId, GroupId, NodeId};
+use crate::core::{CanvasRect, CanvasSize, EdgeId, Graph, GraphId, GroupId, NodeId};
 
 /// Graph file format version (v1).
 pub const GRAPH_FILE_VERSION: u32 = 1;
@@ -265,6 +265,20 @@ pub struct NodeGraphInteractionState {
     /// Auto-pan configuration.
     #[serde(default)]
     pub auto_pan: NodeGraphAutoPanTuning,
+
+    /// Optional bounds for panning the viewport (XyFlow `translateExtent`).
+    ///
+    /// This is expressed in canvas coordinates and constrains the visible viewport rectangle
+    /// (in canvas space) to stay within this extent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub translate_extent: Option<CanvasRect>,
+
+    /// Optional bounds for moving/resizing nodes (XyFlow `nodeExtent`).
+    ///
+    /// This is expressed in canvas coordinates and constrains node rectangles to stay within the
+    /// extent. Parent groups may further constrain movement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_extent: Option<CanvasRect>,
 }
 
 impl NodeGraphInteractionState {

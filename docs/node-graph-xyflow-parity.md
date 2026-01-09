@@ -98,9 +98,9 @@ High-level layering (ADR 0135):
 
 ## 1.3 View constraints and persistence
 
-- [ ] **Translate extent (world bounds) constraint**
+- [~] **Translate extent (world bounds) constraint**
   - XyFlow: `translateExtent` in `XYPanZoom` constrain pipeline
-  - fret-node: not implemented; should live in `NodeGraphInteractionState` (per-view policy)
+  - fret-node: `NodeGraphInteractionState.translate_extent` clamped in `NodeGraphCanvas::update_view_state(...)`
 
 - [x] **Fit view / frame all / frame selection**
   - XyFlow: `fitViewport(...)` from `@xyflow/system`, surfaced via `useReactFlow().fitView()` and `<Controls />`
@@ -224,9 +224,9 @@ High-level layering (ADR 0135):
 
 ## 4.4 Node extent / movement bounds
 
-- [ ] **Global node extent**
+- [~] **Global node extent**
   - XyFlow: store `nodeExtent`
-  - fret-node: not implemented; should be part of interaction state and applied in move/resize
+  - fret-node: `NodeGraphInteractionState.node_extent` applied in node drag + node resize
 
 - [ ] **Per-node extent**
   - XyFlow: `node.extent` supports `'parent'` or custom extents; also `expandParent`

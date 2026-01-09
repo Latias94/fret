@@ -130,17 +130,28 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
                 y: start.y + delta.y,
             };
 
+            let Some(node_geom) = geom_for_extent.nodes.get(id) else {
+                continue;
+            };
+            let node_w = node_geom.rect.size.width.0;
+            let node_h = node_geom.rect.size.height.0;
+
+            if let Some(extent) = snapshot.interaction.node_extent {
+                let min_x = extent.origin.x;
+                let min_y = extent.origin.y;
+                let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
+                let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+                to.x = to.x.clamp(min_x, max_x);
+                to.y = to.y.clamp(min_y, max_y);
+            }
+
             if let Some(parent) = node.parent
                 && let Some(group) = g.groups.get(&parent)
-                && let Some(node_geom) = geom_for_extent.nodes.get(id)
             {
-                let node_w = node_geom.rect.size.width.0;
-                let node_h = node_geom.rect.size.height.0;
                 let min_x = group.rect.origin.x;
                 let min_y = group.rect.origin.y;
                 let max_x = group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
                 let max_y = group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
-
                 to.x = to.x.clamp(min_x, max_x);
                 to.y = to.y.clamp(min_y, max_y);
             }

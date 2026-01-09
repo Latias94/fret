@@ -46,6 +46,13 @@ pub(super) fn handle_node_resize_move<H: UiHost>(
             return;
         };
 
+        if let Some(extent) = _snapshot.interaction.node_extent {
+            let max_w = (extent.origin.x + extent.size.width - node.pos.x).max(min_w);
+            let max_h = (extent.origin.y + extent.size.height - node.pos.y).max(min_h);
+            new_size.width = new_size.width.min(max_w);
+            new_size.height = new_size.height.min(max_h);
+        }
+
         if let Some(parent) = node.parent
             && let Some(group) = g.groups.get(&parent)
         {
