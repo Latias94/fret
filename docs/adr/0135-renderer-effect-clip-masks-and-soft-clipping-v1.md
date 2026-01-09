@@ -59,6 +59,25 @@ When clip masks cannot be produced within budgets (ADR 0120), the renderer must 
 
 Degradation must be layout-invariant and must not change hit-testing geometry.
 
+### 4) Mask semantics are coverage-based and must gate effect outputs
+
+The renderer-internal clip mask represents **coverage** in `[0, 1]` for the effective clip stack:
+
+- Rectangular clips may be represented as a hard scissor or hard mask.
+- Rounded clips must be represented as a soft (anti-aliased) coverage mask (ADR 0063 / ADR 0030).
+
+Effect pipelines must apply masks in a way that preserves visual correctness:
+
+- The clip mask must gate **outputs** (writes/composites) of effect passes.
+- Implementations may also use the mask to reduce work (early-out), but must not rely on input-only masking
+  as the sole mechanism for correctness.
+
+Rationale:
+
+- For blur-like filters, masking only the input causes energy loss near the boundary and produces halos/seams.
+  Output gating (coverage multiplication and/or masked composite) preserves smooth edges while keeping `bounds`
+  as computation-only (ADR 0119).
+
 ## Semantics (Renderer v3)
 
 ### A) FilterContent
@@ -93,7 +112,7 @@ Key property:
 Create a mask texture at the working resolution (full size or downsampled) that stores coverage in `R8Unorm`.
 
 - A `MaskPass` rasterizes the current clip stack into the mask.
-- Fullscreen effect passes sample the mask and blend/overwrite only where coverage > 0 (or multiply by coverage).
+- Fullscreen effect passes sample the mask and gate outputs using coverage multiplication and/or masked compositing.
 
 Benefits:
 
@@ -138,7 +157,7 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 
 ## Open Questions
 
-- Mask blending semantics: multiply output alpha vs alpha-clip discard. (Recommendation: coverage multiplication for smooth edges.)
+- Whether some steps should use “hard discard” for performance (rect-only) vs always coverage-based (rounded clips).
 - Nested rounded clips: whether to rasterize full clip stack into one mask, or limit to a bounded maximum and degrade.
 - Path clips (`PushClipPath`): when and how to extend beyond rounded rects.
 
@@ -151,4 +170,3 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 - Effect semantics: `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
 - Budgets + degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - GPUI reference (rect content masks, premul blending): `repo-ref/zed/crates/gpui`
-
