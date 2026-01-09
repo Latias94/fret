@@ -73,7 +73,10 @@ impl ElementHostWidget {
         // effectively-unbounded available height (e.g. Stack/Pressable measuring with
         // `Px(1.0e9)`). Those passes are not the final viewport constraints and would
         // otherwise clear the request before the real layout happens.
-        let is_probe_layout = cx.available.height.0 >= 1.0e8;
+        let is_probe_layout = match axis {
+            fret_core::Axis::Vertical => cx.available.height.0 >= 1.0e8,
+            fret_core::Axis::Horizontal => cx.available.width.0 >= 1.0e8,
+        };
 
         if !is_probe_layout
             && viewport.0 > 0.0
@@ -124,29 +127,60 @@ impl ElementHostWidget {
 
         match props.measure_mode {
             crate::element::VirtualListMeasureMode::Measured => {
+                #[cfg(feature = "layout-engine-v2")]
+                let item_constraints = LayoutConstraints::new(
+                    LayoutSize::new(
+                        match axis {
+                            fret_core::Axis::Vertical => Some(size.width),
+                            fret_core::Axis::Horizontal => None,
+                        },
+                        match axis {
+                            fret_core::Axis::Vertical => None,
+                            fret_core::Axis::Horizontal => Some(size.height),
+                        },
+                    ),
+                    LayoutSize::new(
+                        match axis {
+                            fret_core::Axis::Vertical => AvailableSpace::Definite(size.width),
+                            fret_core::Axis::Horizontal => AvailableSpace::MaxContent,
+                        },
+                        match axis {
+                            fret_core::Axis::Vertical => AvailableSpace::MaxContent,
+                            fret_core::Axis::Horizontal => AvailableSpace::Definite(size.height),
+                        },
+                    ),
+                );
+
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let start = metrics.offset_for_index(idx);
-                    let origin = match axis {
-                        fret_core::Axis::Vertical => {
-                            let y = cx.bounds.origin.y.0 + start.0 - offset.0;
-                            fret_core::Point::new(cx.bounds.origin.x, Px(y))
-                        }
-                        fret_core::Axis::Horizontal => {
-                            let x = cx.bounds.origin.x.0 + start.0 - offset.0;
-                            fret_core::Point::new(Px(x), cx.bounds.origin.y)
-                        }
-                    };
 
-                    let measure_bounds = match axis {
-                        fret_core::Axis::Vertical => {
-                            Rect::new(origin, Size::new(size.width, Px(1.0e9)))
-                        }
-                        fret_core::Axis::Horizontal => {
-                            Rect::new(origin, Size::new(Px(1.0e9), size.height))
-                        }
+                    #[cfg(feature = "layout-engine-v2")]
+                    let measured = cx.measure_in(child, item_constraints);
+
+                    #[cfg(not(feature = "layout-engine-v2"))]
+                    let measured = {
+                        let start = metrics.offset_for_index(idx);
+                        let origin = match axis {
+                            fret_core::Axis::Vertical => {
+                                let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                                fret_core::Point::new(cx.bounds.origin.x, Px(y))
+                            }
+                            fret_core::Axis::Horizontal => {
+                                let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                                fret_core::Point::new(Px(x), cx.bounds.origin.y)
+                            }
+                        };
+
+                        let measure_bounds = match axis {
+                            fret_core::Axis::Vertical => {
+                                Rect::new(origin, Size::new(size.width, Px(1.0e9)))
+                            }
+                            fret_core::Axis::Horizontal => {
+                                Rect::new(origin, Size::new(Px(1.0e9), size.height))
+                            }
+                        };
+                        cx.layout_in(child, measure_bounds)
                     };
-                    let measured = cx.layout_in(child, measure_bounds);
                     let measured_extent = match axis {
                         fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
                         fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
@@ -258,6 +292,16 @@ impl ElementHostWidget {
                     Rect::new(origin, Size::new(*measured_extent, size.height))
                 }
             };
+
+            #[cfg(feature = "layout-engine-v2")]
+            if !is_probe_layout {
+                let sf = cx.scale_factor;
+                let app = &mut *cx.app;
+                let services = &mut *cx.services;
+                let tree = &mut *cx.tree;
+                tree.precompute_flow_root_island(app, services, *child, child_bounds, sf);
+            }
+
             let _ = cx.layout_in(*child, child_bounds);
         }
 

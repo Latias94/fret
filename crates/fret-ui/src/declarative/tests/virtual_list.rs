@@ -217,6 +217,84 @@ fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
     assert_eq!(ui.children(list_node).len(), 5);
 }
 
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn virtual_list_wraps_visible_items_in_engine_tree() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        cx.virtual_list(
+            100,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.keyed(item.key, |cx| {
+                            let mut props = crate::element::HoverRegionProps::default();
+                            props.layout.size.width = crate::element::Length::Fill;
+                            props.layout.size.height = crate::element::Length::Auto;
+
+                            cx.hover_region(props, |cx, _hovered| vec![cx.text("row")])
+                        })
+                    })
+                    .collect()
+            },
+        )
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-engine-tree",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let list_node = ui.children(root)[0];
+    assert_eq!(ui.children(list_node).len(), 0);
+
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-engine-tree",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let item_root = ui.children(list_node)[0];
+    let item_text = ui.children(item_root)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(item_root).is_some());
+    assert!(engine.layout_id_for_node(item_text).is_some());
+    ui.put_layout_engine(engine);
+}
+
 #[test]
 fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
     let mut app = TestHost::new();
