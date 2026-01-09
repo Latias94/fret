@@ -29,7 +29,7 @@ use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
-    EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
@@ -179,6 +179,7 @@ impl NodeGraphPresenter for DemoPresenter {
         match e.kind {
             fret_node::core::EdgeKind::Exec => {
                 hint.route = EdgeRouteKind::Step;
+                hint.end_marker = Some(EdgeMarker::arrow(12.0));
             }
             fret_node::core::EdgeKind::Data => {
                 let ty = graph

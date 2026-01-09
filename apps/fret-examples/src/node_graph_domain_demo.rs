@@ -17,8 +17,9 @@ use fret_node::rules::{
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{
-    EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphCanvas,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
+    NodeGraphPresenter,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
@@ -278,6 +279,7 @@ impl NodeGraphPresenter for DemoTypedPresenter {
 
         if e.kind == EdgeKind::Exec {
             hint.route = EdgeRouteKind::Step;
+            hint.end_marker = Some(EdgeMarker::arrow(12.0));
             return hint;
         }
 

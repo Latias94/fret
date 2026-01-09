@@ -70,6 +70,8 @@ pub struct PortAnchorHint {
 pub enum EdgeRouteKind {
     /// Smooth cubic Bezier.
     Bezier,
+    /// Straight line.
+    Straight,
     /// Orthogonal "step" routing with right-angle segments.
     Step,
 }
@@ -77,6 +79,30 @@ pub enum EdgeRouteKind {
 impl Default for EdgeRouteKind {
     fn default() -> Self {
         Self::Bezier
+    }
+}
+
+/// Marker kind for edge endpoints.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EdgeMarkerKind {
+    /// Filled triangle arrow head.
+    Arrow,
+}
+
+/// Optional marker rendered at an edge endpoint.
+#[derive(Debug, Clone)]
+pub struct EdgeMarker {
+    pub kind: EdgeMarkerKind,
+    /// Marker size in screen-space pixels (logical px).
+    pub size: f32,
+}
+
+impl EdgeMarker {
+    pub fn arrow(size: f32) -> Self {
+        Self {
+            kind: EdgeMarkerKind::Arrow,
+            size,
+        }
     }
 }
 
@@ -91,12 +117,26 @@ pub struct EdgeRenderHint {
     pub width_mul: f32,
     /// Edge routing kind.
     pub route: EdgeRouteKind,
+    /// Optional marker rendered at the edge start.
+    pub start_marker: Option<EdgeMarker>,
+    /// Optional marker rendered at the edge end.
+    pub end_marker: Option<EdgeMarker>,
 }
 
 impl EdgeRenderHint {
     pub fn normalized(mut self) -> Self {
         if !self.width_mul.is_finite() || self.width_mul <= 0.0 {
             self.width_mul = 1.0;
+        }
+        if let Some(m) = self.start_marker.as_mut() {
+            if !m.size.is_finite() || m.size <= 0.0 {
+                self.start_marker = None;
+            }
+        }
+        if let Some(m) = self.end_marker.as_mut() {
+            if !m.size.is_finite() || m.size <= 0.0 {
+                self.end_marker = None;
+            }
         }
         self
     }

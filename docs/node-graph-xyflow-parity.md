@@ -81,7 +81,7 @@ High-level layering (ADR 0135):
 - [~] **Pan on drag (background)**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnDrag`, filters, handlers)
   - fret-node: `NodeGraphCanvas` (background drag pans; behavior lives in canvas event handling)
-  - TODO: parity knobs: left/middle/right mouse, “space to pan”, touch, inertial pan (optional)
+  - Notes: parity knobs still TBD (left/middle/right mouse, “space to pan”, touch), but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
 
 - [~] **Zoom on wheel / pinch / double click**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
@@ -302,9 +302,9 @@ High-level layering (ADR 0135):
 
 ## 6.1 Edge rendering types and styling
 
-- [ ] **Edge types (bezier/step/smooth) and markers**
+- [~] **Edge types (bezier/step/smooth) and markers**
   - XyFlow: edge types in React package; system provides geometry helpers
-  - fret-node: basic per-edge routing supported via presenter hint (`EdgeRouteKind`: bezier/step); markers still missing
+  - fret-node: presenter hint supports `EdgeRouteKind::{bezier, straight, step}` and end markers (`EdgeMarkerKind::Arrow`); other marker styles remain TODO
 
 - [~] **Interaction width**
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
