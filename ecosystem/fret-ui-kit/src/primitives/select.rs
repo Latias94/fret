@@ -34,6 +34,7 @@ pub use crate::headless::select_item_aligned::{
     select_item_aligned_position,
 };
 use crate::headless::typeahead;
+use crate::overlay;
 use crate::primitives::dialog;
 use crate::primitives::popper;
 use crate::primitives::popper_arrow;
@@ -292,6 +293,58 @@ pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItem
         rect: Rect::new(Point::new(x, y), Size::new(outputs.width, outputs.height)),
         side,
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectItemAlignedElementInputs {
+    pub direction: popper::LayoutDirection,
+    pub window: Rect,
+    pub trigger: Rect,
+
+    pub content_border_top: Px,
+    pub content_padding_top: Px,
+    pub content_border_bottom: Px,
+    pub content_padding_bottom: Px,
+
+    pub viewport_padding_top: Px,
+    pub viewport_padding_bottom: Px,
+
+    pub value_node: GlobalElementId,
+    pub viewport: GlobalElementId,
+    pub listbox: GlobalElementId,
+    pub content_panel: GlobalElementId,
+    pub selected_item: GlobalElementId,
+    pub selected_item_text: GlobalElementId,
+}
+
+pub fn select_item_aligned_layout_from_elements<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    inputs: SelectItemAlignedElementInputs,
+) -> Option<SelectItemAlignedLayout> {
+    let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
+    let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
+    let listbox = overlay::anchor_bounds_for_element(cx, inputs.listbox)?;
+    let content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
+    let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+
+    Some(select_item_aligned_layout(SelectItemAlignedInputs {
+        direction: inputs.direction,
+        window: inputs.window,
+        trigger: inputs.trigger,
+        content,
+        value_node,
+        selected_item_text,
+        selected_item,
+        viewport,
+        content_border_top: inputs.content_border_top,
+        content_padding_top: inputs.content_padding_top,
+        content_border_bottom: inputs.content_border_bottom,
+        content_padding_bottom: inputs.content_padding_bottom,
+        viewport_padding_top: inputs.viewport_padding_top,
+        viewport_padding_bottom: inputs.viewport_padding_bottom,
+        items_height: listbox.size.height,
+    }))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

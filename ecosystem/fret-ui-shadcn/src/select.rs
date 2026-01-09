@@ -22,7 +22,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
-use fret_ui_kit::headless::select_item_aligned as item_aligned;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
@@ -1018,40 +1017,27 @@ fn select_impl<H: UiHost>(
                             selected_item,
                             selected_item_text,
                         ) {
-                            if let (
-                                Some(value_node),
-                                Some(viewport),
-                                Some(listbox),
-                                Some(content),
-                                Some(selected_item),
-                                Some(selected_item_text),
-                            ) = (
-                                overlay::anchor_bounds_for_element(cx, value_node),
-                                overlay::anchor_bounds_for_element(cx, viewport),
-                                overlay::anchor_bounds_for_element(cx, listbox),
-                                overlay::anchor_bounds_for_element(cx, content_panel),
-                                overlay::anchor_bounds_for_element(cx, selected_item),
-                                overlay::anchor_bounds_for_element(cx, selected_item_text),
-                            ) {
-                                let layout = radix_select::select_item_aligned_layout(
-                                    item_aligned::SelectItemAlignedInputs {
-                                        direction: LayoutDirection::Ltr,
-                                        window: cx.bounds,
-                                        trigger: anchor,
-                                        content,
-                                        value_node,
-                                        selected_item_text,
-                                        selected_item,
-                                        viewport,
-                                        content_border_top: border_width,
-                                        content_padding_top: Px(0.0),
-                                        content_border_bottom: border_width,
-                                        content_padding_bottom: Px(0.0),
-                                        viewport_padding_top: Px(4.0),
-                                        viewport_padding_bottom: Px(4.0),
-                                        items_height: listbox.size.height,
-                                    },
-                                );
+                            let layout = radix_select::select_item_aligned_layout_from_elements(
+                                cx,
+                                radix_select::SelectItemAlignedElementInputs {
+                                    direction: LayoutDirection::Ltr,
+                                    window: cx.bounds,
+                                    trigger: anchor,
+                                    content_border_top: border_width,
+                                    content_padding_top: Px(0.0),
+                                    content_border_bottom: border_width,
+                                    content_padding_bottom: Px(0.0),
+                                    viewport_padding_top: Px(4.0),
+                                    viewport_padding_bottom: Px(4.0),
+                                    value_node,
+                                    viewport,
+                                    listbox,
+                                    content_panel,
+                                    selected_item,
+                                    selected_item_text,
+                                },
+                            );
+                            if let Some(layout) = layout {
 
                                 if let Some(scroll_to) = layout.outputs.scroll_to_y
                                     && !did_scroll
