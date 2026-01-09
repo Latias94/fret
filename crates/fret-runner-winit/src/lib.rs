@@ -1,8 +1,9 @@
+use fret_core::time::Instant;
 use fret_core::{
     CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
     MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
 };
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
     ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
