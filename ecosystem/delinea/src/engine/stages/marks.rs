@@ -25,7 +25,7 @@ use crate::transform::RowSelection;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
-use super::{DataViewStage, StackDimsStage};
+use super::{BarLayoutStage, DataViewStage, StackDimsStage};
 
 #[derive(Debug, Clone)]
 struct StackBoundsBuild {
@@ -145,6 +145,7 @@ impl MarksStage {
         view: &ViewState,
         selection_stage: &DataViewStage,
         stack_dims: &StackDimsStage,
+        bar_layout: &BarLayoutStage,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -673,6 +674,10 @@ impl MarksStage {
                     return false;
                 }
 
+                let Some(layout) = bar_layout.layout_for_series(model, series.id, x_col) else {
+                    return false;
+                };
+
                 let x_axis = model.axes.get(&series.x_axis);
                 let x_window = x_axis.and_then(crate::engine::axis::category_domain_window);
                 let x_window = view_x_mapping_window.or(x_window).unwrap_or(DataWindow {
@@ -726,8 +731,8 @@ impl MarksStage {
                     let chunk_end = (self.bar_next_index + points_budget).min(row_end);
 
                     let x_span = x_window.span();
-                    let band_px = (viewport.size.width.0 as f64 / x_span.max(1.0)).max(1.0) as f32;
-                    let bar_w = band_px * 0.8;
+                    let bar_w = ((layout.width_x / x_span.max(1.0)) * viewport.size.width.0 as f64)
+                        .max(1.0) as f32;
 
                     let mut rects = Vec::new();
                     let mut indices = Vec::new();
@@ -760,7 +765,8 @@ impl MarksStage {
                             continue;
                         }
 
-                        let tx = ((xi - x_window.min) / x_window.span()).clamp(0.0, 1.0);
+                        let x_center = xi + layout.offset_x;
+                        let tx = ((x_center - x_window.min) / x_window.span()).clamp(0.0, 1.0);
                         let ty = ((y_top - y_window.min) / y_window.span()).clamp(0.0, 1.0);
                         let ty0 = ((y_base - y_window.min) / y_window.span()).clamp(0.0, 1.0);
 

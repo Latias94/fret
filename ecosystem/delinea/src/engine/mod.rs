@@ -5,7 +5,9 @@ use crate::data::DatasetStore;
 use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
-use crate::engine::stages::{DataViewStage, MarksStage, OrdinalIndexStage, StackDimsStage};
+use crate::engine::stages::{
+    BarLayoutStage, DataViewStage, MarksStage, OrdinalIndexStage, StackDimsStage,
+};
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
@@ -111,6 +113,7 @@ pub struct ChartEngine {
     view: ViewState,
     data_view_stage: DataViewStage,
     ordinal_index_stage: OrdinalIndexStage,
+    bar_layout_stage: BarLayoutStage,
     stack_dims_stage: StackDimsStage,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
@@ -154,6 +157,7 @@ impl ChartEngine {
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
             ordinal_index_stage: OrdinalIndexStage::default(),
+            bar_layout_stage: BarLayoutStage::default(),
             stack_dims_stage: StackDimsStage::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
@@ -622,6 +626,13 @@ impl ChartEngine {
             .stack_dims_stage
             .step(&self.model, &self.datasets, &mut budget);
 
+        self.bar_layout_stage.begin_frame();
+        self.bar_layout_stage.request_for_visible_bars(&self.model);
+        self.bar_layout_stage.prepare_requests();
+        let bar_layout_done = self
+            .bar_layout_stage
+            .step(&self.model, &self.datasets, &mut budget);
+
         self.data_view_stage.begin_frame();
         self.marks_stage.request_data_views(
             &self.model,
@@ -653,6 +664,7 @@ impl ChartEngine {
             &self.view,
             &self.data_view_stage,
             &self.stack_dims_stage,
+            &self.bar_layout_stage,
             viewport,
             &mut budget,
             &mut self.lod_scratch,
@@ -677,7 +689,11 @@ impl ChartEngine {
             }
         }
 
-        let unfinished = !done || !selection_done || !stack_dims_done || !ordinal_indices_done;
+        let unfinished = !done
+            || !selection_done
+            || !stack_dims_done
+            || !ordinal_indices_done
+            || !bar_layout_done;
 
         let hover_px = self.state.hover_px;
         let marks_rev = self.output.marks.revision;
