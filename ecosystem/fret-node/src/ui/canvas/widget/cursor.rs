@@ -1,8 +1,6 @@
 use fret_core::{CursorIcon, Point};
 use fret_ui::UiHost;
 
-use crate::core::EdgeId;
-
 use super::super::state::ViewSnapshot;
 use super::NodeGraphCanvas;
 
@@ -81,8 +79,8 @@ fn update_edge_anchor_cursor<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
-    position: Point,
-    zoom: f32,
+    _position: Point,
+    _zoom: f32,
 ) {
     if !snapshot.interaction.edges_reconnectable
         || canvas.interaction.node_drag.is_some()
@@ -105,28 +103,11 @@ fn update_edge_anchor_cursor<H: UiHost>(
         return;
     };
 
-    let hit = {
-        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
-        let this = &*canvas;
-        let index = index.clone();
-        this.graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch: Vec<EdgeId> = Vec::new();
-                this.hit_edge_focus_anchor(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch,
-                )
-            })
-            .ok()
-            .flatten()
-    };
-
-    if hit.is_some_and(|(id, ..)| id == edge_id) {
+    if canvas
+        .interaction
+        .hover_edge_anchor
+        .is_some_and(|(id, _)| id == edge_id)
+    {
         cx.set_cursor_icon(CursorIcon::Pointer);
     }
 }

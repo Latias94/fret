@@ -329,6 +329,9 @@ High-level layering (ADR 0135):
 - [~] **Reconnect edge workflow**
   - XyFlow: `edgesReconnectable` + edge update anchors (`components/EdgeWrapper/EdgeUpdateAnchors.tsx`)
   - fret-node: reconnect implemented; conversion picker insertion exists in domain demo
+    - interactive update anchors exist (drawn for focused/selected edges) and have higher hover/click priority than edge strokes
+    - anchor click selects the edge; dragging the anchor beyond threshold enters reconnect (prevents “click starts reconnect” surprises)
+    - gating: `NodeGraphInteractionState.edges_reconnectable`
   - TODO: parity knobs:
     - reconnect on drop on empty canvas
     - cancel behavior / escape / outside press

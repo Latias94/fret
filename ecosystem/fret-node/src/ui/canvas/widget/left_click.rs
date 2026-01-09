@@ -223,14 +223,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
-            canvas.interaction.wire_drag = Some(super::super::state::WireDrag {
-                kind: WireDragKind::Reconnect {
-                    edge,
-                    endpoint,
-                    fixed,
-                },
-                pos: position,
-            });
+            canvas.interaction.wire_drag = None;
             canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
@@ -241,6 +234,34 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_convertible = false;
             canvas.interaction.hover_edge = None;
 
+            let selectable =
+                snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
+            if selectable {
+                let multi = modifiers.ctrl || modifiers.meta;
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_nodes.clear();
+                    s.selected_groups.clear();
+                    if multi {
+                        if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
+                            s.selected_edges.remove(ix);
+                        } else {
+                            s.selected_edges.push(edge);
+                        }
+                    } else {
+                        s.selected_edges.clear();
+                        s.selected_edges.push(edge);
+                    }
+                });
+            }
+
+            canvas.interaction.pending_wire_drag = Some(PendingWireDrag {
+                kind: WireDragKind::Reconnect {
+                    edge,
+                    endpoint,
+                    fixed,
+                },
+                start_pos: position,
+            });
             cx.capture_pointer(cx.node);
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

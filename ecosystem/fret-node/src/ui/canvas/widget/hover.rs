@@ -57,7 +57,9 @@ pub(super) fn update_hover_edge<H: UiHost>(
         }
     }
 
-    let new_hover = {
+    let new_hover = if new_hover_anchor.is_some() {
+        None
+    } else {
         let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
         let this = &*canvas;
         let index = index.clone();
