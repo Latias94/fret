@@ -16,15 +16,21 @@ use fret_node::rules::{
     PortTemplate,
 };
 use fret_node::types::TypeDesc;
-use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
+use fret_node::ui::{
+    InsertNodeCandidate, NodeGraphCanvas, NodeGraphEditQueue, NodeGraphEditor,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter,
+};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+    edits: fret_runtime::Model<NodeGraphEditQueue>,
+    overlays: fret_runtime::Model<NodeGraphOverlayState>,
+    group_rename_text: fret_runtime::Model<String>,
 }
 
 fn build_demo_graph() -> Graph {
@@ -44,6 +50,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.const_int"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 80.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_int_out],
             data: serde_json::json!({ "value": 7 }),
@@ -55,6 +63,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.const_float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 240.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_float_out],
             data: serde_json::json!({ "value": 0.5 }),
@@ -66,6 +76,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.sink_float"),
             kind_version: 1,
             pos: CanvasPoint { x: 520.0, y: 160.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_sink_in],
             data: serde_json::Value::Null,
@@ -470,11 +482,34 @@ impl NodeGraphDomainDemoDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let graph = models.graph.clone();
+        let view = models.view.clone();
+        let edits = models.edits.clone();
+        let overlays = models.overlays.clone();
+        let group_rename_text = models.group_rename_text.clone();
+
         let presenter = DemoTypedPresenter::default();
-        let canvas = NodeGraphCanvas::new(models.graph, models.view)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_presenter(presenter)
+            .with_edit_queue(edits.clone())
+            .with_overlay_state(overlays.clone())
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
-        let root = ui.create_node_retained(canvas);
+        let canvas_node = ui.create_node_retained(canvas);
+
+        let overlay_host = NodeGraphOverlayHost::new(
+            graph,
+            edits,
+            overlays,
+            group_rename_text.clone(),
+            canvas_node,
+            fret_node::ui::NodeGraphStyle::default(),
+        );
+        let overlay_node = ui.create_node_retained(overlay_host);
+        let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
+        ui.set_children(overlay_node, vec![rename_input_node]);
+
+        let root = ui.create_node_retained(NodeGraphEditor::new());
+        ui.set_children(root, vec![canvas_node, overlay_node]);
         ui.set_root(root);
 
         NodeGraphDomainDemoWindowState { ui, root }
@@ -606,7 +641,16 @@ pub fn run() -> anyhow::Result<()> {
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
-    app.set_global(NodeGraphDemoModels { graph, view });
+    let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
+    let group_rename_text = app.models_mut().insert(String::new());
+    app.set_global(NodeGraphDemoModels {
+        graph,
+        view,
+        edits,
+        overlays,
+        group_rename_text,
+    });
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_domain_demo".to_string(),

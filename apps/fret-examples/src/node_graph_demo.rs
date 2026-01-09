@@ -13,7 +13,7 @@ use fret_runtime::{
     CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
     PlatformFilter, WhenExpr, keymap::Binding,
 };
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 
 use fret_node::Graph;
@@ -30,7 +30,8 @@ use fret_node::ui::presenter::{
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphInternalsStore, RegistryNodeGraphPresenter, register_node_graph_commands,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -38,6 +39,8 @@ struct NodeGraphDemoModels {
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
+    overlays: fret_runtime::Model<NodeGraphOverlayState>,
+    group_rename_text: fret_runtime::Model<String>,
 }
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
@@ -401,6 +404,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 60.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_value_a_out],
             data: serde_json::json!({ "value": 0.25 }),
@@ -412,6 +417,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 170.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_value_b_out],
             data: serde_json::json!({ "value": 0.75 }),
@@ -423,6 +430,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("fret.variadic_merge"),
             kind_version: 1,
             pos: CanvasPoint { x: 300.0, y: 90.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_merge_in0, port_merge_in1, port_merge_out],
             data: serde_json::Value::Null,
@@ -434,6 +443,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.add"),
             kind_version: 1,
             pos: CanvasPoint { x: 560.0, y: 100.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_add_a, port_add_b, port_add_out],
             data: serde_json::Value::Null,
@@ -445,6 +456,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.output"),
             kind_version: 1,
             pos: CanvasPoint { x: 840.0, y: 140.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![port_out_in],
             data: serde_json::Value::Null,
@@ -456,6 +469,8 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new(WEIRD_KIND),
             kind_version: 1,
             pos: CanvasPoint { x: 560.0, y: 300.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: vec![
                 port_weird_in_a,
@@ -708,15 +723,37 @@ impl NodeGraphDemoDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let graph = models.graph.clone();
+        let view = models.view.clone();
+        let edits = models.edits.clone();
+        let overlays = models.overlays.clone();
+        let group_rename_text = models.group_rename_text.clone();
+
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
-        let canvas = NodeGraphCanvas::new(models.graph, models.view)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_presenter(presenter)
-            .with_edit_queue(models.edits)
+            .with_edit_queue(edits.clone())
+            .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
-        let root = ui.create_node_retained(canvas);
+        let canvas_node = ui.create_node_retained(canvas);
+
+        let overlay_host = NodeGraphOverlayHost::new(
+            graph,
+            edits,
+            overlays,
+            group_rename_text.clone(),
+            canvas_node,
+            NodeGraphStyle::default(),
+        );
+        let overlay_node = ui.create_node_retained(overlay_host);
+        let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
+        ui.set_children(overlay_node, vec![rename_input_node]);
+
+        let root = ui.create_node_retained(NodeGraphEditor::new());
+        ui.set_children(root, vec![canvas_node, overlay_node]);
         ui.set_root(root);
 
         NodeGraphDemoWindowState { ui, root }
@@ -1017,7 +1054,15 @@ pub fn run() -> anyhow::Result<()> {
     let graph = app.models_mut().insert(graph_value);
     let view = app.models_mut().insert(NodeGraphViewState::default());
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
-    app.set_global(NodeGraphDemoModels { graph, view, edits });
+    let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
+    let group_rename_text = app.models_mut().insert(String::new());
+    app.set_global(NodeGraphDemoModels {
+        graph,
+        view,
+        edits,
+        overlays,
+        group_rename_text,
+    });
     app.set_global(build_demo_registry());
     app.set_global(NodeGraphDemoMeasuredStores {
         manual: Arc::new(MeasuredGeometryStore::new()),
