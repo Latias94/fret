@@ -67,13 +67,40 @@ impl<H: UiHost> UiTree<H> {
             while viewport_cursor < self.viewport_roots.len() {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
-                self.precompute_flow_root_island(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
+
+                let Some((prev_bounds, measured, invalidated)) = self
+                    .nodes
+                    .get(viewport_root)
+                    .map(|n| (n.bounds, n.measured_size, n.invalidation.layout))
+                else {
+                    continue;
+                };
+
+                // Only flush viewport roots when required. This prevents barriers that register
+                // many viewport roots (e.g. docking) from forcing unnecessary solves for roots
+                // that did not change.
+                let needs_layout = invalidated || prev_bounds != viewport_bounds;
+                if !needs_layout {
+                    continue;
+                }
+
+                // If the root only translated (same size, different origin) and isn't invalid,
+                // the fast-path in `layout_node` can translate the subtree without requiring
+                // an engine solve.
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == viewport_bounds.size
+                    && prev_bounds.origin != viewport_bounds.origin
+                    && measured != Size::default();
+                if !is_translation_only {
+                    self.precompute_flow_root_island(
+                        app,
+                        services,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
+
                 let _ = self.layout_in_with_pass_kind(
                     app,
                     services,
@@ -142,13 +169,33 @@ impl<H: UiHost> UiTree<H> {
             while viewport_cursor < self.viewport_roots.len() {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
-                self.precompute_flow_root_island(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
+
+                let Some((prev_bounds, measured, invalidated)) = self
+                    .nodes
+                    .get(viewport_root)
+                    .map(|n| (n.bounds, n.measured_size, n.invalidation.layout))
+                else {
+                    continue;
+                };
+
+                let needs_layout = invalidated || prev_bounds != viewport_bounds;
+                if !needs_layout {
+                    continue;
+                }
+
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == viewport_bounds.size
+                    && prev_bounds.origin != viewport_bounds.origin
+                    && measured != Size::default();
+                if !is_translation_only {
+                    self.precompute_flow_root_island(
+                        app,
+                        services,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
 
                 let _ = self.layout_in_with_pass_kind(
                     app,
@@ -245,9 +292,11 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let sf = scale_factor;
-        engine.compute_root_with_measure(root_id, available, sf, |node, constraints| {
-            self.measure_in(app, services, node, constraints, sf)
-        });
+        if !engine.root_is_solved_for(root, available, sf) {
+            engine.compute_root_with_measure(root_id, available, sf, |node, constraints| {
+                self.measure_in(app, services, node, constraints, sf)
+            });
+        }
 
         self.put_layout_engine(engine);
     }

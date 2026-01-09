@@ -27,12 +27,21 @@ pub struct TaffyLayoutEngine {
     layout_to_node: HashMap<LayoutId, NodeId>,
     styles: HashMap<NodeId, taffy::Style>,
     children: HashMap<NodeId, Vec<NodeId>>,
+    parent: HashMap<NodeId, NodeId>,
     seen: HashSet<NodeId>,
     solve_generation: u64,
     node_solved_generation: HashMap<NodeId, u64>,
+    root_solve_keys: HashMap<NodeId, RootSolveKey>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct RootSolveKey {
+    width_bits: u64,
+    height_bits: u64,
+    scale_bits: u32,
 }
 
 impl Default for TaffyLayoutEngine {
@@ -45,9 +54,11 @@ impl Default for TaffyLayoutEngine {
             layout_to_node: HashMap::new(),
             styles: HashMap::new(),
             children: HashMap::new(),
+            parent: HashMap::new(),
             seen: HashSet::new(),
             solve_generation: 0,
             node_solved_generation: HashMap::new(),
+            root_solve_keys: HashMap::new(),
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -56,12 +67,21 @@ impl Default for TaffyLayoutEngine {
 }
 
 impl TaffyLayoutEngine {
+    fn invalidate_solved_ancestors(&mut self, mut node: NodeId) {
+        while let Some(parent) = self.parent.get(&node).copied() {
+            self.node_solved_generation.remove(&parent);
+            self.root_solve_keys.remove(&parent);
+            node = parent;
+        }
+    }
+
     pub fn begin_frame(&mut self, frame_id: FrameId) {
         if self.frame_id != Some(frame_id) {
             self.frame_id = Some(frame_id);
             self.seen.clear();
             self.solve_generation = 0;
             self.node_solved_generation.clear();
+            self.root_solve_keys.clear();
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
         }
@@ -81,8 +101,16 @@ impl TaffyLayoutEngine {
             };
             self.layout_to_node.remove(&layout_id);
             self.styles.remove(&node);
-            self.children.remove(&node);
+            if let Some(children) = self.children.remove(&node) {
+                for child in children {
+                    if self.parent.get(&child) == Some(&node) {
+                        self.parent.remove(&child);
+                    }
+                }
+            }
+            self.parent.remove(&node);
             self.node_solved_generation.remove(&node);
+            self.root_solve_keys.remove(&node);
             let _ = self.tree.remove(layout_id.0);
         }
         self.seen.clear();
@@ -127,6 +155,43 @@ impl TaffyLayoutEngine {
             .map(|id| self.layout_rect(id))
     }
 
+    pub fn root_is_solved_for(
+        &self,
+        root: NodeId,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+    ) -> bool {
+        if self.solve_generation == 0 {
+            return false;
+        }
+        if !self.seen.contains(&root) {
+            return false;
+        }
+        if self.node_solved_generation.get(&root).copied() != Some(self.solve_generation) {
+            return false;
+        }
+
+        fn key_bits(axis: AvailableSpace) -> u64 {
+            match axis {
+                AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                AvailableSpace::MinContent => 1u64 << 32,
+                AvailableSpace::MaxContent => 2u64 << 32,
+            }
+        }
+
+        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
+            scale_factor
+        } else {
+            1.0
+        };
+        let key = RootSolveKey {
+            width_bits: key_bits(available.width),
+            height_bits: key_bits(available.height),
+            scale_bits: sf.to_bits(),
+        };
+        self.root_solve_keys.get(&root).copied() == Some(key)
+    }
+
     pub fn request_layout_node(&mut self, node: NodeId) -> LayoutId {
         self.seen.insert(node);
         if let Some(id) = self.node_to_layout.get(&node).copied() {
@@ -160,6 +225,8 @@ impl TaffyLayoutEngine {
             return;
         }
         self.node_solved_generation.remove(&node);
+        self.root_solve_keys.remove(&node);
+        self.invalidate_solved_ancestors(node);
         let _ = self
             .tree
             .set_node_context(id, Some(NodeContext { node, measured }));
@@ -172,6 +239,8 @@ impl TaffyLayoutEngine {
             return;
         }
         self.node_solved_generation.remove(&node);
+        self.root_solve_keys.remove(&node);
+        self.invalidate_solved_ancestors(node);
         if self.tree.set_style(id, style.clone()).is_ok() {
             self.styles.insert(node, style);
             let _ = self.tree.mark_dirty(id);
@@ -181,20 +250,25 @@ impl TaffyLayoutEngine {
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
         let parent = self.request_layout_node(node).0;
 
-        let prev = self
-            .children
-            .get(&node)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
-        if prev == children {
+        let prev_children = self.children.get(&node).cloned().unwrap_or_default();
+        if prev_children.as_slice() == children {
             return;
         }
         self.node_solved_generation.remove(&node);
+        self.root_solve_keys.remove(&node);
+        self.invalidate_solved_ancestors(node);
+
+        for child in prev_children {
+            if self.parent.get(&child) == Some(&node) {
+                self.parent.remove(&child);
+            }
+        }
 
         let mut child_nodes: Vec<TaffyNodeId> = Vec::with_capacity(children.len());
         for &child in children {
             let child_id = self.request_layout_node(child).0;
             child_nodes.push(child_id);
+            self.parent.insert(child, node);
         }
 
         if self.tree.set_children(parent, &child_nodes).is_ok() {
@@ -236,7 +310,7 @@ impl TaffyLayoutEngine {
         };
         self.solve_scale_factor = sf;
 
-        let available = taffy::geometry::Size {
+        let taffy_available = taffy::geometry::Size {
             width: match available.width {
                 AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0 * sf),
                 AvailableSpace::MinContent => taffy::style::AvailableSpace::MinContent,
@@ -251,7 +325,7 @@ impl TaffyLayoutEngine {
 
         let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
         self.tree
-            .compute_layout_with_measure(root.0, available, |known, avail, _id, ctx, _style| {
+            .compute_layout_with_measure(root.0, taffy_available, |known, avail, _id, ctx, _style| {
                 let Some(ctx) = ctx else {
                     return taffy::geometry::Size::default();
                 };
@@ -306,6 +380,21 @@ impl TaffyLayoutEngine {
         self.solve_generation = self.solve_generation.saturating_add(1);
         if let Some(root_node) = self.node_for_layout_id(root) {
             self.mark_solved_subtree(root_node);
+            fn key_bits(axis: AvailableSpace) -> u64 {
+                match axis {
+                    AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                    AvailableSpace::MinContent => 1u64 << 32,
+                    AvailableSpace::MaxContent => 2u64 << 32,
+                }
+            }
+            self.root_solve_keys.insert(
+                root_node,
+                RootSolveKey {
+                    width_bits: key_bits(available.width),
+                    height_bits: key_bits(available.height),
+                    scale_bits: self.solve_scale_factor.to_bits(),
+                },
+            );
         }
         self.last_solve_time += started.elapsed();
     }

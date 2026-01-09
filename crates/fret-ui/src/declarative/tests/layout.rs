@@ -597,6 +597,72 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_root_flush_only_lays_out_invalidated_roots() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct CountsLayout {
+        count: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountsLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.count.fetch_add(1, Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let left_count = Arc::new(AtomicUsize::new(0));
+    let right_count = Arc::new(AtomicUsize::new(0));
+
+    let left = ui.create_node(CountsLayout {
+        count: left_count.clone(),
+    });
+    ui.set_children(left, Vec::new());
+    let right = ui.create_node(CountsLayout {
+        count: right_count.clone(),
+    });
+    ui.set_children(right, Vec::new());
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![left, right]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(left_count.load(Ordering::Relaxed), 1);
+    assert_eq!(right_count.load(Ordering::Relaxed), 1);
+
+    // Invalidate only the left root subtree; the parent must re-register viewport roots, but the
+    // flush loop should only lay out the invalidated root.
+    ui.invalidate(left, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(left_count.load(Ordering::Relaxed), 2);
+    assert_eq!(
+        right_count.load(Ordering::Relaxed),
+        1,
+        "expected right viewport root to be skipped when clean"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
