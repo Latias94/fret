@@ -891,7 +891,7 @@ fn compute_axis_axis_pointer_output(
 
         let selection = view
             .series_view(series.id)
-            .map(|v| v.selection)
+            .map(|v| v.selection.clone())
             .unwrap_or_default();
         let row_range = selection.as_range(table.row_count);
 

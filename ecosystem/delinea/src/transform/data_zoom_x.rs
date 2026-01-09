@@ -5,10 +5,10 @@ use crate::engine::{ChartState, DataZoomXState};
 use crate::ids::{AxisId, DataZoomId};
 use crate::spec::{AxisRange, FilterMode};
 use crate::transform::{
-    RowRange, RowSelection, SeriesXPolicy, row_range_for_x_filter, series_x_policy,
+    RowRange, RowSelection, SeriesXPolicy, row_selection_for_x_filter, series_x_policy,
 };
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct XWindowResult {
     pub selection: RowSelection,
     pub x_policy: SeriesXPolicy,
@@ -56,11 +56,7 @@ impl DataZoomXNode {
     pub fn apply(self, x_values: &[f64], base_range: RowRange) -> XWindowResult {
         let x_policy = self.x_policy();
         let selection = if self.filter_mode() == FilterMode::Filter {
-            RowSelection::Range(row_range_for_x_filter(
-                x_values,
-                base_range,
-                x_policy.filter,
-            ))
+            row_selection_for_x_filter(x_values, base_range, x_policy.filter)
         } else {
             RowSelection::Range(base_range)
         };

@@ -134,6 +134,8 @@ Trade-offs:
 
 P0/P1:
 
+- Implement an indices-based selection carrier in the transform layer (`RowSelection::Indices`),
+  enabling exact filtering semantics for non-monotonic X without materializing columns.
 - Add a dedicated internal store/view type in `delinea` engine code (even if `DataTable` remains public).
 - Extend transform outputs to support “indices view” beyond pure row ranges where needed.
 - Define a stable “append rows” API surface and its revision semantics.

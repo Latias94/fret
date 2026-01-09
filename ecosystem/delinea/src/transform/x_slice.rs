@@ -1,6 +1,8 @@
 use crate::engine::window::DataWindowX;
 use crate::engine::window_policy::AxisFilter1D;
-use crate::transform::RowRange;
+use std::sync::Arc;
+
+use crate::transform::{RowRange, RowSelection};
 
 pub fn row_range_for_x_filter(values: &[f64], base: RowRange, filter: AxisFilter1D) -> RowRange {
     if let Some(window) = filter.as_window() {
@@ -13,6 +15,23 @@ pub fn row_range_for_x_filter(values: &[f64], base: RowRange, filter: AxisFilter
         return row_range_for_x_max(values, base, max);
     }
     base
+}
+
+pub fn row_selection_for_x_filter(
+    values: &[f64],
+    base: RowRange,
+    filter: AxisFilter1D,
+) -> RowSelection {
+    if let Some(window) = filter.as_window() {
+        return row_selection_for_x_window(values, base, window);
+    }
+    if let Some(min) = filter.min {
+        return row_selection_for_x_min(values, base, min);
+    }
+    if let Some(max) = filter.max {
+        return row_selection_for_x_max(values, base, max);
+    }
+    RowSelection::Range(base)
 }
 
 pub fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
@@ -55,6 +74,35 @@ pub fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindow
     };
 
     RowRange { start, end }
+}
+
+pub fn row_selection_for_x_window(
+    values: &[f64],
+    base: RowRange,
+    window: DataWindowX,
+) -> RowSelection {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() {
+        return RowSelection::Range(base);
+    }
+
+    let slice = &values[base.start..base.end];
+    let Some(first) = slice.first().copied() else {
+        return RowSelection::Range(base);
+    };
+    let Some(last) = slice.last().copied() else {
+        return RowSelection::Range(base);
+    };
+    if first.is_finite() && last.is_finite() {
+        let ascending = first <= last;
+        if is_probably_monotonic(slice, ascending) {
+            return RowSelection::Range(row_range_for_x_window(values, base, window));
+        }
+    }
+
+    let indices = indices_for_x_window(values, base, window);
+    RowSelection::Indices(indices)
 }
 
 fn is_probably_monotonic(values: &[f64], ascending: bool) -> bool {
@@ -125,6 +173,31 @@ fn row_range_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowRange {
     }
 }
 
+pub fn row_selection_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowSelection {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !min.is_finite() {
+        return RowSelection::Range(base);
+    }
+
+    let slice = &values[base.start..base.end];
+    let Some(first) = slice.first().copied() else {
+        return RowSelection::Range(base);
+    };
+    let Some(last) = slice.last().copied() else {
+        return RowSelection::Range(base);
+    };
+    if first.is_finite() && last.is_finite() {
+        let ascending = first <= last;
+        if is_probably_monotonic(slice, ascending) {
+            return RowSelection::Range(row_range_for_x_min(values, base, min));
+        }
+    }
+
+    let indices = indices_for_x_min(values, base, min);
+    RowSelection::Indices(indices)
+}
+
 fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
     let mut base = base;
     base.clamp_to_len(values.len());
@@ -161,6 +234,31 @@ fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
             end: base.end,
         }
     }
+}
+
+pub fn row_selection_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowSelection {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !max.is_finite() {
+        return RowSelection::Range(base);
+    }
+
+    let slice = &values[base.start..base.end];
+    let Some(first) = slice.first().copied() else {
+        return RowSelection::Range(base);
+    };
+    let Some(last) = slice.last().copied() else {
+        return RowSelection::Range(base);
+    };
+    if first.is_finite() && last.is_finite() {
+        let ascending = first <= last;
+        if is_probably_monotonic(slice, ascending) {
+            return RowSelection::Range(row_range_for_x_max(values, base, max));
+        }
+    }
+
+    let indices = indices_for_x_max(values, base, max);
+    RowSelection::Indices(indices)
 }
 
 fn row_range_for_x_min_linear(values: &[f64], base: RowRange, min: f64) -> RowRange {
@@ -256,5 +354,109 @@ fn row_range_for_x_window_linear(values: &[f64], base: RowRange, window: DataWin
             start: base.start,
             end: base.start,
         },
+    }
+}
+
+fn indices_for_x_min(values: &[f64], base: RowRange, min: f64) -> Arc<[u32]> {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+
+    let mut out: Vec<u32> = Vec::new();
+    for i in base.start..base.end {
+        let v = values.get(i).copied().unwrap_or(f64::NAN);
+        if !v.is_finite() {
+            continue;
+        }
+        if v >= min && i <= u32::MAX as usize {
+            out.push(i as u32);
+        }
+    }
+
+    out.into()
+}
+
+fn indices_for_x_max(values: &[f64], base: RowRange, max: f64) -> Arc<[u32]> {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+
+    let mut out: Vec<u32> = Vec::new();
+    for i in base.start..base.end {
+        let v = values.get(i).copied().unwrap_or(f64::NAN);
+        if !v.is_finite() {
+            continue;
+        }
+        if v <= max && i <= u32::MAX as usize {
+            out.push(i as u32);
+        }
+    }
+
+    out.into()
+}
+
+fn indices_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> Arc<[u32]> {
+    let (min, max) = if window.min <= window.max {
+        (window.min, window.max)
+    } else {
+        (window.max, window.min)
+    };
+
+    let mut out: Vec<u32> = Vec::new();
+    for i in base.start..base.end {
+        let v = values.get(i).copied().unwrap_or(f64::NAN);
+        if !v.is_finite() {
+            continue;
+        }
+        if v >= min && v <= max && i <= u32::MAX as usize {
+            out.push(i as u32);
+        }
+    }
+
+    out.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn row_selection_for_x_window_uses_indices_for_non_monotonic_data() {
+        let xs = vec![0.0, 10.0, 0.0, 10.0, 0.0];
+        let base = RowRange {
+            start: 0,
+            end: xs.len(),
+        };
+        let window = DataWindowX {
+            min: 9.0,
+            max: 10.0,
+        };
+
+        let sel = row_selection_for_x_window(&xs, base, window);
+        match &sel {
+            RowSelection::Indices(indices) => {
+                assert_eq!(&**indices, &[1u32, 3u32]);
+            }
+            other => panic!("expected Indices, got {other:?}"),
+        }
+        assert_eq!(sel.len(xs.len()), 2);
+        assert_eq!(sel.as_range(xs.len()), 1..4);
+        assert_eq!(sel.get_raw_index(xs.len(), 0), Some(1));
+        assert_eq!(sel.get_raw_index(xs.len(), 1), Some(3));
+    }
+
+    #[test]
+    fn row_selection_for_x_window_uses_range_for_monotonic_data() {
+        let xs = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+        let base = RowRange {
+            start: 0,
+            end: xs.len(),
+        };
+        let window = DataWindowX { min: 1.0, max: 2.0 };
+
+        let sel = row_selection_for_x_window(&xs, base, window);
+        assert_eq!(sel, RowSelection::Range(RowRange { start: 1, end: 3 }));
+        assert_eq!(sel.len(xs.len()), 2);
+        assert_eq!(sel.as_range(xs.len()), 1..3);
+        assert_eq!(sel.get_raw_index(xs.len(), 0), Some(1));
+        assert_eq!(sel.get_raw_index(xs.len(), 1), Some(2));
     }
 }
