@@ -9,6 +9,7 @@ pub mod editor;
 pub mod internals;
 pub mod measured;
 pub mod overlays;
+pub mod portal;
 pub mod presenter;
 pub mod style;
 
@@ -22,6 +23,7 @@ pub use internals::{
 pub use measured::{
     FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
 };
+pub use portal::{NodeGraphPortalHost, NodeGraphPortalNodeLayout};
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,

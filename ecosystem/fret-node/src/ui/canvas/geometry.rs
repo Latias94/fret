@@ -235,7 +235,7 @@ mod tests {
     }
 }
 
-fn node_size_default_px(
+pub(crate) fn node_size_default_px(
     input_count: usize,
     output_count: usize,
     style: &NodeGraphStyle,
