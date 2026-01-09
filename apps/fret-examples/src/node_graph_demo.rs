@@ -29,7 +29,8 @@ use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
-    InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+    EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
+    NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
@@ -157,6 +158,58 @@ impl NodeGraphPresenter for DemoPresenter {
         }
         let value = n.data.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
         Some(Arc::<str>::from(format!("Value: {:.3}", value)))
+    }
+
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        _style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        let Some(e) = graph.edges.get(&edge) else {
+            return EdgeRenderHint {
+                width_mul: 1.0,
+                ..EdgeRenderHint::default()
+            };
+        };
+        let mut hint = EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
+        };
+        match e.kind {
+            fret_node::core::EdgeKind::Exec => {
+                hint.route = EdgeRouteKind::Step;
+            }
+            fret_node::core::EdgeKind::Data => {
+                let ty = graph
+                    .ports
+                    .get(&e.from)
+                    .and_then(|p| p.ty.as_ref())
+                    .or_else(|| graph.ports.get(&e.to).and_then(|p| p.ty.as_ref()));
+                if let Some(ty) = ty {
+                    let s = match ty {
+                        TypeDesc::Any => "any".to_string(),
+                        TypeDesc::Unknown => "unknown".to_string(),
+                        TypeDesc::Never => "never".to_string(),
+                        TypeDesc::Null => "null".to_string(),
+                        TypeDesc::Bool => "bool".to_string(),
+                        TypeDesc::Int => "int".to_string(),
+                        TypeDesc::Float => "float".to_string(),
+                        TypeDesc::String => "string".to_string(),
+                        TypeDesc::Bytes => "bytes".to_string(),
+                        TypeDesc::List { of } => format!("list<{:?}>", of),
+                        TypeDesc::Map { .. } => "map".to_string(),
+                        TypeDesc::Object { .. } => "object".to_string(),
+                        TypeDesc::Union { .. } => "union".to_string(),
+                        TypeDesc::Option { of } => format!("option<{:?}>", of),
+                        TypeDesc::Var { id } => format!("t{}", id.0),
+                        TypeDesc::Opaque { key, .. } => key.clone(),
+                    };
+                    hint.label = Some(Arc::<str>::from(s));
+                }
+            }
+        }
+        hint
     }
 
     fn list_insertable_nodes(&mut self, graph: &Graph) -> Vec<InsertNodeCandidate> {

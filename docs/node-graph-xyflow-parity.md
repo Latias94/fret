@@ -304,15 +304,15 @@ High-level layering (ADR 0135):
 
 - [ ] **Edge types (bezier/step/smooth) and markers**
   - XyFlow: edge types in React package; system provides geometry helpers
-  - fret-node: single wire style with customizable formula; needs per-edge style overrides
+  - fret-node: basic per-edge routing supported via presenter hint (`EdgeRouteKind`: bezier/step); markers still missing
 
 - [~] **Interaction width**
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
   - fret-node: `edge_interaction_width` in `NodeGraphStyle`
 
-- [ ] **Edge labels**
+- [~] **Edge labels**
   - XyFlow: `EdgeLabelRenderer` component
-  - fret-node: not implemented
+  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (not interactive yet)
 
 ## 6.2 Edge selection and context menus
 

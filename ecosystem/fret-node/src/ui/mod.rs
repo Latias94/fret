@@ -37,8 +37,9 @@ pub use portal::{
     portal_step_text_command, portal_step_text_command_with_mode, portal_submit_text_command,
 };
 pub use presenter::{
-    DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
-    NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,
+    DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
+    NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
+    RegistryNodeGraphPresenter,
 };
 pub use style::NodeGraphStyle;
 

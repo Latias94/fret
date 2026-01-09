@@ -35,8 +35,8 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_UNDO, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 use crate::ui::presenter::{
-    DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
-    NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+    DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
+    NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
@@ -1411,7 +1411,14 @@ impl NodeGraphCanvas {
                 continue;
             };
 
-            let d2 = wire_distance2(pos, from, to, zoom);
+            let route = self
+                .presenter
+                .edge_render_hint(graph, edge_id, &self.style)
+                .route;
+            let d2 = match route {
+                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom),
+                EdgeRouteKind::Step => step_wire_distance2(pos, from, to),
+            };
             if d2 <= threshold2 {
                 match best {
                     Some((_id, best_d2)) if best_d2 <= d2 => {}
@@ -2841,6 +2848,38 @@ impl NodeGraphCanvas {
         Some(id)
     }
 
+    fn prepare_step_path(
+        services: &mut dyn fret_core::UiServices,
+        from: Point,
+        to: Point,
+        zoom: f32,
+        scale_factor: f32,
+        width_px: f32,
+    ) -> Option<fret_core::PathId> {
+        let mx = 0.5 * (from.x.0 + to.x.0);
+        let p1 = Point::new(Px(mx), from.y);
+        let p2 = Point::new(Px(mx), to.y);
+
+        let commands = [
+            PathCommand::MoveTo(from),
+            PathCommand::LineTo(p1),
+            PathCommand::LineTo(p2),
+            PathCommand::LineTo(to),
+        ];
+
+        let (id, _metrics) = services.path().prepare(
+            &commands,
+            PathStyle::Stroke(StrokeStyle {
+                width: Px(width_px / zoom),
+            }),
+            PathConstraints {
+                scale_factor: scale_factor * zoom,
+            },
+        );
+
+        Some(id)
+    }
+
     fn zoom_about_center(&mut self, bounds: Rect, delta_y: f32) {
         let zoom = self.cached_zoom;
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -3927,11 +3966,21 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         #[derive(Debug, Default)]
         struct RenderData {
             groups: Vec<(Rect, Arc<str>, bool)>,
-            edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
+            edges: Vec<EdgeRender>,
             nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>, Option<Arc<str>>, usize)>,
             pins: Vec<(PortId, Rect, Color)>,
             port_labels: HashMap<PortId, PortLabelRender>,
             port_centers: HashMap<PortId, Point>,
+        }
+
+        #[derive(Debug, Clone)]
+        struct EdgeRender {
+            from: Point,
+            to: Point,
+            color: Color,
+            hint: EdgeRenderHint,
+            selected: bool,
+            hovered: bool,
         }
 
         #[derive(Debug, Clone)]
@@ -4049,15 +4098,23 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let Some(to) = out.port_centers.get(&edge.to).copied() else {
                             continue;
                         };
-                        let color = presenter.edge_color(graph, edge_id, &this.style);
-                        out.edges.push((
-                            edge_id,
+                        let hint = presenter
+                            .edge_render_hint(graph, edge_id, &this.style)
+                            .normalized();
+                        let mut color = presenter.edge_color(graph, edge_id, &this.style);
+                        if let Some(override_color) = hint.color {
+                            color = override_color;
+                        }
+                        let selected = selected_edges.contains(&edge_id);
+                        let hovered = hovered_edge == Some(edge_id);
+                        out.edges.push(EdgeRender {
                             from,
                             to,
                             color,
-                            selected_edges.contains(&edge_id),
-                            hovered_edge == Some(edge_id),
-                        ));
+                            hint,
+                            selected,
+                            hovered,
+                        });
                     }
 
                     out
@@ -4116,42 +4173,166 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
         }
 
-        let mut edges_normal: Vec<(Point, Point, Color, f32)> = Vec::new();
-        let mut edges_selected: Vec<(Point, Point, Color, f32)> = Vec::new();
-        let mut edges_hovered: Vec<(Point, Point, Color, f32)> = Vec::new();
+        #[derive(Debug, Clone)]
+        struct EdgePaint {
+            from: Point,
+            to: Point,
+            color: Color,
+            width: f32,
+            route: EdgeRouteKind,
+        }
 
-        for (_edge_id, from, to, color, selected, hovered) in render.edges {
-            let mut width = self.style.wire_width;
-            if selected {
+        let mut edges_normal: Vec<EdgePaint> = Vec::new();
+        let mut edges_selected: Vec<EdgePaint> = Vec::new();
+        let mut edges_hovered: Vec<EdgePaint> = Vec::new();
+        let mut edge_labels: Vec<(Point, Point, EdgeRouteKind, Arc<str>, bool, bool)> = Vec::new();
+
+        for edge in render.edges {
+            let mut width = self.style.wire_width * edge.hint.width_mul.max(0.0);
+            if edge.selected {
                 width *= self.style.wire_width_selected_mul;
             }
-            if hovered {
+            if edge.hovered {
                 width *= self.style.wire_width_hover_mul;
             }
 
-            if hovered {
-                edges_hovered.push((from, to, color, width));
-            } else if selected {
-                edges_selected.push((from, to, color, width));
+            let route = edge.hint.route;
+            if let Some(label) = edge.hint.label.as_ref().filter(|s| !s.is_empty()) {
+                edge_labels.push((
+                    edge.from,
+                    edge.to,
+                    route,
+                    label.clone(),
+                    edge.selected,
+                    edge.hovered,
+                ));
+            }
+
+            let paint = EdgePaint {
+                from: edge.from,
+                to: edge.to,
+                color: edge.color,
+                width,
+                route,
+            };
+
+            if edge.hovered {
+                edges_hovered.push(paint);
+            } else if edge.selected {
+                edges_selected.push(paint);
             } else {
-                edges_normal.push((from, to, color, width));
+                edges_normal.push(paint);
             }
         }
 
-        for (from, to, color, width) in edges_normal
+        for edge in edges_normal
             .into_iter()
             .chain(edges_selected)
             .chain(edges_hovered)
         {
-            if let Some(path) =
-                Self::prepare_wire_path(cx.services, from, to, zoom, cx.scale_factor, width)
-            {
+            let path = match edge.route {
+                EdgeRouteKind::Bezier => Self::prepare_wire_path(
+                    cx.services,
+                    edge.from,
+                    edge.to,
+                    zoom,
+                    cx.scale_factor,
+                    edge.width,
+                ),
+                EdgeRouteKind::Step => Self::prepare_step_path(
+                    cx.services,
+                    edge.from,
+                    edge.to,
+                    zoom,
+                    cx.scale_factor,
+                    edge.width,
+                ),
+            };
+
+            if let Some(path) = path {
                 self.wire_paths.push(path);
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    color,
+                    color: edge.color,
+                });
+            }
+        }
+
+        if !edge_labels.is_empty() {
+            let pad_screen = 6.0;
+            let corner_screen = 8.0;
+            let offset_screen = 10.0;
+
+            let mut edge_text_style = self.style.context_menu_text_style.clone();
+            edge_text_style.size = Px(edge_text_style.size.0 / zoom);
+            if let Some(lh) = edge_text_style.line_height.as_mut() {
+                lh.0 /= zoom;
+            }
+
+            for (from, to, route, label, _selected, _hovered) in edge_labels {
+                let (pos, normal) = match route {
+                    EdgeRouteKind::Bezier => {
+                        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+                        let p = cubic_bezier(from, c1, c2, to, 0.5);
+                        let d = cubic_bezier_derivative(from, c1, c2, to, 0.5);
+                        (p, normal_from_tangent(d))
+                    }
+                    EdgeRouteKind::Step => {
+                        let mx = 0.5 * (from.x.0 + to.x.0);
+                        let p = Point::new(Px(mx), Px(0.5 * (from.y.0 + to.y.0)));
+                        (p, Point::new(Px(0.0), Px(-1.0)))
+                    }
+                };
+
+                let z = zoom.max(1.0e-6);
+                let off = offset_screen / z;
+                let anchor = Point::new(
+                    Px(pos.x.0 + normal.x.0 * off),
+                    Px(pos.y.0 + normal.y.0 * off),
+                );
+
+                let max_w = 220.0 / z;
+                let constraints = TextConstraints {
+                    max_width: Some(Px(max_w)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    scale_factor: cx.scale_factor * zoom,
+                };
+                let (blob, metrics) =
+                    cx.services
+                        .text()
+                        .prepare(label.as_ref(), &edge_text_style, constraints);
+                self.text_blobs.push(blob);
+
+                let pad = pad_screen / z;
+                let w = metrics.size.width.0.max(0.0);
+                let h = metrics.size.height.0.max(0.0);
+                let rect = Rect::new(
+                    Point::new(
+                        Px(anchor.x.0 - 0.5 * w - pad),
+                        Px(anchor.y.0 - 0.5 * h - pad),
+                    ),
+                    Size::new(Px(w + 2.0 * pad), Px(h + 2.0 * pad)),
+                );
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(2),
+                    rect,
+                    background: self.style.context_menu_background,
+                    border: Edges::all(Px(1.0 / z)),
+                    border_color: self.style.context_menu_border,
+                    corner_radii: Corners::all(Px(corner_screen / z)),
+                });
+
+                let text_x = Px(rect.origin.x.0 + pad);
+                let text_y = Px(rect.origin.y.0 + pad + metrics.baseline.0);
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(2),
+                    origin: Point::new(text_x, text_y),
+                    text: blob,
+                    color: self.style.context_menu_text,
                 });
             }
         }
@@ -4693,6 +4874,16 @@ fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
     best
 }
 
+fn step_wire_distance2(p: Point, from: Point, to: Point) -> f32 {
+    let mx = 0.5 * (from.x.0 + to.x.0);
+    let p1 = Point::new(Px(mx), from.y);
+    let p2 = Point::new(Px(mx), to.y);
+    let d0 = dist2_point_to_segment(p, from, p1);
+    let d1 = dist2_point_to_segment(p, p1, p2);
+    let d2 = dist2_point_to_segment(p, p2, to);
+    d0.min(d1).min(d2)
+}
+
 fn wire_ctrl_points(from: Point, to: Point, zoom: f32) -> (Point, Point) {
     let dx = to.x.0 - from.x.0;
     let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
@@ -4717,6 +4908,32 @@ fn cubic_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
         Px(w0 * p0.x.0 + w1 * p1.x.0 + w2 * p2.x.0 + w3 * p3.x.0),
         Px(w0 * p0.y.0 + w1 * p1.y.0 + w2 * p2.y.0 + w3 * p3.y.0),
     )
+}
+
+fn cubic_bezier_derivative(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
+    let t = t.clamp(0.0, 1.0);
+    let mt = 1.0 - t;
+
+    let w0 = 3.0 * mt * mt;
+    let w1 = 6.0 * mt * t;
+    let w2 = 3.0 * t * t;
+
+    Point::new(
+        Px(w0 * (p1.x.0 - p0.x.0) + w1 * (p2.x.0 - p1.x.0) + w2 * (p3.x.0 - p2.x.0)),
+        Px(w0 * (p1.y.0 - p0.y.0) + w1 * (p2.y.0 - p1.y.0) + w2 * (p3.y.0 - p2.y.0)),
+    )
+}
+
+fn normal_from_tangent(tangent: Point) -> Point {
+    let dx = tangent.x.0;
+    let dy = tangent.y.0;
+    let len = (dx * dx + dy * dy).sqrt();
+    if !len.is_finite() || len <= 1.0e-6 {
+        return Point::new(Px(0.0), Px(-1.0));
+    }
+    let nx = -dy / len;
+    let ny = dx / len;
+    Point::new(Px(nx), Px(ny))
 }
 
 fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {

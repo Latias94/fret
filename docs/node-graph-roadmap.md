@@ -134,7 +134,7 @@ Legend:
 ### Medium-term
 
 - [ ] Clipboard copy/paste for selection with `GraphFragment` + deterministic paste offset.
-- [ ] Edge label rendering + per-edge style overrides.
+- [~] Edge label rendering + per-edge style overrides.
 - [ ] Reroute node + edge split UX.
 - [ ] Selection align/distribute + keyboard nudge ops.
 
@@ -144,4 +144,3 @@ Legend:
 - [ ] Blackboard variables + typed symbol references (domain-ready).
 - [ ] Large-graph culling + incremental updates.
 - [ ] Deterministic graph diff/patch set for collaboration.
-

@@ -17,8 +17,8 @@ use fret_node::rules::{
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{
-    InsertNodeCandidate, NodeGraphCanvas, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter,
+    EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphCanvas, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
@@ -256,6 +256,44 @@ impl NodeGraphPresenter for DemoTypedPresenter {
                 Arc::<str>::from(format!("{}: {}", p.key.0, ty))
             })
             .unwrap_or_else(|| Arc::<str>::from("<missing port>"))
+    }
+
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        _style: &fret_node::ui::NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        let Some(e) = graph.edges.get(&edge) else {
+            return EdgeRenderHint {
+                width_mul: 1.0,
+                ..EdgeRenderHint::default()
+            };
+        };
+
+        let mut hint = EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
+        };
+
+        if e.kind == EdgeKind::Exec {
+            hint.route = EdgeRouteKind::Step;
+            return hint;
+        }
+
+        let from_ty = graph.ports.get(&e.from).and_then(|p| p.ty.as_ref());
+        let to_ty = graph.ports.get(&e.to).and_then(|p| p.ty.as_ref());
+        if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+            let from_name = type_name(from_ty);
+            let to_name = type_name(to_ty);
+            if from_name != to_name {
+                hint.label = Some(Arc::<str>::from(format!("{from_name}→{to_name}")));
+            } else {
+                hint.label = Some(Arc::<str>::from(from_name.to_string()));
+            }
+        }
+
+        hint
     }
 
     fn list_insertable_nodes_for_edge(

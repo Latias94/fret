@@ -65,6 +65,43 @@ pub struct PortAnchorHint {
     pub bounds: Rect,
 }
 
+/// Edge routing kind for the canvas renderer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EdgeRouteKind {
+    /// Smooth cubic Bezier.
+    Bezier,
+    /// Orthogonal "step" routing with right-angle segments.
+    Step,
+}
+
+impl Default for EdgeRouteKind {
+    fn default() -> Self {
+        Self::Bezier
+    }
+}
+
+/// Optional per-edge rendering hints.
+#[derive(Debug, Clone, Default)]
+pub struct EdgeRenderHint {
+    /// Optional label rendered near the edge center.
+    pub label: Option<Arc<str>>,
+    /// Optional color override (falls back to `edge_color(...)`).
+    pub color: Option<Color>,
+    /// Width multiplier applied before selection/hover multipliers.
+    pub width_mul: f32,
+    /// Edge routing kind.
+    pub route: EdgeRouteKind,
+}
+
+impl EdgeRenderHint {
+    pub fn normalized(mut self) -> Self {
+        if !self.width_mul.is_finite() || self.width_mul <= 0.0 {
+            self.width_mul = 1.0;
+        }
+        self
+    }
+}
+
 /// Viewer/presenter surface for the node graph UI.
 ///
 /// This is the primary extensibility point: domain code can define titles, styles, and connection
@@ -109,6 +146,19 @@ pub trait NodeGraphPresenter {
         match e.kind {
             crate::core::EdgeKind::Data => style.wire_color_data,
             crate::core::EdgeKind::Exec => style.wire_color_exec,
+        }
+    }
+
+    /// Optional edge rendering hints (label/style/routing).
+    fn edge_render_hint(
+        &self,
+        _graph: &Graph,
+        _edge: EdgeId,
+        _style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
         }
     }
 

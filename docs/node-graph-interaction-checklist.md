@@ -196,7 +196,7 @@ Invariants:
 - (todo) Edge hit-testing uses a larger interaction width than the visual stroke width.
 - (todo) Hovering an edge highlights it (without changing selection).
 - (todo) Selecting an edge is deterministic and undo/redo does not affect selection state unexpectedly.
-- (todo) Edge labels render with stable placement (and do not overlap node ports in common layouts).
+- (prototype) Edge labels render with stable placement (and do not overlap node ports in common layouts).
 - (todo) Per-edge style overrides can affect color/width/label without breaking hit-testing.
 
 ### Invariants
