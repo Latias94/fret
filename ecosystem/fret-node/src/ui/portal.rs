@@ -389,7 +389,7 @@ where
 
         let root_node =
             RenderRootContext::new(&mut *cx.tree, cx.app, cx.services, window, cx.bounds)
-                .render_root(&self.root_name, |ecx| {
+                .render_dismissible_root_with_hooks(&self.root_name, |ecx| {
                     let mut out: Vec<AnyElement> = Vec::new();
 
                     for node_id in &order {
@@ -424,8 +424,8 @@ where
                             continue;
                         }
 
-                        let positioned = ecx.container(
-                            fret_ui::element::ContainerProps {
+                        let positioned = ecx.semantics(
+                            fret_ui::element::SemanticsProps {
                                 layout: fret_ui::element::LayoutStyle {
                                     position: fret_ui::element::PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {

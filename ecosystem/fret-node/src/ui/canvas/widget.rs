@@ -4225,7 +4225,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
-        for (_node, rect, is_selected, title, body, pin_rows) in &render.nodes {
+        for (node, rect, is_selected, title, body, pin_rows) in &render.nodes {
             let rect = *rect;
             let border_color = if *is_selected {
                 self.style.node_border_selected
@@ -4241,7 +4241,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 corner_radii: Corners::all(corner),
             });
 
-            if *is_selected {
+            let show_resize_handle = *is_selected
+                && (self
+                    .interaction
+                    .node_resize
+                    .as_ref()
+                    .is_some_and(|r| r.node == *node)
+                    || self
+                        .interaction
+                        .last_pos
+                        .is_some_and(|p| Self::rect_contains(rect, p)));
+            if show_resize_handle {
                 let handle = self.resize_handle_rect(rect, zoom);
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(5),
