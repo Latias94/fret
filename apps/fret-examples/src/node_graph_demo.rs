@@ -14,6 +14,7 @@ use fret_runtime::{
     CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
     PlatformFilter, WhenExpr, keymap::Binding,
 };
+use fret_ui::Theme;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{TextInputStyle, element::*};
 use fret_ui::{UiFrameCx, UiTree};
@@ -819,11 +820,13 @@ impl NodeGraphDemoDriver {
         let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
+        let style = NodeGraphStyle::from_theme(Theme::global(app));
 
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_presenter(presenter)
+            .with_style(style.clone())
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
@@ -837,7 +840,7 @@ impl NodeGraphDemoDriver {
             overlays,
             group_rename_text.clone(),
             canvas_node,
-            NodeGraphStyle::default(),
+            style.clone(),
         );
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
@@ -847,7 +850,7 @@ impl NodeGraphDemoDriver {
             models.graph.clone(),
             models.view.clone(),
             measured.manual.clone(),
-            NodeGraphStyle::default(),
+            style.clone(),
             "node_graph_demo.portal",
             |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
              graph: &Graph,
