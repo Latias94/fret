@@ -23,7 +23,12 @@ pub use internals::{
 pub use measured::{
     FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
 };
-pub use portal::{NodeGraphPortalHost, NodeGraphPortalNodeLayout};
+pub use portal::{
+    CMD_CANCEL_TEXT_PREFIX, CMD_SUBMIT_TEXT_PREFIX, NodeGraphPortalCommandHandler,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalCommandOutcome, PortalNoopCommandHandler,
+    PortalTextCommand, parse_portal_text_command, portal_cancel_text_command,
+    portal_submit_text_command,
+};
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,

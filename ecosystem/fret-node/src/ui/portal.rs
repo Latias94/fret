@@ -9,18 +9,82 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
+use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::{ElementContext, GlobalElementId, bounds_for_element};
 use fret_ui::{UiHost, retained_bridge::*};
+use uuid::Uuid;
 
 use crate::core::{CanvasPoint, Graph, NodeId};
 use crate::io::NodeGraphViewState;
+use crate::ops::GraphTransaction;
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::style::NodeGraphStyle;
 
 use super::canvas::{node_order, node_ports, node_size_default_px};
+
+pub const CMD_SUBMIT_TEXT_PREFIX: &str = "fret_node.portal.submit_text:";
+pub const CMD_CANCEL_TEXT_PREFIX: &str = "fret_node.portal.cancel_text:";
+
+pub fn portal_submit_text_command(node: NodeId) -> CommandId {
+    CommandId::new(format!("{CMD_SUBMIT_TEXT_PREFIX}{}", node.0))
+}
+
+pub fn portal_cancel_text_command(node: NodeId) -> CommandId {
+    CommandId::new(format!("{CMD_CANCEL_TEXT_PREFIX}{}", node.0))
+}
+
+pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextCommand> {
+    let s = command.as_str();
+    if let Some(rest) = s.strip_prefix(CMD_SUBMIT_TEXT_PREFIX) {
+        let uuid = Uuid::parse_str(rest).ok()?;
+        return Some(PortalTextCommand::Submit { node: NodeId(uuid) });
+    }
+    if let Some(rest) = s.strip_prefix(CMD_CANCEL_TEXT_PREFIX) {
+        let uuid = Uuid::parse_str(rest).ok()?;
+        return Some(PortalTextCommand::Cancel { node: NodeId(uuid) });
+    }
+    None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortalTextCommand {
+    Submit { node: NodeId },
+    Cancel { node: NodeId },
+}
+
+#[derive(Debug, Clone)]
+pub enum PortalCommandOutcome {
+    NotHandled,
+    Handled,
+    Commit(GraphTransaction),
+}
+
+pub trait NodeGraphPortalCommandHandler<H: UiHost> {
+    fn handle_portal_command(
+        &mut self,
+        cx: &mut CommandCx<'_, H>,
+        graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome;
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct PortalNoopCommandHandler;
+
+impl<H: UiHost> NodeGraphPortalCommandHandler<H> for PortalNoopCommandHandler {
+    fn handle_portal_command(
+        &mut self,
+        _cx: &mut CommandCx<'_, H>,
+        _graph: &Graph,
+        _command: PortalTextCommand,
+    ) -> PortalCommandOutcome {
+        PortalCommandOutcome::NotHandled
+    }
+}
 
 /// Layout information for a portal-rendered node subtree.
 #[derive(Debug, Clone, Copy)]
@@ -42,7 +106,7 @@ pub struct NodeGraphPortalNodeLayout {
 ///
 /// The portal subtree is rendered in screen-space (window coordinates) and does not participate in
 /// the canvas pan/zoom transform, matching the ADR 0135 "escape hatch" model.
-pub struct NodeGraphPortalHost<P> {
+pub struct NodeGraphPortalHost<P, C = PortalNoopCommandHandler> {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
     measured: Arc<MeasuredGeometryStore>,
@@ -50,10 +114,14 @@ pub struct NodeGraphPortalHost<P> {
     root_name: String,
     render: P,
 
+    edits: Option<Model<NodeGraphEditQueue>>,
+    focus_canvas: Option<fret_core::NodeId>,
+    command_handler: C,
+
     last_published_nodes: Vec<NodeId>,
 }
 
-impl<P> NodeGraphPortalHost<P> {
+impl<P> NodeGraphPortalHost<P, PortalNoopCommandHandler> {
     pub fn new(
         graph: Model<Graph>,
         view_state: Model<NodeGraphViewState>,
@@ -69,7 +137,37 @@ impl<P> NodeGraphPortalHost<P> {
             style,
             root_name: root_name.into(),
             render,
+            edits: None,
+            focus_canvas: None,
+            command_handler: PortalNoopCommandHandler,
             last_published_nodes: Vec::new(),
+        }
+    }
+}
+
+impl<P, C> NodeGraphPortalHost<P, C> {
+    pub fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+        self.edits = Some(edits);
+        self
+    }
+
+    pub fn with_canvas_focus_target(mut self, node: fret_core::NodeId) -> Self {
+        self.focus_canvas = Some(node);
+        self
+    }
+
+    pub fn with_command_handler<C2>(self, handler: C2) -> NodeGraphPortalHost<P, C2> {
+        NodeGraphPortalHost {
+            graph: self.graph,
+            view_state: self.view_state,
+            measured: self.measured,
+            style: self.style,
+            root_name: self.root_name,
+            render: self.render,
+            edits: self.edits,
+            focus_canvas: self.focus_canvas,
+            command_handler: handler,
+            last_published_nodes: self.last_published_nodes,
         }
     }
 
@@ -94,13 +192,14 @@ impl<P> NodeGraphPortalHost<P> {
     }
 }
 
-impl<H: UiHost, P> Widget<H> for NodeGraphPortalHost<P>
+impl<H: UiHost, P, C> Widget<H> for NodeGraphPortalHost<P, C>
 where
     P: for<'a> FnMut(
         &mut ElementContext<'a, H>,
         &Graph,
         NodeGraphPortalNodeLayout,
     ) -> Vec<AnyElement>,
+    C: NodeGraphPortalCommandHandler<H>,
 {
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
         // Child hit-testing is driven by the declarative subtree root, not this wrapper.
@@ -109,6 +208,47 @@ where
 
     fn semantics_present(&self) -> bool {
         true
+    }
+
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        let Some(cmd) = parse_portal_text_command(command) else {
+            return false;
+        };
+
+        let graph_snapshot = self
+            .graph
+            .read_ref(cx.app, |g| g.clone())
+            .ok()
+            .unwrap_or_default();
+
+        let outcome = self
+            .command_handler
+            .handle_portal_command(cx, &graph_snapshot, cmd);
+
+        match outcome {
+            PortalCommandOutcome::NotHandled => false,
+            PortalCommandOutcome::Handled => {
+                if let Some(canvas) = self.focus_canvas {
+                    cx.request_focus(canvas);
+                }
+                cx.stop_propagation();
+                cx.request_redraw();
+                true
+            }
+            PortalCommandOutcome::Commit(tx) => {
+                if let Some(edits) = &self.edits {
+                    let _ = edits.update(cx.app, |q, _cx| {
+                        q.push(tx);
+                    });
+                }
+                if let Some(canvas) = self.focus_canvas {
+                    cx.request_focus(canvas);
+                }
+                cx.stop_propagation();
+                cx.request_redraw();
+                true
+            }
+        }
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
