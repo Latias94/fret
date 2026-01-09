@@ -18,6 +18,7 @@ Primary ADR:
 - Extensibility ADR: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 - Streaming update model ADR: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
 - Capture options ADR: `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
+- Effect clip masks ADR: `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md`
 
 ## Goals
 
@@ -216,6 +217,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
     - GPU conformance tests cover scissored pixelate for both effect modes.
+    - Next: rounded clip / soft mask integration for effect passes (ADR 0135).
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
@@ -281,6 +283,26 @@ Exit criteria:
 Exit criteria:
 
 - At least one effect group (`FilterContent` or `Backdrop`) works end-to-end with correct ordering/clip/transform (ADR 0119).
+
+### M2.5: Mask-aware effects (rounded clip integration)
+
+Deliverables:
+
+- Encode the effective clip stack (including rounded clips) at effect boundaries during scene encoding.
+- Add a renderer-internal clip mask substrate:
+  - scissor for rectangular intersection,
+  - optional alpha mask for rounded clips (coverage-based).
+- Ensure effect passes can consume clip masks:
+  - `Backdrop` steps write only within the clip mask (and preserve outside pixels),
+  - `FilterContent` composite respects the clip mask (bounds remain computation-only).
+- Add GPU conformance scenes that validate:
+  - rounded “overflow-hidden” glass panel does not bleed into corners,
+  - blur/pixelate do not leak outside the rounded clip under transforms,
+  - behavior is deterministic under budget degradation (ADR 0120).
+
+Exit criteria:
+
+- A rounded clip + effect chain (Backdrop and FilterContent) is visually correct and covered by GPU conformance tests (ADR 0063 / ADR 0135).
 
 ### M3: Budgets + observability hardening
 

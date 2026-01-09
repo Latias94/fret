@@ -160,6 +160,8 @@ Budgets themselves (scope, accounting, and deterministic degradation order) are 
 - Backdrop read-after-write safety: exact approach is renderer-defined (copy vs dual-target vs ping-pong).
 - Whether to add an explicit “effect blend mode” beyond premul over (recommendation: defer; keep premul over v1).
 - Whether `bounds` should be optional for `FilterContent` (recommendation: keep required to enforce predictability).
+- Rounded/soft clipping interaction: effect passes must eventually respect `PushClipRRect` (ADR 0063) via a renderer
+  clip-mask substrate (ADR 0135).
 
 ## Non-goals (v1)
 
