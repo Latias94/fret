@@ -21,12 +21,6 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 
-fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
-    Transform2D::translation(origin)
-        * Transform2D::scale_uniform(scale)
-        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
-}
-
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.navigation_menu.trigger.text_px")
@@ -903,7 +897,10 @@ impl NavigationMenu {
                         else {
                             return radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
                                 opacity,
-                                transform: shadcn_zoom_transform(layout.transform_origin, scale),
+                                transform: overlay_motion::shadcn_zoom_transform_with_scale(
+                                    layout.transform_origin,
+                                    scale,
+                                ),
                                 children: Vec::new(),
                             };
                         };
@@ -1045,7 +1042,10 @@ impl NavigationMenu {
                             );
                         }
 
-                        let transform = shadcn_zoom_transform(layout.transform_origin, scale);
+                        let transform = overlay_motion::shadcn_zoom_transform_with_scale(
+                            layout.transform_origin,
+                            scale,
+                        );
 
                         let panel = popper_content::popper_wrapper_panel_at(
                             cx,
