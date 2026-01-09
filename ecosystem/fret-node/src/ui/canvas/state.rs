@@ -47,7 +47,6 @@ pub(crate) struct InteractionState {
     pub(crate) hover_port_convertible: bool,
     pub(crate) context_menu: Option<ContextMenuState>,
     pub(crate) searcher: Option<SearcherState>,
-    pub(crate) group_rename: Option<GroupRenameState>,
     pub(crate) toast: Option<ToastState>,
     pub(crate) pending_paste: Option<PendingPaste>,
     pub(crate) snap_guides: Option<SnapGuides>,
@@ -213,14 +212,6 @@ pub(crate) struct ContextMenuState {
     pub(crate) hovered_item: Option<usize>,
     pub(crate) active_item: usize,
     pub(crate) typeahead: String,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct GroupRenameState {
-    pub(crate) group: crate::core::GroupId,
-    pub(crate) origin: Point,
-    pub(crate) original: String,
-    pub(crate) text: String,
 }
 
 #[derive(Debug, Clone)]
