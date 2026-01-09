@@ -23,6 +23,7 @@ pub struct DismissiblePopoverRequest {
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
 }
@@ -50,6 +51,7 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())
             .finish()
@@ -66,6 +68,7 @@ pub struct ModalRequest {
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
     pub children: Vec<AnyElement>,
 }
 
@@ -83,6 +86,7 @@ impl std::fmt::Debug for ModalRequest {
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }

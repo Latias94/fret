@@ -20,7 +20,8 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
+    ActionCx, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost,
+    UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps, PressableState,
@@ -1076,6 +1077,41 @@ pub fn select_modal_layer_children_with_pointer_up_guard<H: UiHost>(
         select_modal_barrier_pointer_up_guard(cx, open.clone(), guard),
     );
     select_modal_layer_children(cx, open, dismiss_on_press, barrier_children, content)
+}
+
+/// Returns an item-level pointer-up handler that respects the "open via mouse pointerdown" guard.
+///
+/// When a select is opened on mouse `pointerdown`, the click-release `pointerup` can land on top of
+/// the content. Radix installs a one-shot pointer-up guard to ensure that release does not
+/// immediately select an item. This helper mirrors that behavior for listbox options.
+pub fn select_item_pointer_up_handler(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+) -> OnPointerUp {
+    Arc::new(move |host, action_cx, up: PointerUpCx| {
+        if up.button != fret_core::MouseButton::Left {
+            return false;
+        }
+        if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            return false;
+        }
+        if item_disabled {
+            return true;
+        }
+        if select_mouse_open_guard_should_suppress_pointer_up_shared(&mouse_open_guard, up) {
+            return true;
+        }
+
+        let _ = host
+            .models_mut()
+            .update(&value, |v| *v = Some(item_value.clone()));
+        let _ = host.models_mut().update(&open, |v| *v = false);
+        host.request_redraw(action_cx.window);
+        true
+    })
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.

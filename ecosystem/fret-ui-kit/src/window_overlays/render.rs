@@ -124,25 +124,32 @@ pub fn render<H: UiHost>(
             open_now = false;
         }
 
+        let modal_id = req.id;
+        let root_name = req.root_name.clone();
+        let trigger = req.trigger;
+        let initial_focus = req.initial_focus;
+        let open = req.open;
+        let on_dismiss_request = req.on_dismiss_request.clone();
+        let children = req.children;
+
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
             services,
             window,
             bounds,
-            &req.root_name,
-            |cx| {
-                let open = req.open;
-                cx.dismissible_on_dismiss_request(Arc::new(
-                    move |host, _cx, _reason: DismissReason| {
+            &root_name,
+            move |cx| {
+                cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                    Arc::new(move |host, _cx, _reason: DismissReason| {
                         let _ = host.models_mut().update(&open, |v| *v = false);
-                    },
-                ));
-                req.children
+                    })
+                }));
+                children
             },
         );
 
-        let key = (window, req.id);
+        let key = (window, modal_id);
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
@@ -152,16 +159,16 @@ pub fn render<H: UiHost>(
                 created = true;
                 ActiveModal {
                     layer: ui.push_overlay_root_ex(root, true, true),
-                    root_name: req.root_name.clone(),
-                    trigger: req.trigger,
-                    initial_focus: req.initial_focus,
+                    root_name: root_name.clone(),
+                    trigger,
+                    initial_focus,
                     open: false,
                     restore_focus: None,
                 }
             });
-            entry.root_name = req.root_name.clone();
-            entry.trigger = req.trigger;
-            entry.initial_focus = req.initial_focus;
+            entry.root_name = root_name.clone();
+            entry.trigger = trigger;
+            entry.initial_focus = initial_focus;
 
             // For modal overlays, `present` is the authority for whether the barrier is active.
             OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
@@ -243,9 +250,21 @@ pub fn render<H: UiHost>(
             let _ = app.models_mut().update(&req.open, |v| *v = false);
             open_now = false;
         }
+
+        let popover_id = req.id;
+        let root_name = req.root_name.clone();
+        let trigger = req.trigger;
+        let initial_focus = req.initial_focus;
+        let consume_outside_pointer_events = req.consume_outside_pointer_events;
+        let disable_outside_pointer_events = req.disable_outside_pointer_events;
+        let open = req.open;
+        let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
-        let pointer_barrier_root = req.disable_outside_pointer_events.then(|| {
-            let root_name = format!("{}::pointer_barrier", req.root_name);
+        let on_dismiss_request = req.on_dismiss_request.clone();
+        let children = req.children;
+
+        let pointer_barrier_root = disable_outside_pointer_events.then(|| {
+            let root_name = format!("{}::pointer_barrier", root_name);
             fret_ui::declarative::render_root(
                 ui,
                 app,
@@ -263,22 +282,21 @@ pub fn render<H: UiHost>(
             services,
             window,
             bounds,
-            &req.root_name,
-            |cx| {
-                let open = req.open.clone();
+            &root_name,
+            move |cx| {
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
-                cx.dismissible_on_dismiss_request(Arc::new(
-                    move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(&open, |v| *v = false);
-                    },
-                ));
-                req.children
+                cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
+                    Arc::new(move |host, _cx, _reason: DismissReason| {
+                        let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                    })
+                }));
+                children
             },
         );
 
-        let key = (window, req.id);
+        let key = (window, popover_id);
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
@@ -294,24 +312,24 @@ pub fn render<H: UiHost>(
                 ActivePopover {
                     layer: ui.push_overlay_root_ex(root, false, true),
                     pointer_barrier_layer,
-                    root_name: req.root_name.clone(),
-                    trigger: req.trigger,
-                    initial_focus: req.initial_focus,
-                    consume_outside_pointer_events: req.consume_outside_pointer_events,
-                    disable_outside_pointer_events: req.disable_outside_pointer_events,
+                    root_name: root_name.clone(),
+                    trigger,
+                    initial_focus,
+                    consume_outside_pointer_events,
+                    disable_outside_pointer_events,
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
                 }
             });
-            entry.root_name = req.root_name.clone();
-            entry.trigger = req.trigger;
-            entry.initial_focus = req.initial_focus;
-            entry.consume_outside_pointer_events = req.consume_outside_pointer_events;
-            entry.disable_outside_pointer_events = req.disable_outside_pointer_events;
+            entry.root_name = root_name.clone();
+            entry.trigger = trigger;
+            entry.initial_focus = initial_focus;
+            entry.consume_outside_pointer_events = consume_outside_pointer_events;
+            entry.disable_outside_pointer_events = disable_outside_pointer_events;
 
             if let Some(barrier_layer) = entry.pointer_barrier_layer {
-                let present = open_now && req.disable_outside_pointer_events;
+                let present = open_now && disable_outside_pointer_events;
                 ui.set_layer_visible(barrier_layer, present);
                 ui.set_layer_hit_testable(barrier_layer, false);
                 ui.set_layer_wants_pointer_down_outside_events(barrier_layer, false);
@@ -329,7 +347,7 @@ pub fn render<H: UiHost>(
                     &dismissable_branch_nodes,
                 )
             {
-                let _ = app.models_mut().update(&req.open, |v| *v = false);
+                let _ = app.models_mut().update(&open, |v| *v = false);
                 open_now = false;
             }
 
@@ -341,7 +359,7 @@ pub fn render<H: UiHost>(
             ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
             ui.set_layer_consume_pointer_down_outside_events(
                 entry.layer,
-                req.consume_outside_pointer_events && open_now,
+                consume_outside_pointer_events && open_now,
             );
 
             // Non-modal overlays are click-through during close transitions:
@@ -357,7 +375,7 @@ pub fn render<H: UiHost>(
             // open -> closed edge so recipes can animate out without deferring focus restoration.
             let closing = entry.open && !open_now;
             if closing
-                && (req.consume_outside_pointer_events
+                && (consume_outside_pointer_events
                     || focus_scope_prim::should_restore_focus_for_non_modal_overlay(
                         ui,
                         entry.layer,
@@ -370,7 +388,7 @@ pub fn render<H: UiHost>(
                         ui,
                         app,
                         window,
-                        Some(req.trigger),
+                        Some(trigger),
                         entry.restore_focus,
                     ) {
                         ui.set_focus(Some(node));

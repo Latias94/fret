@@ -15,6 +15,7 @@
 //! modal overlay request wiring, without forcing a visual skin.
 
 use fret_runtime::Model;
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
     SizeStyle,
@@ -118,6 +119,26 @@ impl DialogRoot {
         self.options
     }
 
+    pub fn modal_request_with_dismiss_handler<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        on_dismiss_request: Option<OnDismissRequest>,
+        children: Vec<AnyElement>,
+    ) -> OverlayRequest {
+        modal_dialog_request_with_options_and_dismiss_handler(
+            id,
+            trigger,
+            self.open_model(cx),
+            presence,
+            self.options,
+            on_dismiss_request,
+            children,
+        )
+    }
+
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
     pub fn use_open_model<H: UiHost>(
         &self,
@@ -202,6 +223,25 @@ pub fn modal_dialog_request_with_options(
     request
 }
 
+/// Builds an overlay request for a Radix-style modal dialog, with a custom dismiss handler.
+///
+/// This mirrors the Radix `DismissableLayer` contract: callers may "prevent default" by not
+/// closing the `open` model in the handler.
+pub fn modal_dialog_request_with_options_and_dismiss_handler(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: DialogOptions,
+    on_dismiss_request: Option<OnDismissRequest>,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request =
+        modal_dialog_request_with_options(id, trigger, open, presence, options, children);
+    request.dismissible_on_dismiss_request = on_dismiss_request;
+    request
+}
+
 /// Standard full-window modal barrier layout (absolute inset 0, fill).
 pub fn modal_barrier_layout() -> LayoutStyle {
     LayoutStyle {
@@ -280,6 +320,9 @@ pub fn request_modal_dialog<H: UiHost>(cx: &mut ElementContext<'_, H>, request: 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use fret_ui::action::DismissReason;
+    use std::sync::Arc;
 
     use fret_app::App;
     use fret_core::AppWindowId;
@@ -368,6 +411,25 @@ mod tests {
         let options = root.options();
         assert!(!options.dismiss_on_overlay_press);
         assert_eq!(options.initial_focus, Some(GlobalElementId(0xbeef)));
+    }
+
+    #[test]
+    fn modal_dialog_request_with_options_and_dismiss_handler_sets_dismiss_handler() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let req = modal_dialog_request_with_options_and_dismiss_handler(
+            GlobalElementId(0x123),
+            GlobalElementId(0x123),
+            open,
+            OverlayPresence::instant(true),
+            DialogOptions::default(),
+            Some(handler),
+            Vec::new(),
+        );
+
+        assert!(req.dismissible_on_dismiss_request.is_some());
     }
 
     #[test]

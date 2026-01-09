@@ -5,7 +5,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerUpCx};
+use fret_ui::action::ActionCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
@@ -1520,38 +1520,15 @@ fn select_impl<H: UiHost>(
                                                                                              let mouse_open_guard_for_pointer_up =
                                                                                                  mouse_open_guard_for_item_pointer_up.clone();
 
-                                                                                             cx.pointer_region_on_pointer_up(Arc::new(
-                                                                                                 move |host, action_cx, up: PointerUpCx| {
-                                                                                                     if up.button != fret_core::MouseButton::Left {
-                                                                                                         return false;
-                                                                                                     }
-                                                                                                     if !matches!(
-                                                                                                         up.pointer_type,
-                                                                                                         fret_core::PointerType::Mouse
-                                                                                                             | fret_core::PointerType::Unknown
-                                                                                                     ) {
-                                                                                                         return false;
-                                                                                                     }
-                                                                                                     if item_disabled_for_pointer_up {
-                                                                                                         return true;
-                                                                                                     }
-                                                                                                     if radix_select::select_mouse_open_guard_should_suppress_pointer_up_shared(
-                                                                                                         &mouse_open_guard_for_pointer_up,
-                                                                                                         up,
-                                                                                                     ) {
-                                                                                                         return true;
-                                                                                                     }
-
-                                                                                                     let _ = host.models_mut().update(&model_for_pointer_up, |v| {
-                                                                                                         *v = Some(item_value_for_pointer_up.clone())
-                                                                                                     });
-                                                                                                     let _ = host
-                                                                                                         .models_mut()
-                                                                                                         .update(&open_for_pointer_up, |v| *v = false);
-                                                                                                     host.request_redraw(action_cx.window);
-                                                                                                     true
-                                                                                                 },
-                                                                                             ));
+                                                                                             cx.pointer_region_on_pointer_up(
+                                                                                                 radix_select::select_item_pointer_up_handler(
+                                                                                                     open_for_pointer_up,
+                                                                                                     model_for_pointer_up,
+                                                                                                     item_value_for_pointer_up,
+                                                                                                     item_disabled_for_pointer_up,
+                                                                                                     mouse_open_guard_for_pointer_up,
+                                                                                                 ),
+                                                                                             );
 
                                                                                              vec![cx.container(
                                                                                                 ContainerProps {
