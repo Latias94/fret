@@ -122,6 +122,8 @@ impl NodeGraphCanvas {
     const REROUTE_INPUTS: usize = 1;
     const REROUTE_OUTPUTS: usize = 1;
     const AUTO_PAN_TICK_HZ: f32 = 60.0;
+    const AUTO_PAN_TICK_INTERVAL: Duration =
+        Duration::from_nanos((1.0e9 / Self::AUTO_PAN_TICK_HZ) as u64);
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -2894,6 +2896,68 @@ impl NodeGraphCanvas {
         };
         self.cached_zoom = new_zoom;
     }
+
+    fn stop_auto_pan_timer<H: UiHost>(&mut self, host: &mut H) {
+        let Some(timer) = self.interaction.auto_pan_timer.take() else {
+            return;
+        };
+        host.push_effect(Effect::CancelTimer { token: timer });
+    }
+
+    fn ensure_auto_pan_timer_running<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+    ) {
+        if self.interaction.auto_pan_timer.is_some() {
+            return;
+        }
+        let timer = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window,
+            token: timer,
+            after: Self::AUTO_PAN_TICK_INTERVAL,
+            repeat: Some(Self::AUTO_PAN_TICK_INTERVAL),
+        });
+        self.interaction.auto_pan_timer = Some(timer);
+    }
+
+    fn auto_pan_should_tick(&self, snapshot: &ViewSnapshot, bounds: Rect) -> bool {
+        if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
+            return false;
+        }
+        let Some(pos) = self.interaction.last_pos else {
+            return false;
+        };
+
+        let wants_node_drag = snapshot.interaction.auto_pan.on_node_drag
+            && (self.interaction.node_drag.is_some()
+                || self.interaction.group_drag.is_some()
+                || self.interaction.group_resize.is_some());
+        let wants_connect =
+            snapshot.interaction.auto_pan.on_connect && self.interaction.wire_drag.is_some();
+
+        if !wants_node_drag && !wants_connect {
+            return false;
+        }
+
+        let delta = Self::auto_pan_delta(snapshot, pos, bounds);
+        delta.x != 0.0 || delta.y != 0.0
+    }
+
+    fn sync_auto_pan_timer<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        bounds: Rect,
+    ) {
+        if self.auto_pan_should_tick(snapshot, bounds) {
+            self.ensure_auto_pan_timer_running(host, window);
+        } else {
+            self.stop_auto_pan_timer(host);
+        }
+    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
@@ -3369,6 +3433,39 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.interaction.toast = None;
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
+                if self.interaction.auto_pan_timer == Some(*token) {
+                    if !self.auto_pan_should_tick(&snapshot, cx.bounds) {
+                        self.stop_auto_pan_timer(cx.app);
+                        return;
+                    }
+
+                    let pos = self.interaction.last_pos.unwrap_or_default();
+                    let mods = self.interaction.last_modifiers;
+                    let zoom = snapshot.zoom;
+
+                    if self.interaction.wire_drag.is_some() {
+                        let _ =
+                            wire_drag::handle_wire_drag_move(self, cx, &snapshot, pos, mods, zoom);
+                    } else if self.interaction.node_drag.is_some() {
+                        let _ =
+                            node_drag::handle_node_drag_move(self, cx, &snapshot, pos, mods, zoom);
+                    } else if self.interaction.group_drag.is_some() {
+                        let _ = group_drag::handle_group_drag_move(
+                            self, cx, &snapshot, pos, mods, zoom,
+                        );
+                    } else if self.interaction.group_resize.is_some() {
+                        let _ = group_resize::handle_group_resize_move(
+                            self, cx, &snapshot, pos, mods, zoom,
+                        );
+                    }
+
+                    let snapshot = self.sync_view_state(cx.app);
+                    self.sync_auto_pan_timer(cx.app, cx.window, &snapshot, cx.bounds);
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
@@ -3487,6 +3584,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 ..
             }) => {
                 self.interaction.last_pos = Some(*position);
+                self.interaction.last_modifiers = *modifiers;
                 self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
                     cx.bounds,
                     *position,
@@ -3565,6 +3663,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }) => {
                 let Some(last) = self.interaction.last_pos else {
                     self.interaction.last_pos = Some(*position);
+                    self.interaction.last_modifiers = *modifiers;
                     self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
                         cx.bounds,
                         *position,
@@ -3575,6 +3674,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 };
                 let delta = Point::new(Px(position.x.0 - last.x.0), Px(position.y.0 - last.y.0));
                 self.interaction.last_pos = Some(*position);
+                self.interaction.last_modifiers = *modifiers;
                 self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
                     cx.bounds,
                     *position,
@@ -3585,79 +3685,60 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cursor::update_cursors(self, cx, &snapshot, *position, zoom);
 
                 if pan_zoom::handle_panning_move(self, cx, delta) {
-                    return;
-                }
-
-                if marquee::handle_marquee_move(self, cx, &snapshot, *position, *modifiers, zoom) {
-                    return;
-                }
-
-                if pending_group_drag::handle_pending_group_drag_move(
-                    self, cx, &snapshot, *position, zoom,
-                ) {
-                    return;
-                }
-
-                if group_drag::handle_group_drag_move(
+                    // keep going to sync auto-pan timer
+                } else if marquee::handle_marquee_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
-                    return;
-                }
-
-                if pending_group_resize::handle_pending_group_resize_move(
+                    // keep going to sync auto-pan timer
+                } else if pending_group_drag::handle_pending_group_drag_move(
                     self, cx, &snapshot, *position, zoom,
                 ) {
-                    return;
-                }
-
-                if group_resize::handle_group_resize_move(
+                    // keep going to sync auto-pan timer
+                } else if group_drag::handle_group_drag_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
-                    return;
-                }
-
-                if pending_drag::handle_pending_node_drag_move(self, cx, &snapshot, *position, zoom)
+                    // keep going to sync auto-pan timer
+                } else if pending_group_resize::handle_pending_group_resize_move(
+                    self, cx, &snapshot, *position, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if group_resize::handle_group_resize_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if pending_drag::handle_pending_node_drag_move(
+                    self, cx, &snapshot, *position, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if pending_resize::handle_pending_node_resize_move(
+                    self, cx, &snapshot, *position, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if node_resize::handle_node_resize_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if node_drag::handle_node_drag_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if wire_drag::handle_wire_drag_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if edge_drag::handle_edge_drag_move(self, cx, &snapshot, *position, zoom) {
+                    // keep going to sync auto-pan timer
+                } else if searcher::handle_searcher_pointer_move(self, cx, *position, zoom) {
+                    // keep going to sync auto-pan timer
+                } else if context_menu::handle_context_menu_pointer_move(self, cx, *position, zoom)
                 {
-                    return;
+                    // keep going to sync auto-pan timer
+                } else {
+                    hover::update_hover_edge(self, cx, &snapshot, *position, zoom);
                 }
 
-                if pending_resize::handle_pending_node_resize_move(
-                    self, cx, &snapshot, *position, zoom,
-                ) {
-                    return;
-                }
-
-                if node_resize::handle_node_resize_move(
-                    self, cx, &snapshot, *position, *modifiers, zoom,
-                ) {
-                    return;
-                }
-
-                if node_drag::handle_node_drag_move(
-                    self, cx, &snapshot, *position, *modifiers, zoom,
-                ) {
-                    return;
-                }
-
-                if wire_drag::handle_wire_drag_move(
-                    self, cx, &snapshot, *position, *modifiers, zoom,
-                ) {
-                    return;
-                }
-
-                if edge_drag::handle_edge_drag_move(self, cx, &snapshot, *position, zoom) {
-                    return;
-                }
-
-                if searcher::handle_searcher_pointer_move(self, cx, *position, zoom) {
-                    return;
-                }
-
-                if context_menu::handle_context_menu_pointer_move(self, cx, *position, zoom) {
-                    return;
-                }
-
-                hover::update_hover_edge(self, cx, &snapshot, *position, zoom);
+                let snapshot = self.sync_view_state(cx.app);
+                self.sync_auto_pan_timer(cx.app, cx.window, &snapshot, cx.bounds);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position,

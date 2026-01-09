@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{ClipboardToken, Point, Rect};
+use fret_core::{ClipboardToken, Modifiers, Point, Rect};
 use fret_runtime::TimerToken;
 
 use crate::core::{CanvasPoint, EdgeId, GroupId, NodeId as GraphNodeId, NodeKindKey, PortId};
@@ -27,6 +27,7 @@ pub(crate) struct InteractionState {
     pub(crate) last_pos: Option<Point>,
     pub(crate) last_canvas_pos: Option<CanvasPoint>,
     pub(crate) last_bounds: Option<Rect>,
+    pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) panning: bool,
     pub(crate) pending_marquee: Option<PendingMarqueeDrag>,
@@ -51,6 +52,7 @@ pub(crate) struct InteractionState {
     pub(crate) context_menu: Option<ContextMenuState>,
     pub(crate) searcher: Option<SearcherState>,
     pub(crate) toast: Option<ToastState>,
+    pub(crate) auto_pan_timer: Option<TimerToken>,
     pub(crate) pending_paste: Option<PendingPaste>,
     pub(crate) snap_guides: Option<SnapGuides>,
 

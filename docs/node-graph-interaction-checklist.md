@@ -103,8 +103,8 @@ Strict/Loose resolution:
 
 Auto-pan:
 
-- (todo) While connecting, if pointer is near the canvas edge, the canvas auto-pans.
-- (todo) Auto-pan speed and edge threshold are configurable.
+- (prototype) While connecting, if pointer is near the canvas edge, the canvas auto-pans.
+- (prototype) Auto-pan speed and edge threshold are configurable.
 
 Drag threshold:
 

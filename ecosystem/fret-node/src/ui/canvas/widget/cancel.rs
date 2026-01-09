@@ -61,6 +61,7 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     canvas.interaction.hover_edge = None;
 
     if canceled {
+        canvas.stop_auto_pan_timer(cx.app);
         cx.release_pointer_capture();
         cx.stop_propagation();
         cx.request_redraw();

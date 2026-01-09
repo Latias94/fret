@@ -186,7 +186,7 @@ Legend:
 - [x] Add node graph interaction checklist doc (like docking arbitration): `docs/node-graph-interaction-checklist.md`.
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
-- [ ] Implement auto-pan during connect/drag near edges.
+- [x] Implement auto-pan during connect/drag near edges.
 - [ ] Add “drag handle tooltip/help” in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
 
 ### Medium-term
