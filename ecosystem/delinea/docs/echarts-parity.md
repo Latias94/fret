@@ -74,7 +74,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `filterMode=filter` | DONE | Filters points outside the X window (affects bounds/LOD). |
 | `filterMode=none` | DONE | Keeps Y bounds global while X window changes. |
 | `inside` (wheel/drag) | PARTIAL | UI supports pan/zoom gestures; not yet modeled as separate component types. |
-| `slider` UI | PLANNED | Not implemented. |
+| `slider` UI | PARTIAL | UI-only X slider (value-space window). Composition/span/rangeMode is locked in ADR 0138; full ECharts parity is future work. |
 | Y / 2D zoom | PARTIAL | Mapping-only Y windows; 2D box zoom writes X+Y together. Semantics are locked in ADR 0136. |
 | Brush select | PARTIAL | UI-only persistent selection rectangle (Alt+RMB) with a clear shortcut (`A`); does not filter data yet (ADR 0137). |
 

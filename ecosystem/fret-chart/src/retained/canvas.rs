@@ -85,6 +85,23 @@ struct BrushSelection2D {
     y: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum SliderDragKind {
+    Pan,
+    HandleMin,
+    HandleMax,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DataZoomSliderDrag {
+    axis: delinea::AxisId,
+    kind: SliderDragKind,
+    track: Rect,
+    extent: DataWindow,
+    start_pos: Point,
+    start_window: DataWindow,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisRegion {
     Plot,
@@ -130,6 +147,16 @@ pub struct ChartCanvas {
     box_zoom_drag: Option<BoxZoomDrag>,
     brush_selection: Option<BrushSelection2D>,
     brush_drag: Option<BoxZoomDrag>,
+    slider_drag: Option<DataZoomSliderDrag>,
+    axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AxisExtentCacheEntry {
+    spec_rev: delinea::ids::Revision,
+    visual_rev: delinea::ids::Revision,
+    data_sig: u64,
+    window: DataWindow,
 }
 
 impl ChartCanvas {
@@ -159,6 +186,8 @@ impl ChartCanvas {
             box_zoom_drag: None,
             brush_selection: None,
             brush_drag: None,
+            slider_drag: None,
+            axis_extent_cache: BTreeMap::default(),
         })
     }
 
@@ -546,6 +575,10 @@ impl ChartCanvas {
         self.brush_drag = None;
     }
 
+    fn clear_slider_drag(&mut self) {
+        self.slider_drag = None;
+    }
+
     fn selection_windows_for_drag(
         &self,
         plot: Rect,
@@ -659,6 +692,196 @@ impl ChartCanvas {
         let p0 = Point::new(Px(plot.origin.x.0 + x0), Px(plot.origin.y.0 + y0));
         let p1 = Point::new(Px(plot.origin.x.0 + x1), Px(plot.origin.y.0 + y1));
         Some(rect_from_points_clamped(plot, p0, p1))
+    }
+
+    fn compute_axis_extent_from_data(&mut self, axis: delinea::AxisId, is_x: bool) -> DataWindow {
+        let (spec_rev, visual_rev) = {
+            let model = self.engine.model();
+            (model.revs.spec, model.revs.visual)
+        };
+
+        let data_sig = self.data_signature();
+        if let Some(entry) = self.axis_extent_cache.get(&axis).copied()
+            && entry.spec_rev == spec_rev
+            && entry.visual_rev == visual_rev
+            && entry.data_sig == data_sig
+        {
+            return entry.window;
+        }
+
+        let series_cols = {
+            let model = self.engine.model();
+            if let Some(axis_model) = model.axes.get(&axis) {
+                if let delinea::AxisScale::Category(scale) = &axis_model.scale
+                    && !scale.categories.is_empty()
+                {
+                    let w = DataWindow {
+                        min: -0.5,
+                        max: scale.categories.len() as f64 - 0.5,
+                    };
+                    return w;
+                }
+            }
+
+            let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
+            for series_id in &model.series_order {
+                let Some(series) = model.series.get(series_id) else {
+                    continue;
+                };
+                if !series.visible {
+                    continue;
+                }
+
+                let axis_id = if is_x { series.x_axis } else { series.y_axis };
+                if axis_id != axis {
+                    continue;
+                }
+
+                let Some(dataset) = model.datasets.get(&series.dataset) else {
+                    continue;
+                };
+                let field = if is_x {
+                    series.encode.x
+                } else {
+                    series.encode.y
+                };
+                let Some(col) = dataset.fields.get(&field).copied() else {
+                    continue;
+                };
+                series_cols.push((series.dataset, col));
+            }
+
+            series_cols
+        };
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+
+        for (dataset_id, col) in series_cols {
+            let datasets = &self.engine.datasets_mut().datasets;
+            let Some(table) = datasets
+                .iter()
+                .find_map(|(did, t)| (*did == dataset_id).then_some(t))
+            else {
+                continue;
+            };
+            let Some(values) = table.column_f64(col) else {
+                continue;
+            };
+
+            for &v in values {
+                if !v.is_finite() {
+                    continue;
+                }
+                min = min.min(v);
+                max = max.max(v);
+            }
+        }
+
+        let mut out = if min.is_finite() && max.is_finite() && max > min {
+            DataWindow { min, max }
+        } else {
+            DataWindow { min: 0.0, max: 1.0 }
+        };
+
+        let (locked_min, locked_max) = self.axis_constraints(axis);
+        out = out.apply_constraints(locked_min, locked_max);
+        out.clamp_non_degenerate();
+
+        self.axis_extent_cache.insert(
+            axis,
+            AxisExtentCacheEntry {
+                spec_rev,
+                visual_rev,
+                data_sig,
+                window: out,
+            },
+        );
+        out
+    }
+
+    fn data_signature(&mut self) -> u64 {
+        use std::hash::{Hash, Hasher};
+
+        let dataset_ids: Vec<delinea::DatasetId> =
+            self.engine.model().datasets.keys().copied().collect();
+        let datasets = self.engine.datasets_mut();
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for dataset_id in dataset_ids {
+            dataset_id.0.hash(&mut hasher);
+            if let Some(table) = datasets
+                .datasets
+                .iter()
+                .find_map(|(did, t)| (*did == dataset_id).then_some(t))
+            {
+                table.revision.0.hash(&mut hasher);
+                table.row_count.hash(&mut hasher);
+            }
+        }
+        hasher.finish()
+    }
+
+    fn x_slider_track_for_axis(&self, axis: delinea::AxisId) -> Option<Rect> {
+        let plot = self.last_layout.plot;
+        if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+            return None;
+        }
+
+        let band = self
+            .last_layout
+            .x_axes
+            .iter()
+            .find(|b| b.axis == axis && b.position == delinea::AxisPosition::Bottom)?;
+
+        let h = 9.0f32;
+        let pad = 4.0f32;
+        let y = band.rect.origin.y.0 + band.rect.size.height.0 - h - pad;
+        let track = Rect::new(
+            Point::new(plot.origin.x, Px(y)),
+            Size::new(plot.size.width, Px(h)),
+        );
+
+        if band.rect.contains(track.origin)
+            && band.rect.contains(Point::new(
+                track.origin.x,
+                Px(track.origin.y.0 + track.size.height.0),
+            ))
+        {
+            Some(track)
+        } else {
+            Some(track)
+        }
+    }
+
+    fn current_window_x_for_slider(
+        &mut self,
+        axis: delinea::AxisId,
+        extent: DataWindow,
+    ) -> DataWindow {
+        if let Some(fixed) = self.axis_is_fixed(axis) {
+            return fixed;
+        }
+
+        if let Some(zoom) = self.engine.state().data_zoom_x.get(&axis).copied()
+            && let Some(window) = zoom.window
+        {
+            return window;
+        }
+
+        extent
+    }
+
+    fn slider_norm(extent: DataWindow, v: f64) -> f32 {
+        let span = extent.span();
+        if !span.is_finite() || span <= 0.0 {
+            return 0.0;
+        }
+        (((v - extent.min) / span) as f32).clamp(0.0, 1.0)
+    }
+
+    fn slider_value_at(track: Rect, extent: DataWindow, px_x: f32) -> f64 {
+        delinea::engine::axis::data_at_px(extent, px_x, track.origin.x.0, track.size.width.0)
     }
 
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
@@ -1517,6 +1740,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     self.clear_brush();
+                    self.clear_slider_drag();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1535,6 +1759,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     self.clear_brush();
+                    self.clear_slider_drag();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1553,6 +1778,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     self.clear_brush();
+                    self.clear_slider_drag();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1572,6 +1798,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     self.clear_brush();
+                    self.clear_slider_drag();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1583,6 +1810,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 if plain && *key == KeyCode::KeyA {
                     self.clear_brush();
+                    self.clear_slider_drag();
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -1604,6 +1832,63 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if cx.captured == Some(cx.node) {
+                    if let Some(drag) = self.slider_drag
+                        && Self::is_button_held(MouseButton::Left, *buttons)
+                    {
+                        let track = drag.track;
+                        let extent = drag.extent;
+                        let span = extent.span();
+                        if track.size.width.0 > 0.0 && span.is_finite() && span > 0.0 {
+                            let x = position
+                                .x
+                                .0
+                                .clamp(track.origin.x.0, track.origin.x.0 + track.size.width.0);
+                            let start_x = drag
+                                .start_pos
+                                .x
+                                .0
+                                .clamp(track.origin.x.0, track.origin.x.0 + track.size.width.0);
+                            let delta_px = x - start_x;
+                            let delta_value = (delta_px / track.size.width.0) as f64 * span;
+
+                            let mut window = drag.start_window;
+                            match drag.kind {
+                                SliderDragKind::Pan => {
+                                    window.min += delta_value;
+                                    window.max += delta_value;
+                                }
+                                SliderDragKind::HandleMin => {
+                                    window.min += delta_value;
+                                }
+                                SliderDragKind::HandleMax => {
+                                    window.max += delta_value;
+                                }
+                            }
+                            window.clamp_non_degenerate();
+                            window.min = window.min.max(extent.min).min(extent.max);
+                            window.max = window.max.max(extent.min).min(extent.max);
+                            if window.max <= window.min {
+                                window.max =
+                                    (window.min + f64::MIN_POSITIVE).max(window.min + 1e-9);
+                            }
+                            self.engine.apply_action(Action::SetDataWindowXFromZoom {
+                                axis: drag.axis,
+                                window,
+                            });
+
+                            self.slider_drag = Some(DataZoomSliderDrag {
+                                start_pos: *position,
+                                start_window: window,
+                                ..drag
+                            });
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+                        return;
+                    }
+
                     if let Some(mut drag) = self.box_zoom_drag
                         && Self::is_button_held(drag.button, *buttons)
                     {
@@ -1802,6 +2087,71 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
                 if self.brush_drag.is_some() {
                     return;
+                }
+                if self.slider_drag.is_some() {
+                    return;
+                }
+
+                // Slider interaction: allow left-drag in the slider track (bottom x axis only).
+                if *button == MouseButton::Left {
+                    let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, _y_axis)) = self.active_axes(&layout) else {
+                        return;
+                    };
+
+                    if let Some(track) = self.x_slider_track_for_axis(x_axis)
+                        && track.contains(*position)
+                        && self.axis_is_fixed(x_axis).is_none()
+                    {
+                        let extent = self.compute_axis_extent_from_data(x_axis, true);
+                        let window = self.current_window_x_for_slider(x_axis, extent);
+
+                        let t0 = Self::slider_norm(extent, window.min);
+                        let t1 = Self::slider_norm(extent, window.max);
+                        let left = track.origin.x.0 + t0 * track.size.width.0;
+                        let right = track.origin.x.0 + t1 * track.size.width.0;
+
+                        let handle_hit = 7.0f32;
+                        let x = position.x.0;
+                        let kind = if (x - left).abs() <= handle_hit {
+                            SliderDragKind::HandleMin
+                        } else if (x - right).abs() <= handle_hit {
+                            SliderDragKind::HandleMax
+                        } else if x >= left && x <= right {
+                            SliderDragKind::Pan
+                        } else {
+                            // Jump: center the current span around the click and drag as pan.
+                            SliderDragKind::Pan
+                        };
+
+                        let start_window =
+                            if matches!(kind, SliderDragKind::Pan) && !(x >= left && x <= right) {
+                                let click_value = Self::slider_value_at(track, extent, x);
+                                let half = 0.5 * window.span();
+                                DataWindow {
+                                    min: click_value - half,
+                                    max: click_value + half,
+                                }
+                            } else {
+                                window
+                            };
+
+                        self.slider_drag = Some(DataZoomSliderDrag {
+                            axis: x_axis,
+                            kind,
+                            track,
+                            extent,
+                            start_pos: *position,
+                            start_window,
+                        });
+
+                        cx.request_focus(cx.node);
+                        cx.capture_pointer(cx.node);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
                 }
 
                 let start_box_primary = self.input_map.box_zoom.matches(*button, *modifiers);
@@ -2009,6 +2359,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         self.brush_selection = None;
                     }
 
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.slider_drag.is_some() && *button == MouseButton::Left {
+                    self.slider_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -2421,6 +2782,71 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
+        }
+
+        // DataZoom slider: render for the active bottom X axis (if present).
+        if let Some((x_axis, _y_axis)) = self.active_axes(&self.last_layout)
+            && let Some(track) = self.x_slider_track_for_axis(x_axis)
+        {
+            let extent = self.compute_axis_extent_from_data(x_axis, true);
+            let window = self.current_window_x_for_slider(x_axis, extent);
+
+            let t0 = Self::slider_norm(extent, window.min);
+            let t1 = Self::slider_norm(extent, window.max);
+            let left = track.origin.x.0 + t0 * track.size.width.0;
+            let right = track.origin.x.0 + t1 * track.size.width.0;
+
+            let order = DrawOrder(self.style.draw_order.0.saturating_add(8_650));
+            let track_color = Color {
+                a: 0.18,
+                ..self.style.axis_line_color
+            };
+            cx.scene.push(SceneOp::Quad {
+                order,
+                rect: track,
+                background: track_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(4.0)),
+            });
+
+            let win_rect = Rect::new(
+                Point::new(Px(left.min(right)), track.origin.y),
+                Size::new(Px((right - left).abs().max(1.0)), track.size.height),
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(order.0.saturating_add(1)),
+                rect: win_rect,
+                background: self.style.selection_fill,
+                border: Edges::all(self.style.selection_stroke_width),
+                border_color: self.style.selection_stroke,
+                corner_radii: Corners::all(Px(4.0)),
+            });
+
+            let handle_w = 2.0f32.max(self.style.selection_stroke_width.0);
+            let handle_color = self.style.selection_stroke;
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(order.0.saturating_add(2)),
+                rect: Rect::new(
+                    Point::new(Px(left - 0.5 * handle_w), track.origin.y),
+                    Size::new(Px(handle_w), track.size.height),
+                ),
+                background: handle_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(order.0.saturating_add(3)),
+                rect: Rect::new(
+                    Point::new(Px(right - 0.5 * handle_w), track.origin.y),
+                    Size::new(Px(handle_w), track.size.height),
+                ),
+                background: handle_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
 
         if let Some(brush) = self.brush_selection
