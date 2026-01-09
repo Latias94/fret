@@ -117,6 +117,10 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    /// Number of layout engine root solves performed during the current frame.
+    pub layout_engine_solves: u64,
+    /// Total time spent in layout engine solves during the current frame.
+    pub layout_engine_solve_time: Duration,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }

@@ -100,6 +100,10 @@ impl TaffyLayoutEngine {
         self.solve_generation
     }
 
+    pub fn last_solve_time(&self) -> Duration {
+        self.last_solve_time
+    }
+
     pub fn child_layout_rect_if_solved(&self, parent: NodeId, child: NodeId) -> Option<Rect> {
         if self.solve_generation == 0 {
             return None;

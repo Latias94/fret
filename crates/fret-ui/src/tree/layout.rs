@@ -30,6 +30,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.frame_id = app.frame_id();
             self.debug_stats.layout_nodes_visited = 0;
             self.debug_stats.layout_nodes_performed = 0;
+            self.debug_stats.layout_engine_solves = 0;
+            self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured;
         }
@@ -85,6 +87,14 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         self.layout_engine.end_frame();
+
+        if self.debug_enabled {
+            #[cfg(feature = "layout-engine-v2")]
+            {
+                self.debug_stats.layout_engine_solves = self.layout_engine.solve_count();
+                self.debug_stats.layout_engine_solve_time = self.layout_engine.last_solve_time();
+            }
+        }
     }
 
     pub fn layout(
