@@ -39,7 +39,23 @@ pub fn portal_cancel_text_command(node: NodeId) -> CommandId {
 }
 
 pub fn portal_step_text_command(node: NodeId, delta: i32) -> CommandId {
-    CommandId::new(format!("{CMD_STEP_TEXT_PREFIX}{}:{delta}", node.0))
+    CommandId::new(format!(
+        "{CMD_STEP_TEXT_PREFIX}{}:{delta}:{}",
+        node.0,
+        PortalTextStepMode::Normal.as_str()
+    ))
+}
+
+pub fn portal_step_text_command_with_mode(
+    node: NodeId,
+    delta: i32,
+    mode: PortalTextStepMode,
+) -> CommandId {
+    CommandId::new(format!(
+        "{CMD_STEP_TEXT_PREFIX}{}:{delta}:{}",
+        node.0,
+        mode.as_str()
+    ))
 }
 
 pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextCommand> {
@@ -53,22 +69,61 @@ pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextComman
         return Some(PortalTextCommand::Cancel { node: NodeId(uuid) });
     }
     if let Some(rest) = s.strip_prefix(CMD_STEP_TEXT_PREFIX) {
-        let (uuid_str, delta_str) = rest.split_once(':')?;
+        let mut parts = rest.split(':');
+        let uuid_str = parts.next()?;
+        let delta_str = parts.next()?;
+        let mode_str = parts.next().unwrap_or("normal");
         let uuid = Uuid::parse_str(uuid_str).ok()?;
         let delta = delta_str.parse::<i32>().ok()?;
+        let mode = PortalTextStepMode::parse(mode_str)?;
         return Some(PortalTextCommand::Step {
             node: NodeId(uuid),
             delta,
+            mode,
         });
     }
     None
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortalTextStepMode {
+    Fine,
+    Normal,
+    Coarse,
+}
+
+impl PortalTextStepMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Fine => "fine",
+            Self::Normal => "normal",
+            Self::Coarse => "coarse",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "fine" => Some(Self::Fine),
+            "normal" => Some(Self::Normal),
+            "coarse" => Some(Self::Coarse),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PortalTextCommand {
-    Submit { node: NodeId },
-    Cancel { node: NodeId },
-    Step { node: NodeId, delta: i32 },
+    Submit {
+        node: NodeId,
+    },
+    Cancel {
+        node: NodeId,
+    },
+    Step {
+        node: NodeId,
+        delta: i32,
+        mode: PortalTextStepMode,
+    },
 }
 
 #[derive(Debug, Clone)]

@@ -31,8 +31,9 @@ pub use measured::{
 pub use portal::{
     CMD_CANCEL_TEXT_PREFIX, CMD_STEP_TEXT_PREFIX, CMD_SUBMIT_TEXT_PREFIX,
     NodeGraphPortalCommandHandler, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    PortalCommandOutcome, PortalNoopCommandHandler, PortalTextCommand, parse_portal_text_command,
-    portal_cancel_text_command, portal_step_text_command, portal_submit_text_command,
+    PortalCommandOutcome, PortalNoopCommandHandler, PortalTextCommand, PortalTextStepMode,
+    parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
+    portal_step_text_command_with_mode, portal_submit_text_command,
 };
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,

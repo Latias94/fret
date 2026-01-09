@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, Edges, Px, TextStyle};
-use fret_runtime::{Effect, Model};
+use fret_runtime::Model;
+use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
     ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, RowProps,
     SizeStyle, TextInputProps, TextProps,
@@ -14,8 +15,8 @@ use crate::core::{Graph, NodeId};
 use crate::ops::GraphTransaction;
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
-    PortalTextCommand, portal_cancel_text_command, portal_step_text_command,
-    portal_submit_text_command,
+    PortalTextCommand, PortalTextStepMode, portal_cancel_text_command,
+    portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use crate::ui::style::NodeGraphStyle;
 
@@ -127,8 +128,6 @@ impl PortalTextEditor {
 
         let submit = portal_submit_text_command(node);
         let cancel = portal_cancel_text_command(node);
-        let step_down = portal_step_text_command(node, -1);
-        let step_up = portal_step_text_command(node, 1);
 
         vec![ecx.column(column, |cx| {
             let current_text = input_model
@@ -170,25 +169,42 @@ impl PortalTextEditor {
                     vec![
                         cx.text_input(props),
                         cx.column(btn_col, |cx| {
-                            let down = step_down.clone();
-                            let up = step_up.clone();
-
                             let dec = cx.pressable(minus, |cx, _state| {
-                                cx.pressable_on_activate(Arc::new(move |host, cx, _reason| {
-                                    host.push_effect(Effect::Command {
-                                        window: Some(cx.window),
-                                        command: down.clone(),
-                                    });
+                                let cmd_node = node;
+                                cx.pressable_on_pointer_down(Arc::new(move |host, cx, down| {
+                                    let mode = if down.modifiers.shift {
+                                        PortalTextStepMode::Coarse
+                                    } else if down.modifiers.ctrl || down.modifiers.meta {
+                                        PortalTextStepMode::Fine
+                                    } else {
+                                        PortalTextStepMode::Normal
+                                    };
+
+                                    host.dispatch_command(
+                                        Some(cx.window),
+                                        portal_step_text_command_with_mode(cmd_node, -1, mode),
+                                    );
+                                    PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));
                                 vec![cx.text("-")]
                             });
 
                             let inc = cx.pressable(plus, |cx, _state| {
-                                cx.pressable_on_activate(Arc::new(move |host, cx, _reason| {
-                                    host.push_effect(Effect::Command {
-                                        window: Some(cx.window),
-                                        command: up.clone(),
-                                    });
+                                let cmd_node = node;
+                                cx.pressable_on_pointer_down(Arc::new(move |host, cx, down| {
+                                    let mode = if down.modifiers.shift {
+                                        PortalTextStepMode::Coarse
+                                    } else if down.modifiers.ctrl || down.modifiers.meta {
+                                        PortalTextStepMode::Fine
+                                    } else {
+                                        PortalTextStepMode::Normal
+                                    };
+
+                                    host.dispatch_command(
+                                        Some(cx.window),
+                                        portal_step_text_command_with_mode(cmd_node, 1, mode),
+                                    );
+                                    PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));
                                 vec![cx.text("+")]
                             });
@@ -447,6 +463,17 @@ pub trait PortalTextEditSpec {
     fn step_text(&self, _graph: &Graph, _node: NodeId, _text: &str, _delta: i32) -> Option<String> {
         None
     }
+
+    fn step_text_with_mode(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        text: &str,
+        delta: i32,
+        _mode: PortalTextStepMode,
+    ) -> Option<String> {
+        self.step_text(graph, node, text, delta)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -490,11 +517,14 @@ impl<H: UiHost, S: PortalTextEditSpec> NodeGraphPortalCommandHandler<H>
                     .read_input(cx.app, window, graph, node, &self.spec);
                 self.handle_submit(cx, window, graph, node, text)
             }
-            PortalTextCommand::Step { node, delta } => {
+            PortalTextCommand::Step { node, delta, mode } => {
                 let text = self
                     .editor
                     .read_input(cx.app, window, graph, node, &self.spec);
-                let Some(next_text) = self.spec.step_text(graph, node, &text, delta) else {
+                let Some(next_text) = self
+                    .spec
+                    .step_text_with_mode(graph, node, &text, delta, mode)
+                else {
                     return PortalCommandOutcome::NotHandled;
                 };
 
