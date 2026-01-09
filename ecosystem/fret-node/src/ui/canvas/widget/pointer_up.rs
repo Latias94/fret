@@ -320,6 +320,13 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
+    if canvas.interaction.pending_wire_drag.take().is_some() {
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     if super::wire_drag::handle_wire_left_up(canvas, cx, snapshot, zoom) {
         return true;
     }

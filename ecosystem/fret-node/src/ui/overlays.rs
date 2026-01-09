@@ -17,11 +17,11 @@ use super::edit_queue::NodeGraphEditQueue;
 use super::internals::NodeGraphInternalsStore;
 use super::style::NodeGraphStyle;
 use crate::core::GroupId;
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphConnectionMode, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::commands::{
     CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_RESET_VIEW,
-    CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
+    CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 
 /// UI-only overlay state for a node graph editor instance.
@@ -228,6 +228,7 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ControlsButton {
+    ToggleConnectionMode,
     ZoomIn,
     ZoomOut,
     FrameAll,
@@ -242,6 +243,7 @@ struct ControlsLayout {
 
 pub struct NodeGraphControlsOverlay {
     canvas_node: fret_core::NodeId,
+    view_state: Model<NodeGraphViewState>,
     style: NodeGraphStyle,
     hovered: Option<ControlsButton>,
     pressed: Option<ControlsButton>,
@@ -249,9 +251,14 @@ pub struct NodeGraphControlsOverlay {
 }
 
 impl NodeGraphControlsOverlay {
-    pub fn new(canvas_node: fret_core::NodeId, style: NodeGraphStyle) -> Self {
+    pub fn new(
+        canvas_node: fret_core::NodeId,
+        view_state: Model<NodeGraphViewState>,
+        style: NodeGraphStyle,
+    ) -> Self {
         Self {
             canvas_node,
+            view_state,
             style,
             hovered: None,
             pressed: None,
@@ -266,6 +273,7 @@ impl NodeGraphControlsOverlay {
         let button = self.style.controls_button_size.max(10.0);
 
         let items = [
+            ControlsButton::ToggleConnectionMode,
             ControlsButton::ZoomIn,
             ControlsButton::ZoomOut,
             ControlsButton::FrameAll,
@@ -311,6 +319,9 @@ impl NodeGraphControlsOverlay {
     fn dispatch_button<H: UiHost>(&self, cx: &mut EventCx<'_, H>, btn: ControlsButton) {
         cx.request_focus(self.canvas_node);
         let id = match btn {
+            ControlsButton::ToggleConnectionMode => {
+                CommandId::from(CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE)
+            }
             ControlsButton::ZoomIn => CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
             ControlsButton::ZoomOut => CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
             ControlsButton::FrameAll => CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
@@ -321,8 +332,12 @@ impl NodeGraphControlsOverlay {
         cx.request_redraw();
     }
 
-    fn label_for(btn: ControlsButton) -> &'static str {
+    fn label_for(btn: ControlsButton, mode: NodeGraphConnectionMode) -> &'static str {
         match btn {
+            ControlsButton::ToggleConnectionMode => match mode {
+                NodeGraphConnectionMode::Strict => "S",
+                NodeGraphConnectionMode::Loose => "L",
+            },
             ControlsButton::ZoomIn => "+",
             ControlsButton::ZoomOut => "–",
             ControlsButton::FrameAll => "Fit",
@@ -401,6 +416,13 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             cx.services.text().release(id);
         }
 
+        cx.observe_model(&self.view_state, Invalidation::Paint);
+        let mode = self
+            .view_state
+            .read_ref(cx.app, |s| s.interaction.connection_mode)
+            .ok()
+            .unwrap_or_default();
+
         let layout = self.compute_layout(cx.bounds);
         let bg = self.style.context_menu_background;
         let border = self.style.context_menu_border;
@@ -443,7 +465,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });
 
-            let label = Self::label_for(*btn);
+            let label = Self::label_for(*btn, mode);
             let (id, metrics) = cx.services.text().prepare(label, &text_style, constraints);
             self.text_blobs.push(id);
 

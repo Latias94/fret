@@ -5,7 +5,7 @@ use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 
 use super::super::state::{
     EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
-    ViewSnapshot, WireDrag, WireDragKind,
+    PendingWireDrag, ViewSnapshot, WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -115,6 +115,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -147,9 +148,9 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 },
             };
 
-            canvas.interaction.wire_drag = Some(WireDrag {
+            canvas.interaction.pending_wire_drag = Some(PendingWireDrag {
                 kind,
-                pos: position,
+                start_pos: position,
             });
             cx.capture_pointer(cx.node);
             cx.request_redraw();
@@ -164,6 +165,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
@@ -212,6 +214,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
@@ -268,6 +271,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
@@ -302,6 +306,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
@@ -344,6 +349,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
@@ -393,6 +399,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
             canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;

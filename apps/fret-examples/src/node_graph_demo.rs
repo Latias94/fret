@@ -898,7 +898,8 @@ impl NodeGraphDemoDriver {
         ));
         let portal_node = ui.create_node_retained(portal);
 
-        let controls = NodeGraphControlsOverlay::new(canvas_node, style.clone());
+        let controls =
+            NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone());
         let controls_node = ui.create_node_retained(controls);
 
         let minimap = NodeGraphMiniMapOverlay::new(

@@ -258,6 +258,10 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
 
+    /// Drag threshold in screen pixels before a connection drag starts.
+    #[serde(default = "default_connection_drag_threshold")]
+    pub connection_drag_threshold: f32,
+
     /// Auto-pan configuration.
     #[serde(default)]
     pub auto_pan: NodeGraphAutoPanTuning,
@@ -298,6 +302,10 @@ fn default_snaplines_threshold() -> f32 {
 
 fn default_node_drag_threshold() -> f32 {
     1.0
+}
+
+fn default_connection_drag_threshold() -> f32 {
+    2.0
 }
 
 /// View-state persistence file (v1).

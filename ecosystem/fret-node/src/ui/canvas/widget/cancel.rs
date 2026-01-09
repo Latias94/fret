@@ -37,6 +37,9 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     if canvas.interaction.pending_node_resize.take().is_some() {
         canceled = true;
     }
+    if canvas.interaction.pending_wire_drag.take().is_some() {
+        canceled = true;
+    }
     if canvas.interaction.marquee.take().is_some() {
         canceled = true;
     }

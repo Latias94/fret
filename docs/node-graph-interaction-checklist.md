@@ -77,6 +77,7 @@ Recommended harness:
 - (prototype) Hover a compatible target port and release:
   - a connection is created (or reconnection performed),
   - `GraphTransaction` is committed (undoable).
+- (prototype) Toggle connection mode (strict/loose) and verify targeting behavior changes.
 - (prototype) Release on empty space:
   - a menu/searcher appears,
   - selecting an item either inserts a node and connects, or cancels cleanly.
@@ -94,10 +95,10 @@ Multi-connection bundle:
 
 Strict/Loose resolution:
 
-- (todo) `connection_mode`:
+- (prototype) `connection_mode`:
   - `Strict`: only connect when pointer is over a compatible handle.
   - `Loose`: allow snapping to a compatible handle within `connection_radius`.
-- (todo) When multiple handles are within range, selection must be deterministic:
+- (prototype) When multiple handles are within range, selection is deterministic:
   - closest distance first,
   - stable id ordering as tie-break.
 
@@ -108,7 +109,7 @@ Auto-pan:
 
 Drag threshold:
 
-- (todo) A small movement threshold prevents accidental “start connection” on click.
+- (prototype) A small movement threshold prevents accidental “start connection” on click.
 
 ## E) Portal Editors (embedded node UI)
 

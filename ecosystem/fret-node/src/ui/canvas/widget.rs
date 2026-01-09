@@ -31,8 +31,8 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
     CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER, CMD_NODE_GRAPH_OPEN_INSERT_NODE,
     CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO,
-    CMD_NODE_GRAPH_RESET_VIEW, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
-    CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
+    CMD_NODE_GRAPH_RESET_VIEW, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE,
+    CMD_NODE_GRAPH_UNDO, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -62,6 +62,7 @@ mod pending_drag;
 mod pending_group_drag;
 mod pending_group_resize;
 mod pending_resize;
+mod pending_wire_drag;
 mod pointer_up;
 mod right_click;
 mod searcher;
@@ -1350,14 +1351,18 @@ impl NodeGraphCanvas {
                     let prefer_opposite = handle.dir == desired_dir;
                     let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
                     match best {
-                        Some((_id, best_d2, best_prefer, best_rank)) => {
+                        Some((best_id, best_d2, best_prefer, best_rank)) => {
                             if d2 + eps < best_d2 {
                                 best = Some((port_id, d2, prefer_opposite, rank));
                             } else if (d2 - best_d2).abs() <= eps {
                                 if prefer_opposite && !best_prefer {
                                     best = Some((port_id, d2, prefer_opposite, rank));
-                                } else if prefer_opposite == best_prefer && rank > best_rank {
-                                    best = Some((port_id, d2, prefer_opposite, rank));
+                                } else if prefer_opposite == best_prefer {
+                                    if rank > best_rank {
+                                        best = Some((port_id, d2, prefer_opposite, rank));
+                                    } else if rank == best_rank && port_id < best_id {
+                                        best = Some((port_id, d2, prefer_opposite, rank));
+                                    }
                                 }
                             }
                         }
@@ -3250,6 +3255,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.invalidate_self(Invalidation::Paint);
                 true
             }
+            CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE => {
+                let next = match snapshot.interaction.connection_mode {
+                    NodeGraphConnectionMode::Strict => NodeGraphConnectionMode::Loose,
+                    NodeGraphConnectionMode::Loose => NodeGraphConnectionMode::Strict,
+                };
+
+                self.update_view_state(cx.app, |s| {
+                    s.interaction.connection_mode = next;
+                });
+                self.show_toast(
+                    cx.app,
+                    cx.window,
+                    DiagnosticSeverity::Info,
+                    match next {
+                        NodeGraphConnectionMode::Strict => "connection mode: strict",
+                        NodeGraphConnectionMode::Loose => "connection mode: loose",
+                    },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             CMD_NODE_GRAPH_UNDO => {
                 let did = self.undo_last(cx.app, cx.window);
                 if did {
@@ -3712,6 +3739,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     // keep going to sync auto-pan timer
                 } else if pending_resize::handle_pending_node_resize_move(
                     self, cx, &snapshot, *position, zoom,
+                ) {
+                    // keep going to sync auto-pan timer
+                } else if pending_wire_drag::handle_pending_wire_drag_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
                     // keep going to sync auto-pan timer
                 } else if node_resize::handle_node_resize_move(

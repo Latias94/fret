@@ -40,6 +40,7 @@ pub(crate) struct InteractionState {
     pub(crate) group_resize: Option<GroupResize>,
     pub(crate) pending_node_resize: Option<PendingNodeResize>,
     pub(crate) node_resize: Option<NodeResize>,
+    pub(crate) pending_wire_drag: Option<PendingWireDrag>,
     pub(crate) wire_drag: Option<WireDrag>,
     /// When a multi-step connection workflow opens a picker (conversion/search), the active wire
     /// drag is suspended so it can be restored if the picker action is rejected.
@@ -179,6 +180,12 @@ pub(crate) enum WireDragKind {
 pub(crate) struct WireDrag {
     pub(crate) kind: WireDragKind,
     pub(crate) pos: Point,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingWireDrag {
+    pub(crate) kind: WireDragKind,
+    pub(crate) start_pos: Point,
 }
 
 #[derive(Debug, Clone)]
