@@ -276,36 +276,57 @@ impl ElementHostWidget {
             }
             ElementInstance::Pressable(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
-                    cx,
-                    window,
-                    Rect::new(cx.bounds.origin, cx.available),
-                ) {
-                    return size;
+                {
+                    if let Some(size) =
+                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
+                    {
+                        return size;
+                    }
+                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                        cx,
+                        window,
+                        Rect::new(cx.bounds.origin, cx.available),
+                    ) {
+                        return size;
+                    }
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Semantics(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
-                    cx,
-                    window,
-                    Rect::new(cx.bounds.origin, cx.available),
-                ) {
-                    return size;
+                {
+                    if let Some(size) =
+                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
+                    {
+                        return size;
+                    }
+                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                        cx,
+                        window,
+                        Rect::new(cx.bounds.origin, cx.available),
+                    ) {
+                        return size;
+                    }
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::FocusScope(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
-                    cx,
-                    window,
-                    Rect::new(cx.bounds.origin, cx.available),
-                ) {
-                    return size;
+                {
+                    if let Some(size) =
+                        crate::layout_engine::layout_children_from_engine_if_solved(cx)
+                    {
+                        return size;
+                    }
+                    if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                        cx,
+                        window,
+                        Rect::new(cx.bounds.origin, cx.available),
+                    ) {
+                        return size;
+                    }
                 }
 
                 self.layout_positioned_container_impl(cx, window, props.layout)
