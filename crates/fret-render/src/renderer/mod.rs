@@ -104,6 +104,9 @@ pub struct Renderer {
     composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     clip_mask_pipeline: Option<wgpu::RenderPipeline>,
+    clip_mask_param_buffer: wgpu::Buffer,
+    clip_mask_param_bind_group: wgpu::BindGroup,
+    clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
 
     blit_pipeline_format: Option<wgpu::TextureFormat>,
     blit_pipeline: Option<wgpu::RenderPipeline>,

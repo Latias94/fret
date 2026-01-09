@@ -113,6 +113,35 @@ impl Renderer {
             ..Default::default()
         });
 
+        let clip_mask_param_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret clip-mask params bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                    },
+                    count: None,
+                }],
+            });
+        let clip_mask_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret clip-mask params buffer"),
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let clip_mask_param_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret clip-mask params bind group"),
+            layout: &clip_mask_param_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: clip_mask_param_buffer.as_entire_binding(),
+            }],
+        });
+
         let text_system = TextSystem::new(device);
 
         const FRAMES_IN_FLIGHT: usize = 3;
@@ -225,6 +254,9 @@ impl Renderer {
             composite_mask_pipeline: None,
             composite_mask_bind_group_layout: None,
             clip_mask_pipeline: None,
+            clip_mask_param_buffer,
+            clip_mask_param_bind_group,
+            clip_mask_param_bind_group_layout,
             blit_pipeline_format: None,
             blit_pipeline: None,
             blit_bind_group_layout: None,

@@ -650,7 +650,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   let sample = textureLoad(src_texture, vec2<i32>(i32(sx), i32(sy)), 0);
-  let mask = textureLoad(mask_texture, vec2<i32>(i32(x), i32(y)), 0).x;
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(sample.rgb * mask, mask);
 }
 "#;
@@ -679,6 +683,13 @@ struct ClipStack {
 };
 
 @group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
+
+struct Params {
+  dst_size: vec2<f32>,
+  _pad0: vec2<f32>,
+};
+
+@group(1) @binding(0) var<uniform> params: Params;
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
@@ -755,7 +766,10 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
-  return clip_alpha(pos.xy);
+  let x = floor(pos.x) + 0.5;
+  let y = floor(pos.y) + 0.5;
+  let scale = viewport.viewport_size / params.dst_size;
+  return clip_alpha(vec2<f32>(x, y) * scale);
 }
 "#;
 
@@ -1058,7 +1072,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   rgb = rgb + vec3<f32>(b);
   rgb = saturate3(rgb);
 
-  let mask = textureLoad(mask_texture, vec2<i32>(x, y), 0).x;
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(rgb * a * mask, mask);
 }
 "#;
@@ -1586,7 +1604,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             textureLoad(src_texture, vec2<i32>(sx4n, y), 0)) * w4;
 
   let out = c0 + c1 + c2 + c3 + c4;
-  let mask = textureLoad(mask_texture, vec2<i32>(x, y), 0).x;
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(out.rgb * mask, mask);
 }
 "#;
@@ -1680,7 +1702,11 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             textureLoad(src_texture, vec2<i32>(x, sy4n), 0)) * w4;
 
   let out = c0 + c1 + c2 + c3 + c4;
-  let mask = textureLoad(mask_texture, vec2<i32>(x, y), 0).x;
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(out.rgb * mask, mask);
 }
 "#;
@@ -1895,7 +1921,11 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let x = i32(floor(input.pixel_pos.x));
   let y = i32(floor(input.pixel_pos.y));
-  let mask = textureLoad(mask_texture, vec2<i32>(x, y), 0).x;
+  let mdims_u = textureDimensions(mask_texture);
+  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
+  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);
   let out = vec4<f32>(sample.rgb * o, sample.a * o) * mask;

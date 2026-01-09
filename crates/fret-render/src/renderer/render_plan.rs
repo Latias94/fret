@@ -14,6 +14,8 @@ pub(super) enum PlanTarget {
     Intermediate1,
     Intermediate2,
     Mask0,
+    Mask1,
+    Mask2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -392,15 +394,18 @@ impl RenderPlan {
                 }
 
                 let mask_target = if let Some(uniform_index) = mask_uniform_index
-                    && clip_mask_enabled(viewport_size, intermediate_budget_bytes)
+                    && let Some(mask_target) =
+                        choose_clip_mask_target(viewport_size, intermediate_budget_bytes)
                 {
+                    let mask_size = mask_target_size(viewport_size, mask_target);
+                    let mask_scissor = map_scissor_to_size(Some(scissor), viewport_size, mask_size);
                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
-                        dst: PlanTarget::Mask0,
-                        dst_size: viewport_size,
-                        dst_scissor: Some(scissor),
+                        dst: mask_target,
+                        dst_size: mask_size,
+                        dst_scissor: mask_scissor,
                         uniform_index,
                     }));
-                    Some(PlanTarget::Mask0)
+                    Some(mask_target)
                 } else {
                     None
                 };
@@ -626,17 +631,19 @@ impl RenderPlan {
                                     None,
                                 );
 
-                                let composite_mask_target = if clip_mask_enabled(
-                                    viewport_size,
-                                    intermediate_budget_bytes,
-                                ) {
+                                let composite_mask_target = if let Some(mask_target) =
+                                    choose_clip_mask_target(
+                                        viewport_size,
+                                        intermediate_budget_bytes,
+                                    ) {
+                                    let mask_size = mask_target_size(viewport_size, mask_target);
                                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
-                                        dst: PlanTarget::Mask0,
-                                        dst_size: viewport_size,
+                                        dst: mask_target,
+                                        dst_size: mask_size,
                                         dst_scissor: None,
                                         uniform_index: scope.uniform_index,
                                     }));
-                                    Some(PlanTarget::Mask0)
+                                    Some(mask_target)
                                 } else {
                                     None
                                 };
@@ -779,11 +786,38 @@ fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
-fn clip_mask_enabled(viewport_size: (u32, u32), budget_bytes: u64) -> bool {
+fn choose_clip_mask_target(viewport_size: (u32, u32), budget_bytes: u64) -> Option<PlanTarget> {
     if budget_bytes == 0 {
-        return false;
+        return None;
     }
-    estimate_texture_bytes(viewport_size, wgpu::TextureFormat::R8Unorm, 1) <= budget_bytes
+
+    let full = estimate_texture_bytes(viewport_size, wgpu::TextureFormat::R8Unorm, 1);
+    if full <= budget_bytes {
+        return Some(PlanTarget::Mask0);
+    }
+
+    let half_size = downsampled_size(viewport_size, 2);
+    let half = estimate_texture_bytes(half_size, wgpu::TextureFormat::R8Unorm, 1);
+    if half <= budget_bytes {
+        return Some(PlanTarget::Mask1);
+    }
+
+    let quarter_size = downsampled_size(viewport_size, 4);
+    let quarter = estimate_texture_bytes(quarter_size, wgpu::TextureFormat::R8Unorm, 1);
+    if quarter <= budget_bytes {
+        return Some(PlanTarget::Mask2);
+    }
+
+    None
+}
+
+pub(super) fn mask_target_size(viewport_size: (u32, u32), target: PlanTarget) -> (u32, u32) {
+    match target {
+        PlanTarget::Mask0 => viewport_size,
+        PlanTarget::Mask1 => downsampled_size(viewport_size, 2),
+        PlanTarget::Mask2 => downsampled_size(viewport_size, 4),
+        _ => unreachable!("mask_target_size expects a mask PlanTarget"),
+    }
 }
 
 fn append_scissored_blur_in_place_two_scratch(
@@ -1038,7 +1072,7 @@ fn append_pixelate_in_place_single_scratch(
 }
 
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
-    let mut last_use: [Option<usize>; 4] = [None, None, None, None];
+    let mut last_use: [Option<usize>; 6] = [None, None, None, None, None, None];
 
     for (idx, pass) in passes.iter().enumerate() {
         let mut mark = |t: PlanTarget| {
@@ -1047,6 +1081,8 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 PlanTarget::Intermediate1 => Some(1),
                 PlanTarget::Intermediate2 => Some(2),
                 PlanTarget::Mask0 => Some(3),
+                PlanTarget::Mask1 => Some(4),
+                PlanTarget::Mask2 => Some(5),
                 PlanTarget::Output => None,
             };
             if let Some(slot) = slot {
@@ -1097,7 +1133,9 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
     let last0 = last_use[0];
     let last1 = last_use[1];
     let last2 = last_use[2];
-    let last_mask = last_use[3];
+    let last_mask0 = last_use[3];
+    let last_mask1 = last_use[4];
+    let last_mask2 = last_use[5];
 
     let old = std::mem::take(passes);
     let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 4);
@@ -1120,8 +1158,14 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
         if last2 == Some(idx) {
             push_release(PlanTarget::Intermediate2);
         }
-        if last_mask == Some(idx) {
+        if last_mask0 == Some(idx) {
             push_release(PlanTarget::Mask0);
+        }
+        if last_mask1 == Some(idx) {
+            push_release(PlanTarget::Mask1);
+        }
+        if last_mask2 == Some(idx) {
+            push_release(PlanTarget::Mask2);
         }
     }
 
@@ -1404,7 +1448,9 @@ fn append_upsample_chain(
         let dst_target = match current_target {
             PlanTarget::Intermediate1 => PlanTarget::Intermediate2,
             PlanTarget::Intermediate2 => PlanTarget::Intermediate1,
-            PlanTarget::Mask0 => unreachable!("upsample chain must read from Intermediate1/2"),
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                unreachable!("upsample chain must read from Intermediate1/2")
+            }
             PlanTarget::Intermediate0 | PlanTarget::Output => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
@@ -1865,6 +1911,75 @@ mod tests {
         assert_eq!(color_adjust.mask_target, Some(PlanTarget::Mask0));
         assert_eq!(color_adjust.mask_uniform_index, Some(0));
         assert_eq!(color_adjust.dst_scissor, Some(scissor));
+    }
+
+    #[test]
+    fn compile_for_scene_filter_content_degrades_clip_mask_resolution_by_budget() {
+        let viewport_size = (101, 99);
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+        let half_size = downsampled_size(viewport_size, 2);
+        let quarter_size = downsampled_size(viewport_size, 4);
+        let half_budget = estimate_texture_bytes(half_size, wgpu::TextureFormat::R8Unorm, 1);
+        let quarter_budget = estimate_texture_bytes(quarter_size, wgpu::TextureFormat::R8Unorm, 1);
+
+        let mut encoding = SceneEncoding::default();
+        encoding.effect_markers = vec![
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Push {
+                    scissor,
+                    uniform_index: 0,
+                    mode: fret_core::EffectMode::FilterContent,
+                    chain: fret_core::EffectChain::EMPTY,
+                    quality: fret_core::EffectQuality::Auto,
+                },
+            },
+            EffectMarker {
+                draw_ix: 0,
+                kind: EffectMarkerKind::Pop,
+            },
+        ];
+
+        for (budget, expected_mask_target) in [
+            (half_budget, PlanTarget::Mask1),
+            (quarter_budget, PlanTarget::Mask2),
+        ] {
+            let plan = RenderPlan::compile_for_scene(
+                &encoding,
+                viewport_size,
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::Color::TRANSPARENT,
+                1,
+                DebugPostprocess::None,
+                budget,
+            );
+
+            let core = strip_releases(&plan.passes);
+            let Some(mask_pass) = core.iter().find_map(|p| {
+                let RenderPlanPass::ClipMask(p) = p else {
+                    return None;
+                };
+                Some(*p)
+            }) else {
+                panic!("expected ClipMask pass");
+            };
+            assert_eq!(mask_pass.dst, expected_mask_target);
+            assert_eq!(
+                mask_pass.dst_size,
+                mask_target_size(viewport_size, expected_mask_target)
+            );
+            assert_eq!(mask_pass.dst_scissor, None);
+
+            let Some(composite) = core.iter().find_map(|p| {
+                let RenderPlanPass::CompositePremul(p) = p else {
+                    return None;
+                };
+                Some(*p)
+            }) else {
+                panic!("expected CompositePremul pass");
+            };
+            assert_eq!(composite.mask_target, Some(expected_mask_target));
+        }
     }
 
     #[test]
