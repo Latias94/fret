@@ -480,7 +480,7 @@ impl ElementHostWidget {
         let sf = cx.scale_factor;
         let app = &mut *cx.app;
         let services = &mut *cx.services;
-        engine.compute_root_with_measure(root_id, available, |child, constraints| {
+        engine.compute_root_with_measure(root_id, available, sf, |child, constraints| {
             cx.tree.measure_in(app, services, child, constraints, sf)
         });
 

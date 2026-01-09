@@ -30,14 +30,17 @@ pub struct TaffyLayoutEngine {
     seen: HashSet<NodeId>,
     solve_generation: u64,
     node_solved_generation: HashMap<NodeId, u64>,
+    solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
 }
 
 impl Default for TaffyLayoutEngine {
     fn default() -> Self {
+        let mut tree = TaffyTree::new();
+        tree.enable_rounding();
         Self {
-            tree: TaffyTree::new(),
+            tree,
             node_to_layout: HashMap::new(),
             layout_to_node: HashMap::new(),
             styles: HashMap::new(),
@@ -45,6 +48,7 @@ impl Default for TaffyLayoutEngine {
             seen: HashSet::new(),
             solve_generation: 0,
             node_solved_generation: HashMap::new(),
+            solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
         }
@@ -58,6 +62,7 @@ impl TaffyLayoutEngine {
             self.seen.clear();
             self.solve_generation = 0;
             self.node_solved_generation.clear();
+            self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
         }
     }
@@ -199,6 +204,7 @@ impl TaffyLayoutEngine {
         &mut self,
         root: LayoutId,
         available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
         mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
     ) {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -219,15 +225,21 @@ impl TaffyLayoutEngine {
         }
 
         let started = Instant::now();
+        let sf = if scale_factor.is_finite() && scale_factor > 0.0 {
+            scale_factor
+        } else {
+            1.0
+        };
+        self.solve_scale_factor = sf;
 
         let available = taffy::geometry::Size {
             width: match available.width {
-                AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0),
+                AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0 * sf),
                 AvailableSpace::MinContent => taffy::style::AvailableSpace::MinContent,
                 AvailableSpace::MaxContent => taffy::style::AvailableSpace::MaxContent,
             },
             height: match available.height {
-                AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0),
+                AvailableSpace::Definite(px) => taffy::style::AvailableSpace::Definite(px.0 * sf),
                 AvailableSpace::MinContent => taffy::style::AvailableSpace::MinContent,
                 AvailableSpace::MaxContent => taffy::style::AvailableSpace::MaxContent,
             },
@@ -255,18 +267,21 @@ impl TaffyLayoutEngine {
                 }
 
                 let constraints = LayoutConstraints::new(
-                    LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                    LayoutSize::new(
+                        known.width.map(|w| Px(w / sf)),
+                        known.height.map(|h| Px(h / sf)),
+                    ),
                     LayoutSize::new(
                         match avail.width {
                             taffy::style::AvailableSpace::Definite(w) => {
-                                AvailableSpace::Definite(Px(w))
+                                AvailableSpace::Definite(Px(w / sf))
                             }
                             taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
                         },
                         match avail.height {
                             taffy::style::AvailableSpace::Definite(h) => {
-                                AvailableSpace::Definite(Px(h))
+                                AvailableSpace::Definite(Px(h / sf))
                             }
                             taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
                             taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
@@ -276,8 +291,8 @@ impl TaffyLayoutEngine {
 
                 let s = measure(ctx.node, constraints);
                 let out = taffy::geometry::Size {
-                    width: s.width.0,
-                    height: s.height.0,
+                    width: s.width.0 * sf,
+                    height: s.height.0 * sf,
                 };
                 measure_cache.insert(key, out);
                 out
@@ -291,18 +306,30 @@ impl TaffyLayoutEngine {
         self.last_solve_time += started.elapsed();
     }
 
-    pub fn compute_root(&mut self, root: LayoutId, available: LayoutSize<AvailableSpace>) {
-        self.compute_root_with_measure(root, available, |_node, _constraints| Size::default());
+    pub fn compute_root(
+        &mut self,
+        root: LayoutId,
+        available: LayoutSize<AvailableSpace>,
+        scale_factor: f32,
+    ) {
+        self.compute_root_with_measure(root, available, scale_factor, |_node, _constraints| {
+            Size::default()
+        });
     }
 
     pub fn layout_rect(&self, id: LayoutId) -> Rect {
         let Ok(layout) = self.tree.layout(id.0) else {
             return Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default());
         };
+        let sf = if self.solve_scale_factor.is_finite() && self.solve_scale_factor > 0.0 {
+            self.solve_scale_factor
+        } else {
+            1.0
+        };
 
         Rect::new(
-            Point::new(Px(layout.location.x), Px(layout.location.y)),
-            Size::new(Px(layout.size.width), Px(layout.size.height)),
+            Point::new(Px(layout.location.x / sf), Px(layout.location.y / sf)),
+            Size::new(Px(layout.size.width / sf), Px(layout.size.height / sf)),
         )
     }
 
@@ -381,6 +408,7 @@ mod tests {
                 AvailableSpace::Definite(Px(100.0)),
                 AvailableSpace::Definite(Px(10.0)),
             ),
+            1.0,
         );
 
         let child_a_id = engine.layout_id_for_node(child_a).unwrap();
@@ -394,6 +422,7 @@ mod tests {
                 AvailableSpace::Definite(Px(200.0)),
                 AvailableSpace::Definite(Px(10.0)),
             ),
+            1.0,
         );
 
         let child_b_id = engine.layout_id_for_node(child_b).unwrap();

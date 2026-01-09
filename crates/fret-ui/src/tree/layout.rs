@@ -165,7 +165,7 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let sf = scale_factor;
-        engine.compute_root_with_measure(root_id, available, |node, constraints| {
+        engine.compute_root_with_measure(root_id, available, sf, |node, constraints| {
             self.measure_in(app, services, node, constraints, sf)
         });
 
