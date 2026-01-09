@@ -148,24 +148,30 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
-                #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
-                }
-
                 let pad_left = props.padding.left.0.max(0.0);
                 let pad_right = props.padding.right.0.max(0.0);
                 let pad_top = props.padding.top.0.max(0.0);
                 let pad_bottom = props.padding.bottom.0.max(0.0);
                 let pad_w = pad_left + pad_right;
                 let pad_h = pad_top + pad_bottom;
+
+                #[cfg(feature = "layout-engine-v2")]
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(
+                        fret_core::Point::new(
+                            Px(cx.bounds.origin.x.0 + pad_left),
+                            Px(cx.bounds.origin.y.0 + pad_top),
+                        ),
+                        Size::new(
+                            Px((cx.available.width.0 - pad_w).max(0.0)),
+                            Px((cx.available.height.0 - pad_h).max(0.0)),
+                        ),
+                    ),
+                ) {
+                    return size;
+                }
 
                 let inner_avail = Size::new(
                     Px((cx.available.width.0 - pad_w).max(0.0)),
@@ -224,15 +230,12 @@ impl ElementHostWidget {
             }
             ElementInstance::Pressable(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -271,15 +274,12 @@ impl ElementHostWidget {
             }
             ElementInstance::Semantics(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -318,15 +318,12 @@ impl ElementHostWidget {
             }
             ElementInstance::FocusScope(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -365,15 +362,12 @@ impl ElementHostWidget {
             }
             ElementInstance::Opacity(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -416,15 +410,12 @@ impl ElementHostWidget {
                 }
 
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
@@ -463,15 +454,12 @@ impl ElementHostWidget {
             }
             ElementInstance::VisualTransform(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -637,15 +625,12 @@ impl ElementHostWidget {
             }
             ElementInstance::Stack(props) => {
                 #[cfg(feature = "layout-engine-v2")]
-                if cx.children.len() == 1 {
-                    let child = cx.children[0];
-                    let child_style = layout_style_for_node(cx.app, window, child);
-                    if child_style.position == crate::element::PositionStyle::Static
-                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
-                    {
-                        let _ = cx.layout_in(child, bounds);
-                        return cx.available;
-                    }
+                if let Some(size) = try_layout_children_from_engine_with_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
                 }
 
                 // Probe within the available height budget so measurement passes do not observe an
@@ -1025,4 +1010,53 @@ fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
             AvailableSpace::Definite(size.height),
         ),
     )
+}
+
+#[cfg(feature = "layout-engine-v2")]
+fn try_layout_children_from_engine_with_manual_absolute<H: UiHost>(
+    cx: &mut LayoutCx<'_, H>,
+    window: AppWindowId,
+    base_for_absolute: Rect,
+) -> Option<Size> {
+    if cx.children.is_empty() {
+        return None;
+    }
+
+    let mut any_engine_child = false;
+    let mut non_absolute: Vec<(NodeId, Rect)> = Vec::new();
+    let mut absolute: Vec<(NodeId, crate::element::InsetStyle)> = Vec::new();
+
+    for &child in cx.children {
+        let style = layout_style_for_node(cx.app, window, child);
+        if style.position == crate::element::PositionStyle::Absolute {
+            if cx.layout_engine_child_bounds(child).is_some() {
+                any_engine_child = true;
+            }
+            absolute.push((child, style.inset));
+            continue;
+        }
+
+        let bounds = cx.layout_engine_child_bounds(child)?;
+        any_engine_child = true;
+        non_absolute.push((child, bounds));
+    }
+
+    if !any_engine_child {
+        return None;
+    }
+
+    for (child, bounds) in non_absolute {
+        let _ = cx.layout_in(child, bounds);
+    }
+
+    for (child, inset) in absolute {
+        layout_positioned_child(
+            cx,
+            child,
+            base_for_absolute,
+            PositionedLayoutStyle::Absolute(inset),
+        );
+    }
+
+    Some(cx.available)
 }

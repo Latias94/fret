@@ -7,7 +7,8 @@ use fret_core::{AppWindowId, NodeId, Px, Rect, Size};
 use taffy::geometry::{Line as TaffyLine, Rect as TaffyRect, Size as TaffySize};
 use taffy::style::{
     AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
-    JustifyContent, LengthPercentage, LengthPercentageAuto, Position as TaffyPosition, Style,
+    GridTemplateComponent, JustifyContent, LengthPercentage, LengthPercentageAuto,
+    Position as TaffyPosition, Style,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -15,6 +16,7 @@ pub(crate) enum ParentLayoutKind {
     Root,
     Flex { direction: fret_core::Axis },
     Grid,
+    Overlay,
 }
 
 pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
@@ -117,6 +119,19 @@ fn build_flow_subtree_impl<H: UiHost>(
 
     let instance = element_record_for_node(app, window, node).map(|r| r.instance);
     match instance {
+        Some(ElementInstance::InteractivityGate(props)) if !props.present => {
+            let style = style_for_item_in_parent(
+                app,
+                window,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, true);
+        }
         Some(ElementInstance::Flex(props)) => {
             let mut style = style_for_item_in_parent(
                 app,
@@ -249,6 +264,54 @@ fn build_flow_subtree_impl<H: UiHost>(
                 build_flow_subtree(engine, app, tree, window, ParentLayoutKind::Grid, child);
             }
         }
+        Some(
+            ElementInstance::Container(_)
+            | ElementInstance::Pressable(_)
+            | ElementInstance::Opacity(_)
+            | ElementInstance::VisualTransform(_)
+            | ElementInstance::Semantics(_)
+            | ElementInstance::FocusScope(_)
+            | ElementInstance::InteractivityGate(_)
+            | ElementInstance::Stack(_),
+        ) if !tree.children(node).is_empty() => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                parent_kind,
+                node,
+                Display::Grid,
+                root_override_size,
+            );
+            style.grid_template_columns =
+                vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+            style.grid_template_rows =
+                vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+            style.align_items = Some(AlignItems::Stretch);
+            style.justify_content = Some(JustifyContent::FlexStart);
+
+            if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
+                if let ElementInstance::Container(p) = r.instance {
+                    Some(p)
+                } else {
+                    None
+                }
+            }) {
+                style.padding = TaffyRect {
+                    left: LengthPercentage::length(props.padding.left.0.max(0.0)),
+                    right: LengthPercentage::length(props.padding.right.0.max(0.0)),
+                    top: LengthPercentage::length(props.padding.top.0.max(0.0)),
+                    bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+                };
+            }
+
+            let children = tree.children(node).to_vec();
+            engine.set_style(node, style);
+            engine.set_children(node, &children);
+            engine.set_measured(node, false);
+            for child in children {
+                build_flow_subtree(engine, app, tree, window, ParentLayoutKind::Overlay, child);
+            }
+        }
         _ => {
             let style = style_for_item_in_parent(
                 app,
@@ -338,6 +401,10 @@ fn style_for_item_in_parent<H: UiHost>(
             style.grid_column = taffy_grid_line(layout_style.grid.column);
             style.grid_row = taffy_grid_line(layout_style.grid.row);
         }
+        ParentLayoutKind::Overlay => {
+            style.grid_column = overlay_grid_line();
+            style.grid_row = overlay_grid_line();
+        }
         ParentLayoutKind::Root => {}
     }
 
@@ -349,6 +416,13 @@ fn style_for_item_in_parent<H: UiHost>(
     }
 
     style
+}
+
+fn overlay_grid_line() -> TaffyLine<GridPlacement> {
+    TaffyLine {
+        start: taffy::style_helpers::line::<GridPlacement>(1),
+        end: GridPlacement::Span(1),
+    }
 }
 
 fn passthrough_wrapper_child<H: UiHost>(

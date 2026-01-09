@@ -1115,6 +1115,68 @@ fn hover_region_precomputes_flow_islands_for_multiple_children() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn pressable_wraps_multiple_children_in_engine_tree() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.flex(
+            crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Vertical,
+                ..Default::default()
+            },
+            |cx| {
+                vec![
+                    cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        vec![cx.text("a"), cx.text("b")]
+                    }),
+                ]
+            },
+        )]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-engine-children",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex = ui.children(root)[0];
+    let pressable = ui.children(flex)[0];
+    let a = ui.children(pressable)[0];
+    let b = ui.children(pressable)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(pressable).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,
