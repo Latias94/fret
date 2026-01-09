@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{Modifiers, Point, Px};
 use fret_ui::UiHost;
 
-use crate::core::PortId;
+use crate::core::{EdgeId, PortId};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 use crate::ui::presenter::InsertNodeCandidate;
@@ -89,6 +89,29 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     pos,
                     zoom,
                     &mut scratch_ports,
+                )
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    let new_hover_edge = if new_hover.is_none() {
+        let this = &*canvas;
+        let geom = geom.clone();
+        let index = index.clone();
+        this.graph
+            .read_ref(cx.app, |graph| {
+                let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                this.hit_edge(
+                    graph,
+                    snapshot,
+                    geom.as_ref(),
+                    index.as_ref(),
+                    pos,
+                    zoom,
+                    &mut scratch_edges,
                 )
             })
             .ok()
@@ -187,6 +210,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         canvas.interaction.hover_port_convertible = new_hover_convertible;
     }
 
+    canvas.interaction.hover_edge = new_hover_edge;
     canvas.interaction.wire_drag = Some(w);
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -399,15 +423,41 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                     Outcome::Ignore => {}
                 }
             } else if bundle.is_empty() {
-                let at = NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
-                canvas.interaction.suspended_wire_drag = Some(WireDrag {
-                    kind: WireDragKind::New {
-                        from,
-                        bundle: Vec::new(),
-                    },
-                    pos: suspended_pos,
-                });
-                canvas.open_connection_insert_node_picker(cx.app, from, at);
+                let hit_edge = {
+                    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+                    let this = &*canvas;
+                    let index = index.clone();
+                    this.graph
+                        .read_ref(cx.app, |graph| {
+                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                            this.hit_edge(
+                                graph,
+                                snapshot,
+                                geom.as_ref(),
+                                index.as_ref(),
+                                w.pos,
+                                zoom,
+                                &mut scratch_edges,
+                            )
+                        })
+                        .ok()
+                        .flatten()
+                };
+
+                if let Some(edge_id) = hit_edge {
+                    canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_id, w.pos);
+                } else {
+                    let at =
+                        NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
+                    canvas.interaction.suspended_wire_drag = Some(WireDrag {
+                        kind: WireDragKind::New {
+                            from,
+                            bundle: Vec::new(),
+                        },
+                        pos: suspended_pos,
+                    });
+                    canvas.open_connection_insert_node_picker(cx.app, from, at);
+                }
             }
         }
         WireDragKind::Reconnect {

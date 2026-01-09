@@ -101,7 +101,7 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
     }
 
     let at = canvas.interaction.last_canvas_pos.unwrap_or_default();
-    let on_background = {
+    let (on_node, hit_edge) = {
         let this = &*canvas;
         let geom = geom.clone();
         let index = index.clone();
@@ -113,37 +113,46 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
                         .is_some_and(|ng| ng.rect.contains(position))
                 });
                 if on_node {
-                    return false;
+                    return (true, None);
                 }
                 let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                let on_edge = this
-                    .hit_edge(
-                        graph,
-                        snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        position,
-                        zoom,
-                        &mut scratch_edges,
-                    )
-                    .is_some();
-                !on_edge
+                let hit_edge = this.hit_edge(
+                    graph,
+                    snapshot,
+                    geom.as_ref(),
+                    index.as_ref(),
+                    position,
+                    zoom,
+                    &mut scratch_edges,
+                );
+                (false, hit_edge)
             })
             .ok()
-            .unwrap_or(false)
+            .unwrap_or((false, None))
     };
 
     canvas.interaction.sticky_wire = false;
     canvas.interaction.sticky_wire_ignore_next_up = false;
     cx.release_pointer_capture();
 
-    if on_background {
-        canvas.open_connection_insert_node_picker(cx.app, from, at);
+    if on_node {
+        return false;
+    }
+
+    if let Some(edge_id) = hit_edge {
+        canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_id, position);
         cx.stop_propagation();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         return true;
     }
 
-    false
+    // If we're not on a node or edge, open the insert picker for the current wire.
+    canvas.open_connection_insert_node_picker(cx.app, from, at);
+    cx.stop_propagation();
+    cx.request_redraw();
+    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    return true;
+
+    // unreachable
 }
