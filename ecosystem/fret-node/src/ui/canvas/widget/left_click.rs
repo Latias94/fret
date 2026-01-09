@@ -3,6 +3,7 @@ use fret_ui::UiHost;
 
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 use crate::io::NodeGraphDragHandleMode;
+use crate::rules::EdgeEndpoint;
 
 use super::super::state::{
     EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
@@ -42,6 +43,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     #[derive(Debug, Clone, Copy)]
     enum Hit {
         Port(PortId),
+        EdgeAnchor(EdgeId, EdgeEndpoint, PortId),
         Resize(GraphNodeId, Rect),
         Node(GraphNodeId, Rect),
         Edge(EdgeId),
@@ -66,6 +68,19 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 ) {
                     return Hit::Port(port);
                 }
+
+                if let Some((edge, endpoint, fixed)) = this.hit_edge_focus_anchor(
+                    graph,
+                    snapshot,
+                    geom.as_ref(),
+                    index.as_ref(),
+                    position,
+                    zoom,
+                    &mut scratch_edges,
+                ) {
+                    return Hit::EdgeAnchor(edge, endpoint, fixed);
+                }
+
                 let order = geom.order.clone();
                 let Some(node) = order.iter().rev().find_map(|id| {
                     geom.nodes
@@ -194,6 +209,38 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 kind,
                 start_pos: position,
             });
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
+        Hit::EdgeAnchor(edge, endpoint, fixed) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.pending_node_resize = None;
+            canvas.interaction.node_resize = None;
+            canvas.interaction.pending_wire_drag = None;
+            canvas.interaction.wire_drag = Some(super::super::state::WireDrag {
+                kind: WireDragKind::Reconnect {
+                    edge,
+                    endpoint,
+                    fixed,
+                },
+                pos: position,
+            });
+            canvas.interaction.click_connect = false;
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = Some(edge);
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_edge = None;
+
             cx.capture_pointer(cx.node);
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

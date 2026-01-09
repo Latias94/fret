@@ -340,6 +340,10 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_edges_focusable")]
     pub edges_focusable: bool,
 
+    /// Whether edges can be reconnected by dragging edge update anchors.
+    #[serde(default = "default_edges_reconnectable")]
+    pub edges_reconnectable: bool,
+
     /// Connection targeting strategy.
     #[serde(default)]
     pub connection_mode: NodeGraphConnectionMode,
@@ -455,6 +459,7 @@ impl Default for NodeGraphInteractionState {
             elements_selectable: default_elements_selectable(),
             edges_selectable: default_edges_selectable(),
             edges_focusable: default_edges_focusable(),
+            edges_reconnectable: default_edges_reconnectable(),
             connection_mode: NodeGraphConnectionMode::default(),
             connection_radius: default_connection_radius(),
             reconnect_radius: default_reconnect_radius(),
@@ -490,6 +495,10 @@ fn default_edges_selectable() -> bool {
 }
 
 fn default_edges_focusable() -> bool {
+    true
+}
+
+fn default_edges_reconnectable() -> bool {
     true
 }
 

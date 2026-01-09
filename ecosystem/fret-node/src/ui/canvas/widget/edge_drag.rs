@@ -11,6 +11,10 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     position: Point,
     zoom: f32,
 ) -> bool {
+    if !snapshot.interaction.edges_reconnectable {
+        return false;
+    }
+
     let Some(drag) = canvas.interaction.edge_drag.clone() else {
         return false;
     };

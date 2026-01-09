@@ -128,6 +128,10 @@ impl NodeGraphCanvas {
     const PAN_INERTIA_TICK_HZ: f32 = 60.0;
     const PAN_INERTIA_TICK_INTERVAL: Duration =
         Duration::from_nanos((1.0e9 / Self::PAN_INERTIA_TICK_HZ) as u64);
+    const EDGE_FOCUS_ANCHOR_SIZE_SCREEN: f32 = 16.0;
+    const EDGE_FOCUS_ANCHOR_PAD_SCREEN: f32 = 1.0;
+    const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
+    const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -210,6 +214,53 @@ impl NodeGraphCanvas {
         }
 
         self.geometry.geom.clone()
+    }
+
+    fn edge_focus_anchor_rect(center: Point, zoom: f32) -> Rect {
+        let z = zoom.max(1.0e-6);
+        let half = 0.5 * Self::EDGE_FOCUS_ANCHOR_SIZE_SCREEN / z;
+        let pad = Self::EDGE_FOCUS_ANCHOR_PAD_SCREEN / z;
+        let size = 2.0 * (half + pad);
+        Rect::new(
+            Point::new(Px(center.x.0 - half - pad), Px(center.y.0 - half - pad)),
+            Size::new(Px(size), Px(size)),
+        )
+    }
+
+    fn edge_focus_anchor_centers(
+        route: EdgeRouteKind,
+        from: Point,
+        to: Point,
+        zoom: f32,
+    ) -> (Point, Point) {
+        fn norm_or_fallback(v: Point, fallback: Point) -> Point {
+            let len = (v.x.0 * v.x.0 + v.y.0 * v.y.0).sqrt();
+            if len.is_finite() && len > 1.0e-6 {
+                return Point::new(Px(v.x.0 / len), Px(v.y.0 / len));
+            }
+            let len = (fallback.x.0 * fallback.x.0 + fallback.y.0 * fallback.y.0).sqrt();
+            if len.is_finite() && len > 1.0e-6 {
+                return Point::new(Px(fallback.x.0 / len), Px(fallback.y.0 / len));
+            }
+            Point::new(Px(1.0), Px(0.0))
+        }
+
+        let z = zoom.max(1.0e-6);
+        let off = Self::EDGE_FOCUS_ANCHOR_OFFSET_SCREEN / z;
+        let fallback = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
+
+        let start_dir = norm_or_fallback(edge_route_start_tangent(route, from, to, zoom), fallback);
+        let end_dir = norm_or_fallback(edge_route_end_tangent(route, from, to, zoom), fallback);
+
+        let start = Point::new(
+            Px(from.x.0 + start_dir.x.0 * off),
+            Px(from.y.0 + start_dir.y.0 * off),
+        );
+        let end = Point::new(
+            Px(to.x.0 - end_dir.x.0 * off),
+            Px(to.y.0 - end_dir.y.0 * off),
+        );
+        (start, end)
     }
 
     pub(super) fn canvas_derived<H: UiHost>(
@@ -1432,6 +1483,70 @@ impl NodeGraphCanvas {
         }
 
         best.map(|(id, _)| id)
+    }
+
+    fn hit_edge_focus_anchor(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        geom: &CanvasGeometry,
+        index: &CanvasSpatialIndex,
+        pos: Point,
+        zoom: f32,
+        scratch: &mut Vec<EdgeId>,
+    ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
+        if !snapshot.interaction.edges_reconnectable {
+            return None;
+        }
+
+        let z = zoom.max(1.0e-6);
+        let half =
+            (0.5 * Self::EDGE_FOCUS_ANCHOR_SIZE_SCREEN + Self::EDGE_FOCUS_ANCHOR_PAD_SCREEN) / z;
+        let query_r = (half * 1.5).max(half);
+        index.query_edges(pos, query_r, scratch);
+        scratch.sort_unstable();
+        scratch.dedup();
+
+        let mut best: Option<(EdgeId, EdgeEndpoint, PortId, f32)> = None;
+
+        for &edge_id in scratch.iter() {
+            let Some(edge) = graph.edges.get(&edge_id) else {
+                continue;
+            };
+            let Some(from) = geom.port_center(edge.from) else {
+                continue;
+            };
+            let Some(to) = geom.port_center(edge.to) else {
+                continue;
+            };
+
+            let route = self
+                .presenter
+                .edge_render_hint(graph, edge_id, &self.style)
+                .route;
+            let (a0, a1) = Self::edge_focus_anchor_centers(route, from, to, zoom);
+            let r0 = Self::edge_focus_anchor_rect(a0, zoom);
+            let r1 = Self::edge_focus_anchor_rect(a1, zoom);
+
+            let mut consider =
+                |center: Point, rect: Rect, endpoint: EdgeEndpoint, fixed: PortId| {
+                    if !rect.contains(pos) {
+                        return;
+                    }
+                    let dx = pos.x.0 - center.x.0;
+                    let dy = pos.y.0 - center.y.0;
+                    let d2 = dx * dx + dy * dy;
+                    match best {
+                        Some((_id, _ep, _fixed, best_d2)) if best_d2 <= d2 => {}
+                        _ => best = Some((edge_id, endpoint, fixed, d2)),
+                    }
+                };
+
+            consider(a0, r0, EdgeEndpoint::From, edge.to);
+            consider(a1, r1, EdgeEndpoint::To, edge.from);
+        }
+
+        best.map(|(id, endpoint, fixed, _)| (id, endpoint, fixed))
     }
 
     fn clamp_context_menu_origin(
@@ -4497,22 +4612,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 .unwrap_or_default()
         };
 
-        let focused_edge_id = (snapshot.interaction.elements_selectable
-            && snapshot.interaction.edges_selectable
-            && snapshot.interaction.edges_focusable)
-            .then(|| {
-                self.interaction.focused_edge.or_else(|| {
-                    (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0])
-                })
+        let edge_anchor_target_id = (snapshot.interaction.edges_reconnectable).then(|| {
+            self.interaction.focused_edge.or_else(|| {
+                (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0])
             })
-            .flatten();
-        let focused_edge_anchors: Option<(Point, Point, Color)> = focused_edge_id.and_then(|id| {
-            render
-                .edges
-                .iter()
-                .find(|e| e.id == id)
-                .map(|e| (e.from, e.to, e.color))
         });
+        let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
+            edge_anchor_target_id.flatten().and_then(|id| {
+                render
+                    .edges
+                    .iter()
+                    .find(|e| e.id == id)
+                    .map(|e| (e.hint.route, e.from, e.to, e.color))
+            });
 
         // Groups render under edges and nodes (container frames).
         if !render.groups.is_empty() {
@@ -5078,16 +5190,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             });
         }
 
-        if let Some((from, to, color)) = focused_edge_anchors {
-            let size_screen = 16.0;
-            let border_screen = 2.0;
-            let pad_screen = 1.0;
+        if let Some((route, from, to, color)) = edge_anchor_target {
+            let (a0, a1) = Self::edge_focus_anchor_centers(route, from, to, zoom);
 
             let z = zoom.max(1.0e-6);
-            let half = 0.5 * size_screen / z;
-            let pad = pad_screen / z;
-            let border = Px(border_screen / z);
-
+            let border = Px(Self::EDGE_FOCUS_ANCHOR_BORDER_SCREEN / z);
             let anchor_color = Color {
                 r: color.r,
                 g: color.g,
@@ -5101,18 +5208,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 a: 0.15,
             };
 
-            for center in [from, to] {
-                let rect = Rect::new(
-                    Point::new(Px(center.x.0 - half), Px(center.y.0 - half)),
-                    Size::new(Px(2.0 * half), Px(2.0 * half)),
-                );
-                let rect = Rect::new(
-                    Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
-                    Size::new(
-                        Px(rect.size.width.0 + 2.0 * pad),
-                        Px(rect.size.height.0 + 2.0 * pad),
-                    ),
-                );
+            for center in [a0, a1] {
+                let rect = Self::edge_focus_anchor_rect(center, zoom);
                 let r = Px(0.5 * rect.size.width.0);
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(6),
