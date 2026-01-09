@@ -60,6 +60,35 @@ When clip masks cannot be produced within budgets (ADR 0120), the renderer must 
 
 Degradation must be layout-invariant and must not change hit-testing geometry.
 
+### 3.1) Mask tier selection policy (v1)
+
+The renderer chooses a **mask resolution tier** per effect boundary (per effective clip stack), subject to
+`intermediate_budget_bytes` (ADR 0120).
+
+Available tiers:
+
+- `Mask0`: full-resolution mask, `dst_size == viewport_size`
+- `Mask1`: half-resolution mask, `dst_size == downsampled_size(viewport_size, 2)`
+- `Mask2`: quarter-resolution mask, `dst_size == downsampled_size(viewport_size, 4)`
+
+#### Desired tier (by `EffectQuality`)
+
+- `High`  -> prefer `Mask0`
+- `Medium` -> prefer `Mask1`
+- `Low`   -> prefer `Mask2`
+- `Auto`  -> prefer `Mask0`
+
+#### Degradation rule (deterministic)
+
+If the preferred tier does not fit within `intermediate_budget_bytes`:
+
+1) Degrade to the next lower tier (`Mask0 -> Mask1 -> Mask2`).
+2) If no tier fits, do not allocate a mask texture:
+   - use clip-stack sampling (`mask_uniform_index`) where supported, or
+   - fall back to scissor-only behavior for rect-only clips (existing behavior).
+
+This decision is based only on viewport size and budget, so it is deterministic and layout-invariant.
+
 ### 4) Mask semantics are coverage-based and must gate effect outputs
 
 The renderer-internal clip mask represents **coverage** in `[0, 1]` for the effective clip stack:
@@ -80,6 +109,15 @@ Rationale:
   as computation-only (ADR 0119).
 
 ## Semantics (Renderer v3)
+
+### Bounds + scissor interaction (important)
+
+`bounds` remains computation-only (ADR 0119). In particular:
+
+- `FilterContent` composite must not treat `bounds` as an implicit clip. The clip mask must be derived from the
+  effective clip stack only.
+- `Backdrop` may scissor mask generation to the effect region for performance, because the mask is only consumed
+  by passes that are already scoped by the same computation bounds.
 
 ### A) FilterContent
 
@@ -124,8 +162,8 @@ Benefits:
 Implementation note:
 
 - When the mask texture resolution differs from the viewport, sampling must map pixel coordinates into the mask
-  grid deterministically (no filtering), so that scissor/bounds remain computation-only and clip visibility stays
-  stable under degradation.
+  grid deterministically (nearest sampling + explicit coordinate mapping), so that scissor/bounds remain
+  computation-only and clip visibility stays stable under degradation.
 
 ### Option 2: Stencil-based clip masks
 
