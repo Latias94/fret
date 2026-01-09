@@ -14,6 +14,12 @@ Workstream notes live under `docs/workstreams/` (not a roadmap; do not treat as 
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 
+Subsystem roadmaps (living docs, not ADRs):
+
+- Node graph: `docs/node-graph-roadmap.md` (tracked TODOs for `ecosystem/fret-node`; contracts in ADR 0135).
+- Layout engine: `docs/layout-engine-refactor-roadmap.md`.
+- Renderer: `docs/renderer-refactor-roadmap.md`.
+
 For the declarative layout refactor phases (P0–P5) toward a window-scoped Taffy engine + viewport roots, see:
 `docs/layout-engine-refactor-roadmap.md`.
 
