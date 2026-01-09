@@ -11,7 +11,7 @@ use crate::ui::presenter::InsertNodeCandidate;
 use super::super::conversion;
 use super::super::searcher::SEARCHER_MAX_VISIBLE_ROWS;
 use super::super::state::{
-    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDragKind,
+    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -235,6 +235,7 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
 
     match w.kind {
         WireDragKind::New { from, bundle } => {
+            let suspended_pos = w.pos;
             if let Some(target) = target {
                 enum Outcome {
                     Apply(Vec<GraphOp>),
@@ -349,6 +350,13 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                         }
                     }
                     Outcome::OpenConversionPicker(candidates) => {
+                        canvas.interaction.suspended_wire_drag = Some(WireDrag {
+                            kind: WireDragKind::New {
+                                from,
+                                bundle: Vec::new(),
+                            },
+                            pos: suspended_pos,
+                        });
                         canvas.interaction.last_conversion = Some(LastConversionContext {
                             from,
                             to: target,
@@ -392,6 +400,13 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                 }
             } else if bundle.is_empty() {
                 let at = NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
+                canvas.interaction.suspended_wire_drag = Some(WireDrag {
+                    kind: WireDragKind::New {
+                        from,
+                        bundle: Vec::new(),
+                    },
+                    pos: suspended_pos,
+                });
                 canvas.open_connection_insert_node_picker(cx.app, from, at);
             }
         }

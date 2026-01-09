@@ -144,6 +144,19 @@ pub trait NodeGraphPresenter {
         Vec::new()
     }
 
+    /// Lists nodes that can be inserted as part of a connection workflow.
+    ///
+    /// This is used when a user drops a connection onto empty space and the editor opens a node
+    /// picker. Default behavior reuses `list_insertable_nodes`.
+    fn list_insertable_nodes_for_connection(
+        &mut self,
+        graph: &Graph,
+        from: PortId,
+    ) -> Vec<InsertNodeCandidate> {
+        let _ = from;
+        self.list_insertable_nodes(graph)
+    }
+
     /// Plans inserting a node into the graph (background insert).
     ///
     /// The returned ops must be valid reversible graph edits.

@@ -40,6 +40,9 @@ pub(crate) struct InteractionState {
     pub(crate) pending_node_resize: Option<PendingNodeResize>,
     pub(crate) node_resize: Option<NodeResize>,
     pub(crate) wire_drag: Option<WireDrag>,
+    /// When a multi-step connection workflow opens a picker (conversion/search), the active wire
+    /// drag is suspended so it can be restored if the picker action is rejected.
+    pub(crate) suspended_wire_drag: Option<WireDrag>,
     pub(crate) edge_drag: Option<EdgeDrag>,
     pub(crate) hover_edge: Option<EdgeId>,
     pub(crate) hover_port: Option<PortId>,

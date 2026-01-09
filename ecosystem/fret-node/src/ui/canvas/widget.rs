@@ -708,6 +708,53 @@ impl NodeGraphCanvas {
         self.commit_ops(host, window, None, ops)
     }
 
+    fn start_sticky_wire_drag_from_port<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        from: PortId,
+        pos: Point,
+    ) {
+        self.interaction.wire_drag = Some(WireDrag {
+            kind: WireDragKind::New {
+                from,
+                bundle: Vec::new(),
+            },
+            pos,
+        });
+        self.interaction.sticky_wire = true;
+        self.interaction.sticky_wire_ignore_next_up = true;
+        self.interaction.hover_port = None;
+        self.interaction.hover_port_valid = false;
+        self.interaction.hover_port_convertible = false;
+        cx.capture_pointer(cx.node);
+        cx.request_redraw();
+        cx.invalidate_self(Invalidation::Paint);
+    }
+
+    fn restore_suspended_wire_drag<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        fallback_from: Option<PortId>,
+        fallback_pos: Point,
+    ) {
+        if let Some(wire_drag) = self.interaction.suspended_wire_drag.take() {
+            self.interaction.wire_drag = Some(wire_drag);
+            self.interaction.sticky_wire = true;
+            self.interaction.sticky_wire_ignore_next_up = true;
+            self.interaction.hover_port = None;
+            self.interaction.hover_port_valid = false;
+            self.interaction.hover_port_convertible = false;
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(Invalidation::Paint);
+            return;
+        }
+
+        if let Some(from) = fallback_from {
+            self.start_sticky_wire_drag_from_port(cx, from, fallback_pos);
+        }
+    }
+
     fn apply_transaction_result<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -1823,7 +1870,9 @@ impl NodeGraphCanvas {
         let candidates: Vec<InsertNodeCandidate> = {
             let presenter = &mut *self.presenter;
             self.graph
-                .read_ref(host, |graph| presenter.list_insertable_nodes(graph))
+                .read_ref(host, |graph| {
+                    presenter.list_insertable_nodes_for_connection(graph, from)
+                })
                 .ok()
                 .unwrap_or_default()
         };
@@ -2046,6 +2095,7 @@ impl NodeGraphCanvas {
 
                 match outcome {
                     Outcome::Apply(ops, created_node, continue_from) => {
+                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
                         if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
                             if let Some(node_id) = created_node {
                                 self.update_view_state(cx.app, |s| {
@@ -2062,24 +2112,24 @@ impl NodeGraphCanvas {
                             }
 
                             if let Some(port) = continue_from {
-                                self.interaction.wire_drag = Some(WireDrag {
-                                    kind: WireDragKind::New {
-                                        from: port,
-                                        bundle: Vec::new(),
-                                    },
-                                    pos: invoked_at,
-                                });
-                                self.interaction.sticky_wire = true;
-                                self.interaction.sticky_wire_ignore_next_up = true;
-                                self.interaction.hover_port = None;
-                                self.interaction.hover_port_valid = false;
-                                self.interaction.hover_port_convertible = false;
-                                cx.capture_pointer(cx.node);
+                                self.interaction.suspended_wire_drag = None;
+                                self.start_sticky_wire_drag_from_port(cx, port, resume_pos);
+                            } else {
+                                self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
                             }
+                        } else {
+                            self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
                         }
                     }
-                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
-                    Outcome::Ignore => {}
+                    Outcome::Reject(sev, msg) => {
+                        self.show_toast(cx.app, cx.window, sev, msg);
+                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
+                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
+                    }
+                    Outcome::Ignore => {
+                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
+                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
+                    }
                 }
             }
             (
@@ -2298,7 +2348,14 @@ impl NodeGraphCanvas {
                         .read_ref(cx.app, |graph| {
                             let template = match &candidate.template {
                                 Some(t) => t,
-                                None => return Outcome::Ignore,
+                                None => {
+                                    return Outcome::Reject(
+                                        DiagnosticSeverity::Error,
+                                        Arc::<str>::from(
+                                            "conversion candidate is missing template",
+                                        ),
+                                    );
+                                }
                             };
 
                             let plan = conversion::plan_insert_conversion(
@@ -2321,6 +2378,7 @@ impl NodeGraphCanvas {
                     Outcome::Apply(ops) => {
                         let node_id = Self::first_added_node_id(&ops);
                         self.apply_ops(cx.app, cx.window, ops);
+                        self.interaction.suspended_wire_drag = None;
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
@@ -2332,8 +2390,15 @@ impl NodeGraphCanvas {
                             });
                         }
                     }
-                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
-                    Outcome::Ignore => {}
+                    Outcome::Reject(sev, msg) => {
+                        self.show_toast(cx.app, cx.window, sev, msg);
+                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
+                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
+                    }
+                    Outcome::Ignore => {
+                        let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
+                        self.restore_suspended_wire_drag(cx, Some(*from), resume_pos);
+                    }
                 }
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::Custom(action_id)) => {
