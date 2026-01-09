@@ -43,7 +43,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `line` | DONE | `SeriesKind::Line` |
 | `area` (line with areaStyle) | DONE | `SeriesKind::Area` + `AreaBaseline` |
 | `band` (custom, common in finance) | DONE | `SeriesKind::Band` (`encode.y` + `encode.y2`) |
-| `line/area` + `stack` | DONE | `SeriesSpec.stack` + `stack_strategy` for `Line` and `Area` (v1: stacking is implemented in marks/hit-test; derived columns are future work). |
+| `line/area` + `stack` | DONE | `SeriesSpec.stack` + `stack_strategy` for `Line` and `Area` (P0: implemented; follow-up ADR 0143 proposes refactoring stacking into derived dimensions). |
 | `scatter` | PARTIAL | Point marks + hit test + pixel-bounded large mode; missing symbol/size options. |
 | `bar` | PARTIAL | `SeriesKind::Bar` (requires Category X axis in v1). |
 | `candlestick` | PLANNED | Needs OHLC encode + mark layout. |
@@ -128,4 +128,5 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 - ADR 0140: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
 - ADR 0141: `docs/adr/0141-delinea-missing-values-and-segment-policy.md`
 - ADR 0142: `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`
+- ADR 0143: `docs/adr/0143-delinea-derived-dimensions-and-stack-transform.md`
 - `ecosystem/delinea/docs/transform-pipeline.md`

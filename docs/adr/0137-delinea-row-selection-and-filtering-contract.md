@@ -1,6 +1,6 @@
 # ADR 0137: `delinea` RowSelection + Filtering Contract (ECharts-Inspired)
 
-Status: Proposed (P0)
+Status: Accepted (P0)
 
 ## Context
 
@@ -14,11 +14,11 @@ Status: Proposed (P0)
 Today, our pipeline already relies on a selection abstraction:
 
 - `RowRange` (continuous slice of a dataset table),
-- `RowSelection` (`All` or `Range(RowRange)`),
+- `RowSelection` (`All`, `Range(RowRange)`, or `Indices(...)`),
 - X windowing via `DataZoomXSpec` + `FilterMode::{Filter,None}` (ADR 0129),
 - Y and 2D view windows (mapping-only; ADR 0136).
 
-This is sufficient for X-only slicing on monotonic columns, but it does not fully cover:
+This is sufficient for X-only slicing on monotonic columns, but we also need an explicit path for:
 
 - ECharts `filterMode` variants (`weakFilter`, `empty`) and multi-dimensional filtering,
 - 2D brush/selection semantics beyond “write view windows”,
@@ -55,9 +55,9 @@ Selection is always derived from a **base dataset row range**:
 - Base range comes from `ChartState.dataset_row_ranges[dataset]` (optional) and clamps to dataset length.
 - All selection operations must be expressible as `selection = f(base_range, transforms, view_state)`.
 
-### 2) v1 keeps selection contiguous (Range-only) for performance
+### 2) v1 prefers contiguous selection (fast path)
 
-P0/v1 guarantees:
+P0/v1 preference:
 
 - Selection will be either `All` or `Range(RowRange)`.
 - No sparse selection is required to implement:
@@ -71,7 +71,24 @@ This preserves:
 - stable caching keys,
 - low memory overhead.
 
-### 3) Selection does not model “empty” masking in v1
+### 3) v1 also allows indices selection as an internal transform cache
+
+To align with ECharts `DataStore` (`_indices` + `getRawIndex`) and to keep future filtering extensible,
+`RowSelection` supports a non-contiguous form:
+
+- `RowSelection::Indices(Arc<[u32]>)`
+
+v1 constraints:
+
+- Indices are **raw row indices** (view index -> raw index mapping).
+- Indices may be produced by budgeted engine stages (ADR 0128) and cached by revision keys.
+- Consumers (marks/LOD/bounds/hit testing) must iterate selection via `get_raw_index(...)` rather than
+  assuming contiguity.
+
+This does not remove the contiguous fast path. It makes “sparse views” an explicit, testable contract
+instead of an ad-hoc future rewrite.
+
+### 4) Selection does not model “empty” masking in v1
 
 ECharts `filterMode='empty'` keeps rows but turns out-of-window values into `NaN`, causing line breaks.
 
@@ -85,7 +102,7 @@ In v1:
 - `FilterMode::Filter` removes out-of-window rows by selection (contiguous slice when possible).
 - `FilterMode::None` keeps the base range unchanged.
 
-### 4) When sparse behaviors are added, they must be budget-aware and cacheable
+### 5) When sparse behaviors are added, they must be budget-aware and cacheable
 
 When we introduce ECharts-like `weakFilter` / `empty` / multi-dimensional filtering, we also introduce
 new internal representations. The contract constraints:
@@ -98,21 +115,17 @@ new internal representations. The contract constraints:
   - view revision (state changes).
 - The engine must remain deterministic given the same inputs and budget progression.
 
-### 5) P1 extension path: add sparse selection and value masking as separate concepts
+### 6) P1 extension path: add value masking as a separate concept
 
 We explicitly separate two future mechanisms:
 
-1. **Sparse selection** (rows filtered out):
-   - Add `RowSelection::Indices(...)` or `RowSelection::Mask(...)` (exact type is a follow-up decision).
-   - Used for ECharts `weakFilter` and multi-dimensional filters that cannot be expressed as a contiguous range.
-
-2. **Value masking** (rows kept, but values become invalid):
+1. **Value masking** (rows kept, but values become invalid):
    - Add a per-series “validity” channel or derived-column transform that can mark points as `NaN`.
    - Used for ECharts `empty` semantics (line breaks without removing rows).
 
 This avoids conflating “filtering” with “rendering rules” and keeps marks/hit-testing rules explicit.
 
-### 6) Composition order is fixed and documented
+### 7) Composition order is fixed and documented
 
 To avoid future drift, we adopt a stable transform ordering for cartesian grids:
 
@@ -124,7 +137,7 @@ To avoid future drift, we adopt a stable transform ordering for cartesian grids:
 
 This is consistent with the forward-compatibility rule in ADR 0129 (“apply X filters before Y filters”).
 
-### 7) “Decide early” ECharts-inspired capabilities (backlog)
+### 8) “Decide early” ECharts-inspired capabilities (backlog)
 
 The following ECharts concepts are likely to force refactors if added late. They are not all P0 features,
 but the *contracts* should be decided early:
@@ -167,13 +180,11 @@ Large data and streaming:
 
 P0:
 
-- Keep v1 behaviors aligned with ADR 0129 and ADR 0136 (no sparse selection requirements).
+- Keep v1 behaviors aligned with ADR 0129 and ADR 0136 (contiguous fast path remains primary).
 - Add conformance demos that stress multi-axis + 2D box zoom + large datasets.
 
 P1:
 
-- Decide the concrete sparse representation:
-  - indices list vs bitset vs run-length encoding vs arena-backed scratch buffers.
 - Add `FilterMode::{WeakFilter,Empty}` only after:
   - stacking/bar/categorical behaviors are locked,
   - masking semantics are defined and tested.

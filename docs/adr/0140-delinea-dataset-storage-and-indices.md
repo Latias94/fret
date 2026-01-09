@@ -1,6 +1,6 @@
 # ADR 0140: `delinea` Dataset Storage, Indices, and Zero-Copy Strategy (ECharts-Inspired)
 
-Status: Proposed
+Status: Accepted (P0)
 
 ## Context
 
@@ -82,13 +82,18 @@ than cloning existing ones.
 
 ### 4) Streaming rule: “append only on raw data”
 
-We adopt the same rule as ECharts:
+We adopt the same spirit as ECharts (“append on raw storage”), but the concrete shape differs:
 
-- appending rows is allowed only when the dataset is in “raw mode” (no indices view).
-- if a dataset currently has indices (i.e., represents a derived view), it must be rebuilt or the
-  indices must be invalidated before append.
+- In `delinea`, `DataTable` is always the raw store.
+- Indexed views are **ephemeral**, engine-owned caches (e.g. `RowSelection::Indices`) keyed by dataset
+  revision + transform parameters (ADR 0128 / ADR 0129 / ADR 0137).
 
-This keeps the mental model simple and avoids subtle bugs where view indices point past appended data.
+Therefore:
+
+- appending rows is always performed on the raw store (`DataTable`),
+- caches that depend on row indices must treat a dataset revision bump as invalidation and rebuild
+  under `WorkBudget`,
+- view indices never “own” storage, so they cannot go stale without a revision mismatch.
 
 ### 5) Zero-copy direction: shared column backing is allowed
 
@@ -134,11 +139,10 @@ Trade-offs:
 
 P0/P1:
 
-- Implement an indices-based selection carrier in the transform layer (`RowSelection::Indices`),
-  and a budgeted engine stage to build/cache indices for non-monotonic X without materializing columns.
-- Add a dedicated internal store/view type in `delinea` engine code (even if `DataTable` remains public).
-- Extend transform outputs to support “indices view” beyond pure row ranges where needed.
-- Define a stable “append rows” API surface and its revision semantics.
+- Keep indices-based selection (`RowSelection::Indices`) and budgeted caching as the standard path for
+  non-contiguous transforms.
+- Consider introducing a dedicated internal store/view type (even if `DataTable` remains public) when we
+  add derived dimensions (stack/aggregate) and need shared computed columns.
 - Add unit tests that validate:
   - view indices are monotonic (when required),
   - `get_raw_index` mapping is correct,
