@@ -1,6 +1,8 @@
 use fret_core::{CursorIcon, Point};
 use fret_ui::UiHost;
 
+use crate::core::EdgeId;
+
 use super::super::state::ViewSnapshot;
 use super::NodeGraphCanvas;
 
@@ -13,6 +15,7 @@ pub(super) fn update_cursors<H: UiHost>(
 ) {
     update_close_button_cursor(canvas, cx, snapshot, position, zoom);
     update_resize_handle_cursor(canvas, cx, snapshot, position, zoom);
+    update_edge_anchor_cursor(canvas, cx, snapshot, position, zoom);
 }
 
 fn update_close_button_cursor<H: UiHost>(
@@ -71,5 +74,59 @@ fn update_resize_handle_cursor<H: UiHost>(
             cx.set_cursor_icon(CursorIcon::ColResize);
             return;
         }
+    }
+}
+
+fn update_edge_anchor_cursor<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    position: Point,
+    zoom: f32,
+) {
+    if !snapshot.interaction.edges_reconnectable
+        || canvas.interaction.node_drag.is_some()
+        || canvas.interaction.node_resize.is_some()
+        || canvas.interaction.wire_drag.is_some()
+        || canvas.interaction.edge_drag.is_some()
+        || canvas.interaction.panning
+        || canvas.interaction.marquee.is_some()
+        || canvas.interaction.context_menu.is_some()
+        || canvas.interaction.searcher.is_some()
+    {
+        return;
+    }
+
+    let target_edge = canvas
+        .interaction
+        .focused_edge
+        .or_else(|| (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0]));
+    let Some(edge_id) = target_edge else {
+        return;
+    };
+
+    let hit = {
+        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+        let this = &*canvas;
+        let index = index.clone();
+        this.graph
+            .read_ref(cx.app, |graph| {
+                let mut scratch: Vec<EdgeId> = Vec::new();
+                this.hit_edge_focus_anchor(
+                    graph,
+                    snapshot,
+                    geom.as_ref(),
+                    index.as_ref(),
+                    position,
+                    zoom,
+                    &mut scratch,
+                )
+            })
+            .ok()
+            .flatten()
+    };
+
+    if hit.is_some_and(|(id, ..)| id == edge_id) {
+        cx.set_cursor_icon(CursorIcon::Pointer);
     }
 }

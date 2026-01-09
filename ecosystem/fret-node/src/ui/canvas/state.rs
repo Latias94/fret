@@ -56,6 +56,7 @@ pub(crate) struct InteractionState {
     pub(crate) suspended_wire_drag: Option<WireDrag>,
     pub(crate) edge_drag: Option<EdgeDrag>,
     pub(crate) hover_edge: Option<EdgeId>,
+    pub(crate) hover_edge_anchor: Option<(EdgeId, EdgeEndpoint)>,
     pub(crate) focused_edge: Option<EdgeId>,
     pub(crate) hover_port: Option<PortId>,
     pub(crate) hover_port_valid: bool,

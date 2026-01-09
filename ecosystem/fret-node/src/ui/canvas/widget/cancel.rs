@@ -64,6 +64,7 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
     canvas.interaction.hover_edge = None;
+    canvas.interaction.hover_edge_anchor = None;
     canvas.interaction.focused_edge = None;
 
     if canceled {

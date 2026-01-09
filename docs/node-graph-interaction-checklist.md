@@ -201,6 +201,7 @@ Invariants:
 - (prototype) Keyboard edge focus: `Ctrl/Cmd+Tab` cycles focus/selection across edges (when enabled).
 - (prototype) Focus anchors: focused/selected edge shows endpoint anchors (reconnect affordance).
 - (prototype) Anchor reconnect: click an edge endpoint anchor and drag to reconnect.
+- (prototype) Anchor hover: hovering an anchor highlights it and uses pointer cursor.
 - (prototype) Edge labels render with stable placement (and do not overlap node ports in common layouts).
 - (prototype) Edge end markers (arrows) render and remain stable across zoom levels.
 - (todo) Per-edge style overrides can affect color/width/label without breaking hit-testing.
