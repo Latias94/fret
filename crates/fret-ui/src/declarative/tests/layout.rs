@@ -1043,6 +1043,140 @@ fn stack_does_not_stretch_spacer_children_in_engine_tree() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn container_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::ContainerProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.container(props, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let container = ui.children(child_root)[0];
+    let spacer = ui.children(container)[0];
+
+    let container_bounds = ui.debug_node_bounds(container).expect("container bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(container_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.pressable(props, |cx, _state| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let pressable = ui.children(child_root)[0];
+    let spacer = ui.children(pressable)[0];
+
+    let pressable_bounds = ui.debug_node_bounds(pressable).expect("pressable bounds");
+    let spacer_bounds = ui.debug_node_bounds(spacer).expect("spacer bounds");
+
+    assert_eq!(pressable_bounds, viewport);
+    assert_eq!(spacer_bounds.origin, viewport.origin);
+    assert!(spacer_bounds.size.width.0.abs() < 0.01);
+    assert!(spacer_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_nested_flow_is_solved_once() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,
