@@ -194,6 +194,7 @@ impl TaffyLayoutEngine {
         }
     }
 
+    #[cfg_attr(feature = "layout-engine-v2", stacksafe::stacksafe)]
     pub fn compute_root_with_measure(
         &mut self,
         root: LayoutId,
