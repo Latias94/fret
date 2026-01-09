@@ -21,6 +21,7 @@ pub mod scheduler;
 pub mod spec;
 pub mod stats;
 pub mod text;
+pub mod time_axis;
 pub mod tooltip;
 pub mod transform;
 pub mod view;

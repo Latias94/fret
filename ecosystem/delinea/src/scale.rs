@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum AxisScale {
     Value(ValueAxisScale),
     Category(CategoryAxisScale),
+    Time(TimeAxisScale),
 }
 
 impl Default for AxisScale {
@@ -17,6 +18,10 @@ impl Default for AxisScale {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ValueAxisScale;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct TimeAxisScale;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

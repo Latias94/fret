@@ -47,6 +47,7 @@ pub fn format_value(axis: &AxisModel, window: DataWindow, value: f64) -> String 
     match &axis.scale {
         AxisScale::Value(_) => crate::format::format_tick_value(window, value),
         AxisScale::Category(scale) => format_category_value(scale, value),
+        AxisScale::Time(_) => crate::time_axis::format_tick(window, value),
     }
 }
 
@@ -54,6 +55,7 @@ pub fn axis_ticks(axis: &AxisModel, window: DataWindow, target_count: usize) -> 
     match &axis.scale {
         AxisScale::Value(_) => crate::format::nice_ticks(window, target_count),
         AxisScale::Category(scale) => category_ticks(scale, window, target_count),
+        AxisScale::Time(_) => crate::time_axis::ticks(window, target_count),
     }
 }
 
@@ -61,6 +63,7 @@ pub fn format_axis_tick(axis: &AxisModel, window: DataWindow, value: f64) -> Str
     match &axis.scale {
         AxisScale::Value(_) => crate::format::format_tick_value(window, value),
         AxisScale::Category(scale) => format_category_value(scale, value),
+        AxisScale::Time(_) => crate::time_axis::format_tick(window, value),
     }
 }
 
