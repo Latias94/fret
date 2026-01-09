@@ -3314,6 +3314,10 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
 
     let engine = ui.take_layout_engine();
     assert!(
+        engine.layout_id_for_node(overlay_root).is_some(),
+        "expected dismissible root to be represented in the engine tree"
+    );
+    assert!(
         engine.layout_id_for_node(anchored).is_some(),
         "expected overlay subtree to be precomputed into the engine tree"
     );

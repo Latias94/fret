@@ -298,6 +298,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
+            | ElementInstance::DismissibleLayer(_)
             | ElementInstance::Stack(_)),
         ) if !tree.children(node).is_empty()
             && (!matches!(&instance, ElementInstance::HoverRegion(_))
@@ -312,10 +313,19 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Grid,
                 root_override_size,
             );
-            style.grid_template_columns =
-                vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
-            style.grid_template_rows =
-                vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+            if matches!(&instance, ElementInstance::DismissibleLayer(_)) {
+                style.grid_template_columns = vec![GridTemplateComponent::Single(
+                    taffy::style_helpers::flex(1.0),
+                )];
+                style.grid_template_rows = vec![GridTemplateComponent::Single(
+                    taffy::style_helpers::flex(1.0),
+                )];
+            } else {
+                style.grid_template_columns =
+                    vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+                style.grid_template_rows =
+                    vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+            }
             style.align_items = Some(AlignItems::FlexStart);
             style.justify_content = Some(JustifyContent::FlexStart);
 
@@ -446,6 +456,21 @@ fn style_for_item_in_parent<H: UiHost>(
         margin: taffy_rect_lpa_from_margin_edges(scale_factor, layout_style.margin),
         ..Default::default()
     };
+
+    if layout_style.position == crate::element::PositionStyle::Absolute {
+        if matches!(layout_style.size.width, crate::element::Length::Fill)
+            && layout_style.inset.left.is_some()
+            && layout_style.inset.right.is_some()
+        {
+            style.size.width = Dimension::auto();
+        }
+        if matches!(layout_style.size.height, crate::element::Length::Fill)
+            && layout_style.inset.top.is_some()
+            && layout_style.inset.bottom.is_some()
+        {
+            style.size.height = Dimension::auto();
+        }
+    }
 
     match parent_kind {
         ParentLayoutKind::Flex { .. } => {

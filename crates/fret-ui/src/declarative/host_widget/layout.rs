@@ -515,16 +515,26 @@ impl ElementHostWidget {
 
                 #[cfg(feature = "layout-engine-v2")]
                 {
-                    let sf = cx.scale_factor;
-                    let app = &mut *cx.app;
-                    let services = &mut *cx.services;
-                    let tree = &mut *cx.tree;
-                    for &child in cx.children {
-                        let child_style = layout_style_for_node(app, window, child);
-                        if child_style.position != crate::element::PositionStyle::Absolute {
-                            tree.precompute_flow_root_island_if_needed(
-                                app, services, child, base, sf,
-                            );
+                    if let Some(size) =
+                        try_layout_children_from_engine_or_manual_absolute(cx, window, base)
+                    {
+                        return size;
+                    }
+
+                    if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
+                        && !cx.children.is_empty()
+                        && !cx.tree.flow_subtree_is_engine_backed(cx.node)
+                    {
+                        let sf = cx.scale_factor;
+                        let app = &mut *cx.app;
+                        let services = &mut *cx.services;
+                        let tree = &mut *cx.tree;
+                        tree.precompute_flow_root_island(app, services, cx.node, base, sf);
+
+                        if let Some(size) =
+                            try_layout_children_from_engine_or_manual_absolute(cx, window, base)
+                        {
+                            return size;
                         }
                     }
                 }
