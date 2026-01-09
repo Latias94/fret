@@ -120,7 +120,7 @@ Names illustrative:
 - `LayoutEngine::begin_frame(frame_id, scale_factor, env_keys...)`
 - `LayoutEngine::request_layout(node_id, style, children: &[node_id]) -> LayoutId`
 - `LayoutEngine::request_measured_layout(node_id, style, measure_fn) -> LayoutId`
-- `LayoutEngine::compute_root(root_layout_id, available: Size<AvailableSpace>)`
+- `LayoutEngine::compute_root(root_layout_id, available: Size<AvailableSpace>, scale_factor)`
 - `LayoutEngine::layout_rect(layout_id) -> Rect` (root-local)
 
 Important: the request phase is allowed to observe models/globals for invalidation, but it must not
@@ -243,8 +243,11 @@ Debug surfaces:
   0011); add per-viewport overlay roots only for concrete perf/correctness needs.
 - Root solve order: solve roots in window root z-order, but viewport roots never participate in a
   shared solve; each viewport root is solved independently against its own definite available space.
-- Pixel rounding: keep an explicit engine-level rounding policy (off by default); when enabled,
-  apply it once at the layout-engine boundary so hit-testing and paint share snapped bounds.
+- Pixel rounding: apply layout rounding at the layout-engine boundary so hit-testing and paint share
+  snapped bounds.
+  - The engine solves in "device pixel" space (inputs are multiplied by `scale_factor`) with Taffy
+    rounding enabled, then returns logical pixels (divide outputs by `scale_factor`).
+  - This mirrors the GPUI reference and avoids subpixel drift across multi-root compute/apply.
 
 ## References
 

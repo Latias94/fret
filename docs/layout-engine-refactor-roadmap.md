@@ -107,7 +107,7 @@ Deliverables:
 - Apply composes viewport-local rects into window-local bounds.
 - Flex/Grid/Stack/Container wrappers become nodes in the same Taffy tree when possible; `measure_in`
   is reserved for true leaves.
-- Add stacksafe execution around solves + measure callbacks; enable optional rounding to reduce drift.
+- Add stacksafe execution around solves + measure callbacks; enable Taffy rounding to reduce drift.
 
 Acceptance:
 
