@@ -1,12 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Color, Edges, MouseButton, Px, TextStyle};
+use fret_core::{AppWindowId, Color, Edges, MouseButton, Px, SemanticsRole, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{PointerDownCx, PointerMoveCx, PointerUpCx};
 use fret_ui::element::{
     ColumnProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, PointerRegionProps,
-    PositionStyle, PressableProps, RowProps, SizeStyle, TextInputProps, TextProps,
+    PositionStyle, PressableProps, RowProps, SemanticsProps, SizeStyle, TextInputProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{TextInputStyle, ThemeSnapshot, UiHost};
@@ -287,64 +287,72 @@ impl PortalNumberEditor {
                             region.layout.size.width = Length::Fill;
                             region.layout.size.height = Length::Fill;
 
-                            vec![cx.pointer_region(region, |cx| {
-                                cx.pointer_region_on_pointer_down(Arc::new({
-                                    let graph_model = graph_model.clone();
-                                    let down_spec = drag_spec.clone();
-                                    let down_state = drag_state.clone();
-                                    let down_input = drag_input.clone();
-                                    move |host, cx, down| {
-                                        handle_drag_pointer_down(
-                                            host,
-                                            cx.window,
-                                            &graph_model,
-                                            &down_spec,
-                                            &down_state,
-                                            &down_input,
-                                            cmd_node,
-                                            down,
-                                        )
-                                    }
-                                }));
+                            let mut semantics = SemanticsProps::default();
+                            semantics.role = SemanticsRole::Button;
+                            semantics.label = Some(Arc::from("Drag to adjust value"));
+                            semantics.layout.size.width = Length::Fill;
+                            semantics.layout.size.height = Length::Fill;
 
-                                cx.pointer_region_on_pointer_move(Arc::new({
-                                    let graph_model = graph_model.clone();
-                                    let mv_spec = drag_spec.clone();
-                                    let mv_state = drag_state.clone();
-                                    let mv_input = drag_input.clone();
-                                    move |host, _cx, mv| {
-                                        handle_drag_pointer_move(
-                                            host,
-                                            &graph_model,
-                                            &mv_spec,
-                                            &mv_state,
-                                            &mv_input,
-                                            cmd_node,
-                                            mv,
-                                        )
-                                    }
-                                }));
+                            vec![cx.semantics(semantics, |cx| {
+                                vec![cx.pointer_region(region, |cx| {
+                                    cx.pointer_region_on_pointer_down(Arc::new({
+                                        let graph_model = graph_model.clone();
+                                        let down_spec = drag_spec.clone();
+                                        let down_state = drag_state.clone();
+                                        let down_input = drag_input.clone();
+                                        move |host, cx, down| {
+                                            handle_drag_pointer_down(
+                                                host,
+                                                cx.window,
+                                                &graph_model,
+                                                &down_spec,
+                                                &down_state,
+                                                &down_input,
+                                                cmd_node,
+                                                down,
+                                            )
+                                        }
+                                    }));
 
-                                cx.pointer_region_on_pointer_up(Arc::new({
-                                    let up_state = drag_state.clone();
-                                    move |host, cx, up| {
-                                    handle_drag_pointer_up(
-                                        host,
-                                        cx.window,
-                                        &up_state,
-                                        cmd_node,
-                                        up,
-                                    )
-                                    }
-                                }));
+                                    cx.pointer_region_on_pointer_move(Arc::new({
+                                        let graph_model = graph_model.clone();
+                                        let mv_spec = drag_spec.clone();
+                                        let mv_state = drag_state.clone();
+                                        let mv_input = drag_input.clone();
+                                        move |host, _cx, mv| {
+                                            handle_drag_pointer_move(
+                                                host,
+                                                &graph_model,
+                                                &mv_spec,
+                                                &mv_state,
+                                                &mv_input,
+                                                cmd_node,
+                                                mv,
+                                            )
+                                        }
+                                    }));
 
-                                vec![render_small_button(
-                                    cx,
-                                    &drag_ui.button,
-                                    hovered,
-                                    pressed,
-                                    "<>",
-                                )]
+                                    cx.pointer_region_on_pointer_up(Arc::new({
+                                        let up_state = drag_state.clone();
+                                        move |host, cx, up| {
+                                            handle_drag_pointer_up(
+                                                host,
+                                                cx.window,
+                                                &up_state,
+                                                cmd_node,
+                                                up,
+                                            )
+                                        }
+                                    }));
+
+                                    vec![render_small_button(
+                                        cx,
+                                        &drag_ui.button,
+                                        hovered,
+                                        pressed,
+                                        "<>",
+                                    )]
+                                })]
                             })]
                         }))
                     } else {

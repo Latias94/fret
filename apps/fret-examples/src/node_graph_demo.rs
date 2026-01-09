@@ -758,6 +758,13 @@ impl PortalNumberEditSpec for DemoFloatPortalSpec {
         self.initial_value(graph, node).is_some()
     }
 
+    fn drag_threshold_px(&self, graph: &Graph, node: NodeId) -> f32 {
+        if self.initial_value(graph, node).is_none() {
+            return 1.0;
+        }
+        2.0
+    }
+
     fn drag_sensitivity_per_px(
         &self,
         graph: &Graph,
