@@ -9,6 +9,26 @@ pub struct RenderDocCapture {
 }
 
 impl RenderDocCapture {
+    // RenderDoc capture usage (Windows):
+    //
+    // 1) Make RenderDoc available:
+    //    - Recommended: launch the app via qrenderdoc/renderdoccmd (injection), then `RenderDog::new()` can connect.
+    //    - Or set `FRET_RENDERDOC_DLL` to an absolute `renderdoc.dll` path (useful for Scoop installs).
+    //
+    // 2) Enable capture:
+    //    - Set `FRET_RENDERDOC=1` to enable the integration.
+    //    - Optional: set `FRET_RENDERDOC_AUTOCAPTURE=1` to capture the first rendered frame automatically.
+    //    - Optional: set `FRET_RENDERDOC_CAPTURE_DIR=<path>` to control where `.rdc` files are written.
+    //
+    // 3) If capture hotkey doesn't work, prefer Vulkan backend for debugging:
+    //    - Set `FRET_WGPU_BACKEND=vulkan` and rerun the demo, then press `F12` to request a capture.
+    //
+    // Example:
+    //   $env:FRET_RENDERDOC=1
+    //   $env:FRET_RENDERDOC_DLL="C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current\\renderdoc.dll"
+    //   $env:FRET_RENDERDOC_AUTOCAPTURE=1
+    //   $env:FRET_WGPU_BACKEND="vulkan"
+    //   cargo run -p fret-demo --bin fret-demo -- effects_demo
     pub fn try_init() -> Option<Self> {
         #[cfg(windows)]
         {
