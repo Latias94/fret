@@ -48,6 +48,7 @@ mod cancel;
 mod context_menu;
 mod cursor;
 mod edge_drag;
+mod edge_insert;
 mod group_drag;
 mod group_resize;
 mod hover;
@@ -1921,61 +1922,7 @@ impl NodeGraphCanvas {
         edge: EdgeId,
         invoked_at: Point,
     ) {
-        let candidates: Vec<InsertNodeCandidate> = {
-            let presenter = &mut *self.presenter;
-            self.graph
-                .read_ref(host, |graph| {
-                    presenter.list_insertable_nodes_for_edge(graph, edge)
-                })
-                .ok()
-                .unwrap_or_default()
-        };
-
-        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
-        menu_candidates.push(InsertNodeCandidate {
-            kind: NodeKindKey::new(REROUTE_KIND),
-            label: Arc::<str>::from("Reroute"),
-            enabled: true,
-            template: None,
-            payload: serde_json::Value::Null,
-        });
-        menu_candidates.extend(candidates);
-
-        let rows =
-            super::searcher::build_rows(&menu_candidates, "", &self.interaction.recent_kinds);
-
-        if rows.is_empty() {
-            self.show_toast(
-                host,
-                window,
-                DiagnosticSeverity::Info,
-                "no insertable nodes for edge",
-            );
-            return;
-        }
-
-        let snapshot = self.sync_view_state(host);
-        let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
-        let origin = self.clamp_searcher_origin(invoked_at, visible, bounds, &snapshot);
-        let active_row = rows
-            .iter()
-            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
-            .unwrap_or(0);
-
-        self.interaction.context_menu = None;
-        self.interaction.searcher = Some(SearcherState {
-            origin,
-            invoked_at,
-            target: ContextMenuTarget::EdgeInsertNodePicker(edge),
-            query: String::new(),
-            candidates: menu_candidates,
-            recent_kinds: self.interaction.recent_kinds.clone(),
-            rows,
-            hovered_row: None,
-            active_row,
-            scroll: 0,
-        });
+        edge_insert::open_edge_insert_node_picker(self, host, window, edge, invoked_at);
     }
 
     fn activate_context_menu_item<H: UiHost>(
@@ -2136,50 +2083,7 @@ impl NodeGraphCanvas {
                 ContextMenuTarget::Edge(edge_id),
                 NodeGraphContextMenuAction::OpenInsertNodePicker,
             ) => {
-                let candidates: Vec<InsertNodeCandidate> = {
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            presenter.list_insertable_nodes_for_edge(graph, *edge_id)
-                        })
-                        .ok()
-                        .unwrap_or_default()
-                };
-
-                let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
-                menu_candidates.push(InsertNodeCandidate {
-                    kind: NodeKindKey::new(REROUTE_KIND),
-                    label: Arc::<str>::from("Reroute"),
-                    enabled: true,
-                    template: None,
-                    payload: serde_json::Value::Null,
-                });
-                menu_candidates.extend(candidates);
-
-                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-                for (ix, c) in menu_candidates.iter().enumerate() {
-                    items.push(NodeGraphContextMenuItem {
-                        label: c.label.clone(),
-                        enabled: c.enabled,
-                        action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-                    });
-                }
-
-                let snapshot = self.sync_view_state(cx.app);
-                let origin =
-                    self.clamp_context_menu_origin(invoked_at, items.len(), cx.bounds, &snapshot);
-
-                let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-                self.interaction.context_menu = Some(ContextMenuState {
-                    origin,
-                    invoked_at,
-                    target: ContextMenuTarget::EdgeInsertNodePicker(*edge_id),
-                    items,
-                    candidates: menu_candidates,
-                    hovered_item: None,
-                    active_item,
-                    typeahead: String::new(),
-                });
+                edge_insert::open_edge_insert_context_menu(self, cx, *edge_id, invoked_at);
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
                 let at = self.reroute_pos_for_invoked_at(invoked_at);
@@ -2255,74 +2159,10 @@ impl NodeGraphCanvas {
                 ContextMenuTarget::EdgeInsertNodePicker(edge_id),
                 NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
-                enum Outcome {
-                    Apply(Vec<GraphOp>),
-                    Reject(DiagnosticSeverity, Arc<str>),
-                    Ignore,
-                }
-
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
-                self.record_recent_kind(&candidate.kind);
-
-                let outcome = {
-                    let at = if candidate.kind.0 == REROUTE_KIND {
-                        self.reroute_pos_for_invoked_at(invoked_at)
-                    } else {
-                        CanvasPoint {
-                            x: invoked_at.x.0,
-                            y: invoked_at.y.0,
-                        }
-                    };
-
-                    let presenter = &mut *self.presenter;
-                    self.graph
-                        .read_ref(cx.app, |graph| {
-                            let plan = presenter
-                                .plan_split_edge_candidate(graph, *edge_id, &candidate, at);
-                            match plan.decision {
-                                ConnectDecision::Accept => Outcome::Apply(plan.ops),
-                                ConnectDecision::Reject => {
-                                    Self::toast_from_diagnostics(&plan.diagnostics)
-                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                        .unwrap_or_else(|| {
-                                            Outcome::Reject(
-                                                DiagnosticSeverity::Error,
-                                                Arc::<str>::from(format!(
-                                                    "node insertion was rejected: {}",
-                                                    candidate.kind.0
-                                                )),
-                                            )
-                                        })
-                                }
-                            }
-                        })
-                        .ok()
-                        .unwrap_or(Outcome::Ignore)
-                };
-
-                match outcome {
-                    Outcome::Apply(ops) => {
-                        let select_node = candidate.kind.0 == REROUTE_KIND;
-                        let node_id = select_node
-                            .then(|| Self::first_added_node_id(&ops))
-                            .flatten();
-                        self.apply_ops(cx.app, cx.window, ops);
-                        if let Some(node_id) = node_id {
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_groups.clear();
-                                s.selected_nodes.clear();
-                                s.selected_nodes.push(node_id);
-                                s.draw_order.retain(|id| *id != node_id);
-                                s.draw_order.push(node_id);
-                            });
-                        }
-                    }
-                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
-                    Outcome::Ignore => {}
-                }
+                edge_insert::insert_node_on_edge(self, cx, *edge_id, invoked_at, candidate);
             }
             (
                 ContextMenuTarget::ConnectionConvertPicker { from, to, at },
