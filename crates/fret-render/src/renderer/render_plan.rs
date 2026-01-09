@@ -42,6 +42,7 @@ pub(super) enum RenderPlanPass {
     SceneDrawRange(SceneDrawRangePass),
     PathMsaaBatch(PathMsaaBatchPass),
     FullscreenBlit(FullscreenBlitPass),
+    CompositePremul(CompositePremulPass),
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
     ReleaseTarget(PlanTarget),
@@ -66,6 +67,16 @@ pub(super) struct BlurPass {
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct FullscreenBlitPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct CompositePremulPass {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
@@ -243,35 +254,135 @@ impl RenderPlan {
             return plan;
         }
 
+        #[derive(Clone, Copy, Debug)]
+        struct DrawScope {
+            target: PlanTarget,
+            needs_clear: bool,
+            clear_color: wgpu::Color,
+        }
+
+        #[derive(Clone, Copy, Debug)]
+        struct EffectScope {
+            mode: fret_core::EffectMode,
+            chain: fret_core::EffectChain,
+            quality: fret_core::EffectQuality,
+            scissor: ScissorRect,
+            parent_target: PlanTarget,
+            content_target: Option<PlanTarget>,
+        }
+
         let mut passes: Vec<RenderPlanPass> = Vec::new();
-        let mut is_first_pass = true;
+        let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
+            target: scene_target,
+            needs_clear: true,
+            clear_color: clear,
+        }];
+        let mut effect_scopes: Vec<EffectScope> = Vec::new();
+
         let mut scene_range_start: usize = 0;
         let mut cursor: usize = 0;
-
         let mut marker_ix: usize = 0;
         let markers = &encoding.effect_markers;
 
         let flush_scene_range = |end: usize,
                                  passes: &mut Vec<RenderPlanPass>,
-                                 is_first_pass: &mut bool,
+                                 draw_scopes: &mut Vec<DrawScope>,
                                  scene_range_start: &mut usize| {
-            if *is_first_pass {
+            let scope = draw_scopes.last_mut().expect("draw scope");
+            if scope.needs_clear {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
-                    target: scene_target,
-                    load: wgpu::LoadOp::Clear(clear),
+                    target: scope.target,
+                    load: wgpu::LoadOp::Clear(scope.clear_color),
                     draw_range: *scene_range_start..end,
                 }));
-                *is_first_pass = false;
+                scope.needs_clear = false;
             } else if *scene_range_start < end {
                 passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
-                    target: scene_target,
+                    target: scope.target,
                     load: wgpu::LoadOp::Load,
                     draw_range: *scene_range_start..end,
                 }));
             }
             *scene_range_start = end;
+        };
+
+        let available_scratch_targets =
+            |draw_scopes: &[DrawScope], srcdst: PlanTarget| -> Vec<PlanTarget> {
+                let mut out: Vec<PlanTarget> = Vec::new();
+                for t in [
+                    PlanTarget::Intermediate0,
+                    PlanTarget::Intermediate1,
+                    PlanTarget::Intermediate2,
+                ] {
+                    if t == srcdst {
+                        continue;
+                    }
+                    if draw_scopes.iter().any(|s| s.target == t) {
+                        continue;
+                    }
+                    out.push(t);
+                }
+                out
+            };
+
+        let maybe_blur_in_place = |passes: &mut Vec<RenderPlanPass>,
+                                   draw_scopes: &[DrawScope],
+                                   srcdst: PlanTarget,
+                                   chain: fret_core::EffectChain,
+                                   quality: fret_core::EffectQuality,
+                                   scissor: ScissorRect| {
+            if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
+                return;
+            }
+            let Some(requested_downsample) = effect_chain_requested_downsample(chain) else {
+                return;
+            };
+
+            let scratch = available_scratch_targets(draw_scopes, srcdst);
+            if scratch.len() >= 2 {
+                let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+                    viewport_size,
+                    format,
+                    intermediate_budget_bytes,
+                    requested_downsample,
+                    quality,
+                ) else {
+                    return;
+                };
+                append_scissored_blur_in_place_two_scratch(
+                    passes,
+                    srcdst,
+                    scratch[0],
+                    scratch[1],
+                    viewport_size,
+                    downsample_scale,
+                    scissor,
+                    clear,
+                );
+                return;
+            }
+
+            let Some(&scratch) = scratch.first() else {
+                return;
+            };
+            if intermediate_budget_bytes == 0 {
+                return;
+            }
+            let full = estimate_texture_bytes(viewport_size, format, 1);
+            let required = full.saturating_mul(2);
+            if required > intermediate_budget_bytes {
+                return;
+            }
+            append_scissored_blur_in_place_single_scratch(
+                passes,
+                srcdst,
+                scratch,
+                viewport_size,
+                scissor,
+                clear,
+            );
         };
 
         while cursor <= draws.len() {
@@ -284,36 +395,106 @@ impl RenderPlan {
                 flush_scene_range(
                     cursor,
                     &mut passes,
-                    &mut is_first_pass,
+                    &mut draw_scopes,
                     &mut scene_range_start,
                 );
 
                 while marker_ix < markers.len() && markers[marker_ix].draw_ix == cursor {
                     let marker = markers[marker_ix];
-                    if let EffectMarkerKind::Push {
-                        scissor,
-                        mode,
-                        chain,
-                        quality,
-                    } = marker.kind
-                        && mode == fret_core::EffectMode::Backdrop
-                        && scene_target == PlanTarget::Intermediate0
-                        && let Some(requested_downsample) = effect_chain_requested_downsample(chain)
-                    {
-                        if let Some(downsample_scale) = choose_effect_blur_downsample_scale(
-                            viewport_size,
-                            format,
-                            intermediate_budget_bytes,
-                            requested_downsample,
+                    match marker.kind {
+                        EffectMarkerKind::Push {
+                            scissor,
+                            mode,
+                            chain,
                             quality,
-                        ) {
-                            append_backdrop_blur_in_place(
-                                &mut passes,
-                                viewport_size,
-                                downsample_scale,
-                                Some(scissor),
-                                clear,
-                            );
+                        } => {
+                            let parent_target = draw_scopes.last().expect("draw scope").target;
+                            match mode {
+                                fret_core::EffectMode::Backdrop => {
+                                    maybe_blur_in_place(
+                                        &mut passes,
+                                        &draw_scopes,
+                                        parent_target,
+                                        chain,
+                                        quality,
+                                        scissor,
+                                    );
+                                    effect_scopes.push(EffectScope {
+                                        mode,
+                                        chain,
+                                        quality,
+                                        scissor,
+                                        parent_target,
+                                        content_target: None,
+                                    });
+                                }
+                                fret_core::EffectMode::FilterContent => {
+                                    let mut content_target: Option<PlanTarget> = None;
+                                    for t in [
+                                        PlanTarget::Intermediate0,
+                                        PlanTarget::Intermediate1,
+                                        PlanTarget::Intermediate2,
+                                    ] {
+                                        if draw_scopes.iter().any(|s| s.target == t) {
+                                            continue;
+                                        }
+                                        content_target = Some(t);
+                                        break;
+                                    }
+
+                                    if let Some(content_target) = content_target {
+                                        draw_scopes.push(DrawScope {
+                                            target: content_target,
+                                            needs_clear: true,
+                                            clear_color: wgpu::Color::TRANSPARENT,
+                                        });
+                                    }
+
+                                    effect_scopes.push(EffectScope {
+                                        mode,
+                                        chain,
+                                        quality,
+                                        scissor,
+                                        parent_target,
+                                        content_target,
+                                    });
+                                }
+                            }
+                        }
+                        EffectMarkerKind::Pop => {
+                            let Some(scope) = effect_scopes.pop() else {
+                                marker_ix += 1;
+                                continue;
+                            };
+
+                            if scope.mode == fret_core::EffectMode::FilterContent
+                                && let Some(content_target) = scope.content_target
+                            {
+                                debug_assert_eq!(
+                                    draw_scopes.last().expect("draw scope").target,
+                                    content_target
+                                );
+
+                                maybe_blur_in_place(
+                                    &mut passes,
+                                    &draw_scopes,
+                                    content_target,
+                                    scope.chain,
+                                    scope.quality,
+                                    scope.scissor,
+                                );
+
+                                passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
+                                    src: content_target,
+                                    dst: scope.parent_target,
+                                    src_size: viewport_size,
+                                    dst_size: viewport_size,
+                                    dst_scissor: None,
+                                    load: wgpu::LoadOp::Load,
+                                }));
+
+                                let _ = draw_scopes.pop();
+                            }
                         }
                     }
 
@@ -332,7 +513,7 @@ impl RenderPlan {
                     flush_scene_range(
                         cursor,
                         &mut passes,
-                        &mut is_first_pass,
+                        &mut draw_scopes,
                         &mut scene_range_start,
                     );
 
@@ -349,9 +530,10 @@ impl RenderPlan {
                         }
                     }
 
+                    let target = draw_scopes.last().expect("draw scope").target;
                     passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
                         segment: SceneSegmentId(0),
-                        target: scene_target,
+                        target,
                         draw_range: cursor..end,
                         union_scissor: union,
                         batch_uniform_index,
@@ -424,28 +606,35 @@ fn choose_effect_blur_downsample_scale(
     None
 }
 
-fn append_backdrop_blur_in_place(
+fn append_scissored_blur_in_place_two_scratch(
     passes: &mut Vec<RenderPlanPass>,
-    viewport_size: (u32, u32),
+    srcdst: PlanTarget,
+    scratch_a: PlanTarget,
+    scratch_b: PlanTarget,
+    full_size: (u32, u32),
     downsample_scale: u32,
-    scissor: Option<ScissorRect>,
+    scissor: ScissorRect,
     clear: wgpu::Color,
 ) {
-    let Some(scissor) = scissor else {
-        return;
-    };
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch_a, PlanTarget::Output);
+    debug_assert_ne!(scratch_b, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch_a);
+    debug_assert_ne!(srcdst, scratch_b);
+    debug_assert_ne!(scratch_a, scratch_b);
+
     if scissor.w == 0 || scissor.h == 0 {
         return;
     }
 
     let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
-    let blur_size = downsampled_size(viewport_size, downsample_scale);
+    let blur_size = downsampled_size(full_size, downsample_scale);
 
-    let down_scissor = map_scissor_to_size(Some(scissor), viewport_size, blur_size);
+    let down_scissor = map_scissor_to_size(Some(scissor), full_size, blur_size);
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
-        src: PlanTarget::Intermediate0,
-        dst: PlanTarget::Intermediate1,
-        src_size: viewport_size,
+        src: srcdst,
+        dst: scratch_a,
+        src_size: full_size,
         dst_size: blur_size,
         dst_scissor: down_scissor,
         mode: ScaleMode::Downsample,
@@ -453,10 +642,10 @@ fn append_backdrop_blur_in_place(
         load: wgpu::LoadOp::Clear(clear),
     }));
 
-    let blur_scissor = map_scissor_to_size(Some(scissor), viewport_size, blur_size);
+    let blur_scissor = map_scissor_to_size(Some(scissor), full_size, blur_size);
     passes.push(RenderPlanPass::Blur(BlurPass {
-        src: PlanTarget::Intermediate1,
-        dst: PlanTarget::Intermediate2,
+        src: scratch_a,
+        dst: scratch_b,
         src_size: blur_size,
         dst_size: blur_size,
         dst_scissor: blur_scissor,
@@ -464,8 +653,8 @@ fn append_backdrop_blur_in_place(
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::Blur(BlurPass {
-        src: PlanTarget::Intermediate2,
-        dst: PlanTarget::Intermediate1,
+        src: scratch_b,
+        dst: scratch_a,
         src_size: blur_size,
         dst_size: blur_size,
         dst_scissor: blur_scissor,
@@ -473,15 +662,51 @@ fn append_backdrop_blur_in_place(
         load: wgpu::LoadOp::Clear(clear),
     }));
 
-    let final_scissor = map_scissor_to_size(Some(scissor), viewport_size, viewport_size);
+    let final_scissor = map_scissor_to_size(Some(scissor), full_size, full_size);
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
-        src: PlanTarget::Intermediate1,
-        dst: PlanTarget::Intermediate0,
+        src: scratch_a,
+        dst: srcdst,
         src_size: blur_size,
-        dst_size: viewport_size,
+        dst_size: full_size,
         dst_scissor: final_scissor,
         mode: ScaleMode::Upscale,
         scale: downsample_scale,
+        load: wgpu::LoadOp::Load,
+    }));
+}
+
+fn append_scissored_blur_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: ScissorRect,
+    clear: wgpu::Color,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if scissor.w == 0 || scissor.h == 0 {
+        return;
+    }
+
+    passes.push(RenderPlanPass::Blur(BlurPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: Some(scissor),
+        axis: BlurAxis::Horizontal,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::Blur(BlurPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: Some(scissor),
+        axis: BlurAxis::Vertical,
         load: wgpu::LoadOp::Load,
     }));
 }
@@ -506,6 +731,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
             RenderPlanPass::SceneDrawRange(p) => mark(p.target),
             RenderPlanPass::PathMsaaBatch(p) => mark(p.target),
             RenderPlanPass::FullscreenBlit(p) => {
+                mark(p.src);
+                mark(p.dst);
+            }
+            RenderPlanPass::CompositePremul(p) => {
                 mark(p.src);
                 mark(p.dst);
             }

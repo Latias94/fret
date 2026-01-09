@@ -148,6 +148,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
+        let needs_composite = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::CompositePremul(_)));
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
@@ -157,6 +161,9 @@ impl Renderer {
         }
         if needs_blur {
             self.ensure_blur_pipelines(device, format);
+        }
+        if needs_composite && path_samples <= 1 {
+            self.ensure_composite_pipeline(device, format);
         }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_release_targets = plan
@@ -996,6 +1003,128 @@ impl Renderer {
                         &blit_bind_group,
                         pass.dst_scissor,
                     );
+                }
+                RenderPlanPass::CompositePremul(pass) => {
+                    let composite_pipeline = self
+                        .composite_pipeline
+                        .as_ref()
+                        .expect("composite premul pipeline must exist");
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output => {
+                            debug_assert!(false, "CompositePremul src cannot be Output");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret composite premul bind group"),
+                        layout: &self.viewport_bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::TextureView(&src_view),
+                            },
+                        ],
+                    });
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    let x0 = 0.0;
+                    let y0 = 0.0;
+                    let x1 = pass.dst_size.0 as f32;
+                    let y1 = pass.dst_size.1 as f32;
+                    let vertices = [
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                    ];
+                    queue.write_buffer(
+                        &self.path_composite_vertices,
+                        0,
+                        bytemuck::cast_slice(&vertices),
+                    );
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret composite premul pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: dst_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: pass.load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(composite_pipeline);
+                    rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
+                    rp.set_bind_group(1, &bind_group, &[]);
+                    rp.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
+                    if let Some(scissor) = pass.dst_scissor {
+                        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                    }
+                    rp.draw(0..6, 0..1);
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
                     frame_targets.release_target(

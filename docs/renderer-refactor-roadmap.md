@@ -212,7 +212,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Debug-gated "pixelate" is compiled into the plan (downsample chain -> upscale chain -> blit).
     - Debug-gated separable blur exists (downsample -> blur H/V -> upscale -> blit).
     - MVP public semantics: `SceneOp::PushEffect/PopEffect` are encoded as explicit markers and compiled into
-      `RenderPlan` as a bounded, scissored backdrop blur (ordering preserved).
+      `RenderPlan` as bounded, scissored `Backdrop` + `FilterContent` blur (ordering preserved).
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.

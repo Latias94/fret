@@ -185,8 +185,8 @@ Current v3 implementation is intentionally minimal and focuses on proving the su
 - `SceneOp::PushEffect/PopEffect` are encoded as explicit markers (sequence points) and compiled into `RenderPlan`.
 - MVP supported effect:
   - `EffectMode::Backdrop` + `EffectStep::GaussianBlur { .. }` (bounded by `bounds` and current clip/scissor).
+  - `EffectMode::FilterContent` + `EffectStep::GaussianBlur { .. }` (scissored in-place filtering, then premul over composite).
 - Not yet implemented (treated as a no-op by the renderer):
-  - `EffectMode::FilterContent`,
   - `ColorAdjust`, `Pixelate`, `Dither` as effect steps (debug-only postprocesses exist separately).
 - Blur kernel is currently a fixed separable 9-tap kernel (approx radius 4) and `radius_px` is treated as a hint for
   future quality selection (downsample tier / kernel variants).
