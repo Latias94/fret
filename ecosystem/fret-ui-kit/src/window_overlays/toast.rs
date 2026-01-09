@@ -944,6 +944,52 @@ mod tests {
             !end.dismiss,
             "expected swipe-left below threshold to not dismiss"
         );
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe3").duration(None), None);
+        store.set_window_swipe_config(window, ToastSwipeDirection::Up, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(60.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(10.0), Px(0.0)))
+                .is_some()
+        );
+        assert!(
+            store
+                .toasts_for_window(window)
+                .iter()
+                .find(|t| t.id == id)
+                .expect("toast entry")
+                .drag_offset
+                .y
+                .0
+                < 0.0
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss, "expected swipe-up to dismiss");
+
+        let id = store.add_toast(window, ToastRequest::new("Swipe4").duration(None), None);
+        store.set_window_swipe_config(window, ToastSwipeDirection::Down, Px(50.0));
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+        assert!(
+            store
+                .drag_move(window, id, Point::new(Px(10.0), Px(70.0)))
+                .is_some()
+        );
+        assert!(
+            store
+                .toasts_for_window(window)
+                .iter()
+                .find(|t| t.id == id)
+                .expect("toast entry")
+                .drag_offset
+                .y
+                .0
+                > 0.0
+        );
+        let end = store.end_drag(window, id).expect("end");
+        assert!(end.dragging);
+        assert!(end.dismiss, "expected swipe-down to dismiss");
     }
 
     #[test]
