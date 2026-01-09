@@ -16,7 +16,14 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
-        crate::elements::record_bounds_for_element(&mut *cx.app, window, self.element, cx.bounds);
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
+            crate::elements::record_bounds_for_element(
+                &mut *cx.app,
+                window,
+                self.element,
+                cx.bounds,
+            );
+        }
 
         for (model, invalidation) in
             crate::elements::observed_models_for_element(cx.app, window, self.element)
@@ -238,39 +245,7 @@ impl ElementHostWidget {
                     return size;
                 }
 
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Semantics(props) => {
                 #[cfg(feature = "layout-engine-v2")]
@@ -282,39 +257,7 @@ impl ElementHostWidget {
                     return size;
                 }
 
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::FocusScope(props) => {
                 #[cfg(feature = "layout-engine-v2")]
@@ -326,39 +269,7 @@ impl ElementHostWidget {
                     return size;
                 }
 
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Opacity(props) => {
                 #[cfg(feature = "layout-engine-v2")]
@@ -370,39 +281,7 @@ impl ElementHostWidget {
                     return size;
                 }
 
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::InteractivityGate(props) => {
                 if !props.present {
@@ -420,37 +299,7 @@ impl ElementHostWidget {
 
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
                 // presence/interactivity gating handled via host widget flags.
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::VisualTransform(props) => {
                 #[cfg(feature = "layout-engine-v2")]
@@ -462,39 +311,7 @@ impl ElementHostWidget {
                     return size;
                 }
 
-                // Probe within the available height budget so measurement passes do not observe an
-                // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
-                let mut max_child = Size::new(Px(0.0), Px(0.0));
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    if layout_style.position == crate::element::PositionStyle::Absolute {
-                        continue;
-                    }
-                    let child_size = cx.measure_in(child, probe_constraints);
-                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
-                }
-
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
-                let base = Rect::new(cx.bounds.origin, desired);
-                for &child in cx.children {
-                    let layout_style = layout_style_for_node(cx.app, window, child);
-                    match positioned_layout_style(layout_style) {
-                        PositionedLayoutStyle::Absolute(inset) => {
-                            layout_absolute_child_with_probe_bounds(
-                                cx,
-                                child,
-                                base,
-                                probe_bounds,
-                                inset,
-                            )
-                        }
-                        style => layout_positioned_child(cx, child, base, style),
-                    }
-                }
-                desired
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Anchored(props) => {
                 // Layout-driven anchored placement. We measure the child subtree first, then

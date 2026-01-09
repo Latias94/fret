@@ -14,9 +14,11 @@ impl ElementHostWidget {
         window: AppWindowId,
         layout: LayoutStyle,
     ) -> Size {
-        // Probe within the available height budget so measurement passes do not observe an
-        // artificially "infinite" viewport (important for scroll/virtualized children).
-        let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+        // Probe within this container's own constrained size so measurement passes do not observe
+        // an artificially "infinite" viewport (important for scroll/virtualized children) and so
+        // absolute-positioned children measure against the same size budget used for placement.
+        let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
+        let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
         let probe_constraints = probe_constraints_for_size(probe_bounds.size);
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         for &child in cx.children {
@@ -92,7 +94,8 @@ impl ElementHostWidget {
         //
         // This keeps the hover region's hit-test bounds stable without forcing it to fill the
         // viewport.
-        let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+        let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
+        let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
         let probe_constraints = probe_constraints_for_size(probe_bounds.size);
         let mut max_child = Size::new(Px(0.0), Px(0.0));
 
