@@ -70,3 +70,7 @@ Toolchain is pinned via `rust-toolchain.toml` (Rust 1.92) and the workspace uses
 
 - Treat ADRs as the source of truth for cross-crate contracts.
 - If you change a “hard-to-change” behavior (input, focus, docking, text, rendering boundaries), update or add an ADR in `docs/adr/`.
+- Keep the ADR implementation audit up to date:
+  - When you implement/refactor behavior covered by an ADR, update the corresponding row in `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
+  - Mark one of: `Aligned`, `Aligned (with known gaps)`, `Partially aligned`, `Not implemented`, `Not audited`.
+  - Add 1–3 evidence anchors (file paths / key functions / tests) or clearly describe the missing pieces.
