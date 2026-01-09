@@ -636,6 +636,18 @@ impl ElementHostWidget {
                 fret_core::Point::new(Px(inner_origin.x.0 + x), Px(inner_origin.y.0 + y)),
                 layout.size,
             );
+
+            #[cfg(feature = "layout-engine-v2")]
+            if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
+                && !cx.tree.children(child).is_empty()
+            {
+                let sf = cx.scale_factor;
+                let app = &mut *cx.app;
+                let services = &mut *cx.services;
+                let tree = &mut *cx.tree;
+                tree.precompute_flow_root_island(app, services, child, rect, sf);
+            }
+
             let _ = cx.layout_in(child, rect);
         }
 
