@@ -829,20 +829,6 @@ impl Renderer {
                         bytemuck::cast_slice(&[scale, 0, 0, 0]),
                     );
 
-                    let (pipeline, label) = match pass.mode {
-                        ScaleMode::Downsample => (
-                            self.downsample_pipeline
-                                .as_ref()
-                                .expect("downsample pipeline must exist"),
-                            "fret downsample-nearest pass",
-                        ),
-                        ScaleMode::Upscale => (
-                            self.upscale_pipeline
-                                .as_ref()
-                                .expect("upscale pipeline must exist"),
-                            "fret upscale-nearest pass",
-                        ),
-                    };
                     let layout = self
                         .scale_bind_group_layout
                         .as_ref()
@@ -882,32 +868,67 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    run_fullscreen_triangle_pass(
-                        &mut encoder,
-                        label,
-                        pipeline,
-                        dst_view,
-                        pass.load,
-                        &bind_group,
-                        pass.dst_scissor,
-                    );
+                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+                        let pipeline = self
+                            .upscale_masked_pipeline
+                            .as_ref()
+                            .expect("upscale masked pipeline must exist");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret upscale-nearest masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let (pipeline, label) = match pass.mode {
+                            ScaleMode::Downsample => (
+                                self.downsample_pipeline
+                                    .as_ref()
+                                    .expect("downsample pipeline must exist"),
+                                "fret downsample-nearest pass",
+                            ),
+                            ScaleMode::Upscale => (
+                                self.upscale_pipeline
+                                    .as_ref()
+                                    .expect("upscale pipeline must exist"),
+                                "fret upscale-nearest pass",
+                            ),
+                        };
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            label,
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            pass.dst_scissor,
+                        );
+                    }
                 }
                 RenderPlanPass::Blur(pass) => {
-                    let blur_pipeline = match pass.axis {
-                        BlurAxis::Horizontal => self
-                            .blur_h_pipeline
-                            .as_ref()
-                            .expect("blur-h pipeline must exist"),
-                        BlurAxis::Vertical => self
-                            .blur_v_pipeline
-                            .as_ref()
-                            .expect("blur-v pipeline must exist"),
-                    };
-                    let label = match pass.axis {
-                        BlurAxis::Horizontal => "fret blur-h pass",
-                        BlurAxis::Vertical => "fret blur-v pass",
-                    };
-
                     let src_view = match pass.src {
                         PlanTarget::Output => {
                             debug_assert!(false, "Blur src cannot be Output");
@@ -947,15 +968,74 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    run_fullscreen_triangle_pass(
-                        &mut encoder,
-                        label,
-                        blur_pipeline,
-                        dst_view,
-                        pass.load,
-                        &bind_group,
-                        pass.dst_scissor,
-                    );
+                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let (pipeline, label) = match pass.axis {
+                            BlurAxis::Horizontal => (
+                                self.blur_h_masked_pipeline
+                                    .as_ref()
+                                    .expect("blur-h masked pipeline must exist"),
+                                "fret blur-h masked pass",
+                            ),
+                            BlurAxis::Vertical => (
+                                self.blur_v_masked_pipeline
+                                    .as_ref()
+                                    .expect("blur-v masked pipeline must exist"),
+                                "fret blur-v masked pass",
+                            ),
+                        };
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some(label),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let blur_pipeline = match pass.axis {
+                            BlurAxis::Horizontal => self
+                                .blur_h_pipeline
+                                .as_ref()
+                                .expect("blur-h pipeline must exist"),
+                            BlurAxis::Vertical => self
+                                .blur_v_pipeline
+                                .as_ref()
+                                .expect("blur-v pipeline must exist"),
+                        };
+                        let label = match pass.axis {
+                            BlurAxis::Horizontal => "fret blur-h pass",
+                            BlurAxis::Vertical => "fret blur-v pass",
+                        };
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            label,
+                            blur_pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            pass.dst_scissor,
+                        );
+                    }
                 }
                 RenderPlanPass::FullscreenBlit(pass) => {
                     let blit_pipeline = self
@@ -1012,10 +1092,6 @@ impl Renderer {
                     );
                 }
                 RenderPlanPass::ColorAdjust(pass) => {
-                    let pipeline = self
-                        .color_adjust_pipeline
-                        .as_ref()
-                        .expect("color-adjust pipeline must exist");
                     let layout = self
                         .color_adjust_bind_group_layout
                         .as_ref()
@@ -1067,15 +1143,54 @@ impl Renderer {
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    run_fullscreen_triangle_pass(
-                        &mut encoder,
-                        "fret color-adjust pass",
-                        pipeline,
-                        dst_view,
-                        pass.load,
-                        &bind_group,
-                        pass.dst_scissor,
-                    );
+                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let pipeline = self
+                            .color_adjust_masked_pipeline
+                            .as_ref()
+                            .expect("color-adjust masked pipeline must exist");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-adjust masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let pipeline = self
+                            .color_adjust_pipeline
+                            .as_ref()
+                            .expect("color-adjust pipeline must exist");
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            "fret color-adjust pass",
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            pass.dst_scissor,
+                        );
+                    }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
                     let composite_pipeline = self

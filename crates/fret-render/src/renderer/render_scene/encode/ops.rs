@@ -54,6 +54,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::Push {
                     scissor,
+                    uniform_index: state.current_uniform_index,
                     mode,
                     chain,
                     quality,

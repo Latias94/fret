@@ -9,6 +9,7 @@ impl Renderer {
     ) {
         if self.color_adjust_pipeline_format == Some(format)
             && self.color_adjust_pipeline.is_some()
+            && self.color_adjust_masked_pipeline.is_some()
             && self.color_adjust_bind_group_layout.is_some()
         {
             return;
@@ -44,12 +45,22 @@ impl Renderer {
             label: Some("fret color-adjust shader"),
             source: wgpu::ShaderSource::Wgsl(COLOR_ADJUST_SHADER.into()),
         });
+        let masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret color-adjust masked shader"),
+            source: wgpu::ShaderSource::Wgsl(COLOR_ADJUST_MASKED_SHADER.into()),
+        });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fret color-adjust pipeline layout"),
             bind_group_layouts: &[&bind_group_layout],
             immediate_size: 0,
         });
+        let masked_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("fret color-adjust masked pipeline layout"),
+                bind_group_layouts: &[&self.uniform_bind_group_layout, &bind_group_layout],
+                immediate_size: 0,
+            });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("fret color-adjust pipeline"),
@@ -84,9 +95,55 @@ impl Renderer {
             multiview_mask: None,
             cache: None,
         });
+        let masked_blend = wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::Zero,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
+            },
+        };
+        let masked_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("fret color-adjust masked pipeline"),
+            layout: Some(&masked_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &masked_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &masked_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(masked_blend),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
 
         self.color_adjust_pipeline_format = Some(format);
         self.color_adjust_bind_group_layout = Some(bind_group_layout);
         self.color_adjust_pipeline = Some(pipeline);
+        self.color_adjust_masked_pipeline = Some(masked_pipeline);
     }
 }

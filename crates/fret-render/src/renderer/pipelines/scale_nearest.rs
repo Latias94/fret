@@ -10,6 +10,7 @@ impl Renderer {
         if self.scale_pipeline_format == Some(format)
             && self.downsample_pipeline.is_some()
             && self.upscale_pipeline.is_some()
+            && self.upscale_masked_pipeline.is_some()
             && self.scale_bind_group_layout.is_some()
         {
             return;
@@ -46,6 +47,11 @@ impl Renderer {
             bind_group_layouts: &[&bind_group_layout],
             immediate_size: 0,
         });
+        let masked_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("fret scale-nearest masked pipeline layout"),
+            bind_group_layouts: &[&self.uniform_bind_group_layout, &bind_group_layout],
+            immediate_size: 0,
+        });
 
         let downsample_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret downsample-nearest shader"),
@@ -54,6 +60,10 @@ impl Renderer {
         let upscale_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret upscale-nearest shader"),
             source: wgpu::ShaderSource::Wgsl(UPSCALE_NEAREST_SHADER.into()),
+        });
+        let upscale_masked_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("fret upscale-nearest masked shader"),
+            source: wgpu::ShaderSource::Wgsl(UPSCALE_NEAREST_MASKED_SHADER.into()),
         });
 
         let downsample_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -123,10 +133,57 @@ impl Renderer {
             multiview_mask: None,
             cache: None,
         });
+        let masked_blend = wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                operation: wgpu::BlendOperation::Add,
+            },
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::Zero,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
+            },
+        };
+        let upscale_masked_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("fret upscale-nearest masked pipeline"),
+                layout: Some(&masked_layout),
+                vertex: wgpu::VertexState {
+                    module: &upscale_masked_shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &upscale_masked_shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend: Some(masked_blend),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                }),
+                multiview_mask: None,
+                cache: None,
+            });
 
         self.scale_pipeline_format = Some(format);
         self.scale_bind_group_layout = Some(bind_group_layout);
         self.downsample_pipeline = Some(downsample_pipeline);
         self.upscale_pipeline = Some(upscale_pipeline);
+        self.upscale_masked_pipeline = Some(upscale_masked_pipeline);
     }
 }

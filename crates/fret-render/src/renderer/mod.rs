@@ -108,15 +108,19 @@ pub struct Renderer {
     blur_pipeline_format: Option<wgpu::TextureFormat>,
     blur_h_pipeline: Option<wgpu::RenderPipeline>,
     blur_v_pipeline: Option<wgpu::RenderPipeline>,
+    blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
+    blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
 
     scale_pipeline_format: Option<wgpu::TextureFormat>,
     downsample_pipeline: Option<wgpu::RenderPipeline>,
     upscale_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
     scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
 
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
     color_adjust_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
     color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
     color_adjust_param_buffer: wgpu::Buffer,
 

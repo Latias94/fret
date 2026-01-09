@@ -62,6 +62,7 @@ pub(super) struct BlurPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
     pub(super) axis: BlurAxis,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
@@ -73,6 +74,7 @@ pub(super) struct ColorAdjustPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
     pub(super) saturation: f32,
     pub(super) brightness: f32,
     pub(super) contrast: f32,
@@ -112,6 +114,7 @@ pub(super) struct ScaleNearestPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
     pub(super) mode: ScaleMode,
     pub(super) scale: u32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
@@ -360,120 +363,130 @@ impl RenderPlan {
                 out
             };
 
-        let apply_chain_in_place = |passes: &mut Vec<RenderPlanPass>,
-                                    draw_scopes: &[DrawScope],
-                                    srcdst: PlanTarget,
-                                    chain: fret_core::EffectChain,
-                                    quality: fret_core::EffectQuality,
-                                    scissor: ScissorRect| {
-            if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
-                return;
-            }
+        let apply_chain_in_place =
+            |passes: &mut Vec<RenderPlanPass>,
+             draw_scopes: &[DrawScope],
+             srcdst: PlanTarget,
+             chain: fret_core::EffectChain,
+             quality: fret_core::EffectQuality,
+             scissor: ScissorRect,
+             mask_uniform_index: Option<u32>| {
+                if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
+                    return;
+                }
 
-            for step in chain.iter() {
-                match step {
-                    fret_core::EffectStep::GaussianBlur {
-                        radius_px: _,
-                        downsample,
-                    } => {
-                        let downsample = if downsample >= 4 { 4 } else { 2 };
-                        let scratch = available_scratch_targets(draw_scopes, srcdst);
-                        if scratch.len() >= 2 {
-                            let Some(downsample_scale) = choose_effect_blur_downsample_scale(
-                                viewport_size,
-                                format,
-                                intermediate_budget_bytes,
-                                downsample,
-                                quality,
-                            ) else {
+                for step in chain.iter() {
+                    match step {
+                        fret_core::EffectStep::GaussianBlur {
+                            radius_px: _,
+                            downsample,
+                        } => {
+                            let downsample = if downsample >= 4 { 4 } else { 2 };
+                            let scratch = available_scratch_targets(draw_scopes, srcdst);
+                            if scratch.len() >= 2 {
+                                let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+                                    viewport_size,
+                                    format,
+                                    intermediate_budget_bytes,
+                                    downsample,
+                                    quality,
+                                ) else {
+                                    continue;
+                                };
+                                append_scissored_blur_in_place_two_scratch(
+                                    passes,
+                                    srcdst,
+                                    scratch[0],
+                                    scratch[1],
+                                    viewport_size,
+                                    downsample_scale,
+                                    scissor,
+                                    clear,
+                                    mask_uniform_index,
+                                );
+                                continue;
+                            }
+
+                            let Some(&scratch) = scratch.first() else {
                                 continue;
                             };
-                            append_scissored_blur_in_place_two_scratch(
+                            if intermediate_budget_bytes == 0 {
+                                continue;
+                            }
+                            let full = estimate_texture_bytes(viewport_size, format, 1);
+                            let required = full.saturating_mul(2);
+                            if required > intermediate_budget_bytes {
+                                continue;
+                            }
+                            append_scissored_blur_in_place_single_scratch(
                                 passes,
                                 srcdst,
-                                scratch[0],
-                                scratch[1],
+                                scratch,
                                 viewport_size,
-                                downsample_scale,
                                 scissor,
                                 clear,
+                                mask_uniform_index,
                             );
-                            continue;
                         }
-
-                        let Some(&scratch) = scratch.first() else {
-                            continue;
-                        };
-                        if intermediate_budget_bytes == 0 {
-                            continue;
-                        }
-                        let full = estimate_texture_bytes(viewport_size, format, 1);
-                        let required = full.saturating_mul(2);
-                        if required > intermediate_budget_bytes {
-                            continue;
-                        }
-                        append_scissored_blur_in_place_single_scratch(
-                            passes,
-                            srcdst,
-                            scratch,
-                            viewport_size,
-                            scissor,
-                            clear,
-                        );
-                    }
-                    fret_core::EffectStep::ColorAdjust {
-                        saturation,
-                        brightness,
-                        contrast,
-                    } => {
-                        if !color_adjust_enabled(viewport_size, format, intermediate_budget_bytes) {
-                            continue;
-                        }
-                        let scratch = available_scratch_targets(draw_scopes, srcdst);
-                        let Some(&scratch) = scratch.first() else {
-                            continue;
-                        };
-                        append_color_adjust_in_place_single_scratch(
-                            passes,
-                            srcdst,
-                            scratch,
-                            viewport_size,
-                            Some(scissor),
+                        fret_core::EffectStep::ColorAdjust {
                             saturation,
                             brightness,
                             contrast,
-                            clear,
-                        );
-                    }
-                    fret_core::EffectStep::Pixelate { scale } => {
-                        if !pixelate_enabled(
-                            viewport_size,
-                            format,
-                            intermediate_budget_bytes,
-                            scale,
-                        ) {
-                            continue;
+                        } => {
+                            if !color_adjust_enabled(
+                                viewport_size,
+                                format,
+                                intermediate_budget_bytes,
+                            ) {
+                                continue;
+                            }
+                            let scratch = available_scratch_targets(draw_scopes, srcdst);
+                            let Some(&scratch) = scratch.first() else {
+                                continue;
+                            };
+                            append_color_adjust_in_place_single_scratch(
+                                passes,
+                                srcdst,
+                                scratch,
+                                viewport_size,
+                                Some(scissor),
+                                saturation,
+                                brightness,
+                                contrast,
+                                clear,
+                                mask_uniform_index,
+                            );
                         }
-                        let scratch = available_scratch_targets(draw_scopes, srcdst);
-                        let Some(&scratch) = scratch.first() else {
-                            continue;
-                        };
-                        append_pixelate_in_place_single_scratch(
-                            passes,
-                            srcdst,
-                            scratch,
-                            viewport_size,
-                            Some(scissor),
-                            scale,
-                            clear,
-                        );
-                    }
-                    fret_core::EffectStep::Dither { .. } => {
-                        // Not yet implemented in effect chains (debug-only postprocess exists).
+                        fret_core::EffectStep::Pixelate { scale } => {
+                            if !pixelate_enabled(
+                                viewport_size,
+                                format,
+                                intermediate_budget_bytes,
+                                scale,
+                            ) {
+                                continue;
+                            }
+                            let scratch = available_scratch_targets(draw_scopes, srcdst);
+                            let Some(&scratch) = scratch.first() else {
+                                continue;
+                            };
+                            append_pixelate_in_place_single_scratch(
+                                passes,
+                                srcdst,
+                                scratch,
+                                viewport_size,
+                                Some(scissor),
+                                scale,
+                                clear,
+                                mask_uniform_index,
+                            );
+                        }
+                        fret_core::EffectStep::Dither { .. } => {
+                            // Not yet implemented in effect chains (debug-only postprocess exists).
+                        }
                     }
                 }
-            }
-        };
+            };
 
         while cursor <= draws.len() {
             let next_marker_at = markers
@@ -494,6 +507,7 @@ impl RenderPlan {
                     match marker.kind {
                         EffectMarkerKind::Push {
                             scissor,
+                            uniform_index,
                             mode,
                             chain,
                             quality,
@@ -508,6 +522,7 @@ impl RenderPlan {
                                         chain,
                                         quality,
                                         scissor,
+                                        Some(uniform_index),
                                     );
                                     effect_scopes.push(EffectScope {
                                         mode,
@@ -572,6 +587,7 @@ impl RenderPlan {
                                     scope.chain,
                                     scope.quality,
                                     scope.scissor,
+                                    None,
                                 );
 
                                 passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
@@ -720,6 +736,7 @@ fn append_scissored_blur_in_place_two_scratch(
     downsample_scale: u32,
     scissor: ScissorRect,
     clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch_a, PlanTarget::Output);
@@ -742,6 +759,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: full_size,
         dst_size: blur_size,
         dst_scissor: down_scissor,
+        mask_uniform_index: None,
         mode: ScaleMode::Downsample,
         scale: downsample_scale,
         load: wgpu::LoadOp::Clear(clear),
@@ -754,6 +772,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: blur_size,
         dst_size: blur_size,
         dst_scissor: blur_scissor,
+        mask_uniform_index: None,
         axis: BlurAxis::Horizontal,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -763,6 +782,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: blur_size,
         dst_size: blur_size,
         dst_scissor: blur_scissor,
+        mask_uniform_index: None,
         axis: BlurAxis::Vertical,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -774,6 +794,7 @@ fn append_scissored_blur_in_place_two_scratch(
         src_size: blur_size,
         dst_size: full_size,
         dst_scissor: final_scissor,
+        mask_uniform_index,
         mode: ScaleMode::Upscale,
         scale: downsample_scale,
         load: wgpu::LoadOp::Load,
@@ -787,6 +808,7 @@ fn append_scissored_blur_in_place_single_scratch(
     size: (u32, u32),
     scissor: ScissorRect,
     clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -802,6 +824,7 @@ fn append_scissored_blur_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: Some(scissor),
+        mask_uniform_index: None,
         axis: BlurAxis::Horizontal,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -811,6 +834,7 @@ fn append_scissored_blur_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: Some(scissor),
+        mask_uniform_index,
         axis: BlurAxis::Vertical,
         load: wgpu::LoadOp::Load,
     }));
@@ -826,6 +850,7 @@ fn append_color_adjust_in_place_single_scratch(
     brightness: f32,
     contrast: f32,
     clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -850,6 +875,7 @@ fn append_color_adjust_in_place_single_scratch(
             src_size: size,
             dst_size: size,
             dst_scissor: Some(scissor),
+            mask_uniform_index,
             saturation,
             brightness,
             contrast,
@@ -864,6 +890,7 @@ fn append_color_adjust_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        mask_uniform_index: None,
         saturation,
         brightness,
         contrast,
@@ -887,6 +914,7 @@ fn append_pixelate_in_place_single_scratch(
     scissor: Option<ScissorRect>,
     scale: u32,
     clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -909,6 +937,7 @@ fn append_pixelate_in_place_single_scratch(
         src_size: full_size,
         dst_size: down_size,
         dst_scissor: down_scissor,
+        mask_uniform_index: None,
         mode: ScaleMode::Downsample,
         scale,
         load: wgpu::LoadOp::Clear(clear),
@@ -920,6 +949,11 @@ fn append_pixelate_in_place_single_scratch(
         src_size: down_size,
         dst_size: full_size,
         dst_scissor: scissor,
+        mask_uniform_index: if scissor.is_some() {
+            mask_uniform_index
+        } else {
+            None
+        },
         mode: ScaleMode::Upscale,
         scale,
         load: if scissor.is_some() {
@@ -1075,6 +1109,7 @@ fn push_scale_nearest(
             src_size,
             dst_size,
             dst_scissor,
+            mask_uniform_index: None,
             mode,
             scale,
             load,
@@ -1117,6 +1152,7 @@ fn push_blur(
         src_size,
         dst_size,
         dst_scissor,
+        mask_uniform_index: None,
         axis,
         load,
     }));

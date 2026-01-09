@@ -284,6 +284,7 @@ pub(super) enum OrderedDraw {
 pub(super) enum EffectMarkerKind {
     Push {
         scissor: ScissorRect,
+        uniform_index: u32,
         mode: fret_core::EffectMode,
         chain: fret_core::EffectChain,
         quality: fret_core::EffectQuality,
