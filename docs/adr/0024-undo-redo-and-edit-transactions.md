@@ -3,6 +3,11 @@
 Status: Deferred
 Scope: Example editor application (out of scope for the Fret UI framework)
 
+Note: this ADR remains the “editor application” direction. Framework-level *hooks* that enable
+undo/redo without committing to history policy are tracked separately:
+
+- `docs/adr/0136-undo-redo-infrastructure-boundary.md`
+
 ## Context
 
 A game engine editor must support reliable undo/redo across many domains:
