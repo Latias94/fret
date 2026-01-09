@@ -10,6 +10,7 @@ Primary ADRs:
 
 - AvailableSpace + non-reentrant intrinsic measurement: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Window-scoped engine + viewport roots: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+- Migration inventory (living checklist): `docs/layout-engine-v2-migration-inventory.md`
 
 Related constraints and boundaries:
 

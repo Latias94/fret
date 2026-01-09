@@ -1,0 +1,45 @@
+# Layout Engine v2 Migration Inventory
+
+This document is a living checklist for migrating from container-owned "Taffy islands" to the
+window-scoped layout engine (`layout-engine-v2`), with multi-viewport docking as the end-state.
+
+It is **not** an ADR. Contracts live in:
+
+- `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
+- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+
+Related roadmap:
+
+- `docs/layout-engine-refactor-roadmap.md`
+
+## Status Values
+
+- **Done**: implemented and covered by tests (in this worktree/branch unless otherwise noted).
+- **In progress**: partially migrated; gaps remain.
+- **Planned**: agreed direction; not implemented.
+- **Intentional barrier**: should remain a specialized algorithm, but must interop cleanly.
+
+## Migration Checklist
+
+| Area / Barrier | v2 status | Notes | Tests / Evidence |
+| --- | --- | --- | --- |
+| Viewport roots (multi-viewport docking) | In progress | Each viewport is solved as an independent root; percent/flex only resolve against definite per-viewport available space. | Conformance tests in `crates/fret-ui/src/declarative/tests/layout.rs` (viewport-root suite). |
+| Flow wrappers (Container/Pressable/Opacity/VisualTransform/Semantics/FocusScope/Stack/InteractivityGate/PointerRegion/HoverRegion/WheelRegion/Anchored) | In progress | Prefer building these into the same Taffy tree when layout-style-only and static; keep `measure_in` for true leaves only. | Multiple conformance tests under `layout-engine-v2`. |
+| Scroll (barrier) | Done | Content extent is measured via `measure_in` + `AvailableSpace::MaxContent` (no `1e9` probe). Child subtrees precompute flow islands when not a probe layout. | `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` + v2 tests. |
+| VirtualList (barrier + virtualization) | Done | Measured mode uses `measure_in` + `MaxContent` in v2, then precomputes a flow island per visible item root before final layout. | `declarative::tests::virtual_list_wraps_visible_items_in_engine_tree` in `crates/fret-ui/src/declarative/tests/virtual_list.rs`. |
+| ResizablePanelGroup (barrier + custom layout) | Done | After splitting the viewport into definite panel rects, v2 precomputes one flow island per panel root. | `declarative::tests::resizable_panel_group_precomputes_flow_islands_for_panels` in `crates/fret-ui/src/declarative/tests/interactions.rs`. |
+| Overlay roots / dismissible layers (barrier) | Done | Overlay roots precompute flow islands for static/relative subtrees so engine rect fast paths apply within overlays. | `crates/fret-ui/src/declarative/host_widget/layout.rs` (DismissibleLayer). |
+| "Probe layout" heuristics | In progress | Some sites still use `>= 1.0e8` as the "effectively unbounded" sentinel to avoid consuming deferred scroll or doing precompute during probe passes. Consider centralizing this rule. | Grep for `is_probe_layout`. |
+| Remaining `1e9` usage (code) | In progress | v2 paths must not approximate `Min/MaxContent` as huge definite bounds. `1e9` should only survive in legacy/non-v2 paths or tests where explicitly justified. | Run the audit commands below. |
+
+## Audit Commands
+
+Run these periodically (and update this file with new hits):
+
+- Find large-probe patterns: `rg -n "Px\\(1\\.0e9\\)|\\b1\\.0e9\\b|\\b1e9\\b|>=\\s*1\\.0e8|is_probe_layout" crates/fret-ui/src docs -S`
+- Find remaining v2-incompatible probe layout calls: `rg -n "layout_in\\(.*Px\\(1\\.0e9\\)" crates/fret-ui/src -S`
+
+## Notes (What We Intentionally Do Not Support)
+
+- No general-purpose "display: contents" or Radix `Slot/asChild` prop merging (see `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`).
+
