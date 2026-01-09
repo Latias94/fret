@@ -66,9 +66,10 @@ composing:
 
 ## Gaps / intentional differences
 
-- Focus trap and scroll lock are not currently modeled as part of the menu substrate. Radix traps
-  focus while a modal root menu is open and disables outside scroll in that mode. If strict parity
-  becomes a goal, this can be added by composing `FocusScope` + a scroll lock mechanism when
-  `modal=true`.
+- Focus trap and outside scroll lock are modeled indirectly for `modal=true` menus via the overlay
+  substrate: `OverlayRequest::dismissible_menu(...)` enables `disableOutsidePointerEvents`, which
+  installs a modal barrier scope while the menu is open. This prevents focus traversal and wheel
+  events from reaching underlay widgets (matching the observable outcome of Radix
+  `FocusScope(trapped)` + scroll lock).
 - ARIA hiding (`hideOthers`) is not currently modeled for menus; this is tracked alongside broader
   semantics-bridge work.
