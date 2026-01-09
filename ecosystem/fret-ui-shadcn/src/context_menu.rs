@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
+use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -43,12 +43,6 @@ pub enum ContextMenuEntry {
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
-}
-
-fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
-    Transform2D::translation(origin)
-        * Transform2D::scale_uniform(scale)
-        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1421,13 +1415,13 @@ impl ContextMenu {
                         anchor_rect,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = shadcn_zoom_transform(origin, scale);
-                    let slide = if opening {
-                        overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
-                    } else {
-                        Transform2D::IDENTITY
-                    };
-                    let transform = slide * zoom;
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
+                        layout.side,
+                        origin,
+                        opacity,
+                        scale,
+                        opening,
+                    );
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
@@ -2081,13 +2075,13 @@ impl ContextMenu {
                                 geometry.floating,
                                 side,
                             );
-                            let zoom = shadcn_zoom_transform(origin, submenu_scale);
-                            let slide = overlay_motion::shadcn_enter_slide_transform(
+                            let transform = overlay_motion::shadcn_popper_presence_transform(
                                 side,
+                                origin,
                                 submenu_opacity,
+                                submenu_scale,
                                 true,
                             );
-                            let transform = slide * zoom;
 
                             let opacity_layout = LayoutStyle {
                                 size: SizeStyle {
