@@ -425,7 +425,7 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
 
     let bounds = Rect::new(
         fret_core::Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(1.0e9), Px(60.0)),
+        Size::new(Px(crate::layout_probe::PROBE_LAYOUT_SENTINEL_PX), Px(60.0)),
     );
     let mut text = FakeTextService::default();
 
