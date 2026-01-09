@@ -68,38 +68,29 @@ impl<H: UiHost> UiTree<H> {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
 
-                let Some((prev_bounds, measured, invalidated)) = self
-                    .nodes
-                    .get(viewport_root)
-                    .map(|n| (n.bounds, n.measured_size, n.invalidation.layout))
-                else {
+                let Some(prev_bounds) = self.nodes.get(viewport_root).map(|n| n.bounds) else {
                     continue;
                 };
 
                 // Only flush viewport roots when required. This prevents barriers that register
-                // many viewport roots (e.g. docking) from forcing unnecessary solves for roots
-                // that did not change.
-                let needs_layout = invalidated || prev_bounds != viewport_bounds;
+                // many viewport roots (e.g. docking) from forcing unnecessary layout work for
+                // roots that did not change.
+                let needs_layout = self
+                    .nodes
+                    .get(viewport_root)
+                    .is_some_and(|n| n.invalidation.layout)
+                    || prev_bounds != viewport_bounds;
                 if !needs_layout {
                     continue;
                 }
 
-                // If the root only translated (same size, different origin) and isn't invalid,
-                // the fast-path in `layout_node` can translate the subtree without requiring
-                // an engine solve.
-                let is_translation_only = !invalidated
-                    && prev_bounds.size == viewport_bounds.size
-                    && prev_bounds.origin != viewport_bounds.origin
-                    && measured != Size::default();
-                if !is_translation_only {
-                    self.precompute_flow_root_island(
-                        app,
-                        services,
-                        viewport_root,
-                        viewport_bounds,
-                        scale_factor,
-                    );
-                }
+                self.precompute_flow_root_island_if_needed(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                );
 
                 let _ = self.layout_in_with_pass_kind(
                     app,
@@ -170,32 +161,25 @@ impl<H: UiHost> UiTree<H> {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
 
-                let Some((prev_bounds, measured, invalidated)) = self
-                    .nodes
-                    .get(viewport_root)
-                    .map(|n| (n.bounds, n.measured_size, n.invalidation.layout))
-                else {
+                let Some(prev_bounds) = self.nodes.get(viewport_root).map(|n| n.bounds) else {
                     continue;
                 };
-
-                let needs_layout = invalidated || prev_bounds != viewport_bounds;
+                let needs_layout = self
+                    .nodes
+                    .get(viewport_root)
+                    .is_some_and(|n| n.invalidation.layout)
+                    || prev_bounds != viewport_bounds;
                 if !needs_layout {
                     continue;
                 }
 
-                let is_translation_only = !invalidated
-                    && prev_bounds.size == viewport_bounds.size
-                    && prev_bounds.origin != viewport_bounds.origin
-                    && measured != Size::default();
-                if !is_translation_only {
-                    self.precompute_flow_root_island(
-                        app,
-                        services,
-                        viewport_root,
-                        viewport_bounds,
-                        scale_factor,
-                    );
-                }
+                self.precompute_flow_root_island_if_needed(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                );
 
                 let _ = self.layout_in_with_pass_kind(
                     app,
