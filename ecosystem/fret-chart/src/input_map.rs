@@ -122,6 +122,7 @@ pub struct ChartInputMap {
     pub box_zoom: PointerChord,
     pub box_zoom_alt: Option<PointerChord>,
     pub box_zoom_cancel: Option<PointerChord>,
+    pub brush_select: PointerChord,
     pub box_zoom_expand_x: Option<ModifierKey>,
     pub box_zoom_expand_y: Option<ModifierKey>,
     pub wheel_zoom_mod: Option<ModifierKey>,
@@ -133,6 +134,7 @@ impl Default for ChartInputMap {
         // Defaults are aligned with ImPlot's core interactions:
         // - LMB drag: pan
         // - RMB drag: box zoom
+        // - Alt + RMB drag: brush select (persistent selection window; does not zoom)
         // plus an accessibility alternative:
         // - Shift + LMB drag: box zoom
         // and Ctrl + LMB: axis lock toggle.
@@ -147,6 +149,13 @@ impl Default for ChartInputMap {
                 },
             )),
             box_zoom_cancel: Some(PointerChord::new(MouseButton::Left, ModifiersMask::NONE)),
+            brush_select: PointerChord::new(
+                MouseButton::Right,
+                ModifiersMask {
+                    alt: true,
+                    ..ModifiersMask::NONE
+                },
+            ),
             box_zoom_expand_x: Some(ModifierKey::Alt),
             box_zoom_expand_y: Some(ModifierKey::Shift),
             wheel_zoom_mod: None,

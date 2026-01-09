@@ -77,6 +77,14 @@ struct BoxZoomDrag {
     start_y: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct BrushSelection2D {
+    x_axis: delinea::AxisId,
+    y_axis: delinea::AxisId,
+    x: DataWindow,
+    y: DataWindow,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisRegion {
     Plot,
@@ -120,6 +128,8 @@ pub struct ChartCanvas {
     legend_hover: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
+    brush_selection: Option<BrushSelection2D>,
+    brush_drag: Option<BoxZoomDrag>,
 }
 
 impl ChartCanvas {
@@ -147,6 +157,8 @@ impl ChartCanvas {
             legend_hover: None,
             pan_drag: None,
             box_zoom_drag: None,
+            brush_selection: None,
+            brush_drag: None,
         })
     }
 
@@ -527,6 +539,126 @@ impl ChartCanvas {
             x,
             y,
         }
+    }
+
+    fn clear_brush(&mut self) {
+        self.brush_selection = None;
+        self.brush_drag = None;
+    }
+
+    fn selection_windows_for_drag(
+        &self,
+        plot: Rect,
+        start_x: DataWindow,
+        start_y: DataWindow,
+        start_pos: Point,
+        end_pos: Point,
+        modifiers: Modifiers,
+        required_mods: ModifiersMask,
+    ) -> Option<(DataWindow, DataWindow)> {
+        let width = plot.size.width.0;
+        let height = plot.size.height.0;
+        if width <= 0.0 || height <= 0.0 {
+            return None;
+        }
+
+        let start_local = Point::new(
+            Px(start_pos.x.0 - plot.origin.x.0),
+            Px(start_pos.y.0 - plot.origin.y.0),
+        );
+        let end_local = Point::new(
+            Px(end_pos.x.0 - plot.origin.x.0),
+            Px(end_pos.y.0 - plot.origin.y.0),
+        );
+
+        let (start_local, end_local) = Self::apply_box_select_modifiers(
+            plot.size,
+            start_local,
+            end_local,
+            modifiers,
+            self.input_map.box_zoom_expand_x,
+            self.input_map.box_zoom_expand_y,
+            required_mods,
+        );
+
+        let w = (start_local.x.0 - end_local.x.0).abs();
+        let h = (start_local.y.0 - end_local.y.0).abs();
+        if w < 4.0 || h < 4.0 {
+            return None;
+        }
+
+        let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
+        let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
+        let x_min = delinea::engine::axis::data_at_px(start_x, x0, 0.0, width);
+        let x_max = delinea::engine::axis::data_at_px(start_x, x1, 0.0, width);
+        let mut x = DataWindow {
+            min: x_min,
+            max: x_max,
+        };
+        x.clamp_non_degenerate();
+
+        let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
+        let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
+        let y0_from_bottom = height - y1;
+        let y1_from_bottom = height - y0;
+        let y_min = delinea::engine::axis::data_at_px(start_y, y0_from_bottom, 0.0, height);
+        let y_max = delinea::engine::axis::data_at_px(start_y, y1_from_bottom, 0.0, height);
+        let mut y = DataWindow {
+            min: y_min,
+            max: y_max,
+        };
+        y.clamp_non_degenerate();
+
+        Some((x, y))
+    }
+
+    fn px_at_data(window: DataWindow, value: f64, origin_px: f32, span_px: f32) -> f32 {
+        let mut window = window;
+        window.clamp_non_degenerate();
+        let span = window.span();
+        if !span.is_finite() || span <= 0.0 {
+            return origin_px;
+        }
+        if !span_px.is_finite() || span_px <= 0.0 {
+            return origin_px;
+        }
+        let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+        origin_px + t * span_px
+    }
+
+    fn brush_rect_px(&mut self, brush: BrushSelection2D) -> Option<Rect> {
+        let plot = self.last_layout.plot;
+        let width = plot.size.width.0;
+        let height = plot.size.height.0;
+        if width <= 0.0 || height <= 0.0 {
+            return None;
+        }
+
+        let x_window = self.current_window_x(brush.x_axis);
+        let y_window = self.current_window_y(brush.y_axis);
+
+        let (xmin, xmax) = if brush.x.min <= brush.x.max {
+            (brush.x.min, brush.x.max)
+        } else {
+            (brush.x.max, brush.x.min)
+        };
+        let (ymin, ymax) = if brush.y.min <= brush.y.max {
+            (brush.y.min, brush.y.max)
+        } else {
+            (brush.y.max, brush.y.min)
+        };
+
+        let x0 = Self::px_at_data(x_window, xmin, 0.0, width);
+        let x1 = Self::px_at_data(x_window, xmax, 0.0, width);
+
+        let y0_from_bottom = Self::px_at_data(y_window, ymin, 0.0, height);
+        let y1_from_bottom = Self::px_at_data(y_window, ymax, 0.0, height);
+        let y0 = height - y1_from_bottom;
+        let y1 = height - y0_from_bottom;
+
+        let p0 = Point::new(Px(plot.origin.x.0 + x0), Px(plot.origin.y.0 + y0));
+        let p1 = Point::new(Px(plot.origin.x.0 + x1), Px(plot.origin.y.0 + y1));
+        Some(rect_from_points_clamped(plot, p0, p1))
     }
 
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
@@ -1384,6 +1516,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
+                    self.clear_brush();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1401,6 +1534,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.reset_view_for_axes(x_axis, y_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
+                    self.clear_brush();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1418,6 +1552,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.fit_view_to_data_for_axes(x_axis, y_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
+                    self.clear_brush();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1436,9 +1571,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     self.toggle_data_window_x_filter_mode(x_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
+                    self.clear_brush();
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyA {
+                    self.clear_brush();
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -1465,6 +1609,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     {
                         drag.current_pos = *position;
                         self.box_zoom_drag = Some(drag);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
+                    if let Some(mut drag) = self.brush_drag
+                        && Self::is_button_held(drag.button, *buttons)
+                    {
+                        drag.current_pos = *position;
+                        self.brush_drag = Some(drag);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -1645,6 +1800,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 if self.pan_drag.is_some() || self.box_zoom_drag.is_some() {
                     return;
                 }
+                if self.brush_drag.is_some() {
+                    return;
+                }
 
                 let start_box_primary = self.input_map.box_zoom.matches(*button, *modifiers);
                 let start_box_alt = self
@@ -1683,6 +1841,38 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         y_axis,
                         button: *button,
                         required_mods,
+                        start_pos: *position,
+                        current_pos: *position,
+                        start_x,
+                        start_y,
+                    });
+
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.input_map.brush_select.matches(*button, *modifiers) {
+                    let layout = self.compute_layout(cx.bounds);
+                    if !layout.plot.contains(*position) {
+                        return;
+                    }
+
+                    let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
+                        return;
+                    };
+
+                    let start_x = self.current_window_x(x_axis);
+                    let start_y = self.current_window_y(y_axis);
+
+                    self.brush_drag = Some(BoxZoomDrag {
+                        x_axis,
+                        y_axis,
+                        button: *button,
+                        required_mods: self.input_map.brush_select.modifiers,
                         start_pos: *position,
                         current_pos: *position,
                         start_x,
@@ -1765,74 +1955,58 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                     let layout = self.compute_layout(cx.bounds);
                     let plot = layout.plot;
-                    let width = plot.size.width.0;
-                    let height = plot.size.height.0;
-                    if width > 0.0 && height > 0.0 {
-                        let start_local = Point::new(
-                            Px(drag.start_pos.x.0 - plot.origin.x.0),
-                            Px(drag.start_pos.y.0 - plot.origin.y.0),
-                        );
-                        let end_local = Point::new(
-                            Px(drag.current_pos.x.0 - plot.origin.x.0),
-                            Px(drag.current_pos.y.0 - plot.origin.y.0),
-                        );
+                    if let Some((x, y)) = self.selection_windows_for_drag(
+                        plot,
+                        drag.start_x,
+                        drag.start_y,
+                        drag.start_pos,
+                        drag.current_pos,
+                        *modifiers,
+                        drag.required_mods,
+                    ) {
+                        let x_window = (self.axis_is_fixed(drag.x_axis).is_none()).then_some(x);
+                        let y_window = (self.axis_is_fixed(drag.y_axis).is_none()).then_some(y);
+                        self.engine.apply_action(Self::view_window_2d_action(
+                            drag.x_axis,
+                            drag.y_axis,
+                            x_window,
+                            y_window,
+                        ));
+                    }
 
-                        let (start_local, end_local) = Self::apply_box_select_modifiers(
-                            plot.size,
-                            start_local,
-                            end_local,
-                            *modifiers,
-                            self.input_map.box_zoom_expand_x,
-                            self.input_map.box_zoom_expand_y,
-                            drag.required_mods,
-                        );
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
 
-                        let w = (start_local.x.0 - end_local.x.0).abs();
-                        let h = (start_local.y.0 - end_local.y.0).abs();
-                        if w >= 4.0 && h >= 4.0 {
-                            let mut x_window = None;
-                            if self.axis_is_fixed(drag.x_axis).is_none() {
-                                let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
-                                let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
-                                let min =
-                                    delinea::engine::axis::data_at_px(drag.start_x, x0, 0.0, width);
-                                let max =
-                                    delinea::engine::axis::data_at_px(drag.start_x, x1, 0.0, width);
-                                let mut window = DataWindow { min, max };
-                                window.clamp_non_degenerate();
-                                x_window = Some(window);
-                            }
+                if let Some(drag) = self.brush_drag
+                    && drag.button == *button
+                {
+                    self.brush_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
 
-                            let mut y_window = None;
-                            if self.axis_is_fixed(drag.y_axis).is_none() {
-                                let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
-                                let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
-                                let y0_from_bottom = height - y1;
-                                let y1_from_bottom = height - y0;
-                                let min = delinea::engine::axis::data_at_px(
-                                    drag.start_y,
-                                    y0_from_bottom,
-                                    0.0,
-                                    height,
-                                );
-                                let max = delinea::engine::axis::data_at_px(
-                                    drag.start_y,
-                                    y1_from_bottom,
-                                    0.0,
-                                    height,
-                                );
-                                let mut window = DataWindow { min, max };
-                                window.clamp_non_degenerate();
-                                y_window = Some(window);
-                            }
-
-                            self.engine.apply_action(Self::view_window_2d_action(
-                                drag.x_axis,
-                                drag.y_axis,
-                                x_window,
-                                y_window,
-                            ));
-                        }
+                    let layout = self.compute_layout(cx.bounds);
+                    let plot = layout.plot;
+                    if let Some((x, y)) = self.selection_windows_for_drag(
+                        plot,
+                        drag.start_x,
+                        drag.start_y,
+                        drag.start_pos,
+                        drag.current_pos,
+                        *modifiers,
+                        drag.required_mods,
+                    ) {
+                        self.brush_selection = Some(BrushSelection2D {
+                            x_axis: drag.x_axis,
+                            y_axis: drag.y_axis,
+                            x,
+                            y,
+                        });
+                    } else {
+                        self.brush_selection = None;
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -2240,6 +2414,36 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(self.style.draw_order.0.saturating_add(8_800)),
+                    rect,
+                    background: self.style.selection_fill,
+                    border: Edges::all(self.style.selection_stroke_width),
+                    border_color: self.style.selection_stroke,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+
+        if let Some(brush) = self.brush_selection
+            && let Some(rect) = self.brush_rect_px(brush)
+        {
+            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
+                    rect,
+                    background: self.style.selection_fill,
+                    border: Edges::all(self.style.selection_stroke_width),
+                    border_color: self.style.selection_stroke,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+
+        if let Some(drag) = self.brush_drag {
+            let rect =
+                rect_from_points_clamped(self.last_layout.plot, drag.start_pos, drag.current_pos);
+            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_750)),
                     rect,
                     background: self.style.selection_fill,
                     border: Edges::all(self.style.selection_stroke_width),
