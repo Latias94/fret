@@ -1,7 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_app_kit::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_core::geometry::Px;
 use fret_core::{AppWindowId, Event, ImageColorSpace};
 #[cfg(not(target_arch = "wasm32"))]
@@ -16,6 +15,7 @@ use fret_plot::retained::{
 };
 use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
+use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui::UiTree;
 
 struct PlotImageDemoWindowState {

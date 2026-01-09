@@ -4,11 +4,14 @@ use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor, compute_bounds_step,
-    finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
+    compute_bounds_step_with, finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
+    minmax_per_pixel_step_with,
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
 use crate::ids::MarkId;
+use crate::ids::SeriesId;
+use crate::ids::StackId;
 use crate::marks::{
     MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPointsRef, MarkPolylineRef, MarkRectRef,
     MarkTree,
@@ -16,10 +19,81 @@ use crate::marks::{
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
+use crate::spec::StackStrategy;
 use crate::stats::EngineStats;
 use crate::view::ViewState;
 use core::ops::Range;
 use std::collections::BTreeMap;
+
+#[derive(Debug, Clone)]
+struct StackBoundsBuild {
+    stack: StackId,
+    x_axis: crate::ids::AxisId,
+    y_axis: crate::ids::AxisId,
+    series: Vec<SeriesId>,
+    series_index: usize,
+    cursor: BoundsCursor,
+    accum: BoundsAccum,
+    base: StackAccum,
+    row_range: Range<usize>,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
+    x_mapping_window: Option<DataWindowX>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct StackAccum {
+    strategy: StackStrategy,
+    pos: Vec<f64>,
+    neg: Vec<f64>,
+}
+
+impl StackAccum {
+    fn ensure_len(&mut self, len: usize, strategy: StackStrategy) {
+        self.strategy = strategy;
+        if self.pos.len() != len {
+            self.pos.clear();
+            self.pos.resize(len, 0.0);
+        }
+        if strategy == StackStrategy::SameSign && self.neg.len() != len {
+            self.neg.clear();
+            self.neg.resize(len, 0.0);
+        } else if strategy != StackStrategy::SameSign {
+            self.neg.clear();
+        }
+    }
+
+    fn base_for(&self, y: f64, index: usize) -> f64 {
+        match self.strategy {
+            StackStrategy::All => self.pos.get(index).copied().unwrap_or(0.0),
+            StackStrategy::SameSign => {
+                if y >= 0.0 {
+                    self.pos.get(index).copied().unwrap_or(0.0)
+                } else {
+                    self.neg.get(index).copied().unwrap_or(0.0)
+                }
+            }
+        }
+    }
+
+    fn apply(&mut self, y: f64, index: usize) {
+        match self.strategy {
+            StackStrategy::All => {
+                if let Some(b) = self.pos.get_mut(index) {
+                    *b += y;
+                }
+            }
+            StackStrategy::SameSign => {
+                if y >= 0.0 {
+                    if let Some(b) = self.pos.get_mut(index) {
+                        *b += y;
+                    }
+                } else if let Some(b) = self.neg.get_mut(index) {
+                    *b += y;
+                }
+            }
+        }
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct MarksStage {
@@ -27,6 +101,9 @@ pub struct MarksStage {
     cursor: MinMaxPerPixelCursor,
     bounds_cursor: BoundsCursor,
     bounds_accum: BoundsAccum,
+    stack_accum: BTreeMap<StackId, StackAccum>,
+    stack_bounds: BTreeMap<StackId, DataBounds>,
+    stack_bounds_build: Option<StackBoundsBuild>,
     scatter_next_index: usize,
     scatter_points_start: usize,
     scatter_node_index: Option<usize>,
@@ -81,6 +158,9 @@ impl MarksStage {
         self.cursor = MinMaxPerPixelCursor::default();
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
+        self.stack_accum.clear();
+        self.stack_bounds.clear();
+        self.stack_bounds_build = None;
         self.scatter_next_index = 0;
         self.scatter_points_start = 0;
         self.scatter_node_index = None;
@@ -205,23 +285,191 @@ impl MarksStage {
                     return false;
                 }
 
-                let Some(bounds) = compute_series_bounds(
-                    model,
-                    state,
-                    series.kind,
-                    series.x_axis,
-                    series.y_axis,
-                    x,
-                    y0,
-                    y1,
-                    row_range.clone(),
-                    view_x_filter,
-                    view_x_mapping_window,
-                    points_budget,
-                    &mut self.bounds_cursor,
-                    &mut self.bounds_accum,
-                    budget,
-                ) else {
+                if let Some(stack) = series.stack {
+                    if let Some(bounds) = self.stack_bounds.get(&stack).copied() {
+                        self.bounds = Some(bounds);
+                    } else {
+                        if self.stack_bounds_build.is_none()
+                            || self
+                                .stack_bounds_build
+                                .as_ref()
+                                .is_some_and(|b| b.stack != stack)
+                        {
+                            let stack_series: Vec<SeriesId> = model
+                                .series_order
+                                .iter()
+                                .copied()
+                                .filter(|id| {
+                                    model.series.get(id).is_some_and(|s| {
+                                        s.visible
+                                            && s.stack == Some(stack)
+                                            && s.x_axis == series.x_axis
+                                            && s.y_axis == series.y_axis
+                                            && s.dataset == series.dataset
+                                            && s.encode.x == series.encode.x
+                                    })
+                                })
+                                .collect();
+
+                            let mut base = StackAccum::default();
+                            base.ensure_len(x.len().min(y0.len()), series.stack_strategy);
+                            let mut accum = BoundsAccum::default();
+                            accum.reset();
+
+                            self.stack_bounds_build = Some(StackBoundsBuild {
+                                stack,
+                                x_axis: series.x_axis,
+                                y_axis: series.y_axis,
+                                series: stack_series,
+                                series_index: 0,
+                                cursor: BoundsCursor::default(),
+                                accum,
+                                base,
+                                row_range: row_range.clone(),
+                                x_filter: view_x_filter,
+                                x_mapping_window: view_x_mapping_window,
+                            });
+                        }
+
+                        let Some(build) = self.stack_bounds_build.as_mut() else {
+                            return false;
+                        };
+
+                        while build.series_index < build.series.len() {
+                            let series_id = build.series[build.series_index];
+                            let Some(s) = model.series.get(&series_id) else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+
+                            let Some(dataset) = model.datasets.get(&s.dataset) else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+                            let Some(x_col) = dataset.fields.get(&s.encode.x).copied() else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+                            let Some(y_col) = dataset.fields.get(&s.encode.y).copied() else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+
+                            let table = datasets
+                                .datasets
+                                .iter()
+                                .find_map(|(id, t)| (*id == s.dataset).then_some(t));
+                            let Some(table) = table else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+
+                            let Some(x) = table.column_f64(x_col) else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+                            let Some(y) = table.column_f64(y_col) else {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                                continue;
+                            };
+
+                            let points_budget = budget.take_points(4096) as usize;
+                            if points_budget == 0 {
+                                return false;
+                            }
+
+                            let done = compute_bounds_step_with(
+                                &mut build.cursor,
+                                &mut build.accum,
+                                x,
+                                build.row_range.clone(),
+                                build.x_filter,
+                                points_budget,
+                                |i| {
+                                    let yi = y.get(i).copied().unwrap_or(f64::NAN);
+                                    if !yi.is_finite() {
+                                        return yi;
+                                    }
+                                    let base = build.base.base_for(yi, i);
+                                    let y_eff = yi + base;
+                                    build.base.apply(yi, i);
+                                    y_eff
+                                },
+                            )
+                            .unwrap_or(true);
+
+                            if done {
+                                build.series_index += 1;
+                                build.cursor = BoundsCursor::default();
+                            }
+                        }
+
+                        let mut bounds = finalize_bounds(&build.accum).unwrap_or_default();
+
+                        if let Some(mut w) = build.x_mapping_window.or(model
+                            .axes
+                            .get(&build.x_axis)
+                            .and_then(crate::engine::axis::category_domain_window))
+                        {
+                            w.clamp_non_degenerate();
+                            bounds.x_min = w.min;
+                            bounds.x_max = w.max;
+                        }
+
+                        let y_axis_range = model
+                            .axes
+                            .get(&build.y_axis)
+                            .map(|a| a.range)
+                            .unwrap_or_default();
+                        let y_window_for_bounds = axis_locked_window_y(y_axis_range)
+                            .or(state.data_window_y.get(&build.y_axis).copied());
+                        if let Some(mut y_window) = y_window_for_bounds {
+                            y_window.clamp_non_degenerate();
+                            bounds.y_min = y_window.min;
+                            bounds.y_max = y_window.max;
+                        }
+
+                        apply_axis_constraints(model, build.x_axis, build.y_axis, &mut bounds);
+                        bounds.clamp_non_degenerate();
+
+                        self.stack_bounds.insert(stack, bounds);
+                        self.stack_bounds_build = None;
+                        continue;
+                    }
+                }
+
+                if self.bounds.is_none() {
+                    let Some(bounds) = compute_series_bounds(
+                        model,
+                        state,
+                        series.kind,
+                        series.x_axis,
+                        series.y_axis,
+                        x,
+                        y0,
+                        y1,
+                        None,
+                        row_range.clone(),
+                        view_x_filter,
+                        view_x_mapping_window,
+                        points_budget,
+                        &mut self.bounds_cursor,
+                        &mut self.bounds_accum,
+                        budget,
+                    ) else {
+                        return false;
+                    };
+                    self.bounds = Some(bounds);
+                }
+
+                let Some(bounds) = self.bounds else {
                     return false;
                 };
                 merge_axis_window(
@@ -299,7 +547,6 @@ impl MarksStage {
                         let range = minmax_per_pixel_finalize(
                             scratch,
                             x,
-                            y0,
                             &bounds,
                             viewport,
                             &mut marks.arena.points,
@@ -573,16 +820,41 @@ impl MarksStage {
                     return false;
                 }
 
-                finished_scan = minmax_per_pixel_step(
-                    &mut self.cursor,
-                    scratch,
-                    x,
-                    y0,
-                    &bounds,
-                    viewport,
-                    row_range.clone(),
-                    points_budget,
-                );
+                if let Some(stack) = series.stack {
+                    let len = x.len().min(y0.len());
+                    let accum = self.stack_accum.entry(stack).or_default();
+                    accum.ensure_len(len, series.stack_strategy);
+                    finished_scan = minmax_per_pixel_step_with(
+                        &mut self.cursor,
+                        scratch,
+                        x,
+                        &bounds,
+                        viewport,
+                        row_range.clone(),
+                        points_budget,
+                        |i| {
+                            let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                            if !yi.is_finite() {
+                                return yi;
+                            }
+                            let base = accum.base_for(yi, i);
+                            let y_eff = yi + base;
+                            accum.apply(yi, i);
+                            y_eff
+                        },
+                    );
+                } else {
+                    finished_scan = minmax_per_pixel_step(
+                        &mut self.cursor,
+                        scratch,
+                        x,
+                        y0,
+                        &bounds,
+                        viewport,
+                        row_range.clone(),
+                        points_budget,
+                    );
+                }
             }
 
             if !self.finalized {
@@ -593,7 +865,6 @@ impl MarksStage {
                 let range = minmax_per_pixel_finalize(
                     scratch,
                     x,
-                    y0,
                     &bounds,
                     viewport,
                     &mut marks.arena.points,
@@ -777,6 +1048,7 @@ fn compute_series_bounds(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
+    stack: Option<&StackAccum>,
     row_range: Range<usize>,
     x_filter: crate::engine::window_policy::AxisFilter1D,
     x_mapping_window: Option<DataWindowX>,
@@ -805,8 +1077,18 @@ fn compute_series_bounds(
             w.clamp_non_degenerate();
             (w.min, w.max)
         } else {
-            let mut bounds =
-                compute_bounds_in_range_filtered(x, y0, row_range, x_filter).unwrap_or_default();
+            let mut bounds = if let Some(stack) = stack {
+                compute_bounds_in_range_filtered_with(x, row_range, x_filter, |i| {
+                    let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                    if !yi.is_finite() {
+                        return yi;
+                    }
+                    yi + stack.base_for(yi, i)
+                })
+                .unwrap_or_default()
+            } else {
+                compute_bounds_in_range_filtered(x, y0, row_range, x_filter).unwrap_or_default()
+            };
             bounds.clamp_non_degenerate();
             (bounds.x_min, bounds.x_max)
         };
@@ -855,32 +1137,70 @@ fn compute_series_bounds(
         return Some(combined);
     }
 
-    let mut done = compute_bounds_step(
-        bounds_cursor,
-        bounds_accum,
-        x,
-        y0,
-        row_range.clone(),
-        x_filter,
-        initial_points_budget,
-    )
-    .unwrap_or(true);
-
-    while !done {
-        let points_budget = budget.take_points(4096) as usize;
-        if points_budget == 0 {
-            return None;
-        }
-        done = compute_bounds_step(
+    let mut done = if let Some(stack) = stack {
+        compute_bounds_step_with(
+            bounds_cursor,
+            bounds_accum,
+            x,
+            row_range.clone(),
+            x_filter,
+            initial_points_budget,
+            |i| {
+                let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                if !yi.is_finite() {
+                    return yi;
+                }
+                yi + stack.base_for(yi, i)
+            },
+        )
+        .unwrap_or(true)
+    } else {
+        compute_bounds_step(
             bounds_cursor,
             bounds_accum,
             x,
             y0,
             row_range.clone(),
             x_filter,
-            points_budget,
+            initial_points_budget,
         )
-        .unwrap_or(true);
+        .unwrap_or(true)
+    };
+
+    while !done {
+        let points_budget = budget.take_points(4096) as usize;
+        if points_budget == 0 {
+            return None;
+        }
+        done = if let Some(stack) = stack {
+            compute_bounds_step_with(
+                bounds_cursor,
+                bounds_accum,
+                x,
+                row_range.clone(),
+                x_filter,
+                points_budget,
+                |i| {
+                    let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                    if !yi.is_finite() {
+                        return yi;
+                    }
+                    yi + stack.base_for(yi, i)
+                },
+            )
+            .unwrap_or(true)
+        } else {
+            compute_bounds_step(
+                bounds_cursor,
+                bounds_accum,
+                x,
+                y0,
+                row_range.clone(),
+                x_filter,
+                points_budget,
+            )
+            .unwrap_or(true)
+        };
     }
 
     let mut bounds = finalize_bounds(bounds_accum).unwrap_or_default();
@@ -905,7 +1225,18 @@ fn compute_bounds_in_range_filtered(
     row_range: core::ops::Range<usize>,
     filter: crate::engine::window_policy::AxisFilter1D,
 ) -> Option<DataBounds> {
-    let len = x.len().min(y.len());
+    compute_bounds_in_range_filtered_with(x, row_range, filter, |i| {
+        y.get(i).copied().unwrap_or(f64::NAN)
+    })
+}
+
+fn compute_bounds_in_range_filtered_with(
+    x: &[f64],
+    row_range: core::ops::Range<usize>,
+    filter: crate::engine::window_policy::AxisFilter1D,
+    mut y_at: impl FnMut(usize) -> f64,
+) -> Option<DataBounds> {
+    let len = x.len();
     let start = row_range.start.min(len);
     let end = row_range.end.min(len);
     if start >= end {
@@ -921,7 +1252,7 @@ fn compute_bounds_in_range_filtered(
 
     for i in start..end {
         let xi = x[i];
-        let yi = y[i];
+        let yi = y_at(i);
         if !xi.is_finite() || !yi.is_finite() {
             continue;
         }

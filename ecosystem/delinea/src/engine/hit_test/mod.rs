@@ -301,6 +301,8 @@ mod tests {
                 },
                 x_axis,
                 y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
                 area_baseline: None,
             }],
         };

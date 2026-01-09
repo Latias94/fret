@@ -7,11 +7,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use fret_core::Rect;
 use thiserror::Error;
 
-use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId};
+use crate::ids::{
+    AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId, StackId,
+};
 use crate::scale::AxisScale;
 use crate::spec::{
     AreaBaseline, AxisKind, AxisPointerTrigger, AxisPosition, AxisRange, FilterMode, SeriesEncode,
-    SeriesKind,
+    SeriesKind, StackStrategy,
 };
 
 pub use patch::*;
@@ -24,6 +26,8 @@ pub enum ModelError {
     MissingReference { kind: &'static str },
     #[error("invalid spec: {reason}")]
     InvalidSpec { reason: &'static str },
+    #[error("stack group mismatch: stack={stack:?}")]
+    StackGroupMismatch { stack: StackId },
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -260,6 +264,12 @@ impl ChartModel {
                 });
             }
 
+            if series.stack.is_some() && !matches!(series.kind, SeriesKind::Line) {
+                return Err(ModelError::InvalidSpec {
+                    reason: "stack is only supported for line in v1",
+                });
+            }
+
             model.series_order.push(series.id);
             model.series.insert(
                 series.id,
@@ -271,10 +281,28 @@ impl ChartModel {
                     encode: series.encode,
                     x_axis: series.x_axis,
                     y_axis: series.y_axis,
+                    stack: series.stack,
+                    stack_strategy: series.stack_strategy,
                     visible: true,
                     area_baseline: series.area_baseline.unwrap_or_default(),
                 },
             );
+        }
+
+        let mut stack_groups: BTreeMap<
+            StackId,
+            (AxisId, AxisId, DatasetId, FieldId, StackStrategy),
+        > = BTreeMap::new();
+        for s in model.series.values() {
+            let Some(stack) = s.stack else {
+                continue;
+            };
+            let key = (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy);
+            if let Some(existing) = stack_groups.insert(stack, key) {
+                if existing != key {
+                    return Err(ModelError::StackGroupMismatch { stack });
+                }
+            }
         }
 
         model.revs.bump_spec();
@@ -343,6 +371,8 @@ pub struct SeriesModel {
     pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
+    pub stack: Option<StackId>,
+    pub stack_strategy: StackStrategy,
     pub visible: bool,
     pub area_baseline: AreaBaseline,
 }

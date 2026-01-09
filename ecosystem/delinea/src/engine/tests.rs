@@ -71,6 +71,8 @@ fn basic_spec() -> ChartSpec {
             },
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     }
@@ -142,6 +144,8 @@ fn bar_emits_rect_batch() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -435,6 +439,8 @@ fn band_emits_two_polylines() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -547,6 +553,8 @@ fn row_range_limits_mark_indices() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -649,6 +657,8 @@ fn x_window_limits_mark_indices() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -757,6 +767,8 @@ fn axis_fixed_overrides_data_window_for_marks() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -862,6 +874,8 @@ fn set_series_visible_hides_marks() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -980,6 +994,8 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1101,6 +1117,8 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1245,6 +1263,8 @@ fn data_window_filter_mode_resets_to_spec_default() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1353,6 +1373,8 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1459,6 +1481,8 @@ fn hover_does_not_rebuild_marks() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1557,6 +1581,8 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1669,6 +1695,8 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 },
                 x_axis,
                 y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
                 area_baseline: None,
             },
             SeriesSpec {
@@ -1683,6 +1711,8 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                 },
                 x_axis,
                 y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
                 area_baseline: None,
             },
         ],
@@ -1788,6 +1818,8 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1881,6 +1913,8 @@ fn scatter_emits_point_marks() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -1985,6 +2019,8 @@ fn scatter_large_mode_is_pixel_bounded() {
             },
             x_axis,
             y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
             area_baseline: None,
         }],
     };
@@ -2033,4 +2069,291 @@ fn scatter_large_mode_is_pixel_bounded() {
         "emitted={emitted} width={width_px}"
     );
     assert!(emitted > 0);
+}
+
+fn find_polyline_point_by_data_index(
+    marks: &crate::marks::MarkTree,
+    series: crate::ids::SeriesId,
+    data_index: u32,
+) -> Option<fret_core::Point> {
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Polyline && n.source_series == Some(series))?;
+    let crate::marks::MarkPayloadRef::Polyline(poly) = &node.payload else {
+        return None;
+    };
+    for (p, &i) in marks.arena.points[poly.points.clone()]
+        .iter()
+        .zip(marks.arena.data_indices[poly.points.clone()].iter())
+    {
+        if i == data_index {
+            return Some(*p);
+        }
+    }
+    None
+}
+
+fn data_to_px_y(y: f64, y_min: f64, y_max: f64, viewport: Rect) -> f32 {
+    let span = (y_max - y_min).max(1e-12);
+    let t = ((y - y_min) / span).clamp(0.0, 1.0);
+    viewport.origin.y.0 + (1.0 - (t as f32)) * viewport.size.height.0
+}
+
+#[test]
+fn stacked_line_series_offsets_y() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let stack = crate::ids::StackId::new(1);
+
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack),
+                stack_strategy: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack),
+                stack_strategy: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    table.push_column(Column::F64(vec![1.0, 1.0, 1.0, 1.0]));
+    table.push_column(Column::F64(vec![2.0, 2.0, 2.0, 2.0]));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let y_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!(y_window.max > y_window.min);
+
+    let marks = &engine.output().marks;
+    let p_a = find_polyline_point_by_data_index(marks, series_a, 0).expect("point a");
+    let p_b = find_polyline_point_by_data_index(marks, series_b, 0).expect("point b");
+
+    let expected_a = data_to_px_y(1.0, y_window.min, y_window.max, viewport);
+    let expected_b = data_to_px_y(3.0, y_window.min, y_window.max, viewport);
+    assert!((p_a.y.0 - expected_a).abs() < 0.5);
+    assert!((p_b.y.0 - expected_b).abs() < 0.5);
+    assert!(p_b.y.0 < p_a.y.0);
+}
+
+#[test]
+fn stack_strategy_samesign_separates_positive_and_negative() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let stack = crate::ids::StackId::new(1);
+
+    let series_pos = crate::ids::SeriesId::new(1);
+    let series_neg = crate::ids::SeriesId::new(2);
+
+    let x_field = crate::ids::FieldId::new(1);
+    let y_pos_field = crate::ids::FieldId::new(2);
+    let y_neg_field = crate::ids::FieldId::new(3);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_pos_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_neg_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![
+            SeriesSpec {
+                id: series_pos,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_pos_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack),
+                stack_strategy: crate::spec::StackStrategy::SameSign,
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_neg,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_neg_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack),
+                stack_strategy: crate::spec::StackStrategy::SameSign,
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    table.push_column(Column::F64(vec![1.0, 1.0, 1.0, 1.0]));
+    table.push_column(Column::F64(vec![-2.0, -2.0, -2.0, -2.0]));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let y_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    assert!(y_window.max > y_window.min);
+
+    let marks = &engine.output().marks;
+    let p_neg = find_polyline_point_by_data_index(marks, series_neg, 0).expect("point neg");
+
+    let expected = data_to_px_y(-2.0, y_window.min, y_window.max, viewport);
+    assert!((p_neg.y.0 - expected).abs() < 0.5);
 }

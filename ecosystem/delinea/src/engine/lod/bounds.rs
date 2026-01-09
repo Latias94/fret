@@ -69,7 +69,27 @@ pub fn compute_bounds_step(
     x_filter: crate::engine::window_policy::AxisFilter1D,
     max_points_to_process: usize,
 ) -> Option<bool> {
-    let len = x.len().min(y.len());
+    compute_bounds_step_with(
+        cursor,
+        accum,
+        x,
+        row_range,
+        x_filter,
+        max_points_to_process,
+        |i| y.get(i).copied().unwrap_or(f64::NAN),
+    )
+}
+
+pub fn compute_bounds_step_with(
+    cursor: &mut BoundsCursor,
+    accum: &mut BoundsAccum,
+    x: &[f64],
+    row_range: core::ops::Range<usize>,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
+    max_points_to_process: usize,
+    mut y_at: impl FnMut(usize) -> f64,
+) -> Option<bool> {
+    let len = x.len();
     if cursor.next_index == 0 {
         cursor.next_index = row_range.start.min(len);
     }
@@ -83,7 +103,7 @@ pub fn compute_bounds_step(
 
     for i in cursor.next_index..end {
         let xi = x[i];
-        let yi = y[i];
+        let yi = y_at(i);
         if !xi.is_finite() || !yi.is_finite() {
             continue;
         }

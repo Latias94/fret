@@ -27,7 +27,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `option` | `ChartSpec` | 🟨 | We support a subset focused on cartesian 2D line-family charts. |
 | `dataset` | `DatasetSpec` + `DatasetStore` | 🟨 | Field-to-column mapping is explicit via `FieldId` and `SeriesEncode`. |
 | `encode` | `SeriesEncode` | ✅ | `x`, `y`, `y2` (for bands). |
-| `series` | `SeriesSpec` (`SeriesKind`) | 🟨 | Currently `Line`, `Area`, `Band`, `Bar`. |
+| `series` | `SeriesSpec` (`SeriesKind`) | 🟨 | Currently `Line`, `Area`, `Band`, `Bar`, `Scatter`. |
 | `grid` | `GridSpec` | 🟨 | Single-grid usage is primary; multi-grid is possible but not exercised. |
 | `xAxis/yAxis` | `AxisSpec` + `AxisScale` + `AxisRange` | 🟨 | `Value/Category` scales; `Auto/LockMin/LockMax/Fixed` constraints. |
 | `axisPointer` | `AxisPointerSpec` | 🟨 | `trigger=Item` and `trigger=Axis` supported (cartesian X). |
@@ -43,7 +43,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `line` | ✅ | `SeriesKind::Line` |
 | `area` (line with areaStyle) | ✅ | `SeriesKind::Area` + `AreaBaseline` |
 | `band` (custom, common in finance) | ✅ | `SeriesKind::Band` (`encode.y` + `encode.y2`) |
-| `line` + `stack` | ❌ | Needs stacking transform + baseline rules. |
+| `line` + `stack` | 🟨 | `SeriesSpec.stack` + `stack_strategy` implemented for `Line` (v1: no stack transforms yet; no stacked areas/bars). |
 | `scatter` | 🟨 | `SeriesKind::Scatter` + point marks + hit test + pixel-bounded large mode; missing symbol/size options. |
 | `bar` | ✅ | `SeriesKind::Bar` (requires Category X axis in v1). |
 | `candlestick` | ❌ | Needs OHLC encode + mark layout. |

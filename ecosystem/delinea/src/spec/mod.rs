@@ -1,6 +1,6 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
+use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId};
 use crate::scale::AxisScale;
 
 #[cfg(feature = "serde")]
@@ -230,6 +230,16 @@ pub enum SeriesKind {
     Scatter,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum StackStrategy {
+    /// Match ECharts default: stack positive and negative values separately.
+    #[default]
+    SameSign,
+    /// Stack all values together (including mixed sign).
+    All,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SeriesEncode {
@@ -261,6 +271,12 @@ pub struct SeriesSpec {
     pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
+    /// Stack group id (ECharts `series.stack`).
+    ///
+    /// v1: only supported for `SeriesKind::Line`.
+    pub stack: Option<StackId>,
+    /// Stacking strategy (ECharts `series.stackStrategy`).
+    pub stack_strategy: StackStrategy,
     /// Area baseline configuration (only used when `kind == Area`).
     pub area_baseline: Option<AreaBaseline>,
 }
