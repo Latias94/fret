@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, Size, Transform2D};
 use fret_runtime::Model;
+use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
-    VisualTransformProps,
+    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, PointerRegionProps,
+    SizeStyle, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -255,6 +258,35 @@ impl HoverCard {
             let open = open_root.open_model(cx);
             let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
+            #[derive(Default)]
+            struct HoverCardPointerDownModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let pointer_down_on_content = cx.with_state_for(
+                hover_card_id,
+                HoverCardPointerDownModelState::default,
+                |st| st.model.clone(),
+            );
+            let pointer_down_on_content = if let Some(model) = pointer_down_on_content {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(
+                    hover_card_id,
+                    HoverCardPointerDownModelState::default,
+                    |st| {
+                        st.model = Some(model.clone());
+                    },
+                );
+                model
+            };
+            let pointer_down_on_content_now = cx
+                .watch_model(&pointer_down_on_content)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+
             let overlay_hovered =
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered
@@ -273,6 +305,8 @@ impl HoverCard {
                 tick: u64,
                 intent: hover_intent::HoverIntentState,
                 saw_active_since_open: bool,
+                last_pointer_down: bool,
+                close_suppressed_after_pointer_down: bool,
             }
 
             let frame_tick = cx.app.frame_id().0;
@@ -297,11 +331,28 @@ impl HoverCard {
                     if st.intent.is_open() != open_now {
                         st.intent.set_open(open_now);
                         st.saw_active_since_open = false;
+                        st.close_suppressed_after_pointer_down = false;
                     }
 
                     let signal_active = hovered;
                     let was_open = st.intent.is_open();
-                    if was_open && signal_active {
+
+                    if pointer_down_on_content_now != st.last_pointer_down {
+                        if pointer_down_on_content_now {
+                            st.close_suppressed_after_pointer_down = false;
+                        } else if was_open && !signal_active {
+                            // Mirror Radix HoverCard: if the pointer left while the button is
+                            // held, `onClose` does not schedule a close timer. We model that by
+                            // suppressing close until the next "active -> inactive" edge.
+                            st.close_suppressed_after_pointer_down = true;
+                        }
+                        st.last_pointer_down = pointer_down_on_content_now;
+                    }
+                    if st.close_suppressed_after_pointer_down && signal_active {
+                        st.close_suppressed_after_pointer_down = false;
+                    }
+
+                    if was_open && (signal_active || pointer_down_on_content_now) {
                         st.saw_active_since_open = true;
                     }
 
@@ -309,14 +360,21 @@ impl HoverCard {
                     // If the root is open but we've never observed an "active" signal since it opened
                     // (e.g. `defaultOpen=true` on first mount), keep it open until we see at least one
                     // active period and then a leave edge.
-                    let effective_hovered =
-                        signal_active || (was_open && !st.saw_active_since_open);
+                    let effective_hovered = if was_open {
+                        signal_active
+                            || pointer_down_on_content_now
+                            || st.close_suppressed_after_pointer_down
+                            || !st.saw_active_since_open
+                    } else {
+                        signal_active || pointer_down_on_content_now
+                    };
 
                     let out = st.intent.update(effective_hovered, st.tick, cfg);
                     if !was_open && out.open {
-                        st.saw_active_since_open = signal_active;
+                        st.saw_active_since_open = signal_active || pointer_down_on_content_now;
                     } else if was_open && !out.open {
                         st.saw_active_since_open = false;
+                        st.close_suppressed_after_pointer_down = false;
                     }
 
                     out
@@ -346,6 +404,12 @@ impl HoverCard {
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered = false;
                 });
+                if pointer_down_on_content_now {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&pointer_down_on_content, |v| *v = false);
+                }
                 return out;
             }
 
@@ -419,16 +483,60 @@ impl HoverCard {
                     ..Default::default()
                 };
 
-                let wrapper = popper_content::popper_hover_region_at_with_panel(
-                    cx,
-                    placed,
-                    wrapper_insets,
-                    Overflow::Visible,
-                    move |_cx| vec![content],
-                    move |cx, hovered, panel| {
+                let pointer_down_on_content_model = pointer_down_on_content.clone();
+                let content_for_panel = content.clone();
+                let wrapper = cx.hover_region(
+                    HoverRegionProps {
+                        layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
+                    },
+                    move |cx, hovered| {
                         cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                             st.overlay_hovered = hovered;
                         });
+
+                        let panel_layout = popper_content::popper_panel_layout(
+                            placed,
+                            wrapper_insets,
+                            Overflow::Visible,
+                        );
+                        let panel = cx.pointer_region(
+                            PointerRegionProps {
+                                layout: panel_layout,
+                                enabled: true,
+                            },
+                            move |cx| {
+                                let pointer_down_model_for_down =
+                                    pointer_down_on_content_model.clone();
+                                cx.pointer_region_on_pointer_down(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          _down: PointerDownCx| {
+                                        host.capture_pointer();
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&pointer_down_model_for_down, |v| *v = true);
+                                        host.request_redraw(cx.window);
+                                        false
+                                    },
+                                ));
+
+                                let pointer_down_model_for_up =
+                                    pointer_down_on_content_model.clone();
+                                cx.pointer_region_on_pointer_up(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          _up: PointerUpCx| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&pointer_down_model_for_up, |v| *v = false);
+                                        host.request_redraw(cx.window);
+                                        false
+                                    },
+                                ));
+
+                                vec![content_for_panel.clone()]
+                            },
+                        );
 
                         let arrow_el = popper_arrow::diamond_arrow_element(
                             cx,
@@ -1088,5 +1196,219 @@ mod tests {
             !snap.nodes.iter().any(|n| n.id == content_node),
             "expected hover card content to unmount after blur"
         );
+    }
+
+    #[test]
+    fn hover_card_does_not_close_while_pointer_down_on_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      frame: u64| {
+            let content_id_out = content_id.clone();
+            let open = open.clone();
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, _id| {
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let content = cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+                    content_id_out.set(Some(content.id));
+
+                    vec![
+                        HoverCard::new(trigger, content)
+                            .open(Some(open))
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(120.0)))
+                                    .h_px(MetricRef::Px(Px(40.0))),
+                            )
+                            .window_margin(Px(0.0))
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        };
+
+        // Frame 1: mount trigger and establish element/node mappings.
+        render(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Hover trigger to open (open_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: open model should flip to true.
+        render(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(is_open, "expected hover card to open on hover");
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+
+        // Pointer down on the content, then drag out.
+        let down_pos = Point::new(
+            Px(content_bounds.origin.x.0 + 1.0),
+            Px(content_bounds.origin.y.0 + 1.0),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: down_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let outside = Point::new(Px(400.0), Px(400.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: outside,
+                buttons: MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 3: should remain open (close_delay=0, but pointer is down).
+        render(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(
+            is_open,
+            "expected hover card to remain open while pointer is down"
+        );
+
+        // Pointer up outside should not immediately close; Radix does not schedule close during pointer down.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: outside,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        render(&mut ui, &mut app, &mut services, 4);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(
+            is_open,
+            "expected hover card to keep open after drag out release"
+        );
+
+        // Re-enter the hover card content, then leave to close (close_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: down_pos,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        render(&mut ui, &mut app, &mut services, 5);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: outside,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        render(&mut ui, &mut app, &mut services, 6);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // The overlay-hover flag is updated while rendering overlay children, so allow one extra
+        // frame for the leave to reflect in the root driver before asserting close.
+        render(&mut ui, &mut app, &mut services, 7);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(!is_open, "expected hover card to close after leave edge");
     }
 }
