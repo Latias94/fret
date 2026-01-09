@@ -130,9 +130,12 @@ High-level layering (ADR 0135):
 
 ## 2.2 Measuring node size and handle bounds
 
-- [ ] **Automatic DOM/Widget measurement to update internals**
+- [~] **Automatic DOM/Widget measurement to update internals**
   - XyFlow: `updateNodeInternals(...)` in `packages/react/src/store/index.ts` calling `@xyflow/system` internals update
-  - fret-node: `MeasuredGeometryStore` exists but is currently driven by portal measurement only
+  - fret-node:
+    - `MeasuredGeometryStore` as the mechanism for publishing measured node sizes and port anchor bounds
+    - Batch update API (XyFlow-like action): `MeasuredGeometryStore::apply_batch_if_changed(...)` /
+      `MeasuredGeometryStore::apply_exclusive_batch_if_changed(...)` in `ecosystem/fret-node/src/ui/measured.rs`
   - TODO: extend measurement sources:
     - canvas-rendered node chrome geometry (ports, header/body)
     - optional portal-provided measured sizes
@@ -472,4 +475,3 @@ High-level layering (ADR 0135):
     - connect/reconnect determinism
     - connection drag threshold does not regress
     - portal does not steal canvas pointer events
-

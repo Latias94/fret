@@ -629,59 +629,13 @@ impl NodeGraphCanvas {
             port_anchors.push((port, PortAnchorHint { center, bounds }));
         }
 
-        let keep_nodes: std::collections::BTreeSet<GraphNodeId> =
-            node_sizes.iter().map(|(id, _)| *id).collect();
-        let keep_ports: std::collections::BTreeSet<PortId> =
-            port_anchors.iter().map(|(id, _)| *id).collect();
-
-        let _ = store.update_if_changed(|sizes, anchors| {
-            let mut changed = false;
-
-            sizes.retain(|id, _| {
-                let ok = keep_nodes.contains(id);
-                if !ok {
-                    changed = true;
-                }
-                ok
-            });
-            anchors.retain(|id, _| {
-                let ok = keep_ports.contains(id);
-                if !ok {
-                    changed = true;
-                }
-                ok
-            });
-
-            for (node, size) in &node_sizes {
-                let needs = match sizes.get(node) {
-                    Some(old) => (old.0 - size.0).abs() > 0.25 || (old.1 - size.1).abs() > 0.25,
-                    None => true,
-                };
-                if needs {
-                    sizes.insert(*node, *size);
-                    changed = true;
-                }
-            }
-            for (port, hint) in &port_anchors {
-                let needs = match anchors.get(port) {
-                    Some(old) => {
-                        (old.center.x.0 - hint.center.x.0).abs() > 0.25
-                            || (old.center.y.0 - hint.center.y.0).abs() > 0.25
-                            || (old.bounds.origin.x.0 - hint.bounds.origin.x.0).abs() > 0.25
-                            || (old.bounds.origin.y.0 - hint.bounds.origin.y.0).abs() > 0.25
-                            || (old.bounds.size.width.0 - hint.bounds.size.width.0).abs() > 0.25
-                            || (old.bounds.size.height.0 - hint.bounds.size.height.0).abs() > 0.25
-                    }
-                    None => true,
-                };
-                if needs {
-                    anchors.insert(*port, *hint);
-                    changed = true;
-                }
-            }
-
-            changed
-        });
+        let _ = store.apply_exclusive_batch_if_changed(
+            crate::ui::measured::MeasuredGeometryExclusiveBatch {
+                node_sizes_px: node_sizes,
+                port_anchors_px: port_anchors,
+            },
+            crate::ui::measured::MeasuredGeometryApplyOptions::default(),
+        );
     }
 
     fn update_view_state<H: UiHost>(

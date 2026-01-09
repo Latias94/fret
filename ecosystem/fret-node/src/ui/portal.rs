@@ -469,30 +469,22 @@ where
         }
 
         let prev_published = self.last_published_nodes.clone();
-        let published = self.measured.update_if_changed(|node_sizes, _anchors| {
-            let mut changed = false;
-            let mut keep: BTreeSet<NodeId> = BTreeSet::new();
+        let keep: BTreeSet<NodeId> = publish.iter().map(|(id, _)| *id).collect();
+        let remove_nodes: Vec<NodeId> = prev_published
+            .iter()
+            .copied()
+            .filter(|id| !keep.contains(id))
+            .collect();
 
-            for (node_id, size) in &publish {
-                let cur = node_sizes.get(node_id).copied();
-                if cur != Some(*size) {
-                    node_sizes.insert(*node_id, *size);
-                    changed = true;
-                }
-                keep.insert(*node_id);
-            }
-
-            for old in &prev_published {
-                if keep.contains(old) {
-                    continue;
-                }
-                if node_sizes.remove(old).is_some() {
-                    changed = true;
-                }
-            }
-
-            changed
-        });
+        let published = self.measured.apply_batch_if_changed(
+            crate::ui::measured::MeasuredGeometryBatch {
+                node_sizes_px: publish.clone(),
+                port_anchors_px: Vec::new(),
+                remove_nodes,
+                remove_ports: Vec::new(),
+            },
+            crate::ui::measured::MeasuredGeometryApplyOptions::default(),
+        );
 
         if published.is_some() {
             self.last_published_nodes = publish.iter().map(|(id, _)| *id).collect();

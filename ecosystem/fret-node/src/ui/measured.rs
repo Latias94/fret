@@ -82,6 +82,163 @@ impl MeasuredGeometryStore {
             .ok()
             .and_then(|m| m.get(&port).copied())
     }
+
+    /// Applies a batch of geometry updates, returning a new revision if anything changed.
+    ///
+    /// This is intended as a stable "internals update" surface, similar to XyFlow's
+    /// `updateNodeInternals` action: a caller can publish measured node sizes and port anchor
+    /// bounds without mutating the graph model.
+    pub fn apply_batch_if_changed(
+        &self,
+        batch: MeasuredGeometryBatch,
+        opts: MeasuredGeometryApplyOptions,
+    ) -> Option<u64> {
+        let mut node_sizes = self.node_sizes_px.write().expect("poisoned lock");
+        let mut anchors = self.port_anchors_px.write().expect("poisoned lock");
+
+        let mut changed = false;
+
+        for node in &batch.remove_nodes {
+            if node_sizes.remove(node).is_some() {
+                changed = true;
+            }
+        }
+        for port in &batch.remove_ports {
+            if anchors.remove(port).is_some() {
+                changed = true;
+            }
+        }
+
+        for (node, size) in &batch.node_sizes_px {
+            let needs = match node_sizes.get(node) {
+                Some(old) => {
+                    (old.0 - size.0).abs() > opts.epsilon_px
+                        || (old.1 - size.1).abs() > opts.epsilon_px
+                }
+                None => true,
+            };
+            if needs {
+                node_sizes.insert(*node, *size);
+                changed = true;
+            }
+        }
+
+        for (port, hint) in &batch.port_anchors_px {
+            let needs = match anchors.get(port) {
+                Some(old) => {
+                    (old.center.x.0 - hint.center.x.0).abs() > opts.epsilon_px
+                        || (old.center.y.0 - hint.center.y.0).abs() > opts.epsilon_px
+                        || (old.bounds.origin.x.0 - hint.bounds.origin.x.0).abs() > opts.epsilon_px
+                        || (old.bounds.origin.y.0 - hint.bounds.origin.y.0).abs() > opts.epsilon_px
+                        || (old.bounds.size.width.0 - hint.bounds.size.width.0).abs()
+                            > opts.epsilon_px
+                        || (old.bounds.size.height.0 - hint.bounds.size.height.0).abs()
+                            > opts.epsilon_px
+                }
+                None => true,
+            };
+            if needs {
+                anchors.insert(*port, *hint);
+                changed = true;
+            }
+        }
+
+        changed.then(|| self.bump_revision())
+    }
+
+    /// Applies a batch that is treated as the full source of truth for this store.
+    ///
+    /// Any existing node/port entries not present in the batch are removed.
+    pub fn apply_exclusive_batch_if_changed(
+        &self,
+        batch: MeasuredGeometryExclusiveBatch,
+        opts: MeasuredGeometryApplyOptions,
+    ) -> Option<u64> {
+        let keep_nodes: std::collections::BTreeSet<NodeId> =
+            batch.node_sizes_px.iter().map(|(id, _)| *id).collect();
+        let keep_ports: std::collections::BTreeSet<PortId> =
+            batch.port_anchors_px.iter().map(|(id, _)| *id).collect();
+
+        let mut node_sizes = self.node_sizes_px.write().expect("poisoned lock");
+        let mut anchors = self.port_anchors_px.write().expect("poisoned lock");
+
+        let mut changed = false;
+
+        node_sizes.retain(|id, _| {
+            let ok = keep_nodes.contains(id);
+            if !ok {
+                changed = true;
+            }
+            ok
+        });
+        anchors.retain(|id, _| {
+            let ok = keep_ports.contains(id);
+            if !ok {
+                changed = true;
+            }
+            ok
+        });
+
+        for (node, size) in &batch.node_sizes_px {
+            let needs = match node_sizes.get(node) {
+                Some(old) => {
+                    (old.0 - size.0).abs() > opts.epsilon_px
+                        || (old.1 - size.1).abs() > opts.epsilon_px
+                }
+                None => true,
+            };
+            if needs {
+                node_sizes.insert(*node, *size);
+                changed = true;
+            }
+        }
+        for (port, hint) in &batch.port_anchors_px {
+            let needs = match anchors.get(port) {
+                Some(old) => {
+                    (old.center.x.0 - hint.center.x.0).abs() > opts.epsilon_px
+                        || (old.center.y.0 - hint.center.y.0).abs() > opts.epsilon_px
+                        || (old.bounds.origin.x.0 - hint.bounds.origin.x.0).abs() > opts.epsilon_px
+                        || (old.bounds.origin.y.0 - hint.bounds.origin.y.0).abs() > opts.epsilon_px
+                        || (old.bounds.size.width.0 - hint.bounds.size.width.0).abs()
+                            > opts.epsilon_px
+                        || (old.bounds.size.height.0 - hint.bounds.size.height.0).abs()
+                            > opts.epsilon_px
+                }
+                None => true,
+            };
+            if needs {
+                anchors.insert(*port, *hint);
+                changed = true;
+            }
+        }
+
+        changed.then(|| self.bump_revision())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct MeasuredGeometryBatch {
+    pub node_sizes_px: Vec<(NodeId, (f32, f32))>,
+    pub port_anchors_px: Vec<(PortId, PortAnchorHint)>,
+    pub remove_nodes: Vec<NodeId>,
+    pub remove_ports: Vec<PortId>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct MeasuredGeometryExclusiveBatch {
+    pub node_sizes_px: Vec<(NodeId, (f32, f32))>,
+    pub port_anchors_px: Vec<(PortId, PortAnchorHint)>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MeasuredGeometryApplyOptions {
+    pub epsilon_px: f32,
+}
+
+impl Default for MeasuredGeometryApplyOptions {
+    fn default() -> Self {
+        Self { epsilon_px: 0.25 }
+    }
 }
 
 /// Presenter wrapper that consults measured geometry before delegating to an inner presenter.
