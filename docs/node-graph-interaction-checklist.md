@@ -52,6 +52,7 @@ Recommended harness:
 
 - (implemented) Click node selects it.
 - (implemented) Click empty space clears selection.
+- (prototype) Selection gating: when `elements_selectable=false`, pointer selection and marquee do nothing.
 - (prototype) Shift-click adds to selection (no drag).
 - (prototype) Ctrl/Cmd-click toggles selection (no drag).
 - (implemented) Drag marquee selects nodes inside the rect.
@@ -198,6 +199,7 @@ Invariants:
 - (todo) Hovering an edge highlights it (without changing selection).
 - (todo) Selecting an edge is deterministic and undo/redo does not affect selection state unexpectedly.
 - (prototype) Keyboard edge focus: `Ctrl/Cmd+Tab` cycles focus/selection across edges (when enabled).
+- (prototype) Focus anchors: focused/selected edge shows endpoint anchors (reconnect affordance).
 - (prototype) Edge labels render with stable placement (and do not overlap node ports in common layouts).
 - (prototype) Edge end markers (arrows) render and remain stable across zoom levels.
 - (todo) Per-edge style overrides can affect color/width/label without breaking hit-testing.

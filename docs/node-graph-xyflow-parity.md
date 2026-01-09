@@ -175,6 +175,7 @@ High-level layering (ADR 0135):
   - fret-node:
     - pointer selection exists (click edge selects; drag edge starts reconnect)
     - keyboard focus is available via `Ctrl/Cmd+Tab` cycling (opt-in policy until per-edge focus nodes exist)
+    - config gates: `NodeGraphInteractionState.{elements_selectable, edges_selectable, edges_focusable}`
 
 - [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)

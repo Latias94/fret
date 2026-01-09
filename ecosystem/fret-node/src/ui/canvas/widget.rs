@@ -3713,6 +3713,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .unwrap_or_default();
 
                 let _ = self.commit_ops(cx.app, cx.window, Some("Delete Selection"), remove_ops);
+                self.interaction.focused_edge = None;
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
@@ -4347,6 +4348,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         #[derive(Debug, Clone)]
         struct EdgeRender {
+            id: EdgeId,
             from: Point,
             to: Point,
             color: Color,
@@ -4480,6 +4482,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let selected = selected_edges.contains(&edge_id);
                         let hovered = hovered_edge == Some(edge_id);
                         out.edges.push(EdgeRender {
+                            id: edge_id,
                             from,
                             to,
                             color,
@@ -4493,6 +4496,23 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 })
                 .unwrap_or_default()
         };
+
+        let focused_edge_id = (snapshot.interaction.elements_selectable
+            && snapshot.interaction.edges_selectable
+            && snapshot.interaction.edges_focusable)
+            .then(|| {
+                self.interaction.focused_edge.or_else(|| {
+                    (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0])
+                })
+            })
+            .flatten();
+        let focused_edge_anchors: Option<(Point, Point, Color)> = focused_edge_id.and_then(|id| {
+            render
+                .edges
+                .iter()
+                .find(|e| e.id == id)
+                .map(|e| (e.from, e.to, e.color))
+        });
 
         // Groups render under edges and nodes (container frames).
         if !render.groups.is_empty() {
@@ -5056,6 +5076,53 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(r),
             });
+        }
+
+        if let Some((from, to, color)) = focused_edge_anchors {
+            let size_screen = 16.0;
+            let border_screen = 2.0;
+            let pad_screen = 1.0;
+
+            let z = zoom.max(1.0e-6);
+            let half = 0.5 * size_screen / z;
+            let pad = pad_screen / z;
+            let border = Px(border_screen / z);
+
+            let anchor_color = Color {
+                r: color.r,
+                g: color.g,
+                b: color.b,
+                a: 0.95,
+            };
+            let fill_color = Color {
+                r: color.r,
+                g: color.g,
+                b: color.b,
+                a: 0.15,
+            };
+
+            for center in [from, to] {
+                let rect = Rect::new(
+                    Point::new(Px(center.x.0 - half), Px(center.y.0 - half)),
+                    Size::new(Px(2.0 * half), Px(2.0 * half)),
+                );
+                let rect = Rect::new(
+                    Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                    Size::new(
+                        Px(rect.size.width.0 + 2.0 * pad),
+                        Px(rect.size.height.0 + 2.0 * pad),
+                    ),
+                );
+                let r = Px(0.5 * rect.size.width.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(6),
+                    rect,
+                    background: fill_color,
+                    border: Edges::all(border),
+                    border_color: anchor_color,
+                    corner_radii: Corners::all(r),
+                });
+            }
         }
 
         if self.close_command.is_some() {

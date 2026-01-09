@@ -100,6 +100,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
         selected.dedup();
 
         canvas.interaction.marquee = Some(marquee);
+        canvas.interaction.focused_edge = None;
         canvas.update_view_state(cx.app, |s| {
             s.selected_edges.clear();
             s.selected_nodes = selected;
