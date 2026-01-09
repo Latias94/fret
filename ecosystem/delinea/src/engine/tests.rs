@@ -291,6 +291,74 @@ fn zoom_lock_prevents_zoom_window_update() {
 }
 
 #[test]
+fn set_data_window_applies_axis_range_lock_min() {
+    let mut spec = basic_spec();
+    let x_axis = spec.axes[0].id;
+    spec.axes[0].range = Some(AxisRange::LockMin { min: 200.0 });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let stored = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected x window to be stored");
+    assert_eq!(
+        stored,
+        DataWindow {
+            min: 200.0,
+            max: 210.0
+        }
+    );
+}
+
+#[test]
+fn set_view_window_2d_applies_axis_range_lock_max() {
+    let mut spec = basic_spec();
+    let x_axis = spec.axes[0].id;
+    let y_axis = spec.axes[1].id;
+    spec.axes[1].range = Some(AxisRange::LockMax { max: -100.0 });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    engine.apply_action(Action::SetViewWindow2D {
+        x_axis,
+        y_axis,
+        x: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+        y: Some(DataWindow {
+            min: 0.0,
+            max: 10.0,
+        }),
+    });
+
+    let y = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window to be stored");
+    assert_eq!(
+        y,
+        DataWindow {
+            min: -110.0,
+            max: -100.0
+        }
+    );
+}
+
+#[test]
 fn fixed_axis_prevents_pan_and_zoom_actions() {
     let x_axis = crate::ids::AxisId::new(1);
     let y_axis = crate::ids::AxisId::new(2);

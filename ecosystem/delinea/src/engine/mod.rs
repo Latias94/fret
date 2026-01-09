@@ -248,6 +248,7 @@ impl ChartEngine {
                 self.apply_zoom_set_window(axis, window);
             }
             Action::SetDataWindowX { axis, window } => {
+                let range = self.axis_range(axis);
                 let default_mode = self
                     .model
                     .data_zoom_x_by_axis
@@ -265,6 +266,7 @@ impl ChartEngine {
                     });
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
+                    window = window.apply_constraints(range.locked_min(), range.locked_max());
                     entry.window = Some(window);
                 } else {
                     entry.window = None;
@@ -273,8 +275,10 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
             Action::SetDataWindowY { axis, window } => {
+                let range = self.axis_range(axis);
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
+                    window = window.apply_constraints(range.locked_min(), range.locked_max());
                     self.state.data_window_y.insert(axis, window);
                 } else {
                     self.state.data_window_y.remove(&axis);
@@ -308,6 +312,8 @@ impl ChartEngine {
                 x,
                 y,
             } => {
+                let x_range = self.axis_range(x_axis);
+                let y_range = self.axis_range(y_axis);
                 let default_mode = self
                     .model
                     .data_zoom_x_by_axis
@@ -325,6 +331,7 @@ impl ChartEngine {
                     });
                 if let Some(mut x) = x {
                     x.clamp_non_degenerate();
+                    x = x.apply_constraints(x_range.locked_min(), x_range.locked_max());
                     entry.window = Some(x);
                 } else {
                     entry.window = None;
@@ -332,6 +339,7 @@ impl ChartEngine {
 
                 if let Some(mut y) = y {
                     y.clamp_non_degenerate();
+                    y = y.apply_constraints(y_range.locked_min(), y_range.locked_max());
                     self.state.data_window_y.insert(y_axis, y);
                 } else {
                     self.state.data_window_y.remove(&y_axis);

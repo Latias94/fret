@@ -82,16 +82,38 @@ impl DataWindow {
 
     pub fn apply_constraints(self, locked_min: Option<f64>, locked_max: Option<f64>) -> Self {
         let mut out = self;
+        out.clamp_non_degenerate();
 
-        if let Some(min) = locked_min
-            && min.is_finite()
-        {
+        let locked_min = locked_min.filter(|v| v.is_finite());
+        let locked_max = locked_max.filter(|v| v.is_finite());
+
+        if locked_min.is_none() && locked_max.is_none() {
+            return out;
+        }
+
+        let span = {
+            let span = out.span();
+            if span.is_finite() && span > 0.0 {
+                span
+            } else {
+                1.0
+            }
+        };
+
+        if let Some(min) = locked_min {
             out.min = min;
         }
-        if let Some(max) = locked_max
-            && max.is_finite()
-        {
+        if let Some(max) = locked_max {
             out.max = max;
+        }
+
+        if !(out.max > out.min) {
+            match (locked_min.is_some(), locked_max.is_some()) {
+                (true, false) => out.max = out.min + span,
+                (false, true) => out.min = out.max - span,
+                (true, true) => out.max = out.min + span,
+                (false, false) => {}
+            }
         }
 
         out.clamp_non_degenerate();
@@ -140,5 +162,37 @@ mod tests {
         };
         let constrained = window.apply_constraints(Some(2.0), Some(3.0));
         assert_eq!(constrained, DataWindow { min: 2.0, max: 3.0 });
+    }
+
+    #[test]
+    fn apply_constraints_lock_min_preserves_span() {
+        let window = DataWindow {
+            min: 0.0,
+            max: 10.0,
+        };
+        let constrained = window.apply_constraints(Some(200.0), None);
+        assert_eq!(
+            constrained,
+            DataWindow {
+                min: 200.0,
+                max: 210.0
+            }
+        );
+    }
+
+    #[test]
+    fn apply_constraints_lock_max_preserves_span() {
+        let window = DataWindow {
+            min: 0.0,
+            max: 10.0,
+        };
+        let constrained = window.apply_constraints(None, Some(-100.0));
+        assert_eq!(
+            constrained,
+            DataWindow {
+                min: -110.0,
+                max: -100.0
+            }
+        );
     }
 }
