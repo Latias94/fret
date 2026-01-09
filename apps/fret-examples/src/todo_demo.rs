@@ -35,6 +35,7 @@ enum TodoFilter {
 
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))
+        .with_default_diagnostics()
         .with_main_window("todo_demo", (560.0, 520.0))
         .with_default_settings_json()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
