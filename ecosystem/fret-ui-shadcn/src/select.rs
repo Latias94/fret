@@ -5,7 +5,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::Model;
-use fret_ui::action::ActionCx;
+use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
@@ -400,6 +400,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    on_dismiss_request: Option<OnDismissRequest>,
     layout: LayoutRefinement,
     align: SelectAlign,
     side: SelectSide,
@@ -421,6 +422,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            on_dismiss_request: None,
             layout: LayoutRefinement::default(),
             align: SelectAlign::default(),
             side: SelectSide::default(),
@@ -497,6 +499,15 @@ impl Select {
         self
     }
 
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
+    /// default", do not close the `open` model inside the handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
     pub fn align(mut self, align: SelectAlign) -> Self {
         self.align = align;
         self
@@ -558,6 +569,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.on_dismiss_request,
             self.layout,
             self.align,
             self.side,
@@ -591,6 +603,7 @@ pub fn select<H: UiHost>(
         placeholder,
         disabled,
         a11y_label,
+        None,
         layout,
         SelectAlign::default(),
         SelectSide::default(),
@@ -612,6 +625,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    on_dismiss_request: Option<OnDismissRequest>,
     layout: LayoutRefinement,
     align: SelectAlign,
     side: SelectSide,
@@ -1759,21 +1773,23 @@ fn select_impl<H: UiHost>(
                             }
                         }
 
-                        radix_select::select_modal_layer_children_with_pointer_up_guard(
+                        radix_select::select_modal_layer_children_with_pointer_up_guard_and_dismiss_handler(
                             cx,
                             open_for_barrier_children.clone(),
                             dismiss_on_overlay_press,
+                            on_dismiss_request.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
                             Vec::new(),
                             animated,
                         )
                     });
 
-                    let mut request = radix_select::modal_select_request(
+                    let mut request = radix_select::modal_select_request_with_dismiss_handler(
                         trigger_id,
                         trigger_id,
                         open_for_trigger.clone(),
                         overlay_presence,
+                        on_dismiss_request.clone(),
                         overlay_children,
                     );
                     request.initial_focus = Some(listbox_id_for_trigger);
@@ -1781,25 +1797,28 @@ fn select_impl<H: UiHost>(
                 } else {
                     let open_for_overlay = open_for_trigger.clone();
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+                    let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let pointer_up_guard = radix_select::select_modal_barrier_pointer_up_guard(
                             cx,
                             open_for_overlay.clone(),
                             mouse_open_guard_for_overlay.clone(),
                         );
-                        vec![radix_select::select_modal_barrier(
+                        vec![radix_select::select_modal_barrier_with_dismiss_handler(
                             cx,
                             open_for_overlay.clone(),
                             true,
+                            on_dismiss_request_for_overlay_children.clone(),
                             vec![pointer_up_guard],
                         )]
                     });
 
-                    let request = radix_select::modal_select_request(
+                    let request = radix_select::modal_select_request_with_dismiss_handler(
                         trigger_id,
                         trigger_id,
                         open_for_trigger.clone(),
                         overlay_presence,
+                        on_dismiss_request.clone(),
                         overlay_children,
                     );
                     radix_select::request_select(cx, request);
@@ -1904,6 +1923,7 @@ fn select_impl<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
 
     use fret_app::App;
@@ -2023,6 +2043,37 @@ mod tests {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
                 vec![Select::new(model, open).items(items).into_element(cx)]
+            });
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
@@ -2933,6 +2984,87 @@ mod tests {
             }),
         );
 
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn select_modal_barrier_dismiss_can_be_prevented_via_dismiss_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let dismiss_calls = Arc::new(AtomicUsize::new(0));
+        let dismiss_calls_for_handler = dismiss_calls.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+            dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+        });
+
+        let _ = render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+            Some(handler),
+        );
+
+        let outside = Point::new(Px(390.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 

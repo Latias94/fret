@@ -47,6 +47,10 @@ Fret models Radix Select outcomes by composing:
 - Pass: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is implemented as reusable
   headless geometry math in `ecosystem/fret-ui-kit/src/headless/select_item_aligned.rs` and is
   available to recipes (shadcn select exposes it via `SelectPosition::ItemAligned`).
+- Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
+  `modal_select_request_with_dismiss_handler(...)` and `select_modal_barrier_with_dismiss_handler(...)`.
+  When provided, the handler receives the `DismissReason` and can decide whether to close the `open`
+  model.
 
 ## Follow-ups (recommended)
 

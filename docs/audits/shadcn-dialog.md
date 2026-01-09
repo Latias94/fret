@@ -45,6 +45,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Escape dismiss is handled by the shared dismissible root (Radix-aligned outcome).
 - Pass: Overlay click-to-dismiss is implemented by rendering a full-window barrier behind the
   content (default on).
+- Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
+  `Dialog::on_dismiss_request(...)`. When set, Escape and overlay-click dismissal route through the
+  handler and do not automatically close `open`.
 
 ### Focus behavior
 
