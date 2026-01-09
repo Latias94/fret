@@ -115,26 +115,24 @@ pub fn hover_hit_test(
                     }
 
                     let y_eff_a = if let Some(stack) = series.stack {
-                        let base = stack_dims
-                            .stack_base(stack, series_id, ia, model.revs.marks, table.revision)
+                        stack_dims
+                            .stacked_y(stack, series_id, ia, model.revs.marks, table.revision)
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, ia, y0a)
-                                    .map(|b| b.base)
-                                    .unwrap_or(0.0)
-                            });
-                        y0a + base
+                                    .map(|b| y0a + b.base)
+                                    .unwrap_or(y0a)
+                            })
                     } else {
                         y0a
                     };
                     let y_eff_b = if let Some(stack) = series.stack {
-                        let base = stack_dims
-                            .stack_base(stack, series_id, ib, model.revs.marks, table.revision)
+                        stack_dims
+                            .stacked_y(stack, series_id, ib, model.revs.marks, table.revision)
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, ib, y0b)
-                                    .map(|b| b.base)
-                                    .unwrap_or(0.0)
-                            });
-                        y0b + base
+                                    .map(|b| y0b + b.base)
+                                    .unwrap_or(y0b)
+                            })
                     } else {
                         y0b
                     };
@@ -183,14 +181,13 @@ pub fn hover_hit_test(
                     let x_value = x[idx];
                     let y0 = y[idx];
                     let y_value = if let Some(stack) = series.stack {
-                        let base = stack_dims
-                            .stack_base(stack, series_id, idx, model.revs.marks, table.revision)
+                        stack_dims
+                            .stacked_y(stack, series_id, idx, model.revs.marks, table.revision)
                             .unwrap_or_else(|| {
                                 stack_base_at_index(model, datasets, series_id, idx, y0)
-                                    .map(|b| b.base)
-                                    .unwrap_or(0.0)
-                            });
-                        y0 + base
+                                    .map(|b| y0 + b.base)
+                                    .unwrap_or(y0)
+                            })
                     } else {
                         y0
                     };

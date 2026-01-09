@@ -20,10 +20,8 @@ use crate::marks::{
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
-use crate::spec::StackStrategy;
 use crate::stats::EngineStats;
 use crate::transform::RowSelection;
-use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
@@ -38,65 +36,9 @@ struct StackBoundsBuild {
     series_index: usize,
     cursor: BoundsCursor,
     accum: BoundsAccum,
-    base: StackAccum,
     selection: RowSelection,
     x_filter: crate::engine::window_policy::AxisFilter1D,
     x_mapping_window: Option<DataWindowX>,
-}
-
-#[derive(Debug, Default, Clone)]
-struct StackAccum {
-    strategy: StackStrategy,
-    pos: Vec<f64>,
-    neg: Vec<f64>,
-}
-
-impl StackAccum {
-    fn ensure_len(&mut self, len: usize, strategy: StackStrategy) {
-        self.strategy = strategy;
-        if self.pos.len() != len {
-            self.pos.clear();
-            self.pos.resize(len, 0.0);
-        }
-        if strategy == StackStrategy::SameSign && self.neg.len() != len {
-            self.neg.clear();
-            self.neg.resize(len, 0.0);
-        } else if strategy != StackStrategy::SameSign {
-            self.neg.clear();
-        }
-    }
-
-    fn base_for(&self, y: f64, index: usize) -> f64 {
-        match self.strategy {
-            StackStrategy::All => self.pos.get(index).copied().unwrap_or(0.0),
-            StackStrategy::SameSign => {
-                if y >= 0.0 {
-                    self.pos.get(index).copied().unwrap_or(0.0)
-                } else {
-                    self.neg.get(index).copied().unwrap_or(0.0)
-                }
-            }
-        }
-    }
-
-    fn apply(&mut self, y: f64, index: usize) {
-        match self.strategy {
-            StackStrategy::All => {
-                if let Some(b) = self.pos.get_mut(index) {
-                    *b += y;
-                }
-            }
-            StackStrategy::SameSign => {
-                if y >= 0.0 {
-                    if let Some(b) = self.pos.get_mut(index) {
-                        *b += y;
-                    }
-                } else if let Some(b) = self.neg.get_mut(index) {
-                    *b += y;
-                }
-            }
-        }
-    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -107,7 +49,6 @@ pub struct MarksStage {
     bounds_accum: BoundsAccum,
     active_series: Option<SeriesId>,
     active_selection: RowSelection,
-    stack_accum: BTreeMap<StackId, StackAccum>,
     stack_bounds: BTreeMap<StackId, DataBounds>,
     stack_bounds_build: Option<StackBoundsBuild>,
     scatter_next_index: usize,
@@ -178,7 +119,6 @@ impl MarksStage {
         self.bounds_accum.reset();
         self.active_series = None;
         self.active_selection = RowSelection::default();
-        self.stack_accum.clear();
         self.stack_bounds.clear();
         self.stack_bounds_build = None;
         self.scatter_next_index = 0;
@@ -351,8 +291,6 @@ impl MarksStage {
                                 })
                                 .collect();
 
-                            let mut base = StackAccum::default();
-                            base.ensure_len(x.len().min(y0.len()), series.stack_strategy);
                             let mut accum = BoundsAccum::default();
                             accum.reset();
 
@@ -364,7 +302,6 @@ impl MarksStage {
                                 series_index: 0,
                                 cursor: BoundsCursor::default(),
                                 accum,
-                                base,
                                 selection: selection.clone(),
                                 x_filter: view_x_filter,
                                 x_mapping_window: view_x_mapping_window,
@@ -393,11 +330,6 @@ impl MarksStage {
                                 build.cursor = BoundsCursor::default();
                                 continue;
                             };
-                            let Some(y_col) = dataset.fields.get(&s.encode.y).copied() else {
-                                build.series_index += 1;
-                                build.cursor = BoundsCursor::default();
-                                continue;
-                            };
 
                             let table = datasets.dataset(s.dataset);
                             let Some(table) = table else {
@@ -411,10 +343,13 @@ impl MarksStage {
                                 build.cursor = BoundsCursor::default();
                                 continue;
                             };
-                            let Some(y) = table.column_f64(y_col) else {
-                                build.series_index += 1;
-                                build.cursor = BoundsCursor::default();
-                                continue;
+                            let Some(arrays) = stack_dims.stack_arrays(
+                                build.stack,
+                                series_id,
+                                model.revs.marks,
+                                table.revision,
+                            ) else {
+                                return false;
                             };
 
                             let points_budget = budget.take_points(4096) as usize;
@@ -429,16 +364,7 @@ impl MarksStage {
                                 &build.selection,
                                 build.x_filter,
                                 points_budget,
-                                |i| {
-                                    let yi = y.get(i).copied().unwrap_or(f64::NAN);
-                                    if !yi.is_finite() {
-                                        return yi;
-                                    }
-                                    let base = build.base.base_for(yi, i);
-                                    let y_eff = yi + base;
-                                    build.base.apply(yi, i);
-                                    y_eff
-                                },
+                                |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
                             )
                             .unwrap_or(true);
 
@@ -449,6 +375,16 @@ impl MarksStage {
                         }
 
                         let mut bounds = finalize_bounds(&build.accum).unwrap_or_default();
+
+                        if build.series.iter().any(|id| {
+                            model
+                                .series
+                                .get(id)
+                                .is_some_and(|s| s.kind == crate::spec::SeriesKind::Bar)
+                        }) {
+                            bounds.y_min = bounds.y_min.min(0.0);
+                            bounds.y_max = bounds.y_max.max(0.0);
+                        }
 
                         if let Some(mut w) = build.x_mapping_window.or(model
                             .axes
@@ -730,6 +666,13 @@ impl MarksStage {
             }
 
             if series.kind == crate::spec::SeriesKind::Bar {
+                let stack_arrays = series.stack.and_then(|stack| {
+                    stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
+                });
+                if series.stack.is_some() && stack_arrays.is_none() {
+                    return false;
+                }
+
                 let x_axis = model.axes.get(&series.x_axis);
                 let x_window = x_axis.and_then(crate::engine::axis::category_domain_window);
                 let x_window = view_x_mapping_window.or(x_window).unwrap_or(DataWindow {
@@ -781,7 +724,6 @@ impl MarksStage {
                     }
 
                     let chunk_end = (self.bar_next_index + points_budget).min(row_end);
-                    let baseline_data = 0.0f64;
 
                     let x_span = x_window.span();
                     let band_px = (viewport.size.width.0 as f64 / x_span.max(1.0)).max(1.0) as f32;
@@ -807,10 +749,20 @@ impl MarksStage {
                             continue;
                         }
 
+                        let (y_top, y_base) = if let Some(arrays) = &stack_arrays {
+                            let y_base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
+                            let y_top = arrays.stacked.get(i).copied().unwrap_or(f64::NAN);
+                            (y_top, y_base)
+                        } else {
+                            (yi, 0.0)
+                        };
+                        if !y_top.is_finite() || !y_base.is_finite() {
+                            continue;
+                        }
+
                         let tx = ((xi - x_window.min) / x_window.span()).clamp(0.0, 1.0);
-                        let ty = ((yi - y_window.min) / y_window.span()).clamp(0.0, 1.0);
-                        let ty0 =
-                            ((baseline_data - y_window.min) / y_window.span()).clamp(0.0, 1.0);
+                        let ty = ((y_top - y_window.min) / y_window.span()).clamp(0.0, 1.0);
+                        let ty0 = ((y_base - y_window.min) / y_window.span()).clamp(0.0, 1.0);
 
                         let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
                         let px_y =
@@ -860,16 +812,19 @@ impl MarksStage {
             }
 
             let mut finished_scan = false;
+            let stack_arrays = series.stack.and_then(|stack| {
+                stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
+            });
+            if series.stack.is_some() && stack_arrays.is_none() {
+                return false;
+            }
             while !finished_scan {
                 let points_budget = budget.take_points(4096) as usize;
                 if points_budget == 0 {
                     return false;
                 }
 
-                if let Some(stack) = series.stack {
-                    let len = x.len().min(y0.len());
-                    let accum = self.stack_accum.entry(stack).or_default();
-                    accum.ensure_len(len, series.stack_strategy);
+                if let Some(arrays) = &stack_arrays {
                     finished_scan = minmax_per_pixel_step_selection_with(
                         &mut self.cursor,
                         scratch,
@@ -878,16 +833,7 @@ impl MarksStage {
                         viewport,
                         &selection,
                         points_budget,
-                        |i| {
-                            let yi = y0.get(i).copied().unwrap_or(f64::NAN);
-                            if !yi.is_finite() {
-                                return yi;
-                            }
-                            let base = accum.base_for(yi, i);
-                            let y_eff = yi + base;
-                            accum.apply(yi, i);
-                            y_eff
-                        },
+                        |i| arrays.stacked.get(i).copied().unwrap_or(f64::NAN),
                     );
                 } else {
                     finished_scan = minmax_per_pixel_step_selection(
@@ -1037,22 +983,13 @@ impl MarksStage {
                             continue;
                         }
 
-                        let y_base = series
-                            .stack
-                            .and_then(|stack| {
-                                stack_dims.stack_base(
-                                    stack,
-                                    series.id,
-                                    i,
-                                    model.revs.marks,
-                                    table.revision,
-                                )
-                            })
-                            .unwrap_or_else(|| {
-                                stack_base_at_index(model, datasets, series.id, i, yi)
-                                    .map(|b| b.base)
-                                    .unwrap_or(0.0)
-                            });
+                        let Some(arrays) = stack_arrays.as_ref() else {
+                            return false;
+                        };
+                        let y_base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
+                        if !y_base.is_finite() {
+                            continue;
+                        }
 
                         let y_base = y_base.clamp(bounds.y_min, bounds.y_max);
                         let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
@@ -1302,6 +1239,10 @@ fn compute_series_bounds(
         w.clamp_non_degenerate();
         bounds.y_min = w.min;
         bounds.y_max = w.max;
+    }
+    if kind == crate::spec::SeriesKind::Bar {
+        bounds.y_min = bounds.y_min.min(0.0);
+        bounds.y_max = bounds.y_max.max(0.0);
     }
     apply_axis_constraints(model, x_axis, y_axis, &mut bounds);
     bounds.clamp_non_degenerate();

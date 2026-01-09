@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::data::DatasetStore;
 use crate::engine::model::ChartModel;
 use crate::ids::{DatasetId, Revision, SeriesId, StackId};
+use crate::scale::AxisScale;
 use crate::scheduler::WorkBudget;
 use crate::spec::StackStrategy;
 
@@ -22,6 +23,19 @@ struct StackSeriesInput {
 }
 
 #[derive(Debug, Clone)]
+enum StackIndexing {
+    ByRowIndex {
+        accum_pos: Vec<f64>,
+        accum_neg: Vec<f64>,
+    },
+    ByOrdinal {
+        x_col: usize,
+        accum_pos: Vec<f64>,
+        accum_neg: Vec<f64>,
+    },
+}
+
+#[derive(Debug, Clone)]
 enum StackGroupEntry {
     Ready {
         model_rev: Revision,
@@ -30,6 +44,7 @@ enum StackGroupEntry {
         row_count: usize,
         strategy: StackStrategy,
         bases: BTreeMap<SeriesId, Arc<[f64]>>,
+        stacked: BTreeMap<SeriesId, Arc<[f64]>>,
     },
     Building {
         model_rev: Revision,
@@ -40,10 +55,11 @@ enum StackGroupEntry {
         series: Vec<StackSeriesInput>,
         series_index: usize,
         next_row: usize,
-        accum_pos: Vec<f64>,
-        accum_neg: Vec<f64>,
+        indexing: StackIndexing,
         current_base: Vec<f64>,
+        current_stacked: Vec<f64>,
         bases: BTreeMap<SeriesId, Arc<[f64]>>,
+        stacked: BTreeMap<SeriesId, Arc<[f64]>>,
     },
 }
 
@@ -78,14 +94,12 @@ impl StackDimsStage {
         for &stack in &self.requested {
             let model_rev = model.revs.marks;
 
-            let Some((dataset_id, strategy, series_inputs)) =
-                stack_group_inputs(model, stack, datasets)
-            else {
+            let Some(inputs) = stack_group_inputs(model, stack, datasets) else {
                 self.cache.remove(&stack);
                 continue;
             };
 
-            let Some(table) = datasets.dataset(dataset_id) else {
+            let Some(table) = datasets.dataset(inputs.dataset_id) else {
                 self.cache.remove(&stack);
                 continue;
             };
@@ -103,29 +117,27 @@ impl StackDimsStage {
                     ..
                 }) if *mr == model_rev
                     && *dr == data_rev
-                    && *dataset == dataset_id
+                    && *dataset == inputs.dataset_id
                     && *rc == row_count
-                    && *st == strategy => {}
+                    && *st == inputs.strategy => {}
                 _ => {
+                    let indexing = stack_indexing_for_group(model, datasets, &inputs, row_count);
                     self.cache.insert(
                         stack,
                         StackGroupEntry::Building {
                             model_rev,
                             data_rev,
-                            dataset: dataset_id,
+                            dataset: inputs.dataset_id,
                             row_count,
-                            strategy,
-                            series: series_inputs,
+                            strategy: inputs.strategy,
+                            series: inputs.series,
                             series_index: 0,
                             next_row: 0,
-                            accum_pos: vec![0.0; row_count],
-                            accum_neg: if strategy == StackStrategy::SameSign {
-                                vec![0.0; row_count]
-                            } else {
-                                Vec::new()
-                            },
+                            indexing,
                             current_base: vec![0.0; row_count],
+                            current_stacked: vec![0.0; row_count],
                             bases: BTreeMap::new(),
+                            stacked: BTreeMap::new(),
                         },
                     );
                 }
@@ -160,10 +172,11 @@ impl StackDimsStage {
                 series,
                 series_index,
                 next_row,
-                accum_pos,
-                accum_neg,
+                indexing,
                 current_base,
+                current_stacked,
                 bases,
+                stacked,
             } = entry
             else {
                 self.cursor += 1;
@@ -197,29 +210,90 @@ impl StackDimsStage {
                     break;
                 };
 
+                let x = match indexing {
+                    StackIndexing::ByRowIndex { .. } => None,
+                    StackIndexing::ByOrdinal { x_col, .. } => table.column_f64(*x_col),
+                };
+
                 let end = (*next_row + points_budget).min(*row_count);
                 for i in *next_row..end {
                     let yi = y.get(i).copied().unwrap_or(f64::NAN);
                     if !yi.is_finite() {
-                        current_base[i] = 0.0;
+                        current_base[i] = f64::NAN;
+                        current_stacked[i] = f64::NAN;
                         continue;
                     }
 
-                    let base = stack_base_for_row(*strategy, accum_pos, accum_neg, yi, i);
+                    let index = match indexing {
+                        StackIndexing::ByRowIndex { .. } => Some(i),
+                        StackIndexing::ByOrdinal { accum_pos, .. } => {
+                            if let Some(x) = x {
+                                let xv = x.get(i).copied().unwrap_or(f64::NAN);
+                                if !xv.is_finite() {
+                                    None
+                                } else {
+                                    let ord = xv.round() as i64;
+                                    if ord < 0 || ord as usize >= accum_pos.len() {
+                                        None
+                                    } else {
+                                        Some(ord as usize)
+                                    }
+                                }
+                            } else {
+                                None
+                            }
+                        }
+                    };
+
+                    let Some(index) = index else {
+                        current_base[i] = 0.0;
+                        current_stacked[i] = yi;
+                        continue;
+                    };
+
+                    let base = match indexing {
+                        StackIndexing::ByRowIndex {
+                            accum_pos,
+                            accum_neg,
+                        } => stack_base_for_row(*strategy, accum_pos, accum_neg, yi, index),
+                        StackIndexing::ByOrdinal {
+                            accum_pos,
+                            accum_neg,
+                            ..
+                        } => stack_base_for_row(*strategy, accum_pos, accum_neg, yi, index),
+                    };
+
                     current_base[i] = base;
-                    stack_apply_row(*strategy, accum_pos, accum_neg, yi, i);
+                    current_stacked[i] = yi + base;
+
+                    match indexing {
+                        StackIndexing::ByRowIndex {
+                            accum_pos,
+                            accum_neg,
+                        } => stack_apply_row(*strategy, accum_pos, accum_neg, yi, index),
+                        StackIndexing::ByOrdinal {
+                            accum_pos,
+                            accum_neg,
+                            ..
+                        } => stack_apply_row(*strategy, accum_pos, accum_neg, yi, index),
+                    }
                 }
 
                 *next_row = end;
 
                 if *next_row >= *row_count {
-                    let mut finished = Vec::new();
-                    std::mem::swap(&mut finished, current_base);
-                    bases.insert(input.series, Arc::from(finished.into_boxed_slice()));
+                    let mut finished_base = Vec::new();
+                    std::mem::swap(&mut finished_base, current_base);
+                    bases.insert(input.series, Arc::from(finished_base.into_boxed_slice()));
+
+                    let mut finished_stacked = Vec::new();
+                    std::mem::swap(&mut finished_stacked, current_stacked);
+                    stacked.insert(input.series, Arc::from(finished_stacked.into_boxed_slice()));
 
                     *next_row = 0;
                     *series_index += 1;
                     current_base.resize(*row_count, 0.0);
+                    current_stacked.resize(*row_count, 0.0);
                 }
             }
 
@@ -231,6 +305,7 @@ impl StackDimsStage {
                     row_count: *row_count,
                     strategy: *strategy,
                     bases: bases.clone(),
+                    stacked: stacked.clone(),
                 };
                 self.cache.insert(stack, ready);
             }
@@ -261,15 +336,76 @@ impl StackDimsStage {
             _ => None,
         }
     }
+
+    pub fn stack_arrays(
+        &self,
+        stack: StackId,
+        series: SeriesId,
+        model_rev: Revision,
+        data_rev: Revision,
+    ) -> Option<StackSeriesArrays> {
+        match self.cache.get(&stack) {
+            Some(StackGroupEntry::Ready {
+                model_rev: mr,
+                data_rev: dr,
+                bases,
+                stacked,
+                ..
+            }) if *mr == model_rev && *dr == data_rev => {
+                let base = bases.get(&series)?.clone();
+                let stacked = stacked.get(&series)?.clone();
+                Some(StackSeriesArrays { base, stacked })
+            }
+            _ => None,
+        }
+    }
+
+    pub fn stacked_y(
+        &self,
+        stack: StackId,
+        series: SeriesId,
+        raw_index: usize,
+        model_rev: Revision,
+        data_rev: Revision,
+    ) -> Option<f64> {
+        match self.cache.get(&stack) {
+            Some(StackGroupEntry::Ready {
+                model_rev: mr,
+                data_rev: dr,
+                stacked,
+                ..
+            }) if *mr == model_rev && *dr == data_rev => {
+                stacked.get(&series).and_then(|b| b.get(raw_index).copied())
+            }
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StackSeriesArrays {
+    pub base: Arc<[f64]>,
+    pub stacked: Arc<[f64]>,
+}
+
+#[derive(Debug, Clone)]
+struct StackGroupInputs {
+    dataset_id: DatasetId,
+    x_axis: crate::ids::AxisId,
+    x_col: usize,
+    strategy: StackStrategy,
+    series: Vec<StackSeriesInput>,
 }
 
 fn stack_group_inputs(
     model: &ChartModel,
     stack: StackId,
     datasets: &DatasetStore,
-) -> Option<(DatasetId, StackStrategy, Vec<StackSeriesInput>)> {
+) -> Option<StackGroupInputs> {
     let mut dataset_id: Option<DatasetId> = None;
     let mut strategy: Option<StackStrategy> = None;
+    let mut x_axis: Option<crate::ids::AxisId> = None;
+    let mut x_col: Option<usize> = None;
     let mut inputs = Vec::<StackSeriesInput>::new();
 
     for series in model.series_in_order() {
@@ -278,6 +414,7 @@ fn stack_group_inputs(
         }
         dataset_id.get_or_insert(series.dataset);
         strategy.get_or_insert(series.stack_strategy);
+        x_axis.get_or_insert(series.x_axis);
 
         if dataset_id != Some(series.dataset) || strategy != Some(series.stack_strategy) {
             return None;
@@ -289,6 +426,13 @@ fn stack_group_inputs(
         let Some(dataset) = model.datasets.get(&series.dataset) else {
             return None;
         };
+
+        let group_x_col = *dataset.fields.get(&series.encode.x)?;
+        x_col.get_or_insert(group_x_col);
+        if x_col != Some(group_x_col) {
+            return None;
+        }
+
         let y_col = *dataset.fields.get(&series.encode.y)?;
         if table.column_f64(y_col).is_none() {
             return None;
@@ -302,7 +446,63 @@ fn stack_group_inputs(
 
     let dataset_id = dataset_id?;
     let strategy = strategy.unwrap_or_default();
-    Some((dataset_id, strategy, inputs))
+    let x_axis = x_axis?;
+    let x_col = x_col?;
+    Some(StackGroupInputs {
+        dataset_id,
+        x_axis,
+        x_col,
+        strategy,
+        series: inputs,
+    })
+}
+
+fn stack_indexing_for_group(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    inputs: &StackGroupInputs,
+    row_count: usize,
+) -> StackIndexing {
+    let Some(table) = datasets.dataset(inputs.dataset_id) else {
+        return StackIndexing::ByRowIndex {
+            accum_pos: vec![0.0; row_count],
+            accum_neg: if inputs.strategy == StackStrategy::SameSign {
+                vec![0.0; row_count]
+            } else {
+                Vec::new()
+            },
+        };
+    };
+
+    let axis = model.axes.get(&inputs.x_axis);
+    let ordinal_len = axis.and_then(|a| match &a.scale {
+        AxisScale::Category(scale) => Some(scale.len()),
+        _ => None,
+    });
+
+    if let Some(ordinal_len) = ordinal_len
+        && ordinal_len > 0
+        && table.column_f64(inputs.x_col).is_some()
+    {
+        return StackIndexing::ByOrdinal {
+            x_col: inputs.x_col,
+            accum_pos: vec![0.0; ordinal_len],
+            accum_neg: if inputs.strategy == StackStrategy::SameSign {
+                vec![0.0; ordinal_len]
+            } else {
+                Vec::new()
+            },
+        };
+    }
+
+    StackIndexing::ByRowIndex {
+        accum_pos: vec![0.0; row_count],
+        accum_neg: if inputs.strategy == StackStrategy::SameSign {
+            vec![0.0; row_count]
+        } else {
+            Vec::new()
+        },
+    }
 }
 
 fn stack_base_for_row(
@@ -493,6 +693,148 @@ mod tests {
         assert_eq!(
             stage.stack_base(stack, b, 2, model.revs.marks, data_rev),
             Some(3.0)
+        );
+    }
+
+    #[test]
+    fn stack_dims_stage_uses_ordinal_accumulation_on_category_axes() {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_a_field = FieldId::new(2);
+        let y_b_field = FieldId::new(3);
+        let stack = StackId::new(1);
+        let a = SeriesId::new(1);
+        let b = SeriesId::new(2);
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                        categories: vec!["a".into(), "b".into(), "c".into()],
+                    }),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: a,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: b,
+                    name: None,
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: Default::default(),
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut datasets = DatasetStore::default();
+        let mut table = DataTable::default();
+        // Category ordinals with a shuffled raw order.
+        table.push_column(Column::F64(vec![0.0, 2.0, 1.0]));
+        table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0]));
+        let data_rev = table.revision;
+        datasets.insert(dataset_id, table);
+
+        let mut stage = StackDimsStage::default();
+        stage.begin_frame();
+        stage.request_for_visible_stacks(&model);
+        stage.prepare_requests(&model, &datasets);
+
+        let mut budget = WorkBudget::new(1_000_000, 0, 0);
+        assert!(stage.step(&model, &datasets, &mut budget));
+
+        assert_eq!(
+            stage.stack_base(stack, a, 0, model.revs.marks, data_rev),
+            Some(0.0)
+        );
+        assert_eq!(
+            stage.stack_base(stack, a, 2, model.revs.marks, data_rev),
+            Some(0.0)
+        );
+
+        // For series B, the base should match series A's y per category ordinal.
+        assert_eq!(
+            stage.stack_base(stack, b, 0, model.revs.marks, data_rev),
+            Some(1.0)
+        );
+        assert_eq!(
+            stage.stack_base(stack, b, 1, model.revs.marks, data_rev),
+            Some(2.0)
+        );
+        assert_eq!(
+            stage.stack_base(stack, b, 2, model.revs.marks, data_rev),
+            Some(3.0)
+        );
+
+        assert_eq!(
+            stage.stacked_y(stack, b, 2, model.revs.marks, data_rev),
+            Some(33.0)
         );
     }
 }

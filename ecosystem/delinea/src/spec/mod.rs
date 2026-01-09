@@ -273,7 +273,7 @@ pub struct SeriesSpec {
     pub y_axis: AxisId,
     /// Stack group id (ECharts `series.stack`).
     ///
-    /// v1: only supported for `SeriesKind::Line` and `SeriesKind::Area`.
+    /// v1: only supported for `SeriesKind::Line`, `SeriesKind::Area`, and `SeriesKind::Bar`.
     pub stack: Option<StackId>,
     /// Stacking strategy (ECharts `series.stackStrategy`).
     pub stack_strategy: StackStrategy,

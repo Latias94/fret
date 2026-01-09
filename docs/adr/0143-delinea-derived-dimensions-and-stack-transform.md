@@ -81,19 +81,24 @@ Consumers must use:
 
 The original raw `y` value remains accessible via the raw dataset column.
 
-### 4) v1 scope: stack-by-index only (ECharts “isStackedByIndex”)
+### 4) v1 scope: stack-by-index + stack-by-ordinal (category axes)
 
-To keep P0 tractable and fast, v1 stacking supports only stack-by-index:
+To keep P0 tractable but still unlock common stacked bar charts, v1 supports two stacking modes:
 
-- stacked series must share:
+- **Stack-by-index** (ECharts “isStackedByIndex”): for non-category X axes, we stack by raw row index.
+  Stacked series must share:
   - the same dataset,
-  - the same `encode.x` field (and thus the same row alignment),
+  - the same `encode.x` field,
   - compatible axes.
+- **Stack-by-ordinal** (category X axes): when the X axis uses `AxisScale::Category`, we interpret
+  `encode.x` as an ordinal (0..N-1) and stack by that ordinal bucket rather than raw row index.
+  This supports shuffled raw row orders and missing category rows across series.
 
-This matches the common “timeseries table” ingestion model and avoids expensive joins.
+Assumptions (aligned with ECharts ordinal inverted indices):
 
-P1+ may add stack-by-dimension (ECharts `stackedByDimension`) for category bars and joins, but only after
-we lock the required lookup/indexing strategy (see Follow-ups).
+- X ordinal values should be finite and integer-like (we use `round()`).
+- Ordinals are expected to be in range (out-of-range values are treated as unstacked).
+- Duplicate ordinals within a single series are undefined behavior in v1.
 
 ### 5) Stacking must respect legend/visibility state
 
@@ -142,8 +147,9 @@ P0:
 P1:
 
 - Decide stack-by-dimension strategy:
+  - category/ordinal inverted index (ECharts-style `invertedIndices[value] -> rawIndex`),
   - monotonic X fast path (`lower_bound`),
-  - hash map index (`x_value -> raw_index`),
+  - hash map index (`x_value -> raw_index`) where appropriate,
   - sorted indices view (`RowSelection::Indices` that is monotonic in X),
   - and how it interacts with missing values (ADR 0141).
 - Add derived dimensions for:
