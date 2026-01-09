@@ -415,10 +415,19 @@ Portal command routing (locked):
   - Shift → `coarse`
   - Ctrl/Cmd → `fine`
   - otherwise → `normal`
+- Modifier lock (recommended default):
+  - For drag-style continuous edits (sliders, number drags), the modifier-derived mode should be
+    captured on pointer down and remain stable for the duration of the drag session to avoid
+    mid-drag discontinuities.
 - Submit semantics:
   - Parse/validate in the domain spec.
   - On success, emit a `GraphTransaction` commit so undo/redo works uniformly (ADR 0024).
   - On failure, keep the buffer and show an inline error string (UI-only state).
+- Drag semantics (recommended default):
+  - Use a small movement threshold (e.g. 1–3 px) before starting a value drag to avoid accidental
+    edits on click.
+  - During drag, update only the widget buffer (preview). Commit once on pointer up to keep undo
+    granularity sane.
 
 Interaction protocol target (inspired by `imgui-node-editor`):
 
