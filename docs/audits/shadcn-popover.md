@@ -55,6 +55,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Outside-press dismiss is implemented via the click-through observer pass (ADR 0069) and the
   window overlay layer.
 - Pass: Escape dismiss is handled by the shared dismissible overlay policy layer.
+- Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
+  `Popover::on_dismiss_request(...)`. When set, Escape/outside-press dismissal route through the
+  handler and do not automatically close `open`. For modal popovers, the barrier press also routes
+  through the same handler.
 
 ### Focus behavior
 

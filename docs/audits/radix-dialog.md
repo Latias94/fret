@@ -35,6 +35,9 @@ Fret does not use React context. Instead, dialog behavior is composed via:
   `dialog_use_open_model(...)` (thin helper), backed by the shared controllable-state substrate.
 - Pass: Modal focus traversal is scoped to the modal barrier layer (ADR 0068).
 - Pass: Escape dismiss is handled by the shared dismissible root used by modal overlays.
+- Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
+  `modal_dialog_request_with_options_and_dismiss_handler(...)` and
+  `modal_barrier_with_dismiss_handler(...)`. Callers choose whether to close the `open` model.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
   `apply_dialog_trigger_a11y(...)`.
 - Pass: Modal outside-click dismissal is authored via a Radix-named primitive helper
@@ -45,5 +48,4 @@ Fret does not use React context. Instead, dialog behavior is composed via:
 
 ## Follow-ups (recommended)
 
-- Consider a `DialogOptions` builder in `primitives::dialog` to make focus targets and dismissal
-  knobs explicit (e.g. overlay-click closable vs not).
+- None currently tracked.
