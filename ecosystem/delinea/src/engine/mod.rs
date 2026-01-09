@@ -14,6 +14,7 @@ use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use crate::tooltip::{TooltipLine, TooltipOutput};
+use crate::transform::RowRange;
 use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use fret_core::Point;
@@ -960,6 +961,10 @@ fn sample_scatter_at_x(
         return None;
     }
 
+    if crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_none() {
+        return None;
+    }
+
     let xs = &x[start..end];
     if xs.len() == 1 {
         return Some(SampledSeriesValue {
@@ -1018,6 +1023,10 @@ fn sample_series_at_x(
     let start = row_range.start.min(len);
     let end = row_range.end.min(len);
     if end <= start {
+        return None;
+    }
+
+    if crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_none() {
         return None;
     }
 

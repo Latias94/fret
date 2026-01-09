@@ -247,18 +247,16 @@ impl MarksStage {
             };
 
             if self.active_series != Some(series.id) {
-                let mut selection = base_selection.clone();
-                if let Some(sel) = selection_stage.selection_for(
+                let view = selection_stage.table_view_for(
+                    table,
                     series.dataset,
                     x_col,
                     selection_range,
                     view_x_filter,
-                    table.revision,
-                ) {
-                    selection = sel;
-                }
+                    base_selection.clone(),
+                );
                 self.active_series = Some(series.id);
-                self.active_selection = selection;
+                self.active_selection = view.selection().clone();
             }
 
             let selection = self.active_selection.clone();

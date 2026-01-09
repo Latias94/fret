@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use crate::data::DatasetStore;
+use crate::data::{DataTable, DataTableView, DatasetStore};
 use crate::engine::model::ChartModel;
 use crate::engine::window_policy::AxisFilter1D;
 use crate::ids::{DatasetId, Revision};
@@ -283,6 +283,21 @@ impl SelectionStage {
             }
             _ => None,
         }
+    }
+
+    pub fn table_view_for<'a>(
+        &self,
+        table: &'a DataTable,
+        dataset: DatasetId,
+        x_col: usize,
+        selection_range: RowRange,
+        filter: AxisFilter1D,
+        base_selection: RowSelection,
+    ) -> DataTableView<'a> {
+        let selection = self
+            .selection_for(dataset, x_col, selection_range, filter, table.revision)
+            .unwrap_or(base_selection);
+        DataTableView::new(table, selection)
     }
 }
 
