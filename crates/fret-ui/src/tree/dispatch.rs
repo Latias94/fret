@@ -365,6 +365,8 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
+        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+        let mut wheel_stop_node: Option<NodeId> = None;
 
         if let Event::KeyDown {
             key,
@@ -756,6 +758,9 @@ impl<H: UiHost> UiTree<H> {
 
                 if stop_propagation {
                     stop_propagation_requested = true;
+                    if is_wheel && wheel_stop_node.is_none() {
+                        wheel_stop_node = Some(node_id);
+                    }
                 }
 
                 if self.captured.is_some() || stop_propagation {
@@ -836,6 +841,9 @@ impl<H: UiHost> UiTree<H> {
 
                 if stop_propagation {
                     stop_propagation_requested = true;
+                    if is_wheel && wheel_stop_node.is_none() {
+                        wheel_stop_node = Some(node_id);
+                    }
                 }
 
                 if self.captured.is_some() || stop_propagation {
@@ -846,6 +854,122 @@ impl<H: UiHost> UiTree<H> {
                     Some(parent) => parent,
                     None => break,
                 };
+            }
+        }
+
+        if is_wheel
+            && let Some(scroll_target) = wheel_stop_node
+            && let Some(window) = self.window
+        {
+            let is_scroll_target = declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let record = window_frame.instances.get(&scroll_target)?;
+                Some(matches!(
+                    record.instance,
+                    declarative::ElementInstance::Scroll(_)
+                        | declarative::ElementInstance::VirtualList(_)
+                        | declarative::ElementInstance::WheelRegion(_)
+                        | declarative::ElementInstance::Scrollbar(_)
+                ))
+            })
+            .unwrap_or(false);
+
+            if is_scroll_target {
+                struct ScrollDismissHookHost<'a, H: crate::UiHost> {
+                    app: &'a mut H,
+                    window: AppWindowId,
+                    element: crate::GlobalElementId,
+                }
+
+                impl<H: crate::UiHost> crate::action::UiActionHost for ScrollDismissHookHost<'_, H> {
+                    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                        self.app.models_mut()
+                    }
+
+                    fn push_effect(&mut self, effect: Effect) {
+                        match effect {
+                            Effect::SetTimer {
+                                window: Some(window),
+                                token,
+                                ..
+                            } if window == self.window => {
+                                crate::elements::record_timer_target(
+                                    &mut *self.app,
+                                    window,
+                                    token,
+                                    self.element,
+                                );
+                            }
+                            Effect::CancelTimer { token } => {
+                                crate::elements::clear_timer_target(
+                                    &mut *self.app,
+                                    self.window,
+                                    token,
+                                );
+                            }
+                            _ => {}
+                        }
+                        self.app.push_effect(effect);
+                    }
+
+                    fn request_redraw(&mut self, window: AppWindowId) {
+                        self.app.request_redraw(window);
+                    }
+
+                    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                        self.app.next_timer_token()
+                    }
+                }
+
+                let mut dismissed_any = false;
+                for layer_id in self.visible_layers_in_paint_order() {
+                    let Some(layer) = self.layers.get(layer_id) else {
+                        continue;
+                    };
+                    if layer.scroll_dismiss_descendants.is_empty() {
+                        continue;
+                    }
+                    let should_dismiss = layer
+                        .scroll_dismiss_descendants
+                        .iter()
+                        .copied()
+                        .any(|node| self.is_descendant(scroll_target, node));
+                    if !should_dismiss {
+                        continue;
+                    }
+                    let Some(root_element) = self.nodes.get(layer.root).and_then(|n| n.element)
+                    else {
+                        continue;
+                    };
+                    let hook = crate::elements::with_element_state(
+                        app,
+                        window,
+                        root_element,
+                        crate::action::DismissibleActionHooks::default,
+                        |hooks| hooks.on_dismiss_request.clone(),
+                    );
+                    let Some(hook) = hook else {
+                        continue;
+                    };
+                    let mut host = ScrollDismissHookHost {
+                        app,
+                        window,
+                        element: root_element,
+                    };
+                    hook(
+                        &mut host,
+                        crate::action::ActionCx {
+                            window,
+                            target: root_element,
+                        },
+                        crate::action::DismissReason::Scroll,
+                    );
+                    dismissed_any = true;
+                }
+
+                if dismissed_any {
+                    needs_redraw = true;
+                }
             }
         }
 
