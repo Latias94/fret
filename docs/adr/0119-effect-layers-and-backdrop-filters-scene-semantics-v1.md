@@ -183,3 +183,5 @@ Implementations are considered conformant when:
 - ADR 0118 (RenderPlan substrate): `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - Bevy postprocess patterns (ping-pong view targets): `repo-ref/bevy`
 - Zed/GPUI shader patterns (reference only): `repo-ref/zed/crates/gpui`
+- React Bits "glass" components (visual inspiration only; do not port): `repo-ref/react-bits`
+- Apple / Fluent glass-style materials (visual references; semantics must remain portable)

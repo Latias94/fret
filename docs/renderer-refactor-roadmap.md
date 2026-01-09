@@ -219,6 +219,10 @@ Recent landing points (branch-local):
 - `f47f0ec`: minimal `RenderPlan` skeleton.
 - `045a69c`: Path MSAA is an explicit `RenderPlan` pass.
 - `f32a62f`: Offscreen target + fullscreen identity blit pass + GPU equality test.
+- `27891de`: Intermediate texture pooling for offscreen targets (acquire/release per frame).
+- `865d15d`: Debug-gated pixelate postprocess (downsample/upscale chain + blit).
+- `8ba9319`: Debug-gated separable blur postprocess (downsample -> blur H/V -> upscale -> blit).
+- `523d913`: Region-scissored fullscreen passes (required for bounded backdrop/glass).
 
 ## Work Breakdown (Actionable Checklist)
 
