@@ -84,6 +84,7 @@ impl Renderer {
         } else if self.debug_blur_radius > 0 {
             DebugPostprocess::Blur {
                 radius: self.debug_blur_radius,
+                scissor: None,
             }
         } else if self.debug_offscreen_blit_enabled {
             DebugPostprocess::OffscreenBlit
@@ -812,6 +813,7 @@ impl Renderer {
                         dst_view,
                         pass.load,
                         &bind_group,
+                        pass.dst_scissor,
                     );
                 }
                 RenderPlanPass::Blur(pass) => {
@@ -875,6 +877,7 @@ impl Renderer {
                         dst_view,
                         pass.load,
                         &bind_group,
+                        pass.dst_scissor,
                     );
                 }
                 RenderPlanPass::FullscreenBlit(pass) => {
@@ -927,6 +930,7 @@ impl Renderer {
                         dst_view,
                         pass.load,
                         &blit_bind_group,
+                        pass.dst_scissor,
                     );
                 }
             }

@@ -67,6 +67,7 @@ Deliverables:
   - write to a destination color attachment.
 - Implementation note:
   - Keep a shared fullscreen pass runner utility that owns render-pass boilerplate (to avoid N copies as effects grow).
+- Add support for region-scissored fullscreen passes (required for bounded glass/backdrop effects).
 - Add internal utilities for common postprocess patterns:
   - ping-pong between A/B intermediates
   - downsample chain helpers (half/quarter res; chain sizing metadata in `RenderPlan`)

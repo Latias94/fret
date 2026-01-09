@@ -18,8 +18,13 @@ pub(super) enum PlanTarget {
 pub(super) enum DebugPostprocess {
     None,
     OffscreenBlit,
-    Pixelate { scale: u32 },
-    Blur { radius: u32 },
+    Pixelate {
+        scale: u32,
+    },
+    Blur {
+        radius: u32,
+        scissor: Option<ScissorRect>,
+    },
 }
 
 #[derive(Debug)]
@@ -51,6 +56,7 @@ pub(super) struct BlurPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) axis: BlurAxis,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
@@ -61,6 +67,7 @@ pub(super) struct FullscreenBlitPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -76,6 +83,7 @@ pub(super) struct ScaleNearestPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mode: ScaleMode,
     pub(super) scale: u32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
@@ -210,12 +218,55 @@ fn decompose_pixelate_scale(scale: u32) -> Vec<u32> {
     steps
 }
 
+fn map_scissor_to_size(
+    scissor_in_full: Option<ScissorRect>,
+    full_size: (u32, u32),
+    dst_size: (u32, u32),
+) -> Option<ScissorRect> {
+    let scissor = scissor_in_full?;
+    if scissor.w == 0 || scissor.h == 0 {
+        return None;
+    }
+
+    let full_w = full_size.0.max(1) as u64;
+    let full_h = full_size.1.max(1) as u64;
+    let dst_w = dst_size.0.max(1) as u64;
+    let dst_h = dst_size.1.max(1) as u64;
+
+    let x0 = scissor.x as u64;
+    let y0 = scissor.y as u64;
+    let x1 = x0.saturating_add(scissor.w as u64);
+    let y1 = y0.saturating_add(scissor.h as u64);
+
+    let sx0 = (x0 * dst_w) / full_w;
+    let sy0 = (y0 * dst_h) / full_h;
+    let sx1 = (x1 * dst_w + full_w - 1) / full_w;
+    let sy1 = (y1 * dst_h + full_h - 1) / full_h;
+
+    let sx0 = sx0.min(dst_w);
+    let sy0 = sy0.min(dst_h);
+    let sx1 = sx1.min(dst_w);
+    let sy1 = sy1.min(dst_h);
+
+    if sx1 <= sx0 || sy1 <= sy0 {
+        return None;
+    }
+
+    Some(ScissorRect {
+        x: sx0 as u32,
+        y: sy0 as u32,
+        w: (sx1 - sx0) as u32,
+        h: (sy1 - sy0) as u32,
+    })
+}
+
 fn push_scale_nearest(
     plan: &mut RenderPlan,
     src: PlanTarget,
     dst: PlanTarget,
     src_size: (u32, u32),
     dst_size: (u32, u32),
+    dst_scissor: Option<ScissorRect>,
     mode: ScaleMode,
     scale: u32,
     clear: wgpu::Color,
@@ -226,6 +277,7 @@ fn push_scale_nearest(
             dst,
             src_size,
             dst_size,
+            dst_scissor,
             mode,
             scale,
             load: wgpu::LoadOp::Clear(clear),
@@ -238,6 +290,7 @@ fn push_fullscreen_blit(
     dst: PlanTarget,
     src_size: (u32, u32),
     dst_size: (u32, u32),
+    dst_scissor: Option<ScissorRect>,
     clear: wgpu::Color,
 ) {
     plan.passes
@@ -246,6 +299,7 @@ fn push_fullscreen_blit(
             dst,
             src_size,
             dst_size,
+            dst_scissor,
             load: wgpu::LoadOp::Clear(clear),
         }));
 }
@@ -256,6 +310,7 @@ fn push_blur(
     dst: PlanTarget,
     src_size: (u32, u32),
     dst_size: (u32, u32),
+    dst_scissor: Option<ScissorRect>,
     axis: BlurAxis,
     clear: wgpu::Color,
 ) {
@@ -264,6 +319,7 @@ fn push_blur(
         dst,
         src_size,
         dst_size,
+        dst_scissor,
         axis,
         load: wgpu::LoadOp::Clear(clear),
     }));
@@ -276,17 +332,21 @@ fn append_downsample_chain(
     steps: &[u32],
     mut dst_a: PlanTarget,
     mut dst_b: PlanTarget,
+    scissor_in_full: Option<ScissorRect>,
+    full_size: (u32, u32),
     clear: wgpu::Color,
 ) -> (PlanTarget, (u32, u32), Vec<((u32, u32), u32)>) {
     let mut stack: Vec<((u32, u32), u32)> = Vec::with_capacity(steps.len());
     for step in steps.iter().copied() {
         let dst_size = downsampled_size(current_size, step);
+        let dst_scissor = map_scissor_to_size(scissor_in_full, full_size, dst_size);
         push_scale_nearest(
             plan,
             current_target,
             dst_a,
             current_size,
             dst_size,
+            dst_scissor,
             ScaleMode::Downsample,
             step,
             clear,
@@ -314,6 +374,8 @@ fn append_downsample_half_quarter(
     src_size: (u32, u32),
     half_target: PlanTarget,
     quarter_target: PlanTarget,
+    scissor_in_full: Option<ScissorRect>,
+    full_size: (u32, u32),
     clear: wgpu::Color,
 ) -> DownsampleHalfQuarter {
     debug_assert_ne!(src_target, PlanTarget::Output);
@@ -322,24 +384,28 @@ fn append_downsample_half_quarter(
     debug_assert_ne!(half_target, quarter_target);
 
     let half_size = downsampled_size(src_size, 2);
+    let half_scissor = map_scissor_to_size(scissor_in_full, full_size, half_size);
     push_scale_nearest(
         plan,
         src_target,
         half_target,
         src_size,
         half_size,
+        half_scissor,
         ScaleMode::Downsample,
         2,
         clear,
     );
 
     let quarter_size = downsampled_size(half_size, 2);
+    let quarter_scissor = map_scissor_to_size(scissor_in_full, full_size, quarter_size);
     push_scale_nearest(
         plan,
         half_target,
         quarter_target,
         half_size,
         quarter_size,
+        quarter_scissor,
         ScaleMode::Downsample,
         2,
         clear,
@@ -359,6 +425,8 @@ fn append_upsample_chain(
     mut current_target: PlanTarget,
     mut current_size: (u32, u32),
     mut stack: Vec<((u32, u32), u32)>,
+    scissor_in_full: Option<ScissorRect>,
+    full_size: (u32, u32),
     clear: wgpu::Color,
 ) -> (PlanTarget, (u32, u32)) {
     while let Some((dst_size, step)) = stack.pop() {
@@ -369,12 +437,14 @@ fn append_upsample_chain(
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
         };
+        let dst_scissor = map_scissor_to_size(scissor_in_full, full_size, dst_size);
         push_scale_nearest(
             plan,
             current_target,
             dst_target,
             current_size,
             dst_size,
+            dst_scissor,
             ScaleMode::Upscale,
             step,
             clear,
@@ -400,6 +470,7 @@ fn append_postprocess(
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
+                None,
                 clear,
             );
         }
@@ -413,6 +484,8 @@ fn append_postprocess(
                         viewport_size,
                         PlanTarget::Intermediate2,
                         PlanTarget::Intermediate1,
+                        None,
+                        viewport_size,
                         clear,
                     );
 
@@ -424,6 +497,8 @@ fn append_postprocess(
                         &steps[2..],
                         half_quarter.half_target,
                         half_quarter.quarter_target,
+                        None,
+                        viewport_size,
                         clear,
                     );
                     stack.extend(rest_stack);
@@ -436,21 +511,31 @@ fn append_postprocess(
                         &steps,
                         PlanTarget::Intermediate2,
                         PlanTarget::Intermediate1,
+                        None,
+                        viewport_size,
                         clear,
                     )
                 };
-            let (current_target, _current_size) =
-                append_upsample_chain(plan, current_target, current_size, stack, clear);
+            let (current_target, _current_size) = append_upsample_chain(
+                plan,
+                current_target,
+                current_size,
+                stack,
+                None,
+                viewport_size,
+                clear,
+            );
             push_fullscreen_blit(
                 plan,
                 current_target,
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
+                None,
                 clear,
             );
         }
-        DebugPostprocess::Blur { radius } => {
+        DebugPostprocess::Blur { radius, scissor } => {
             let radius = radius.max(1);
             let half_quarter = append_downsample_half_quarter(
                 plan,
@@ -458,6 +543,8 @@ fn append_postprocess(
                 viewport_size,
                 PlanTarget::Intermediate2,
                 PlanTarget::Intermediate1,
+                scissor,
+                viewport_size,
                 clear,
             );
 
@@ -476,12 +563,14 @@ fn append_postprocess(
                 )
             };
 
+            let blur_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
             push_blur(
                 plan,
                 blur_src,
                 scratch,
                 blur_size,
                 blur_size,
+                blur_scissor,
                 BlurAxis::Horizontal,
                 clear,
             );
@@ -491,17 +580,20 @@ fn append_postprocess(
                 blur_src,
                 blur_size,
                 blur_size,
+                blur_scissor,
                 BlurAxis::Vertical,
                 clear,
             );
 
             let upscale_scale = if use_quarter { 4 } else { 2 };
+            let final_scissor = map_scissor_to_size(scissor, viewport_size, viewport_size);
             push_scale_nearest(
                 plan,
                 blur_src,
                 PlanTarget::Intermediate0,
                 blur_size,
                 viewport_size,
+                final_scissor,
                 ScaleMode::Upscale,
                 upscale_scale,
                 clear,
@@ -512,6 +604,7 @@ fn append_postprocess(
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
+                final_scissor,
                 clear,
             );
         }
@@ -563,6 +656,7 @@ mod tests {
         assert_eq!(blit.dst, PlanTarget::Output);
         assert_eq!(blit.src_size, (100, 100));
         assert_eq!(blit.dst_size, (100, 100));
+        assert_eq!(blit.dst_scissor, None);
     }
 
     #[test]
@@ -592,6 +686,7 @@ mod tests {
         assert_eq!(down0.scale, 2);
         assert_eq!(down0.src_size, viewport_size);
         assert_eq!(down0.dst_size, downsampled_size(viewport_size, 2));
+        assert_eq!(down0.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(down1) = &plan.passes[2] else {
             panic!("expected ScaleNearest downsample pass 1");
@@ -602,6 +697,7 @@ mod tests {
         assert_eq!(down1.scale, 2);
         assert_eq!(down1.src_size, down0.dst_size);
         assert_eq!(down1.dst_size, downsampled_size(down0.dst_size, 2));
+        assert_eq!(down1.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(up0) = &plan.passes[3] else {
             panic!("expected ScaleNearest upscale pass 0");
@@ -612,6 +708,7 @@ mod tests {
         assert_eq!(up0.scale, 2);
         assert_eq!(up0.src_size, down1.dst_size);
         assert_eq!(up0.dst_size, down1.src_size);
+        assert_eq!(up0.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(up1) = &plan.passes[4] else {
             panic!("expected ScaleNearest upscale pass 1");
@@ -622,6 +719,7 @@ mod tests {
         assert_eq!(up1.scale, 2);
         assert_eq!(up1.src_size, up0.dst_size);
         assert_eq!(up1.dst_size, viewport_size);
+        assert_eq!(up1.dst_scissor, None);
 
         let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[5] else {
             panic!("expected FullscreenBlit pass");
@@ -630,6 +728,7 @@ mod tests {
         assert_eq!(blit.dst, PlanTarget::Output);
         assert_eq!(blit.src_size, viewport_size);
         assert_eq!(blit.dst_size, viewport_size);
+        assert_eq!(blit.dst_scissor, None);
     }
 
     #[test]
@@ -641,6 +740,8 @@ mod tests {
             (128, 64),
             PlanTarget::Intermediate2,
             PlanTarget::Intermediate1,
+            None,
+            (128, 64),
             wgpu::Color::TRANSPARENT,
         );
 
@@ -658,6 +759,7 @@ mod tests {
         assert_eq!(pass0.dst_size, (64, 32));
         assert_eq!(pass0.mode, ScaleMode::Downsample);
         assert_eq!(pass0.scale, 2);
+        assert_eq!(pass0.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(pass1) = &plan.passes[1] else {
             panic!("expected ScaleNearest pass 1");
@@ -668,6 +770,7 @@ mod tests {
         assert_eq!(pass1.dst_size, (32, 16));
         assert_eq!(pass1.mode, ScaleMode::Downsample);
         assert_eq!(pass1.scale, 2);
+        assert_eq!(pass1.dst_scissor, None);
     }
 
     #[test]
@@ -679,7 +782,10 @@ mod tests {
             viewport_size,
             wgpu::Color::TRANSPARENT,
             1,
-            DebugPostprocess::Blur { radius: 2 },
+            DebugPostprocess::Blur {
+                radius: 2,
+                scissor: None,
+            },
         );
 
         assert_eq!(plan.passes.len(), 7);
@@ -697,6 +803,7 @@ mod tests {
         assert_eq!(half.dst_size, (64, 32));
         assert_eq!(half.mode, ScaleMode::Downsample);
         assert_eq!(half.scale, 2);
+        assert_eq!(half.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(quarter) = &plan.passes[2] else {
             panic!("expected quarter downsample pass");
@@ -707,6 +814,7 @@ mod tests {
         assert_eq!(quarter.dst_size, (32, 16));
         assert_eq!(quarter.mode, ScaleMode::Downsample);
         assert_eq!(quarter.scale, 2);
+        assert_eq!(quarter.dst_scissor, None);
 
         let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
             panic!("expected blur-h pass");
@@ -716,6 +824,7 @@ mod tests {
         assert_eq!(blur_h.dst, PlanTarget::Intermediate0);
         assert_eq!(blur_h.src_size, (64, 32));
         assert_eq!(blur_h.dst_size, (64, 32));
+        assert_eq!(blur_h.dst_scissor, None);
 
         let RenderPlanPass::Blur(blur_v) = &plan.passes[4] else {
             panic!("expected blur-v pass");
@@ -725,6 +834,7 @@ mod tests {
         assert_eq!(blur_v.dst, PlanTarget::Intermediate2);
         assert_eq!(blur_v.src_size, (64, 32));
         assert_eq!(blur_v.dst_size, (64, 32));
+        assert_eq!(blur_v.dst_scissor, None);
 
         let RenderPlanPass::ScaleNearest(upscale) = &plan.passes[5] else {
             panic!("expected upscale pass");
@@ -735,6 +845,7 @@ mod tests {
         assert_eq!(upscale.dst_size, viewport_size);
         assert_eq!(upscale.mode, ScaleMode::Upscale);
         assert_eq!(upscale.scale, 2);
+        assert_eq!(upscale.dst_scissor, None);
 
         let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
             panic!("expected blit pass");
@@ -743,5 +854,65 @@ mod tests {
         assert_eq!(blit.dst, PlanTarget::Output);
         assert_eq!(blit.src_size, viewport_size);
         assert_eq!(blit.dst_size, viewport_size);
+        assert_eq!(blit.dst_scissor, None);
+    }
+
+    #[test]
+    fn blur_scissor_is_mapped_per_pass_dst_size() {
+        let encoding = SceneEncoding::default();
+        let viewport_size = (100, 100);
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::Blur {
+                radius: 2,
+                scissor: Some(ScissorRect {
+                    x: 10,
+                    y: 10,
+                    w: 50,
+                    h: 50,
+                }),
+            },
+        );
+
+        // Half target is (50, 50) for 100x100.
+        let RenderPlanPass::ScaleNearest(half) = &plan.passes[1] else {
+            panic!("expected half downsample pass");
+        };
+        assert_eq!(
+            half.dst_scissor,
+            Some(ScissorRect {
+                x: 5,
+                y: 5,
+                w: 25,
+                h: 25
+            })
+        );
+        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
+            panic!("expected blur-h pass");
+        };
+        assert_eq!(
+            blur_h.dst_scissor,
+            Some(ScissorRect {
+                x: 5,
+                y: 5,
+                w: 25,
+                h: 25
+            })
+        );
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
+            panic!("expected blit pass");
+        };
+        assert_eq!(
+            blit.dst_scissor,
+            Some(ScissorRect {
+                x: 10,
+                y: 10,
+                w: 50,
+                h: 50
+            })
+        );
     }
 }
