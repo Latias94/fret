@@ -167,6 +167,53 @@ impl NodeGraphCanvas {
         Some((first.severity, Arc::<str>::from(first.message.clone())))
     }
 
+    fn repair_focused_edge_after_graph_change<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        preferred: Option<EdgeId>,
+    ) {
+        if preferred.is_none() && self.interaction.focused_edge.is_none() {
+            return;
+        }
+
+        let snapshot = self.sync_view_state(host);
+        if !snapshot.interaction.edges_focusable && !snapshot.interaction.edges_reconnectable {
+            self.interaction.focused_edge = None;
+            return;
+        }
+
+        let (edges, current_valid) = self
+            .graph
+            .read_ref(host, |g| {
+                let mut edges: Vec<EdgeId> = g.edges.keys().copied().collect();
+                edges.sort_unstable();
+                let current = self.interaction.focused_edge;
+                let current_valid = current.is_some_and(|id| g.edges.contains_key(&id));
+                (edges, current_valid)
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if edges.is_empty() {
+            self.interaction.focused_edge = None;
+            return;
+        }
+
+        if current_valid {
+            return;
+        }
+
+        let base = preferred.or(self.interaction.focused_edge);
+        let next = match base {
+            Some(id) => match edges.binary_search(&id) {
+                Ok(ix) => edges.get(ix).copied(),
+                Err(ix) => edges.get(ix).copied().or_else(|| edges.first().copied()),
+            },
+            None => edges.first().copied(),
+        };
+        self.interaction.focused_edge = next;
+    }
+
     fn draw_order_hash(ids: &[GraphNodeId]) -> u64 {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         ids.hash(&mut hasher);
@@ -917,6 +964,7 @@ impl NodeGraphCanvas {
     }
 
     fn undo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
+        let preferred_focus = self.interaction.focused_edge;
         let mut history = std::mem::take(&mut self.history);
         let result = history.undo(|tx| self.apply_transaction_result(host, tx));
         self.history = history;
@@ -928,6 +976,7 @@ impl NodeGraphCanvas {
                     s.selected_nodes.clear();
                     s.selected_groups.clear();
                 });
+                self.repair_focused_edge_after_graph_change(host, preferred_focus);
                 true
             }
             Ok(false) => false,
@@ -941,6 +990,7 @@ impl NodeGraphCanvas {
     }
 
     fn redo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
+        let preferred_focus = self.interaction.focused_edge;
         let mut history = std::mem::take(&mut self.history);
         let result = history.redo(|tx| self.apply_transaction_result(host, tx));
         self.history = history;
@@ -952,6 +1002,7 @@ impl NodeGraphCanvas {
                     s.selected_nodes.clear();
                     s.selected_groups.clear();
                 });
+                self.repair_focused_edge_after_graph_change(host, preferred_focus);
                 true
             }
             Ok(false) => false,
@@ -3804,6 +3855,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 true
             }
             CMD_NODE_GRAPH_DELETE_SELECTION => {
+                let preferred_focus = self
+                    .interaction
+                    .focused_edge
+                    .or_else(|| snapshot.selected_edges.first().copied());
                 let selected_edges = snapshot.selected_edges.clone();
                 let selected_nodes = snapshot.selected_nodes.clone();
                 let selected_groups = snapshot.selected_groups.clone();
@@ -3828,12 +3883,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .unwrap_or_default();
 
                 let _ = self.commit_ops(cx.app, cx.window, Some("Delete Selection"), remove_ops);
-                self.interaction.focused_edge = None;
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
                     s.selected_groups.clear();
                 });
+                self.repair_focused_edge_after_graph_change(cx.app, preferred_focus);
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
                 true

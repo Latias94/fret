@@ -40,6 +40,7 @@ enum TuningHit {
     AutoPanMarginInc,
     AutoPanSpeedDec,
     AutoPanSpeedInc,
+    ToggleEdgesReconnectable,
 }
 
 #[derive(Debug, Clone)]
@@ -82,7 +83,7 @@ impl NodeGraphTuningOverlay {
         let btn = self.style.controls_button_size.max(22.0);
 
         let panel_w = 340.0;
-        let rows = 16.0;
+        let rows = 17.0;
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -329,6 +330,14 @@ impl NodeGraphTuningOverlay {
             TuningHit::AutoPanSpeedDec,
             TuningHit::AutoPanSpeedInc,
         );
+        cy += row_h + gap;
+
+        // Row 15: edges_reconnectable
+        let edges_reconnectable_btn = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        hits.push((TuningHit::ToggleEdgesReconnectable, edges_reconnectable_btn));
 
         TuningLayout { panel, hits }
     }
@@ -543,6 +552,9 @@ impl NodeGraphTuningOverlay {
             TuningHit::AutoPanSpeedInc => {
                 s.interaction.auto_pan.speed =
                     (s.interaction.auto_pan.speed + 50.0 * step_scale).clamp(0.0, 4000.0);
+            }
+            TuningHit::ToggleEdgesReconnectable => {
+                s.interaction.edges_reconnectable = !s.interaction.edges_reconnectable;
             }
         });
     }
@@ -1277,6 +1289,47 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             format!("{:.0}", state.interaction.auto_pan.speed),
             TuningHit::AutoPanSpeedDec,
             TuningHit::AutoPanSpeedInc,
+        );
+        cy += row_h + gap;
+
+        let edges_reconnectable_text = if state.interaction.edges_reconnectable {
+            "On"
+        } else {
+            "Off"
+        };
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Edges reconnect", edges_reconnectable_text),
+            self.style.context_menu_text,
+        );
+        let edges_reconnectable_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let edges_reconnectable_bg = if self.hovered == Some(TuningHit::ToggleEdgesReconnectable) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: edges_reconnectable_btn_rect,
+            background: edges_reconnectable_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(edges_reconnectable_btn_rect.origin.x.0 + 4.0),
+                Px(edges_reconnectable_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            edges_reconnectable_text,
+            self.style.controls_text,
         );
     }
 
