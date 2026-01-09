@@ -118,7 +118,7 @@ impl Renderer {
                 DebugPostprocess::Blur {
                     radius,
                     downsample_scale,
-                    scissor: None,
+                    scissor: self.debug_blur_scissor,
                 }
             }
         } else if self.debug_offscreen_blit_enabled {

@@ -164,6 +164,19 @@ impl Renderer {
         self.debug_blur_radius = radius.min(64);
     }
 
+    pub fn debug_blur_scissor(&self) -> Option<(u32, u32, u32, u32)> {
+        self.debug_blur_scissor.map(|s| (s.x, s.y, s.w, s.h))
+    }
+
+    pub fn set_debug_blur_scissor(&mut self, scissor: Option<(u32, u32, u32, u32)>) {
+        self.debug_blur_scissor = scissor.and_then(|(x, y, w, h)| {
+            if w == 0 || h == 0 {
+                return None;
+            }
+            Some(ScissorRect { x, y, w, h })
+        });
+    }
+
     pub fn intermediate_budget_bytes(&self) -> u64 {
         self.intermediate_budget_bytes
     }

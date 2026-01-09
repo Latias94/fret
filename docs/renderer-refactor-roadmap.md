@@ -215,6 +215,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
     - Debug blur postprocess selects a cheaper downsample tier when `intermediate_budget_bytes` would be exceeded.
+    - Region-scissored blur preserves outside pixels (base blit + in-place scissored upscale) with a GPU conformance test.
   - M4: Deferred.
 
 Recent landing points (branch-local):

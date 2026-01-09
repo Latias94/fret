@@ -339,7 +339,7 @@ fn push_scale_nearest(
     dst_scissor: Option<ScissorRect>,
     mode: ScaleMode,
     scale: u32,
-    clear: wgpu::Color,
+    load: wgpu::LoadOp<wgpu::Color>,
 ) {
     plan.passes
         .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
@@ -350,7 +350,7 @@ fn push_scale_nearest(
             dst_scissor,
             mode,
             scale,
-            load: wgpu::LoadOp::Clear(clear),
+            load,
         }));
 }
 
@@ -361,7 +361,7 @@ fn push_fullscreen_blit(
     src_size: (u32, u32),
     dst_size: (u32, u32),
     dst_scissor: Option<ScissorRect>,
-    clear: wgpu::Color,
+    load: wgpu::LoadOp<wgpu::Color>,
 ) {
     plan.passes
         .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
@@ -370,7 +370,7 @@ fn push_fullscreen_blit(
             src_size,
             dst_size,
             dst_scissor,
-            load: wgpu::LoadOp::Clear(clear),
+            load,
         }));
 }
 
@@ -382,7 +382,7 @@ fn push_blur(
     dst_size: (u32, u32),
     dst_scissor: Option<ScissorRect>,
     axis: BlurAxis,
-    clear: wgpu::Color,
+    load: wgpu::LoadOp<wgpu::Color>,
 ) {
     plan.passes.push(RenderPlanPass::Blur(BlurPass {
         src,
@@ -391,7 +391,7 @@ fn push_blur(
         dst_size,
         dst_scissor,
         axis,
-        load: wgpu::LoadOp::Clear(clear),
+        load,
     }));
 }
 
@@ -419,7 +419,7 @@ fn append_downsample_chain(
             dst_scissor,
             ScaleMode::Downsample,
             step,
-            clear,
+            wgpu::LoadOp::Clear(clear),
         );
         stack.push((current_size, step));
         current_target = dst_a;
@@ -465,7 +465,7 @@ fn append_downsample_half_quarter(
         half_scissor,
         ScaleMode::Downsample,
         2,
-        clear,
+        wgpu::LoadOp::Clear(clear),
     );
 
     let quarter_size = downsampled_size(half_size, 2);
@@ -479,7 +479,7 @@ fn append_downsample_half_quarter(
         quarter_scissor,
         ScaleMode::Downsample,
         2,
-        clear,
+        wgpu::LoadOp::Clear(clear),
     );
 
     DownsampleHalfQuarter {
@@ -518,7 +518,7 @@ fn append_upsample_chain(
             dst_scissor,
             ScaleMode::Upscale,
             step,
-            clear,
+            wgpu::LoadOp::Clear(clear),
         );
         current_target = dst_target;
         current_size = dst_size;
@@ -542,7 +542,7 @@ fn append_postprocess(
                 viewport_size,
                 viewport_size,
                 None,
-                clear,
+                wgpu::LoadOp::Clear(clear),
             );
         }
         DebugPostprocess::Pixelate { scale } => {
@@ -586,7 +586,7 @@ fn append_postprocess(
                         None,
                         ScaleMode::Downsample,
                         first_step,
-                        clear,
+                        wgpu::LoadOp::Clear(clear),
                     );
                     let mut stack = vec![(viewport_size, first_step)];
 
@@ -620,7 +620,7 @@ fn append_postprocess(
                 viewport_size,
                 viewport_size,
                 None,
-                clear,
+                wgpu::LoadOp::Clear(clear),
             );
         }
         DebugPostprocess::Blur {
@@ -656,7 +656,7 @@ fn append_postprocess(
                 down_scissor,
                 ScaleMode::Downsample,
                 downsample_scale,
-                clear,
+                wgpu::LoadOp::Clear(clear),
             );
 
             let blur_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
@@ -668,7 +668,7 @@ fn append_postprocess(
                 blur_size,
                 blur_scissor,
                 BlurAxis::Horizontal,
-                clear,
+                wgpu::LoadOp::Clear(clear),
             );
             push_blur(
                 plan,
@@ -678,30 +678,55 @@ fn append_postprocess(
                 blur_size,
                 blur_scissor,
                 BlurAxis::Vertical,
-                clear,
+                wgpu::LoadOp::Clear(clear),
             );
 
             let final_scissor = map_scissor_to_size(scissor, viewport_size, viewport_size);
-            push_scale_nearest(
-                plan,
-                blur_src,
-                PlanTarget::Intermediate0,
-                blur_size,
-                viewport_size,
-                final_scissor,
-                ScaleMode::Upscale,
-                downsample_scale,
-                clear,
-            );
-            push_fullscreen_blit(
-                plan,
-                PlanTarget::Intermediate0,
-                PlanTarget::Output,
-                viewport_size,
-                viewport_size,
-                final_scissor,
-                clear,
-            );
+            if scissor.is_some() {
+                // For region-limited effects we must preserve the content outside the scissor.
+                // Copy the base scene to the output first, then write the blurred region in-place.
+                push_fullscreen_blit(
+                    plan,
+                    PlanTarget::Intermediate0,
+                    PlanTarget::Output,
+                    viewport_size,
+                    viewport_size,
+                    None,
+                    wgpu::LoadOp::Clear(clear),
+                );
+                push_scale_nearest(
+                    plan,
+                    blur_src,
+                    PlanTarget::Output,
+                    blur_size,
+                    viewport_size,
+                    final_scissor,
+                    ScaleMode::Upscale,
+                    downsample_scale,
+                    wgpu::LoadOp::Load,
+                );
+            } else {
+                push_scale_nearest(
+                    plan,
+                    blur_src,
+                    PlanTarget::Intermediate0,
+                    blur_size,
+                    viewport_size,
+                    final_scissor,
+                    ScaleMode::Upscale,
+                    downsample_scale,
+                    wgpu::LoadOp::Clear(clear),
+                );
+                push_fullscreen_blit(
+                    plan,
+                    PlanTarget::Intermediate0,
+                    PlanTarget::Output,
+                    viewport_size,
+                    viewport_size,
+                    final_scissor,
+                    wgpu::LoadOp::Clear(clear),
+                );
+            }
         }
     }
 }
@@ -1072,16 +1097,34 @@ mod tests {
                 h: 25
             })
         );
-        let blit = plan
+        let base_blit = plan
             .passes
             .iter()
             .find_map(|p| match p {
-                RenderPlanPass::FullscreenBlit(p) => Some(*p),
+                RenderPlanPass::FullscreenBlit(p)
+                    if p.src == PlanTarget::Intermediate0 && p.dst == PlanTarget::Output =>
+                {
+                    Some(*p)
+                }
                 _ => None,
             })
-            .expect("expected blit pass");
+            .expect("expected base blit pass");
+        assert_eq!(base_blit.dst_scissor, None);
+
+        let upscale = plan
+            .passes
+            .iter()
+            .find_map(|p| match p {
+                RenderPlanPass::ScaleNearest(p)
+                    if p.mode == ScaleMode::Upscale && p.dst == PlanTarget::Output =>
+                {
+                    Some(*p)
+                }
+                _ => None,
+            })
+            .expect("expected upscale-to-output pass");
         assert_eq!(
-            blit.dst_scissor,
+            upscale.dst_scissor,
             Some(ScissorRect {
                 x: 10,
                 y: 10,
