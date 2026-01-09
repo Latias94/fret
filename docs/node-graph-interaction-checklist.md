@@ -178,6 +178,7 @@ Invariants:
 - (implemented) Copy selection creates a deterministic `GraphFragment` payload.
 - (implemented) Paste uses a deterministic offset strategy when repeatedly pasting at the same anchor.
 - (implemented) Paste is undoable as one transaction.
+- (prototype) Copy selection includes selected groups (and their child nodes) when groups are selected.
 
 ## H) Minimap and Controls (todo)
 

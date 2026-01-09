@@ -1084,19 +1084,23 @@ impl NodeGraphCanvas {
         at
     }
 
-    fn copy_selected_nodes_to_clipboard<H: UiHost>(
+    fn copy_selection_to_clipboard<H: UiHost>(
         &mut self,
         host: &mut H,
         selected_nodes: &[GraphNodeId],
+        selected_groups: &[crate::core::GroupId],
     ) {
-        if selected_nodes.is_empty() {
+        if selected_nodes.is_empty() && selected_groups.is_empty() {
             return;
         }
-        let nodes: Vec<GraphNodeId> = selected_nodes.to_vec();
         let text = self
             .graph
             .read_ref(host, |graph| {
-                let fragment = GraphFragment::from_nodes(graph, nodes);
+                let fragment = GraphFragment::from_selection(
+                    graph,
+                    selected_nodes.to_vec(),
+                    selected_groups.to_vec(),
+                );
                 match serde_json::to_string(&fragment) {
                     Ok(json) => format!("fret-node.fragment.v1\n{json}"),
                     Err(_) => String::new(),
@@ -1152,6 +1156,10 @@ impl NodeGraphCanvas {
             min_x = min_x.min(node.pos.x);
             min_y = min_y.min(node.pos.y);
         }
+        for group in fragment.groups.values() {
+            min_x = min_x.min(group.rect.origin.x);
+            min_y = min_y.min(group.rect.origin.y);
+        }
         if !min_x.is_finite() || !min_y.is_finite() {
             return;
         }
@@ -1173,19 +1181,31 @@ impl NodeGraphCanvas {
                 _ => None,
             })
             .collect();
+        let new_groups: Vec<crate::core::GroupId> = tx
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                GraphOp::AddGroup { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
 
         if !self.apply_ops_result(host, window, tx.ops) {
             return;
         }
 
-        if !new_nodes.is_empty() {
+        if !new_nodes.is_empty() || !new_groups.is_empty() {
             self.update_view_state(host, |s| {
                 s.selected_edges.clear();
-                s.selected_groups.clear();
                 s.selected_nodes = new_nodes.clone();
+                s.selected_groups = new_groups.clone();
                 for id in &new_nodes {
                     s.draw_order.retain(|x| x != id);
                     s.draw_order.push(*id);
+                }
+                for id in &new_groups {
+                    s.group_draw_order.retain(|x| x != id);
+                    s.group_draw_order.push(*id);
                 }
             });
         }
@@ -3888,11 +3908,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 true
             }
             CMD_NODE_GRAPH_COPY => {
-                self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                self.copy_selection_to_clipboard(
+                    cx.app,
+                    &snapshot.selected_nodes,
+                    &snapshot.selected_groups,
+                );
                 true
             }
             CMD_NODE_GRAPH_CUT => {
-                self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                self.copy_selection_to_clipboard(
+                    cx.app,
+                    &snapshot.selected_nodes,
+                    &snapshot.selected_groups,
+                );
 
                 let selected_nodes = snapshot.selected_nodes.clone();
                 let selected_edges = snapshot.selected_edges.clone();

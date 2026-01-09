@@ -449,9 +449,12 @@ High-level layering (ADR 0135):
   - XyFlow: userland; store emits changes continuously, apps decide history granularity
   - fret-node: transaction model exists (`GraphTransaction`); needs conformance tests to lock granularity
 
-- [ ] **Copy/paste selection**
+- [x] **Copy/paste selection**
   - XyFlow: userland; but many examples implement it
-  - fret-node: planned `GraphFragment` (roadmap); not implemented
+  - fret-node:
+    - deterministic fragment payload: `ecosystem/fret-node/src/ops/fragment.rs` (`GraphFragment`)
+    - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardSetText` / `ClipboardGetText`)
+    - captures selected nodes + selected groups (including group children) + internal edges
 
 ---
 
