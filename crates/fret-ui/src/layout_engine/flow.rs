@@ -295,6 +295,8 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::Semantics(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
+            | ElementInstance::PointerRegion(_)
+            | ElementInstance::WheelRegion(_)
             | ElementInstance::Stack(_),
         ) if !tree.children(node).is_empty() => {
             let mut style = style_for_item_in_parent(
