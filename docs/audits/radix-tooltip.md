@@ -21,9 +21,12 @@ Fret models Radix tooltip outcomes by composing:
 
 - Delay group state machine: `ecosystem/fret-ui-kit/src/headless/tooltip_delay_group.rs`
 - Provider scoping: `ecosystem/fret-ui-kit/src/tooltip_provider.rs`
+- Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
+- Pointer “safe hover” corridor math: `ecosystem/fret-ui-kit/src/headless/safe_hover.rs`
 - Placement: `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - Portal rendering: per-window overlay roots via `ecosystem/fret-ui-kit/src/window_overlays/*`
 - Radix-named facade: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
+- shadcn recipe wiring (reference implementation): `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 
 ## Current parity notes
 
@@ -33,4 +36,12 @@ Fret models Radix tooltip outcomes by composing:
 - Pass: Controlled/uncontrolled open modeling is available via
   `primitives::tooltip::tooltip_use_open_model(...)` (backed by the shared controllable-state
   substrate).
+- Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState` (see shadcn tooltip
+  for a concrete wiring reference).
+- Pass: Hoverable-content grace behavior (`disableHoverableContent` outcome) is implemented as a
+  deterministic safe-hover corridor between trigger and content (see shadcn tooltip).
 
+## Follow-ups (recommended)
+
+- Consider downshifting the hover intent + grace-corridor wiring into the Radix-named primitives
+  facade (so non-shadcn consumers can reuse the same policy without copying recipe code).
