@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -35,11 +36,26 @@ pub enum PopoverVariant {
     Modal,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct PopoverOptions {
     pub variant: PopoverVariant,
     pub consume_outside_pointer_events: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
+}
+
+impl std::fmt::Debug for PopoverOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PopoverOptions")
+            .field("variant", &self.variant)
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
+            .field("initial_focus", &self.initial_focus)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .finish()
+    }
 }
 
 impl Default for PopoverOptions {
@@ -48,6 +64,7 @@ impl Default for PopoverOptions {
             variant: PopoverVariant::NonModal,
             consume_outside_pointer_events: false,
             initial_focus: None,
+            on_dismiss_request: None,
         }
     }
 }
@@ -69,6 +86,16 @@ impl PopoverOptions {
 
     pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
         self.initial_focus = Some(element);
+        self
+    }
+
+    /// Installs a DismissableLayer-style dismiss handler.
+    ///
+    /// When set, this overrides the default behavior that closes the popover on dismiss.
+    /// Callers may update the `open` model themselves (or intentionally keep it open) to mirror
+    /// Radix `onInteractOutside` / `onEscapeKeyDown` `preventDefault` outcomes.
+    pub fn on_dismiss_request(mut self, handler: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = handler;
         self
     }
 }
@@ -128,8 +155,13 @@ impl PopoverRoot {
         self
     }
 
+    pub fn on_dismiss_request(mut self, handler: Option<OnDismissRequest>) -> Self {
+        self.options = self.options.on_dismiss_request(handler);
+        self
+    }
+
     pub fn options(&self) -> PopoverOptions {
-        self.options
+        self.options.clone()
     }
 
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -234,6 +266,7 @@ pub fn popover_request(
     });
     request.consume_outside_pointer_events = options.consume_outside_pointer_events;
     request.initial_focus = options.initial_focus;
+    request.dismissible_on_dismiss_request = options.on_dismiss_request;
     request
 }
 
@@ -338,6 +371,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::action::DismissReason;
     use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, PressableProps};
 
     fn bounds() -> Rect {
@@ -365,14 +399,17 @@ mod tests {
 
     #[test]
     fn popover_root_options_builder_updates_options() {
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
         let root = PopoverRoot::new()
             .modal(true)
             .consume_outside_pointer_events(true)
-            .initial_focus(GlobalElementId(0xbeef));
+            .initial_focus(GlobalElementId(0xbeef))
+            .on_dismiss_request(Some(handler.clone()));
         let options = root.options();
         assert_eq!(options.variant, PopoverVariant::Modal);
         assert!(options.consume_outside_pointer_events);
         assert_eq!(options.initial_focus, Some(GlobalElementId(0xbeef)));
+        assert!(options.on_dismiss_request.is_some());
     }
 
     #[test]
