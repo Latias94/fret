@@ -597,6 +597,8 @@ fn append_postprocess(
                 downsample_scale,
                 clear,
             );
+            plan.passes
+                .push(RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0));
 
             let blur_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
             push_blur(
@@ -829,7 +831,7 @@ mod tests {
             },
         );
 
-        assert_eq!(plan.passes.len(), 6);
+        assert_eq!(plan.passes.len(), 7);
         let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
             panic!("expected SceneDrawRange pass");
         };
@@ -846,7 +848,12 @@ mod tests {
         assert_eq!(half.scale, 2);
         assert_eq!(half.dst_scissor, None);
 
-        let RenderPlanPass::Blur(blur_h) = &plan.passes[2] else {
+        let RenderPlanPass::ReleaseTarget(release) = &plan.passes[2] else {
+            panic!("expected ReleaseTarget pass");
+        };
+        assert_eq!(*release, PlanTarget::Intermediate0);
+
+        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
             panic!("expected blur-h pass");
         };
         assert_eq!(blur_h.axis, BlurAxis::Horizontal);
@@ -856,7 +863,7 @@ mod tests {
         assert_eq!(blur_h.dst_size, (64, 32));
         assert_eq!(blur_h.dst_scissor, None);
 
-        let RenderPlanPass::Blur(blur_v) = &plan.passes[3] else {
+        let RenderPlanPass::Blur(blur_v) = &plan.passes[4] else {
             panic!("expected blur-v pass");
         };
         assert_eq!(blur_v.axis, BlurAxis::Vertical);
@@ -866,7 +873,7 @@ mod tests {
         assert_eq!(blur_v.dst_size, (64, 32));
         assert_eq!(blur_v.dst_scissor, None);
 
-        let RenderPlanPass::ScaleNearest(upscale) = &plan.passes[4] else {
+        let RenderPlanPass::ScaleNearest(upscale) = &plan.passes[5] else {
             panic!("expected upscale pass");
         };
         assert_eq!(upscale.src, PlanTarget::Intermediate2);
@@ -877,7 +884,7 @@ mod tests {
         assert_eq!(upscale.scale, 2);
         assert_eq!(upscale.dst_scissor, None);
 
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[5] else {
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
             panic!("expected blit pass");
         };
         assert_eq!(blit.src, PlanTarget::Intermediate0);
@@ -921,7 +928,7 @@ mod tests {
                 h: 25
             })
         );
-        let RenderPlanPass::Blur(blur_h) = &plan.passes[2] else {
+        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
             panic!("expected blur-h pass");
         };
         assert_eq!(
@@ -933,7 +940,7 @@ mod tests {
                 h: 25
             })
         );
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[5] else {
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
             panic!("expected blit pass");
         };
         assert_eq!(

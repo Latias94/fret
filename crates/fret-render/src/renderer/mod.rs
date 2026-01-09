@@ -35,6 +35,7 @@ use intermediate_pool::*;
 use path::*;
 use render_plan::*;
 use types::*;
+pub use types::{IntermediatePerfSnapshot, SvgPerfSnapshot};
 use util::*;
 
 #[derive(Debug, Clone, Copy)]

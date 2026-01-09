@@ -11,6 +11,7 @@ pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
 pub use images::{ImageDescriptor, ImageRegistry, UploadedRgba8Image, upload_rgba8_image};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
+pub use renderer::{IntermediatePerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
 pub use svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
