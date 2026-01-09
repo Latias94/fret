@@ -254,6 +254,19 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::GridProps,
     ) -> Size {
+        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
+            let constraints = crate::layout_constraints::LayoutConstraints::new(
+                LayoutSize::new(None, None),
+                LayoutSize::new(
+                    RuntimeAvailableSpace::Definite(cx.available.width),
+                    RuntimeAvailableSpace::Definite(cx.available.height),
+                ),
+            );
+            return cx
+                .tree
+                .measure_in(cx.app, cx.services, cx.node, constraints, cx.scale_factor);
+        }
+
         if let Some(size) = layout_children_from_engine_if_solved(cx) {
             return size;
         }
