@@ -75,7 +75,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `filterMode=none` | DONE | Keeps Y bounds global while X window changes. |
 | `inside` (wheel/drag) | PARTIAL | UI supports pan/zoom gestures; not yet modeled as separate component types. |
 | `slider` UI | PLANNED | Not implemented. |
-| Y / 2D zoom | PLANNED | Not implemented. |
+| Y / 2D zoom | PARTIAL | Mapping-only Y windows; 2D box zoom writes X+Y together. Semantics are locked in ADR 0136. |
 
 ### Axis Interaction Locks
 
