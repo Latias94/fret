@@ -67,11 +67,13 @@ It complements (but does not replace) ADRs:
 
 ## P0 - Themes / Token Consistency / shadcn Alignment
 
-- **Finish the token-only migration across the ecosystem**
+- **Enforce token-only reads in shadcn-aligned surfaces**
   - Problem: theme drift occurs when some components read typed fields (`theme.colors.*` / `theme.metrics.*`) while others read semantic tokens (`theme.color_by_key("border")`).
   - ADRs: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`, `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`
   - Current: `ecosystem/fret-ui-shadcn` is now token-only and fails fast when required tokens are missing.
-  - TODO: migrate `ecosystem/fret-ui-kit` primitives and demos to token-only; add a CI guard (e.g. grep-based test) that rejects new `theme.colors.*` / `theme.metrics.*` reads in shadcn-aligned crates.
+  - Current: `ecosystem/fret-ui-kit` is also token-based (no direct `theme.colors.*` / `theme.metrics.*` reads in the UI-kit surface).
+  - TODO: add a CI guard (e.g. grep-based test) that rejects new `theme.colors.*` / `theme.metrics.*` reads in shadcn-aligned crates (at least `fret-ui-shadcn` + `fret-ui-kit`).
+  - Note: non-shadcn crates may still read typed theme fields (e.g. as a fallback); decide whether to treat those as acceptable or expand the token-only rule.
 
 - **Apply shadcn theme presets in shadcn demos by default**
   - Problem: shadcn-aligned components look "off" if the global theme does not provide the expected semantic tokens (or is tuned for a different palette).

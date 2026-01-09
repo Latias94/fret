@@ -39,8 +39,10 @@ Notes:
 - Backends (desktop-first now, wasm/WebGPU later):
   - `fret-platform` (portable contracts)
   - `fret-platform-native` (desktop backend)
+  - `fret-platform-desktop` (compat shim re-exporting `fret-platform-native`)
   - `fret-platform-web` (web backend)
   - `fret-runner-winit` (winit platform adapter: event mapping + input normalization)
+  - `fret-runner-web` (compat shim re-exporting `fret-platform-web`)
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
   - `fret-launch` (cross-platform launcher glue; depends on backend crates)
@@ -48,6 +50,7 @@ Notes:
   - `fret` (re-exports)
 - Other core glue:
   - `fret-a11y-accesskit`
+  - `fret-fonts` (bundled default fonts for wasm/bootstrap)
 
 Rule of thumb:
 

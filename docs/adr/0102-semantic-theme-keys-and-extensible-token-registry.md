@@ -217,7 +217,8 @@ Any registry changes (new tokens registered) that affect resolution must also bu
 - Implemented: canonical key aliasing via `crates/fret-ui/src/theme_registry.rs`.
 - Implemented: required token accessors via `crates/fret-ui/src/theme.rs` (`Theme::color_required`, `Theme::metric_required`).
 - Implemented: `ecosystem/fret-ui-shadcn` no longer reads typed theme fields (`theme.colors.*` / `theme.metrics.*`).
-- TODO: migrate `ecosystem/fret-ui-kit` primitives and demos; add a CI guard that prevents reintroducing typed reads in shadcn-aligned crates.
+- Implemented: `ecosystem/fret-ui-kit` is also token-based (no direct `theme.colors.*` / `theme.metrics.*` reads in the UI-kit surface).
+- TODO: add a CI guard that prevents reintroducing typed reads in shadcn-aligned crates (at least `fret-ui-shadcn` + `fret-ui-kit`).
 
 ## Design Outline (Non-Normative)
 

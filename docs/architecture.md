@@ -73,10 +73,13 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
 - `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
+- `crates/fret-fonts`: bundled default font bytes for wasm/bootstrap (fed to `Effect::TextAddFonts`).
 - `crates/fret-platform`: portable platform I/O contracts (clipboard, external drops, file dialogs, open-url).
 - `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
+- `crates/fret-platform-desktop`: compatibility shim re-exporting `fret-platform-native`.
 - `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.
 - `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
+- `crates/fret-runner-web`: compatibility shim re-exporting `fret-platform-web` (dedicated DOM adapter TBD).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
 - `crates/fret-launch`: integration glue (desktop now; web/mobile later) that owns presentation/effect draining and drives the frame loop.
@@ -87,6 +90,7 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `apps/fret-examples`: shared end-to-end harness code (components gallery, docking demos, smoke tests).
 - `apps/fret-demo`: native demo binaries (thin shells over `fret-examples`).
 - `apps/fret-demo-web`: wasm demo shell (Trunk + `#[wasm_bindgen(start)]`, thin shell over `fret-examples`).
+- `apps/fretboard`: dev CLI for running native/web demos and generating starter templates.
 
 ## Repository Layout (Future)
 

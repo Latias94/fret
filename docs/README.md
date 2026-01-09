@@ -44,6 +44,7 @@ contracts early to avoid large rewrites later.
 
 - End-to-end demo wiring (effects → runner → render): `apps/fret-examples/src/components_gallery.rs`
 - Todo app “golden path” (shadcn + bootstrap): `apps/fret-examples/src/todo_demo.rs` (or `fretboard dev native --bin todo_demo`)
+- Starter todo template generator: `fretboard init todo --name my-todo` (see `docs/examples/todo-app-golden-path.md`)
 - shadcn surface smoke test (components + overlays): `apps/fret-examples/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
 - Docking + viewport + overlays conformance harness (ADR 0072): `apps/fret-examples/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
 - Plot demos (2D): `apps/fret-examples/src/plot_demo.rs` (or `cargo run -p fret-demo --bin plot_demo`; web: `apps/fret-demo-web` + `?demo=plot_demo`)
