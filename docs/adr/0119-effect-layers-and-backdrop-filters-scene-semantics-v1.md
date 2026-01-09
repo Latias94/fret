@@ -186,8 +186,9 @@ Current v3 implementation is intentionally minimal and focuses on proving the su
 - MVP supported effect:
   - `EffectMode::Backdrop` + `EffectStep::GaussianBlur { .. }` (bounded by `bounds` and current clip/scissor).
   - `EffectMode::FilterContent` + `EffectStep::GaussianBlur { .. }` (scissored in-place filtering, then premul over composite).
+  - `EffectStep::ColorAdjust { saturation, brightness, contrast }` (scissored, in-place via scratch target).
 - Not yet implemented (treated as a no-op by the renderer):
-  - `ColorAdjust`, `Pixelate`, `Dither` as effect steps (debug-only postprocesses exist separately).
+  - `Pixelate`, `Dither` as effect steps (debug-only postprocesses exist separately).
 - Blur kernel is currently a fixed separable 9-tap kernel (approx radius 4) and `radius_px` is treated as a hint for
   future quality selection (downsample tier / kernel variants).
 

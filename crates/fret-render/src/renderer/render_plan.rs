@@ -45,6 +45,7 @@ pub(super) enum RenderPlanPass {
     CompositePremul(CompositePremulPass),
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
+    ColorAdjust(ColorAdjustPass),
     ReleaseTarget(PlanTarget),
 }
 
@@ -62,6 +63,19 @@ pub(super) struct BlurPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) axis: BlurAxis,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ColorAdjustPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) saturation: f32,
+    pub(super) brightness: f32,
+    pub(super) contrast: f32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -129,14 +143,17 @@ impl RenderPlan {
     ) -> Self {
         let mut postprocess = postprocess;
 
-        let has_backdrop_blur = encoding.effect_markers.iter().any(|m| {
+        let has_backdrop_supported_effect = encoding.effect_markers.iter().any(|m| {
             let EffectMarkerKind::Push { mode, chain, .. } = m.kind else {
                 return false;
             };
-            mode == fret_core::EffectMode::Backdrop && effect_chain_has_gaussian_blur(chain)
+            mode == fret_core::EffectMode::Backdrop
+                && (effect_chain_has_gaussian_blur(chain) || effect_chain_has_color_adjust(chain))
         });
-        let backdrop_blur_enabled = has_backdrop_blur
-            && choose_effect_blur_downsample_scale(
+        let backdrop_effect_enabled = if !has_backdrop_supported_effect {
+            false
+        } else {
+            let blur_ok = choose_effect_blur_downsample_scale(
                 viewport_size,
                 format,
                 intermediate_budget_bytes,
@@ -144,8 +161,11 @@ impl RenderPlan {
                 fret_core::EffectQuality::Auto,
             )
             .is_some();
+            let color_ok = color_adjust_enabled(viewport_size, format, intermediate_budget_bytes);
+            blur_ok || color_ok
+        };
 
-        let needs_intermediate = backdrop_blur_enabled
+        let needs_intermediate = backdrop_effect_enabled
             || matches!(
                 postprocess,
                 DebugPostprocess::OffscreenBlit
@@ -327,62 +347,97 @@ impl RenderPlan {
                 out
             };
 
-        let maybe_blur_in_place = |passes: &mut Vec<RenderPlanPass>,
-                                   draw_scopes: &[DrawScope],
-                                   srcdst: PlanTarget,
-                                   chain: fret_core::EffectChain,
-                                   quality: fret_core::EffectQuality,
-                                   scissor: ScissorRect| {
+        let apply_chain_in_place = |passes: &mut Vec<RenderPlanPass>,
+                                    draw_scopes: &[DrawScope],
+                                    srcdst: PlanTarget,
+                                    chain: fret_core::EffectChain,
+                                    quality: fret_core::EffectQuality,
+                                    scissor: ScissorRect| {
             if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
                 return;
             }
-            let Some(requested_downsample) = effect_chain_requested_downsample(chain) else {
-                return;
-            };
 
-            let scratch = available_scratch_targets(draw_scopes, srcdst);
-            if scratch.len() >= 2 {
-                let Some(downsample_scale) = choose_effect_blur_downsample_scale(
-                    viewport_size,
-                    format,
-                    intermediate_budget_bytes,
-                    requested_downsample,
-                    quality,
-                ) else {
-                    return;
-                };
-                append_scissored_blur_in_place_two_scratch(
-                    passes,
-                    srcdst,
-                    scratch[0],
-                    scratch[1],
-                    viewport_size,
-                    downsample_scale,
-                    scissor,
-                    clear,
-                );
-                return;
-            }
+            for step in chain.iter() {
+                match step {
+                    fret_core::EffectStep::GaussianBlur {
+                        radius_px: _,
+                        downsample,
+                    } => {
+                        let downsample = if downsample >= 4 { 4 } else { 2 };
+                        let scratch = available_scratch_targets(draw_scopes, srcdst);
+                        if scratch.len() >= 2 {
+                            let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+                                viewport_size,
+                                format,
+                                intermediate_budget_bytes,
+                                downsample,
+                                quality,
+                            ) else {
+                                continue;
+                            };
+                            append_scissored_blur_in_place_two_scratch(
+                                passes,
+                                srcdst,
+                                scratch[0],
+                                scratch[1],
+                                viewport_size,
+                                downsample_scale,
+                                scissor,
+                                clear,
+                            );
+                            continue;
+                        }
 
-            let Some(&scratch) = scratch.first() else {
-                return;
-            };
-            if intermediate_budget_bytes == 0 {
-                return;
+                        let Some(&scratch) = scratch.first() else {
+                            continue;
+                        };
+                        if intermediate_budget_bytes == 0 {
+                            continue;
+                        }
+                        let full = estimate_texture_bytes(viewport_size, format, 1);
+                        let required = full.saturating_mul(2);
+                        if required > intermediate_budget_bytes {
+                            continue;
+                        }
+                        append_scissored_blur_in_place_single_scratch(
+                            passes,
+                            srcdst,
+                            scratch,
+                            viewport_size,
+                            scissor,
+                            clear,
+                        );
+                    }
+                    fret_core::EffectStep::ColorAdjust {
+                        saturation,
+                        brightness,
+                        contrast,
+                    } => {
+                        if !color_adjust_enabled(viewport_size, format, intermediate_budget_bytes) {
+                            continue;
+                        }
+                        let scratch = available_scratch_targets(draw_scopes, srcdst);
+                        let Some(&scratch) = scratch.first() else {
+                            continue;
+                        };
+                        append_color_adjust_in_place_single_scratch(
+                            passes,
+                            srcdst,
+                            scratch,
+                            viewport_size,
+                            Some(scissor),
+                            saturation,
+                            brightness,
+                            contrast,
+                            clear,
+                        );
+                    }
+                    fret_core::EffectStep::Pixelate { .. }
+                    | fret_core::EffectStep::Dither { .. } => {
+                        // Not yet implemented in effect chains (debug-only postprocesses exist).
+                    }
+                }
             }
-            let full = estimate_texture_bytes(viewport_size, format, 1);
-            let required = full.saturating_mul(2);
-            if required > intermediate_budget_bytes {
-                return;
-            }
-            append_scissored_blur_in_place_single_scratch(
-                passes,
-                srcdst,
-                scratch,
-                viewport_size,
-                scissor,
-                clear,
-            );
         };
 
         while cursor <= draws.len() {
@@ -411,7 +466,7 @@ impl RenderPlan {
                             let parent_target = draw_scopes.last().expect("draw scope").target;
                             match mode {
                                 fret_core::EffectMode::Backdrop => {
-                                    maybe_blur_in_place(
+                                    apply_chain_in_place(
                                         &mut passes,
                                         &draw_scopes,
                                         parent_target,
@@ -475,7 +530,7 @@ impl RenderPlan {
                                     content_target
                                 );
 
-                                maybe_blur_in_place(
+                                apply_chain_in_place(
                                     &mut passes,
                                     &draw_scopes,
                                     content_target,
@@ -561,14 +616,10 @@ fn effect_chain_has_gaussian_blur(chain: fret_core::EffectChain) -> bool {
         .any(|step| matches!(step, fret_core::EffectStep::GaussianBlur { .. }))
 }
 
-fn effect_chain_requested_downsample(chain: fret_core::EffectChain) -> Option<u32> {
-    for step in chain.iter() {
-        if let fret_core::EffectStep::GaussianBlur { downsample, .. } = step {
-            let downsample = if downsample >= 4 { 4 } else { 2 };
-            return Some(downsample);
-        }
-    }
-    None
+fn effect_chain_has_color_adjust(chain: fret_core::EffectChain) -> bool {
+    chain
+        .iter()
+        .any(|step| matches!(step, fret_core::EffectStep::ColorAdjust { .. }))
 }
 
 fn choose_effect_blur_downsample_scale(
@@ -604,6 +655,18 @@ fn choose_effect_blur_downsample_scale(
         return Some(4);
     }
     None
+}
+
+fn color_adjust_enabled(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+) -> bool {
+    if budget_bytes == 0 {
+        return false;
+    }
+    let full = estimate_texture_bytes(viewport_size, format, 1);
+    full.saturating_mul(2) <= budget_bytes
 }
 
 fn append_scissored_blur_in_place_two_scratch(
@@ -711,6 +774,69 @@ fn append_scissored_blur_in_place_single_scratch(
     }));
 }
 
+fn append_color_adjust_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    saturation: f32,
+    brightness: f32,
+    contrast: f32,
+    clear: wgpu::Color,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(scissor),
+            saturation,
+            brightness,
+            contrast,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        saturation,
+        brightness,
+        contrast,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
     let mut last_use: [Option<usize>; 3] = [None, None, None];
 
@@ -743,6 +869,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 mark(p.dst);
             }
             RenderPlanPass::Blur(p) => {
+                mark(p.src);
+                mark(p.dst);
+            }
+            RenderPlanPass::ColorAdjust(p) => {
                 mark(p.src);
                 mark(p.dst);
             }

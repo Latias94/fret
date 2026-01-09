@@ -178,6 +178,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let color_adjust_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret color-adjust params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -226,6 +233,10 @@ impl Renderer {
             upscale_pipeline: None,
             scale_bind_group_layout: None,
             scale_param_buffer,
+            color_adjust_pipeline_format: None,
+            color_adjust_pipeline: None,
+            color_adjust_bind_group_layout: None,
+            color_adjust_param_buffer,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,

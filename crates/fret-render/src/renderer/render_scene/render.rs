@@ -152,6 +152,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::CompositePremul(_)));
+        let needs_color_adjust = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ColorAdjust(_)));
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
@@ -164,6 +168,9 @@ impl Renderer {
         }
         if needs_composite && path_samples <= 1 {
             self.ensure_composite_pipeline(device, format);
+        }
+        if needs_color_adjust {
+            self.ensure_color_adjust_pipeline(device, format);
         }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_release_targets = plan
@@ -1001,6 +1008,72 @@ impl Renderer {
                         dst_view,
                         pass.load,
                         &blit_bind_group,
+                        pass.dst_scissor,
+                    );
+                }
+                RenderPlanPass::ColorAdjust(pass) => {
+                    let pipeline = self
+                        .color_adjust_pipeline
+                        .as_ref()
+                        .expect("color-adjust pipeline must exist");
+                    let layout = self
+                        .color_adjust_bind_group_layout
+                        .as_ref()
+                        .expect("color-adjust bind group layout must exist");
+
+                    queue.write_buffer(
+                        &self.color_adjust_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&[
+                            pass.saturation,
+                            pass.brightness,
+                            pass.contrast,
+                            0.0,
+                        ]),
+                    );
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output => {
+                            debug_assert!(false, "ColorAdjust src cannot be Output");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+                    let bind_group = create_texture_uniform_bind_group(
+                        device,
+                        "fret color-adjust bind group",
+                        layout,
+                        &src_view,
+                        self.color_adjust_param_buffer.as_entire_binding(),
+                    );
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    run_fullscreen_triangle_pass(
+                        &mut encoder,
+                        "fret color-adjust pass",
+                        pipeline,
+                        dst_view,
+                        pass.load,
+                        &bind_group,
                         pass.dst_scissor,
                     );
                 }

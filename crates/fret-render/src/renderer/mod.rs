@@ -115,6 +115,11 @@ pub struct Renderer {
     scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
 
+    color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
+    color_adjust_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_adjust_param_buffer: wgpu::Buffer,
+
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
     path_vertex_capacity: usize,

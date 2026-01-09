@@ -1,5 +1,6 @@
 mod blit;
 mod blur;
+mod color_adjust;
 mod composite;
 mod mask;
 mod path;
