@@ -131,6 +131,7 @@ impl RenderPlan {
                 })],
             };
             append_postprocess(&mut plan, viewport_size, postprocess, clear);
+            insert_early_releases(&mut plan.passes);
             return plan;
         }
 
@@ -205,8 +206,75 @@ impl RenderPlan {
 
         let mut plan = Self { passes };
         append_postprocess(&mut plan, viewport_size, postprocess, clear);
+        insert_early_releases(&mut plan.passes);
         plan
     }
+}
+
+fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
+    let mut last_use: [Option<usize>; 3] = [None, None, None];
+
+    for (idx, pass) in passes.iter().enumerate() {
+        let mut mark = |t: PlanTarget| {
+            let slot = match t {
+                PlanTarget::Intermediate0 => Some(0),
+                PlanTarget::Intermediate1 => Some(1),
+                PlanTarget::Intermediate2 => Some(2),
+                PlanTarget::Output => None,
+            };
+            if let Some(slot) = slot {
+                last_use[slot] = Some(idx);
+            }
+        };
+
+        match pass {
+            RenderPlanPass::SceneDrawRange(p) => mark(p.target),
+            RenderPlanPass::PathMsaaBatch(p) => mark(p.target),
+            RenderPlanPass::FullscreenBlit(p) => {
+                mark(p.src);
+                mark(p.dst);
+            }
+            RenderPlanPass::ScaleNearest(p) => {
+                mark(p.src);
+                mark(p.dst);
+            }
+            RenderPlanPass::Blur(p) => {
+                mark(p.src);
+                mark(p.dst);
+            }
+            RenderPlanPass::ReleaseTarget(_target) => {}
+        }
+    }
+
+    let last0 = last_use[0];
+    let last1 = last_use[1];
+    let last2 = last_use[2];
+
+    let old = std::mem::take(passes);
+    let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 3);
+    let mut inserted: u64 = 0;
+
+    for (idx, pass) in old.into_iter().enumerate() {
+        out.push(pass);
+
+        let mut push_release = |t: PlanTarget| {
+            out.push(RenderPlanPass::ReleaseTarget(t));
+            inserted = inserted.saturating_add(1);
+        };
+
+        if last0 == Some(idx) {
+            push_release(PlanTarget::Intermediate0);
+        }
+        if last1 == Some(idx) {
+            push_release(PlanTarget::Intermediate1);
+        }
+        if last2 == Some(idx) {
+            push_release(PlanTarget::Intermediate2);
+        }
+    }
+
+    *passes = out;
+    inserted
 }
 
 fn decompose_pixelate_scale(scale: u32) -> Vec<u32> {
@@ -380,7 +448,6 @@ fn append_downsample_half_quarter(
     scissor_in_full: Option<ScissorRect>,
     full_size: (u32, u32),
     clear: wgpu::Color,
-    release_src_after_first: bool,
 ) -> DownsampleHalfQuarter {
     debug_assert_ne!(src_target, PlanTarget::Output);
     debug_assert_ne!(half_target, PlanTarget::Output);
@@ -400,9 +467,6 @@ fn append_downsample_half_quarter(
         2,
         clear,
     );
-    if release_src_after_first {
-        plan.passes.push(RenderPlanPass::ReleaseTarget(src_target));
-    }
 
     let quarter_size = downsampled_size(half_size, 2);
     let quarter_scissor = map_scissor_to_size(scissor_in_full, full_size, quarter_size);
@@ -494,7 +558,6 @@ fn append_postprocess(
                         None,
                         viewport_size,
                         clear,
-                        true,
                     );
 
                     let mut stack = half_quarter.stack;
@@ -525,8 +588,6 @@ fn append_postprocess(
                         first_step,
                         clear,
                     );
-                    plan.passes
-                        .push(RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0));
                     let mut stack = vec![(viewport_size, first_step)];
 
                     let (current_target, current_size, rest_stack) = append_downsample_chain(
@@ -597,8 +658,6 @@ fn append_postprocess(
                 downsample_scale,
                 clear,
             );
-            plan.passes
-                .push(RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0));
 
             let blur_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
             push_blur(
@@ -651,6 +710,13 @@ fn append_postprocess(
 mod tests {
     use super::*;
 
+    fn strip_releases<'a>(passes: &'a [RenderPlanPass]) -> Vec<&'a RenderPlanPass> {
+        passes
+            .iter()
+            .filter(|p| !matches!(p, RenderPlanPass::ReleaseTarget(_)))
+            .collect()
+    }
+
     #[test]
     fn compile_for_scene_none_targets_output() {
         let encoding = SceneEncoding::default();
@@ -680,12 +746,13 @@ mod tests {
             DebugPostprocess::OffscreenBlit,
         );
 
-        assert_eq!(plan.passes.len(), 2);
-        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+        let core = strip_releases(&plan.passes);
+        assert_eq!(core.len(), 2);
+        let RenderPlanPass::SceneDrawRange(scene) = core[0] else {
             panic!("expected SceneDrawRange pass");
         };
         assert_eq!(scene.target, PlanTarget::Intermediate0);
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[1] else {
+        let RenderPlanPass::FullscreenBlit(blit) = core[1] else {
             panic!("expected FullscreenBlit pass");
         };
         assert_eq!(blit.src, PlanTarget::Intermediate0);
@@ -693,6 +760,13 @@ mod tests {
         assert_eq!(blit.src_size, (100, 100));
         assert_eq!(blit.dst_size, (100, 100));
         assert_eq!(blit.dst_scissor, None);
+
+        assert!(
+            plan.passes
+                .iter()
+                .any(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0))),
+            "expected ReleaseTarget(Intermediate0)"
+        );
     }
 
     #[test]
@@ -707,13 +781,15 @@ mod tests {
             DebugPostprocess::Pixelate { scale: 4 },
         );
 
-        assert_eq!(plan.passes.len(), 7);
-        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+        let core = strip_releases(&plan.passes);
+        assert_eq!(core.len(), 6);
+
+        let RenderPlanPass::SceneDrawRange(scene) = core[0] else {
             panic!("expected SceneDrawRange pass");
         };
         assert_eq!(scene.target, PlanTarget::Intermediate0);
 
-        let RenderPlanPass::ScaleNearest(down0) = &plan.passes[1] else {
+        let RenderPlanPass::ScaleNearest(down0) = core[1] else {
             panic!("expected ScaleNearest downsample pass 0");
         };
         assert_eq!(down0.src, PlanTarget::Intermediate0);
@@ -724,12 +800,27 @@ mod tests {
         assert_eq!(down0.dst_size, downsampled_size(viewport_size, 2));
         assert_eq!(down0.dst_scissor, None);
 
-        let RenderPlanPass::ReleaseTarget(release) = &plan.passes[2] else {
-            panic!("expected ReleaseTarget pass");
-        };
-        assert_eq!(*release, PlanTarget::Intermediate0);
+        let release0 = plan
+            .passes
+            .iter()
+            .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
+            .expect("expected ReleaseTarget(Intermediate0)");
+        let down0_idx = plan
+            .passes
+            .iter()
+            .position(|p| {
+                matches!(
+                    p,
+                    RenderPlanPass::ScaleNearest(p)
+                        if p.mode == ScaleMode::Downsample
+                            && p.src == PlanTarget::Intermediate0
+                            && p.dst == PlanTarget::Intermediate2
+                )
+            })
+            .unwrap();
+        assert!(release0 > down0_idx);
 
-        let RenderPlanPass::ScaleNearest(down1) = &plan.passes[3] else {
+        let RenderPlanPass::ScaleNearest(down1) = core[2] else {
             panic!("expected ScaleNearest downsample pass 1");
         };
         assert_eq!(down1.src, PlanTarget::Intermediate2);
@@ -740,7 +831,7 @@ mod tests {
         assert_eq!(down1.dst_size, downsampled_size(down0.dst_size, 2));
         assert_eq!(down1.dst_scissor, None);
 
-        let RenderPlanPass::ScaleNearest(up0) = &plan.passes[4] else {
+        let RenderPlanPass::ScaleNearest(up0) = core[3] else {
             panic!("expected ScaleNearest upscale pass 0");
         };
         assert_eq!(up0.src, PlanTarget::Intermediate1);
@@ -751,7 +842,7 @@ mod tests {
         assert_eq!(up0.dst_size, down1.src_size);
         assert_eq!(up0.dst_scissor, None);
 
-        let RenderPlanPass::ScaleNearest(up1) = &plan.passes[5] else {
+        let RenderPlanPass::ScaleNearest(up1) = core[4] else {
             panic!("expected ScaleNearest upscale pass 1");
         };
         assert_eq!(up1.src, PlanTarget::Intermediate2);
@@ -762,7 +853,7 @@ mod tests {
         assert_eq!(up1.dst_size, viewport_size);
         assert_eq!(up1.dst_scissor, None);
 
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
+        let RenderPlanPass::FullscreenBlit(blit) = core[5] else {
             panic!("expected FullscreenBlit pass");
         };
         assert_eq!(blit.src, PlanTarget::Intermediate1);
@@ -770,6 +861,17 @@ mod tests {
         assert_eq!(blit.src_size, viewport_size);
         assert_eq!(blit.dst_size, viewport_size);
         assert_eq!(blit.dst_scissor, None);
+        let releases: Vec<PlanTarget> = plan
+            .passes
+            .iter()
+            .filter_map(|p| match p {
+                RenderPlanPass::ReleaseTarget(t) => Some(*t),
+                _ => None,
+            })
+            .collect();
+        assert!(releases.contains(&PlanTarget::Intermediate0));
+        assert!(releases.contains(&PlanTarget::Intermediate1));
+        assert!(releases.contains(&PlanTarget::Intermediate2));
     }
 
     #[test]
@@ -784,7 +886,6 @@ mod tests {
             None,
             (128, 64),
             wgpu::Color::TRANSPARENT,
-            false,
         );
 
         assert_eq!(info.half_size, (64, 32));
@@ -831,29 +932,38 @@ mod tests {
             },
         );
 
-        assert_eq!(plan.passes.len(), 7);
-        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+        let core = strip_releases(&plan.passes);
+        assert_eq!(core.len(), 6);
+
+        let RenderPlanPass::SceneDrawRange(scene) = core[0] else {
             panic!("expected SceneDrawRange pass");
         };
         assert_eq!(scene.target, PlanTarget::Intermediate0);
 
-        let RenderPlanPass::ScaleNearest(half) = &plan.passes[1] else {
-            panic!("expected half downsample pass");
+        let RenderPlanPass::ScaleNearest(down) = core[1] else {
+            panic!("expected downsample pass");
         };
-        assert_eq!(half.src, PlanTarget::Intermediate0);
-        assert_eq!(half.dst, PlanTarget::Intermediate2);
-        assert_eq!(half.src_size, viewport_size);
-        assert_eq!(half.dst_size, (64, 32));
-        assert_eq!(half.mode, ScaleMode::Downsample);
-        assert_eq!(half.scale, 2);
-        assert_eq!(half.dst_scissor, None);
+        assert_eq!(down.mode, ScaleMode::Downsample);
+        assert_eq!(down.src, PlanTarget::Intermediate0);
+        assert_eq!(down.dst, PlanTarget::Intermediate2);
+        assert_eq!(down.src_size, viewport_size);
+        assert_eq!(down.dst_size, (64, 32));
 
-        let RenderPlanPass::ReleaseTarget(release) = &plan.passes[2] else {
-            panic!("expected ReleaseTarget pass");
-        };
-        assert_eq!(*release, PlanTarget::Intermediate0);
+        let release0 = plan
+            .passes
+            .iter()
+            .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
+            .expect("expected ReleaseTarget(Intermediate0)");
+        let down0_idx = plan
+            .passes
+            .iter()
+            .position(
+                |p| matches!(p, RenderPlanPass::ScaleNearest(p) if p.mode == ScaleMode::Downsample),
+            )
+            .unwrap();
+        assert!(release0 > down0_idx);
 
-        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
+        let RenderPlanPass::Blur(blur_h) = core[2] else {
             panic!("expected blur-h pass");
         };
         assert_eq!(blur_h.axis, BlurAxis::Horizontal);
@@ -863,7 +973,7 @@ mod tests {
         assert_eq!(blur_h.dst_size, (64, 32));
         assert_eq!(blur_h.dst_scissor, None);
 
-        let RenderPlanPass::Blur(blur_v) = &plan.passes[4] else {
+        let RenderPlanPass::Blur(blur_v) = core[3] else {
             panic!("expected blur-v pass");
         };
         assert_eq!(blur_v.axis, BlurAxis::Vertical);
@@ -873,7 +983,7 @@ mod tests {
         assert_eq!(blur_v.dst_size, (64, 32));
         assert_eq!(blur_v.dst_scissor, None);
 
-        let RenderPlanPass::ScaleNearest(upscale) = &plan.passes[5] else {
+        let RenderPlanPass::ScaleNearest(upscale) = core[4] else {
             panic!("expected upscale pass");
         };
         assert_eq!(upscale.src, PlanTarget::Intermediate2);
@@ -884,7 +994,7 @@ mod tests {
         assert_eq!(upscale.scale, 2);
         assert_eq!(upscale.dst_scissor, None);
 
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
+        let RenderPlanPass::FullscreenBlit(blit) = core[5] else {
             panic!("expected blit pass");
         };
         assert_eq!(blit.src, PlanTarget::Intermediate0);
@@ -892,6 +1002,18 @@ mod tests {
         assert_eq!(blit.src_size, viewport_size);
         assert_eq!(blit.dst_size, viewport_size);
         assert_eq!(blit.dst_scissor, None);
+
+        let releases: Vec<PlanTarget> = plan
+            .passes
+            .iter()
+            .filter_map(|p| match p {
+                RenderPlanPass::ReleaseTarget(t) => Some(*t),
+                _ => None,
+            })
+            .collect();
+        assert!(releases.contains(&PlanTarget::Intermediate0));
+        assert!(releases.contains(&PlanTarget::Intermediate1));
+        assert!(releases.contains(&PlanTarget::Intermediate2));
     }
 
     #[test]
@@ -916,9 +1038,14 @@ mod tests {
         );
 
         // Half target is (50, 50) for 100x100.
-        let RenderPlanPass::ScaleNearest(half) = &plan.passes[1] else {
-            panic!("expected half downsample pass");
-        };
+        let half = plan
+            .passes
+            .iter()
+            .find_map(|p| match p {
+                RenderPlanPass::ScaleNearest(p) if p.mode == ScaleMode::Downsample => Some(*p),
+                _ => None,
+            })
+            .expect("expected half downsample pass");
         assert_eq!(
             half.dst_scissor,
             Some(ScissorRect {
@@ -928,9 +1055,14 @@ mod tests {
                 h: 25
             })
         );
-        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
-            panic!("expected blur-h pass");
-        };
+        let blur_h = plan
+            .passes
+            .iter()
+            .find_map(|p| match p {
+                RenderPlanPass::Blur(p) if p.axis == BlurAxis::Horizontal => Some(*p),
+                _ => None,
+            })
+            .expect("expected blur-h pass");
         assert_eq!(
             blur_h.dst_scissor,
             Some(ScissorRect {
@@ -940,9 +1072,14 @@ mod tests {
                 h: 25
             })
         );
-        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
-            panic!("expected blit pass");
-        };
+        let blit = plan
+            .passes
+            .iter()
+            .find_map(|p| match p {
+                RenderPlanPass::FullscreenBlit(p) => Some(*p),
+                _ => None,
+            })
+            .expect("expected blit pass");
         assert_eq!(
             blit.dst_scissor,
             Some(ScissorRect {

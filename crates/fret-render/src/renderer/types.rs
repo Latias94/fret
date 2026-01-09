@@ -140,6 +140,10 @@ pub struct IntermediatePerfSnapshot {
     pub budget_bytes: u64,
 
     pub last_frame_in_use_bytes: u64,
+    pub last_frame_peak_in_use_bytes: u64,
+    pub last_frame_release_targets: u64,
+    pub blur_degraded_to_quarter: u64,
+    pub blur_disabled_due_to_budget: u64,
     pub pool_free_bytes: u64,
     pub pool_free_textures: u64,
 
@@ -153,6 +157,10 @@ pub struct IntermediatePerfSnapshot {
 pub(super) struct IntermediatePerfStats {
     pub(super) frames: u64,
     pub(super) last_frame_in_use_bytes: u64,
+    pub(super) last_frame_peak_in_use_bytes: u64,
+    pub(super) last_frame_release_targets: u64,
+    pub(super) blur_degraded_to_quarter: u64,
+    pub(super) blur_disabled_due_to_budget: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

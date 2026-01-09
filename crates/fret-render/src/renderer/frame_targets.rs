@@ -6,6 +6,8 @@ pub(in crate::renderer) struct FrameTargets {
     intermediate0: Option<FrameTarget>,
     intermediate1: Option<FrameTarget>,
     intermediate2: Option<FrameTarget>,
+    bytes_in_use: u64,
+    peak_bytes_in_use: u64,
 }
 
 struct FrameTarget {
@@ -38,11 +40,14 @@ impl FrameTargets {
         }
 
         if let Some(existing) = slot.take() {
+            self.bytes_in_use = self.bytes_in_use.saturating_sub(existing.texture.bytes);
             pool.release(existing.texture, budget_bytes);
         }
 
         let texture =
             pool.acquire_texture(device, "fret intermediate target", size, format, usage, 1);
+        self.bytes_in_use = self.bytes_in_use.saturating_add(texture.bytes);
+        self.peak_bytes_in_use = self.peak_bytes_in_use.max(self.bytes_in_use);
         let view = texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -83,6 +88,7 @@ impl FrameTargets {
             PlanTarget::Output => unreachable!("Output is not an intermediate target"),
         };
         if let Some(t) = slot.take() {
+            self.bytes_in_use = self.bytes_in_use.saturating_sub(t.texture.bytes);
             pool.release(t.texture, budget_bytes);
         }
     }
@@ -94,16 +100,11 @@ impl FrameTargets {
     }
 
     pub(super) fn in_use_bytes(&self) -> u64 {
-        let mut bytes = 0u64;
-        for t in [
-            self.intermediate0.as_ref(),
-            self.intermediate1.as_ref(),
-            self.intermediate2.as_ref(),
-        ] {
-            let Some(t) = t else { continue };
-            bytes = bytes.saturating_add(t.texture.bytes);
-        }
-        bytes
+        self.bytes_in_use
+    }
+
+    pub(super) fn peak_in_use_bytes(&self) -> u64 {
+        self.peak_bytes_in_use
     }
 }
 

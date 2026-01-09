@@ -94,12 +94,25 @@ impl Renderer {
             let required_half = full.saturating_add(half.saturating_mul(2));
             let required_quarter = full.saturating_add(quarter.saturating_mul(2));
 
-            let mut downsample_scale = if radius > 4 { 4 } else { 2 };
+            let default_downsample_scale = if radius > 4 { 4 } else { 2 };
+            let mut downsample_scale = default_downsample_scale;
             if downsample_scale == 2 && required_half > budget {
                 downsample_scale = 4;
+                if self.intermediate_perf_enabled {
+                    self.intermediate_perf.blur_degraded_to_quarter = self
+                        .intermediate_perf
+                        .blur_degraded_to_quarter
+                        .saturating_add(1);
+                }
             }
 
             if downsample_scale == 4 && required_quarter > budget {
+                if self.intermediate_perf_enabled {
+                    self.intermediate_perf.blur_disabled_due_to_budget = self
+                        .intermediate_perf
+                        .blur_disabled_due_to_budget
+                        .saturating_add(1);
+                }
                 DebugPostprocess::None
             } else {
                 DebugPostprocess::Blur {
@@ -132,6 +145,13 @@ impl Renderer {
             path_samples,
             postprocess,
         );
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_release_targets = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
+                .count() as u64;
+        }
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -978,6 +998,7 @@ impl Renderer {
 
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
+            self.intermediate_perf.last_frame_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
         }
         frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
 
