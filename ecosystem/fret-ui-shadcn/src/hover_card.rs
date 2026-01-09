@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Px, Size, Transform2D};
+use fret_core::{Px, Size};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
@@ -27,12 +27,6 @@ use crate::overlay_motion;
 const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
-
-fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> Transform2D {
-    Transform2D::translation(origin)
-        * Transform2D::scale_uniform(scale)
-        * Transform2D::translation(fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0)))
-}
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("popover");
@@ -468,14 +462,13 @@ impl HoverCard {
                     anchor,
                     arrow.then_some(arrow_size),
                 );
-
-                let zoom = shadcn_zoom_transform(origin, scale);
-                let slide = if opening {
-                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
-                } else {
-                    Transform2D::IDENTITY
-                };
-                let transform = slide * zoom;
+                let transform = overlay_motion::shadcn_popper_presence_transform(
+                    layout.side,
+                    origin,
+                    opacity,
+                    scale,
+                    opening,
+                );
 
                 let overlay_layout = LayoutStyle {
                     size: SizeStyle {

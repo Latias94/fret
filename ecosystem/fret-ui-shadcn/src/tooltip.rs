@@ -15,9 +15,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{
-    KeyCode, Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
@@ -28,12 +26,6 @@ use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
-
-fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
-    Transform2D::translation(origin)
-        * Transform2D::scale_uniform(scale)
-        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
-}
 
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
     match &mut element.kind {
@@ -726,14 +718,13 @@ impl Tooltip {
                     anchor,
                     arrow.then_some(arrow_size),
                 );
-
-                let zoom = shadcn_zoom_transform(origin, scale);
-                let slide = if opening {
-                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
-                } else {
-                    Transform2D::IDENTITY
-                };
-                let transform = slide * zoom;
+                let transform = overlay_motion::shadcn_popper_presence_transform(
+                    layout.side,
+                    origin,
+                    opacity,
+                    scale,
+                    opening,
+                );
 
                 let overlay_layout = LayoutStyle {
                     size: SizeStyle {

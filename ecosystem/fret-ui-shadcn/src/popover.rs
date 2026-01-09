@@ -2,9 +2,7 @@ use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{
-    FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
@@ -25,15 +23,6 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
-
-fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
-    fret_core::Transform2D::translation(origin)
-        * fret_core::Transform2D::scale_uniform(scale)
-        * fret_core::Transform2D::translation(fret_core::Point::new(
-            fret_core::Px(-origin.x.0),
-            fret_core::Px(-origin.y.0),
-        ))
-}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -351,13 +340,13 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = shadcn_zoom_transform(origin, scale);
-                    let slide = if opening {
-                        overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
-                    } else {
-                        Transform2D::IDENTITY
-                    };
-                    let transform = slide * zoom;
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
+                        layout.side,
+                        origin,
+                        opacity,
+                        scale,
+                        opening,
+                    );
 
                     let bg = theme.color_required("popover.background");
                     let border = theme.color_required("border");
