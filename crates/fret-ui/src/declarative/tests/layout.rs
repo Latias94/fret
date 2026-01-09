@@ -533,21 +533,28 @@ fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
         "expected a small, non-zero solve count; got {s1}"
     );
 
-    // Force a re-layout within the same frame so a second call performs some engine work.
-    // Stats should reflect *this call's* work, not cumulative engine totals.
-    ui.set_children(root, ui.children(root).to_vec());
+    // A second call with identical inputs should not report the cumulative engine totals from the
+    // prior call.
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     let s2 = ui.debug_stats().layout_engine_solves;
+    assert_eq!(s2, 0, "expected per-call solve stats (not cumulative)");
+
+    // Change the window bounds; this must force some engine work again, and should still be
+    // bounded and per-call.
+    let bounds2 = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(60.0)),
+    );
+    ui.layout_all(&mut app, &mut text, bounds2, 1.0);
+    let s3 = ui.debug_stats().layout_engine_solves;
     assert!(
-        (1..=64).contains(&s2),
-        "expected a small, non-zero solve count after invalidation; got {s2}"
+        (1..=64).contains(&s3),
+        "expected a small, non-zero solve count after bounds change; got {s3}"
     );
 
-    // One more call, still within the same frame and without further invalidation. This should
-    // not report the cumulative engine totals from prior calls.
-    ui.layout_all(&mut app, &mut text, bounds, 1.0);
-    let s3 = ui.debug_stats().layout_engine_solves;
-    assert_eq!(s3, 0, "expected per-call solve stats (not cumulative)");
+    ui.layout_all(&mut app, &mut text, bounds2, 1.0);
+    let s4 = ui.debug_stats().layout_engine_solves;
+    assert_eq!(s4, 0, "expected per-call solve stats (not cumulative)");
 }
 
 #[cfg(feature = "layout-engine-v2")]
@@ -658,6 +665,78 @@ fn viewport_root_flush_only_lays_out_invalidated_roots() {
         right_count.load(Ordering::Relaxed),
         1,
         "expected right viewport root to be skipped when clean"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
+    struct PrecomputesSameRootTwice {
+        a: NodeId,
+        b: NodeId,
+        rect: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputesSameRootTwice {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+
+            tree.precompute_flow_root_island(app, services, self.a, self.rect, sf);
+            tree.precompute_flow_root_island(app, services, self.b, self.rect, sf);
+            tree.precompute_flow_root_island(app, services, self.a, self.rect, sf);
+
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-a",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("a"), cx.text("aa")])],
+    );
+    let b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "precompute-b",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("b")])],
+    );
+
+    let rect = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(150.0), Px(40.0)),
+    );
+    let parent = ui.create_node(PrecomputesSameRootTwice { a, b, rect });
+    ui.set_children(parent, vec![a, b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        2,
+        "expected the third precompute to reuse cached solve results"
     );
 }
 

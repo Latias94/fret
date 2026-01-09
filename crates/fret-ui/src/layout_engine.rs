@@ -161,13 +161,10 @@ impl TaffyLayoutEngine {
         available: LayoutSize<AvailableSpace>,
         scale_factor: f32,
     ) -> bool {
-        if self.solve_generation == 0 {
-            return false;
-        }
         if !self.seen.contains(&root) {
             return false;
         }
-        if self.node_solved_generation.get(&root).copied() != Some(self.solve_generation) {
+        if self.node_solved_generation.get(&root).copied().unwrap_or(0) == 0 {
             return false;
         }
 
@@ -325,56 +322,68 @@ impl TaffyLayoutEngine {
 
         let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
         self.tree
-            .compute_layout_with_measure(root.0, taffy_available, |known, avail, _id, ctx, _style| {
-                let Some(ctx) = ctx else {
-                    return taffy::geometry::Size::default();
-                };
-                if !ctx.measured {
-                    return taffy::geometry::Size::default();
-                }
+            .compute_layout_with_measure(
+                root.0,
+                taffy_available,
+                |known, avail, _id, ctx, _style| {
+                    let Some(ctx) = ctx else {
+                        return taffy::geometry::Size::default();
+                    };
+                    if !ctx.measured {
+                        return taffy::geometry::Size::default();
+                    }
 
-                let key = MeasureKey {
-                    node: ctx.node,
-                    known_w: known.width.map(|v| v.to_bits()),
-                    known_h: known.height.map(|v| v.to_bits()),
-                    avail_w: avail_key(avail.width),
-                    avail_h: avail_key(avail.height),
-                };
-                if let Some(size) = measure_cache.get(&key) {
-                    return *size;
-                }
+                    let key = MeasureKey {
+                        node: ctx.node,
+                        known_w: known.width.map(|v| v.to_bits()),
+                        known_h: known.height.map(|v| v.to_bits()),
+                        avail_w: avail_key(avail.width),
+                        avail_h: avail_key(avail.height),
+                    };
+                    if let Some(size) = measure_cache.get(&key) {
+                        return *size;
+                    }
 
-                let constraints = LayoutConstraints::new(
-                    LayoutSize::new(
-                        known.width.map(|w| Px(w / sf)),
-                        known.height.map(|h| Px(h / sf)),
-                    ),
-                    LayoutSize::new(
-                        match avail.width {
-                            taffy::style::AvailableSpace::Definite(w) => {
-                                AvailableSpace::Definite(Px(w / sf))
-                            }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                        },
-                        match avail.height {
-                            taffy::style::AvailableSpace::Definite(h) => {
-                                AvailableSpace::Definite(Px(h / sf))
-                            }
-                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                        },
-                    ),
-                );
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(
+                            known.width.map(|w| Px(w / sf)),
+                            known.height.map(|h| Px(h / sf)),
+                        ),
+                        LayoutSize::new(
+                            match avail.width {
+                                taffy::style::AvailableSpace::Definite(w) => {
+                                    AvailableSpace::Definite(Px(w / sf))
+                                }
+                                taffy::style::AvailableSpace::MinContent => {
+                                    AvailableSpace::MinContent
+                                }
+                                taffy::style::AvailableSpace::MaxContent => {
+                                    AvailableSpace::MaxContent
+                                }
+                            },
+                            match avail.height {
+                                taffy::style::AvailableSpace::Definite(h) => {
+                                    AvailableSpace::Definite(Px(h / sf))
+                                }
+                                taffy::style::AvailableSpace::MinContent => {
+                                    AvailableSpace::MinContent
+                                }
+                                taffy::style::AvailableSpace::MaxContent => {
+                                    AvailableSpace::MaxContent
+                                }
+                            },
+                        ),
+                    );
 
-                let s = measure(ctx.node, constraints);
-                let out = taffy::geometry::Size {
-                    width: s.width.0 * sf,
-                    height: s.height.0 * sf,
-                };
-                measure_cache.insert(key, out);
-                out
-            })
+                    let s = measure(ctx.node, constraints);
+                    let out = taffy::geometry::Size {
+                        width: s.width.0 * sf,
+                        height: s.height.0 * sf,
+                    };
+                    measure_cache.insert(key, out);
+                    out
+                },
+            )
             .ok();
 
         self.solve_generation = self.solve_generation.saturating_add(1);
