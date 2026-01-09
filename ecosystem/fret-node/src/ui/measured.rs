@@ -299,9 +299,14 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         node: NodeId,
         style: &NodeGraphStyle,
     ) -> Option<(f32, f32)> {
-        self.measured
-            .node_size_px(node)
-            .or_else(|| self.inner.node_size_hint_px(graph, node, style))
+        let measured = self.measured.node_size_px(node);
+        let hinted = self.inner.node_size_hint_px(graph, node, style);
+        match (measured, hinted) {
+            (Some(a), Some(b)) => Some((a.0.max(b.0), a.1.max(b.1))),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
+        }
     }
 
     fn port_anchor_hint(
