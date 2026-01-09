@@ -310,10 +310,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         window: &dyn Window,
         gfx: &mut GfxState,
         state: &mut D::WindowState,
-    ) {
+    ) -> bool {
         let effects = self.app.flush_effects();
         if effects.is_empty() {
-            return;
+            return false;
         }
 
         let effects = self.web_services.handle_effects(&mut self.app, effects);
@@ -439,7 +439,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         self.exiting = true;
                         self.web_cursor.take();
                         event_loop.exit();
-                        return;
+                        return true;
                     }
                     WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
                 },
@@ -474,10 +474,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 _ => {}
             }
         }
+
+        true
     }
 
-    fn dispatch_events(&mut self, gfx: &mut GfxState, state: &mut D::WindowState) {
+    fn dispatch_events(&mut self, gfx: &mut GfxState, state: &mut D::WindowState) -> bool {
         let events = std::mem::take(&mut self.pending_events);
+        let mut did_work = !events.is_empty();
         for event in events {
             apply_window_metrics_event(&mut self.app, self.app_window, &event);
             self.driver.handle_event(
@@ -493,6 +496,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let changed_models = self.app.take_changed_models();
         if !changed_models.is_empty() {
+            did_work = true;
             self.driver.handle_model_changes(
                 WinitWindowContext {
                     app: &mut self.app,
@@ -505,6 +509,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let changed_globals = self.app.take_changed_globals();
         if !changed_globals.is_empty() {
+            did_work = true;
             self.driver.handle_global_changes(
                 WinitWindowContext {
                     app: &mut self.app,
@@ -513,6 +518,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
                 &changed_globals,
             );
+        }
+
+        did_work
+    }
+
+    fn drain_turns(
+        &mut self,
+        event_loop: &dyn ActiveEventLoop,
+        window: &dyn Window,
+        gfx: &mut GfxState,
+        state: &mut D::WindowState,
+    ) {
+        // ADR 0034: coalesce and bound effect/event draining to prevent unbounded "effect storms"
+        // while still allowing same-frame fixed-point progress for common chains.
+        const MAX_EFFECT_DRAIN_TURNS: usize = 8;
+
+        for _ in 0..MAX_EFFECT_DRAIN_TURNS {
+            if self.exiting {
+                break;
+            }
+
+            let mut did_work = self.drain_effects(event_loop, window, gfx, state);
+            did_work |= self.dispatch_events(gfx, state);
+            if !did_work {
+                break;
+            }
         }
     }
 
@@ -558,8 +589,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
         }
 
-        self.drain_effects(event_loop, window, &mut gfx, &mut state);
-        self.dispatch_events(&mut gfx, &mut state);
+        self.drain_turns(event_loop, window, &mut gfx, &mut state);
 
         let scale_factor = scale as f32;
         self.driver.gpu_frame_prepare(
@@ -640,7 +670,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx.ctx.queue.submit(submit);
         frame.present();
 
-        self.drain_effects(event_loop, window, &mut gfx, &mut state);
+        self.drain_turns(event_loop, window, &mut gfx, &mut state);
 
         self.window_state = Some(state);
         self.gfx = Some(gfx);
