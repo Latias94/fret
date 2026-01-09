@@ -17,59 +17,59 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-09
 - ADR count (numbered): 139
 
-- Aligned: 6
-- Aligned (with known gaps): 1
+- Aligned: 34
+- Aligned (with known gaps): 2
 - N/A (superseded): 1
-- Not audited: 126
+- Not audited: 92
 - Not implemented: 3
-- Partially aligned: 2
+- Partially aligned: 7
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
-| [`0001-app-effects.md`](0001-app-effects.md) | Accepted | Not audited |  |
-| [`0002-display-list.md`](0002-display-list.md) | Accepted | Not audited |  |
+| [`0001-app-effects.md`](0001-app-effects.md) | Accepted | Aligned | Effects queue + redraw coalescing: `crates/fret-app/src/app.rs` (`push_effect`, `flush_effects`); bounded fixed-point draining: `crates/fret-launch/src/runner/desktop/mod.rs` and `crates/fret-launch/src/runner/web.rs`. |
+| [`0002-display-list.md`](0002-display-list.md) | Accepted | Aligned | `SceneOp` contract: `crates/fret-core/src/scene.rs`; renderer preserves op iteration order: `crates/fret-render/src/renderer/render_scene/encode/mod.rs`. |
 | [`0003-platform-boundary.md`](0003-platform-boundary.md) | Superseded | N/A (superseded) | Superseded ADR; do not implement new work against this contract. |
-| [`0004-resource-handles.md`](0004-resource-handles.md) | Accepted | Not audited |  |
-| [`0005-retained-ui-tree.md`](0005-retained-ui-tree.md) | Accepted | Not audited |  |
-| [`0006-text-system.md`](0006-text-system.md) | Accepted | Not audited |  |
-| [`0007-viewport-surfaces.md`](0007-viewport-surfaces.md) | Accepted | Not audited |  |
-| [`0008-threading-logging-errors.md`](0008-threading-logging-errors.md) | Accepted | Not audited |  |
-| [`0009-renderer-ordering-and-batching.md`](0009-renderer-ordering-and-batching.md) | Accepted | Not audited |  |
-| [`0010-wgpu-context-ownership.md`](0010-wgpu-context-ownership.md) | Accepted | Not audited |  |
-| [`0011-overlays-and-multi-root.md`](0011-overlays-and-multi-root.md) | Accepted | Not audited |  |
+| [`0004-resource-handles.md`](0004-resource-handles.md) | Accepted | Aligned | Stable IDs: `crates/fret-core/src/ids.rs`; effect-driven registration: `crates/fret-runtime/src/effect.rs` (`ImageRegisterRgba8`, `ImageUnregister`); runner/renderer handles at flush point: `crates/fret-launch/src/runner/desktop/mod.rs`. |
+| [`0005-retained-ui-tree.md`](0005-retained-ui-tree.md) | Accepted | Aligned | Retained tree + bounds/hit-test routing: `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/tree/dispatch.rs` (hit-test, capture, focus fallback). |
+| [`0006-text-system.md`](0006-text-system.md) | Accepted | Aligned | Text boundary trait: `crates/fret-core/src/text.rs` (`TextService`); renderer implementation: `crates/fret-render/src/text.rs` + `crates/fret-render/src/renderer/services.rs`; UI emits `SceneOp::Text`: `crates/fret-ui/src/declarative/host_widget/paint.rs`. |
+| [`0007-viewport-surfaces.md`](0007-viewport-surfaces.md) | Accepted | Aligned | `RenderTargetId` + `SceneOp::ViewportSurface`: `crates/fret-core/src/ids.rs`, `crates/fret-core/src/scene.rs`; registry: `crates/fret-render/src/targets.rs`. |
+| [`0008-threading-logging-errors.md`](0008-threading-logging-errors.md) | Accepted | Aligned | Main-thread runner loop + `pollster` init: `crates/fret-launch/src/runner/desktop/app_handler.rs`; structured logging via `tracing` across crates (e.g. `crates/fret-launch/src/runner/desktop/mod.rs`). |
+| [`0009-renderer-ordering-and-batching.md`](0009-renderer-ordering-and-batching.md) | Accepted | Aligned | Renderer encodes ops in order: `crates/fret-render/src/renderer/render_scene/encode/mod.rs`; adjacency batching without reordering via `ordered_draws` + quad batch flush: `crates/fret-render/src/renderer/render_scene/encode/state.rs`. |
+| [`0010-wgpu-context-ownership.md`](0010-wgpu-context-ownership.md) | Accepted | Aligned | Host-provided `WgpuContext`: `crates/fret-render/src/lib.rs`; runner supports provided vs created context: `crates/fret-launch/src/runner/common.rs`; surfaces created from `context.instance`: `crates/fret-render/src/lib.rs` (`create_surface`). |
+| [`0011-overlays-and-multi-root.md`](0011-overlays-and-multi-root.md) | Accepted | Aligned | Overlay roots + modal blocking: `crates/fret-ui/src/tree/layers.rs` (`push_overlay_root_ex`, `blocks_underlay_input`, `visible_layers_in_paint_order`); hit-test across roots: `crates/fret-ui/src/tree/hit_test.rs`; tests: `crates/fret-ui/src/tree/tests/hit_test.rs`. |
 | [`0012-keyboard-ime-and-text-input.md`](0012-keyboard-ime-and-text-input.md) | Accepted | Partially aligned | Shortcut deferral for text input in `crates/fret-ui/src/tree/dispatch.rs`; desktop IME effects in `crates/fret-launch/src/runner/desktop/mod.rs`; web runner lacks IME effect handling (`crates/fret-launch/src/runner/web.rs`). |
-| [`0013-docking-ops-and-persistence.md`](0013-docking-ops-and-persistence.md) | Accepted | Not audited |  |
-| [`0014-settings-and-configuration-files.md`](0014-settings-and-configuration-files.md) | Accepted | Not audited |  |
-| [`0015-frame-lifecycle-and-submission-order.md`](0015-frame-lifecycle-and-submission-order.md) | Accepted | Not audited |  |
-| [`0016-plugin-and-panel-boundaries.md`](0016-plugin-and-panel-boundaries.md) | Accepted | Not audited |  |
-| [`0017-multi-window-display-and-dpi.md`](0017-multi-window-display-and-dpi.md) | Accepted | Not audited |  |
-| [`0018-key-codes-and-shortcuts.md`](0018-key-codes-and-shortcuts.md) | Accepted | Not audited |  |
-| [`0019-scene-state-stack-and-layers.md`](0019-scene-state-stack-and-layers.md) | Accepted | Not audited |  |
-| [`0020-focus-and-command-routing.md`](0020-focus-and-command-routing.md) | Accepted | Not audited |  |
-| [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Not audited |  |
-| [`0022-when-expressions.md`](0022-when-expressions.md) | Accepted | Not audited |  |
-| [`0023-command-metadata-menus-and-palette.md`](0023-command-metadata-menus-and-palette.md) | Accepted | Not audited |  |
+| [`0013-docking-ops-and-persistence.md`](0013-docking-ops-and-persistence.md) | Accepted | Aligned | Dock ops + persistence: `crates/fret-core/src/dock_op.rs`, `crates/fret-core/src/dock_layout.rs`, `crates/fret-core/src/panels.rs`; runner applies via `Effect::Dock`: `crates/fret-launch/src/runner/desktop/mod.rs`; demo persistence: `apps/fret-examples/src/docking_arbitration_demo.rs`. |
+| [`0014-settings-and-configuration-files.md`](0014-settings-and-configuration-files.md) | Accepted | Partially aligned | Strongly typed settings file: `crates/fret-app/src/settings.rs`; bootstrap loads `.fret/settings.json`: `ecosystem/fret-bootstrap/src/lib.rs`; user-level OS config dirs + scope layering not yet wired. |
+| [`0015-frame-lifecycle-and-submission-order.md`](0015-frame-lifecycle-and-submission-order.md) | Accepted | Aligned | Runner render pipeline + submission ordering: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`RedrawRequested` records engine + UI and submits engine cmd buffers before UI cmd); `TickId` vs `FrameId`: same file (`about_to_wait` vs frame increment). |
+| [`0016-plugin-and-panel-boundaries.md`](0016-plugin-and-panel-boundaries.md) | Accepted | Partially aligned | Stable panel identity exists (`crates/fret-core/src/panels.rs`, `crates/fret-core/src/dock.rs`); ecosystem panel registry service exists (`ecosystem/fret-ui-docking/src/dock/panel_registry.rs`); plugin lifecycle/command/settings registration remains app-owned and not yet standardized. |
+| [`0017-multi-window-display-and-dpi.md`](0017-multi-window-display-and-dpi.md) | Accepted | Aligned | Logical px window events: `crates/fret-core/src/input.rs` (`WindowScaleFactorChanged`, `WindowMoved`, `WindowResized`); metrics service: `crates/fret-core/src/window.rs`; runners apply: `crates/fret-launch/src/runner/desktop/mod.rs` and `crates/fret-launch/src/runner/web.rs` (`apply_window_metrics_event`). |
+| [`0018-key-codes-and-shortcuts.md`](0018-key-codes-and-shortcuts.md) | Accepted | Aligned | Physical key codes as `KeyCode` (aligned with `keyboard-types::Code`): `crates/fret-core/src/input.rs`; winit mapping uses physical keys: `crates/fret-runner-winit/src/lib.rs` (`map_physical_key`). |
+| [`0019-scene-state-stack-and-layers.md`](0019-scene-state-stack-and-layers.md) | Accepted | Aligned | Scene state ops + debug validation: `crates/fret-core/src/scene.rs` (`PushTransform/Opacity/Layer/Clip` + `validate`); renderer encodes stack into draw state: `crates/fret-render/src/renderer/render_scene/encode/ops.rs`. |
+| [`0020-focus-and-command-routing.md`](0020-focus-and-command-routing.md) | Accepted | Aligned | Shortcut→command as effects: `crates/fret-ui/src/tree/shortcuts.rs` (`Effect::Command`, repeatable gating via `CommandMeta`); widget-scope dispatch: `crates/fret-ui/src/tree/commands.rs`; runner drains and calls driver handlers: `crates/fret-launch/src/runner/desktop/mod.rs`. |
+| [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Partially aligned | Keymap parsing + platform/when support: `crates/fret-runtime/src/keymap.rs` (v1 + sequences); disk IO helper: `crates/fret-app/src/keymap.rs`; end-to-end layered loading (user/project) not standardized yet. |
+| [`0022-when-expressions.md`](0022-when-expressions.md) | Accepted | Aligned | Parser/validator/evaluator: `crates/fret-runtime/src/when_expr.rs` (unknown identifiers evaluate false via `eval_ident_bool`). |
+| [`0023-command-metadata-menus-and-palette.md`](0023-command-metadata-menus-and-palette.md) | Accepted | Partially aligned | Command metadata + scopes: `crates/fret-runtime/src/commands.rs` (`CommandMeta`, `CommandScope`), stored on app: `crates/fret-app/src/app.rs`; menu model: `crates/fret-runtime/src/menu.rs`; command palette widget exists (`ecosystem/fret-ui-shadcn/src/command.rs`) but registry→palette wiring remains app-owned. |
 | [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Not audited |  |
-| [`0025-viewport-input-forwarding.md`](0025-viewport-input-forwarding.md) | Accepted | Not audited |  |
+| [`0025-viewport-input-forwarding.md`](0025-viewport-input-forwarding.md) | Accepted | Aligned | Core event + mapping: `crates/fret-core/src/input.rs` (`ViewportInputEvent`), `crates/fret-core/src/viewport.rs` (`ViewportMapping`); UI emits `Effect::ViewportInput`: `ecosystem/fret-ui-docking/src/dock/space.rs`; runner drains into driver hook: `crates/fret-launch/src/runner/desktop/mod.rs`. |
 | [`0026-asset-database-and-import-pipeline.md`](0026-asset-database-and-import-pipeline.md) | Deferred | Not audited |  |
-| [`0027-framework-scope-and-responsibilities.md`](0027-framework-scope-and-responsibilities.md) | Accepted | Not audited |  |
-| [`0028-declarative-elements-and-element-state.md`](0028-declarative-elements-and-element-state.md) | Accepted | Not audited |  |
+| [`0027-framework-scope-and-responsibilities.md`](0027-framework-scope-and-responsibilities.md) | Accepted | Aligned | Layering matches: `fret-core` stays platform/render-agnostic while `wgpu` lives in `crates/fret-render`; policy-heavy surfaces live under `ecosystem/` (see `AGENTS.md`, `docs/dependency-policy.md`). |
+| [`0028-declarative-elements-and-element-state.md`](0028-declarative-elements-and-element-state.md) | Accepted | Aligned | Declarative mount contract: `crates/fret-ui/src/declarative/mount.rs` (`render_root`); stable IDs: `crates/fret-ui/src/elements/id.rs` + hashing (`crates/fret-ui/src/elements/hash.rs`); cross-frame state: `crates/fret-ui/src/elements/access.rs` (`with_element_state`). |
 | [`0029-text-pipeline-and-atlas-strategy.md`](0029-text-pipeline-and-atlas-strategy.md) | Accepted | Not audited |  |
 | [`0030-shape-rendering-and-sdf-semantics.md`](0030-shape-rendering-and-sdf-semantics.md) | Accepted | Not audited |  |
 | [`0031-app-owned-models-and-leasing-updates.md`](0031-app-owned-models-and-leasing-updates.md) | Accepted | Not audited |  |
-| [`0032-style-tokens-and-theme-resolution.md`](0032-style-tokens-and-theme-resolution.md) | Accepted | Not audited |  |
-| [`0033-semantics-tree-and-accessibility-bridge.md`](0033-semantics-tree-and-accessibility-bridge.md) | Accepted | Not audited |  |
-| [`0034-timers-animation-and-redraw-scheduling.md`](0034-timers-animation-and-redraw-scheduling.md) | Accepted | Aligned | `MAX_EFFECT_DRAIN_TURNS=8` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`; web: `crates/fret-launch/src/runner/web.rs`). |
-| [`0035-layout-constraints-and-optional-taffy-integration.md`](0035-layout-constraints-and-optional-taffy-integration.md) | Accepted | Not audited |  |
-| [`0036-observability-tracing-and-ui-inspector-hooks.md`](0036-observability-tracing-and-ui-inspector-hooks.md) | Accepted | Not audited |  |
+| [`0032-style-tokens-and-theme-resolution.md`](0032-style-tokens-and-theme-resolution.md) | Accepted | Aligned | Token registry + resolution + linearized colors: `crates/fret-ui/src/theme.rs`, `crates/fret-ui/src/theme_registry.rs` (includes sRGB/HSL/OKLCH parsing to linear + revision). |
+| [`0033-semantics-tree-and-accessibility-bridge.md`](0033-semantics-tree-and-accessibility-bridge.md) | Accepted | Aligned | Portable schema: `crates/fret-core/src/semantics.rs`; snapshot build w/ overlay barrier root: `crates/fret-ui/src/tree/mod.rs` (`refresh_semantics_snapshot`); AccessKit mapping + action decoding: `crates/fret-a11y-accesskit/src/lib.rs`; winit adapter: `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs`. |
+| [`0034-timers-animation-and-redraw-scheduling.md`](0034-timers-animation-and-redraw-scheduling.md) | Accepted | Aligned | Scheduling effects: `crates/fret-runtime/src/effect.rs` (`RequestAnimationFrame`, `SetTimer`, `CancelTimer`); RAII continuous frames: `crates/fret-ui/src/elements/runtime.rs`; runner timers + bounded draining: desktop `crates/fret-launch/src/runner/desktop/mod.rs`, web `crates/fret-launch/src/runner/web.rs` (`MAX_EFFECT_DRAIN_TURNS=8`). |
+| [`0035-layout-constraints-and-optional-taffy-integration.md`](0035-layout-constraints-and-optional-taffy-integration.md) | Accepted | Aligned | Hybrid explicit bounds + internal Taffy: `crates/fret-ui/src/declarative/host_widget.rs` (Flex/Grid caches + measurement hook), `crates/fret-ui/src/declarative/taffy_layout.rs`. |
+| [`0036-observability-tracing-and-ui-inspector-hooks.md`](0036-observability-tracing-and-ui-inspector-hooks.md) | Accepted | Partially aligned | Structured tracing is pervasive (e.g. `crates/fret-launch/src/runner/desktop/mod.rs`); UI inspector toggles + per-frame debug stats exist: `crates/fret-ui/src/tree/mod.rs` (`inspection_active`, `UiDebugFrameStats`); standardized renderer metrics surface is not yet implemented (beyond ad-hoc snapshots like `crates/fret-render/src/renderer/types.rs`). |
 | [`0037-workspace-boundaries-and-components-repository.md`](0037-workspace-boundaries-and-components-repository.md) | Accepted | Not audited |  |
-| [`0038-engine-render-hook-and-submission-coordinator.md`](0038-engine-render-hook-and-submission-coordinator.md) | Accepted | Not audited |  |
-| [`0039-component-authoring-model-render-renderonce-and-intoelement.md`](0039-component-authoring-model-render-renderonce-and-intoelement.md) | Accepted | Not audited |  |
+| [`0038-engine-render-hook-and-submission-coordinator.md`](0038-engine-render-hook-and-submission-coordinator.md) | Accepted | Aligned | Engine frame recording + target updates: `crates/fret-launch/src/runner/common.rs` (`EngineFrameUpdate`, `RenderTargetUpdate`); runner applies updates before UI submits: desktop `crates/fret-launch/src/runner/desktop/app_handler.rs`, web `crates/fret-launch/src/runner/web.rs`. |
+| [`0039-component-authoring-model-render-renderonce-and-intoelement.md`](0039-component-authoring-model-render-renderonce-and-intoelement.md) | Accepted | Aligned (with known gaps) | Authoring traits exist in `crates/fret-ui/src/element.rs` (`IntoElement`, `RenderOnce`); derive-macro ergonomics (`fret-macros`) not implemented yet. |
 | [`0040-color-management-and-compositing-contracts.md`](0040-color-management-and-compositing-contracts.md) | Accepted | Not audited |  |
 | [`0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`](0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md) | Accepted | Not audited |  |
-| [`0042-virtualization-and-large-lists.md`](0042-virtualization-and-large-lists.md) | Accepted | Not audited |  |
+| [`0042-virtualization-and-large-lists.md`](0042-virtualization-and-large-lists.md) | Accepted | Aligned | VirtualList container + scroll model: `crates/fret-ui/src/element.rs` (`VirtualListProps`, `VirtualListState`), implementation in `crates/fret-ui/src/declarative/host_widget/layout.rs`; tests: `crates/fret-ui/src/declarative/tests/virtual_list.rs`; demos: `apps/fret-examples/src/virtual_list_*`. |
 | [`0043-shortcut-arbitration-pending-bindings-and-altgr.md`](0043-shortcut-arbitration-pending-bindings-and-altgr.md) | Accepted | Not audited |  |
 | [`0044-text-editing-state-and-commands.md`](0044-text-editing-state-and-commands.md) | Accepted | Not audited |  |
 | [`0045-text-geometry-queries-hit-testing-and-caret-metrics.md`](0045-text-geometry-queries-hit-testing-and-caret-metrics.md) | Accepted | Not audited |  |
@@ -77,9 +77,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0047-virtual-list-data-source-and-stable-item-keys.md`](0047-virtual-list-data-source-and-stable-item-keys.md) | Accepted | Not audited |  |
 | [`0048-inspector-property-protocol-and-editor-registry.md`](0048-inspector-property-protocol-and-editor-registry.md) | Accepted | Not audited |  |
 | [`0049-viewport-tools-input-capture-and-overlays.md`](0049-viewport-tools-input-capture-and-overlays.md) | Deferred | Not audited |  |
-| [`0050-theme-config-schema-and-baseline-tokens.md`](0050-theme-config-schema-and-baseline-tokens.md) | Accepted | Not audited |  |
-| [`0051-model-observation-and-ui-invalidation-propagation.md`](0051-model-observation-and-ui-invalidation-propagation.md) | Accepted | Not audited |  |
-| [`0052-ui-host-runtime-boundary.md`](0052-ui-host-runtime-boundary.md) | Accepted | Not audited |  |
+| [`0050-theme-config-schema-and-baseline-tokens.md`](0050-theme-config-schema-and-baseline-tokens.md) | Accepted | Aligned | Baseline typed tokens + default theme + semantic alias keys (shadcn bridge): `crates/fret-ui/src/theme.rs` (includes tests). |
+| [`0051-model-observation-and-ui-invalidation-propagation.md`](0051-model-observation-and-ui-invalidation-propagation.md) | Accepted | Aligned | Changed model/global propagation: `crates/fret-app/src/app.rs` (`take_changed_models`) + `crates/fret-ui/src/tree/mod.rs` (observation registries and invalidation); tests: `crates/fret-ui/src/tree/tests/models.rs`. |
+| [`0052-ui-host-runtime-boundary.md`](0052-ui-host-runtime-boundary.md) | Accepted | Aligned | Host boundary trait surface: `crates/fret-runtime/src/ui_host.rs`; default host impl: `crates/fret-app/src/ui_host.rs`; integrated bridge crate: `crates/fret-ui-app`. |
 | [`0053-external-drag-payload-portability.md`](0053-external-drag-payload-portability.md) | Accepted | Not audited |  |
 | [`0054-platform-capabilities-and-portability-matrix.md`](0054-platform-capabilities-and-portability-matrix.md) | Accepted | Not audited |  |
 | [`0055-frame-recording-and-subtree-replay-caching.md`](0055-frame-recording-and-subtree-replay-caching.md) | Accepted | Not audited |  |
@@ -167,4 +167,3 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0136-undo-redo-infrastructure-boundary.md`](0136-undo-redo-infrastructure-boundary.md) | Proposed | Not implemented | ADR only; no shared undo/redo substrate committed yet. |
 | [`0137-canvas-widgets-and-interactive-surfaces.md`](0137-canvas-widgets-and-interactive-surfaces.md) | Proposed | Not implemented | ADR only; `fret-canvas` ecosystem crate not created yet. |
 | [`0138-tooltip-scroll-dismissal.md`](0138-tooltip-scroll-dismissal.md) | Accepted | Aligned | Scroll dismissal: `UiTree::set_layer_scroll_dismiss_elements` (`crates/fret-ui/src/tree/layers.rs`) + dispatch in `crates/fret-ui/src/tree/dispatch.rs`; wiring in `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and `ecosystem/fret-ui-shadcn/src/tooltip.rs` (plus tests). |
-
