@@ -969,6 +969,80 @@ fn layout_engine_v2_scales_px_styles_with_scale_factor() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn stack_does_not_stretch_spacer_children_in_engine_tree() {
+    struct RegistersViewportRoot {
+        viewport: Rect,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let child = cx.children[0];
+            let _ = cx.layout_viewport_root(child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(140.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(7.0), Px(11.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let mut text = FakeTextService::default();
+
+    let child_root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "stack-engine-no-stretch",
+        |cx| {
+            let mut props = crate::element::StackProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.stack_props(props, |cx| {
+                vec![
+                    cx.spacer(crate::element::SpacerProps::default()),
+                    cx.spacer(crate::element::SpacerProps::default()),
+                ]
+            })]
+        },
+    );
+
+    let base = ui.create_node(RegistersViewportRoot { viewport });
+    ui.set_children(base, vec![child_root]);
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let stack = ui.children(child_root)[0];
+    let a = ui.children(stack)[0];
+    let b = ui.children(stack)[1];
+
+    let a_bounds = ui.debug_node_bounds(a).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(b).expect("b bounds");
+
+    assert_eq!(a_bounds.origin, viewport.origin);
+    assert_eq!(b_bounds.origin, viewport.origin);
+
+    assert!(a_bounds.size.width.0.abs() < 0.01);
+    assert!(a_bounds.size.height.0.abs() < 0.01);
+    assert!(b_bounds.size.width.0.abs() < 0.01);
+    assert!(b_bounds.size.height.0.abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_nested_flow_is_solved_once() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,

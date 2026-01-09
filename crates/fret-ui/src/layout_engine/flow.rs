@@ -296,6 +296,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::Stack(_),
         ) if !tree.children(node).is_empty() => {
+            let is_stack = matches!(instance, Some(ElementInstance::Stack(_)));
             let mut style = style_for_item_in_parent(
                 app,
                 window,
@@ -309,7 +310,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
             style.grid_template_rows =
                 vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
-            style.align_items = Some(AlignItems::Stretch);
+            style.align_items = Some(if is_stack {
+                AlignItems::FlexStart
+            } else {
+                AlignItems::Stretch
+            });
             style.justify_content = Some(JustifyContent::FlexStart);
 
             if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
@@ -503,8 +508,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::Opacity(_)
         | ElementInstance::VisualTransform(_)
         | ElementInstance::Semantics(_)
-        | ElementInstance::FocusScope(_)
-        | ElementInstance::Stack(_) => Some(child),
+        | ElementInstance::FocusScope(_) => Some(child),
         _ => None,
     }
 }
