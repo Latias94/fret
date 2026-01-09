@@ -164,6 +164,44 @@ impl Renderer {
         self.debug_blur_radius = radius.min(64);
     }
 
+    pub fn intermediate_budget_bytes(&self) -> u64 {
+        self.intermediate_budget_bytes
+    }
+
+    pub fn set_intermediate_budget_bytes(&mut self, bytes: u64) {
+        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
+        self.intermediate_budget_bytes = bytes.max(1024);
+        self.intermediate_pool
+            .enforce_budget(self.intermediate_budget_bytes);
+    }
+
+    pub fn set_intermediate_perf_enabled(&mut self, enabled: bool) {
+        self.intermediate_perf_enabled = enabled;
+        self.intermediate_perf = IntermediatePerfStats::default();
+        let _ = self.intermediate_pool.take_perf_snapshot();
+    }
+
+    pub fn take_intermediate_perf_snapshot(&mut self) -> Option<IntermediatePerfSnapshot> {
+        if !self.intermediate_perf_enabled {
+            return None;
+        }
+
+        let pool = self.intermediate_pool.take_perf_snapshot();
+        let snap = IntermediatePerfSnapshot {
+            frames: self.intermediate_perf.frames,
+            budget_bytes: self.intermediate_budget_bytes,
+            last_frame_in_use_bytes: self.intermediate_perf.last_frame_in_use_bytes,
+            pool_free_bytes: pool.free_bytes,
+            pool_free_textures: pool.free_textures,
+            pool_allocations: pool.allocations,
+            pool_reuses: pool.reuses,
+            pool_releases: pool.releases,
+            pool_evictions: pool.evictions,
+        };
+        self.intermediate_perf = IntermediatePerfStats::default();
+        Some(snap)
+    }
+
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
     }

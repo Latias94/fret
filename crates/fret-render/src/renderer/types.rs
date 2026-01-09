@@ -134,6 +134,27 @@ pub(super) struct SvgPerfStats {
     pub(super) rgba_upload: Duration,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct IntermediatePerfSnapshot {
+    pub frames: u64,
+    pub budget_bytes: u64,
+
+    pub last_frame_in_use_bytes: u64,
+    pub pool_free_bytes: u64,
+    pub pool_free_textures: u64,
+
+    pub pool_allocations: u64,
+    pub pool_reuses: u64,
+    pub pool_releases: u64,
+    pub pool_evictions: u64,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct IntermediatePerfStats {
+    pub(super) frames: u64,
+    pub(super) last_frame_in_use_bytes: u64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct SvgRasterKey {
     pub(super) svg: fret_core::SvgId,

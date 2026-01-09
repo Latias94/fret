@@ -1,4 +1,4 @@
-use super::super::frame_targets::FrameTargets;
+use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
 use fret_core::time::Instant;
 
@@ -39,6 +39,9 @@ impl Renderer {
         self.text_system.flush_uploads(queue);
         if self.svg_perf_enabled {
             self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
+        }
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.frames = self.intermediate_perf.frames.saturating_add(1);
         }
         self.bump_svg_raster_epoch();
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
@@ -82,9 +85,28 @@ impl Renderer {
                 scale: self.debug_pixelate_scale,
             }
         } else if self.debug_blur_radius > 0 {
-            DebugPostprocess::Blur {
-                radius: self.debug_blur_radius,
-                scissor: None,
+            let radius = self.debug_blur_radius.max(1);
+            let budget = self.intermediate_budget_bytes;
+            let full = estimate_texture_bytes(viewport_size, format, 1);
+            let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
+            let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
+
+            let required_half = full.saturating_add(half.saturating_mul(2));
+            let required_quarter = full.saturating_add(quarter.saturating_mul(2));
+
+            let mut downsample_scale = if radius > 4 { 4 } else { 2 };
+            if downsample_scale == 2 && required_half > budget {
+                downsample_scale = 4;
+            }
+
+            if downsample_scale == 4 && required_quarter > budget {
+                DebugPostprocess::None
+            } else {
+                DebugPostprocess::Blur {
+                    radius,
+                    downsample_scale,
+                    scissor: None,
+                }
             }
         } else if self.debug_offscreen_blit_enabled {
             DebugPostprocess::OffscreenBlit
@@ -196,6 +218,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -204,6 +227,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -212,6 +236,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                     };
                     let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
@@ -559,6 +584,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -567,6 +593,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -575,6 +602,7 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                     };
                     let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
@@ -802,6 +830,7 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
@@ -866,6 +895,7 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
@@ -919,6 +949,7 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
+                            self.intermediate_budget_bytes,
                         )),
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
@@ -933,12 +964,22 @@ impl Renderer {
                         pass.dst_scissor,
                     );
                 }
+                RenderPlanPass::ReleaseTarget(target) => {
+                    frame_targets.release_target(
+                        &mut self.intermediate_pool,
+                        *target,
+                        self.intermediate_budget_bytes,
+                    );
+                }
             }
         }
 
         let cmd = encoder.finish();
 
-        frame_targets.release_all(&mut self.intermediate_pool);
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
+        }
+        frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
 
         // Keep the most recent encoding for potential reuse on the next frame.
         if cache_hit {

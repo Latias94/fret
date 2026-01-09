@@ -23,6 +23,7 @@ impl FrameTargets {
         size: (u32, u32),
         format: wgpu::TextureFormat,
         usage: wgpu::TextureUsages,
+        budget_bytes: u64,
     ) -> wgpu::TextureView {
         let size = (size.0.max(1), size.1.max(1));
         let slot = match target {
@@ -37,7 +38,7 @@ impl FrameTargets {
         }
 
         if let Some(existing) = slot.take() {
-            pool.release(existing.texture);
+            pool.release(existing.texture, budget_bytes);
         }
 
         let texture =
@@ -69,16 +70,40 @@ impl FrameTargets {
         existing.view.clone()
     }
 
-    pub(super) fn release_all(&mut self, pool: &mut IntermediatePool) {
-        if let Some(t) = self.intermediate0.take() {
-            pool.release(t.texture);
+    pub(super) fn release_target(
+        &mut self,
+        pool: &mut IntermediatePool,
+        target: PlanTarget,
+        budget_bytes: u64,
+    ) {
+        let slot = match target {
+            PlanTarget::Intermediate0 => &mut self.intermediate0,
+            PlanTarget::Intermediate1 => &mut self.intermediate1,
+            PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Output => unreachable!("Output is not an intermediate target"),
+        };
+        if let Some(t) = slot.take() {
+            pool.release(t.texture, budget_bytes);
         }
-        if let Some(t) = self.intermediate1.take() {
-            pool.release(t.texture);
+    }
+
+    pub(super) fn release_all(&mut self, pool: &mut IntermediatePool, budget_bytes: u64) {
+        self.release_target(pool, PlanTarget::Intermediate0, budget_bytes);
+        self.release_target(pool, PlanTarget::Intermediate1, budget_bytes);
+        self.release_target(pool, PlanTarget::Intermediate2, budget_bytes);
+    }
+
+    pub(super) fn in_use_bytes(&self) -> u64 {
+        let mut bytes = 0u64;
+        for t in [
+            self.intermediate0.as_ref(),
+            self.intermediate1.as_ref(),
+            self.intermediate2.as_ref(),
+        ] {
+            let Some(t) = t else { continue };
+            bytes = bytes.saturating_add(t.texture.bytes);
         }
-        if let Some(t) = self.intermediate2.take() {
-            pool.release(t.texture);
-        }
+        bytes
     }
 }
 
