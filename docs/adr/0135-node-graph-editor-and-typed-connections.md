@@ -401,6 +401,25 @@ Embedded node content: Canvas Portal (locked boundary, staged implementation):
   - Stage 2: portal host for node header/body subtrees (enables IME-backed renames and constants).
   - Stage 3: optional per-port-row subtrees and richer semantics (inline controls in pin rows).
 
+Portal command routing (locked):
+
+- Embedded widgets must not mutate graph state directly. They emit commands and the host/controller
+  decides whether to commit a `GraphTransaction`, reject, or surface inline errors.
+- The portal host maintains UI-only editor session state keyed by view context (at least `(window,
+  portal_root_name, node_id)`), e.g. the current text buffer and last error message.
+- Standard command shapes (subject to revision, but should remain stable once shipped):
+  - `fret_node.portal.submit_text:<node_uuid>`
+  - `fret_node.portal.cancel_text:<node_uuid>`
+  - `fret_node.portal.step_text:<node_uuid>:<delta>:<mode>` where `mode` ∈ `fine|normal|coarse`.
+- Modifier policy (recommended default):
+  - Shift → `coarse`
+  - Ctrl/Cmd → `fine`
+  - otherwise → `normal`
+- Submit semantics:
+  - Parse/validate in the domain spec.
+  - On success, emit a `GraphTransaction` commit so undo/redo works uniformly (ADR 0024).
+  - On failure, keep the buffer and show an inline error string (UI-only state).
+
 Interaction protocol target (inspired by `imgui-node-editor`):
 
 - The widget produces “pending requests” (e.g. `PendingConnect`, `PendingDelete`).
@@ -1010,6 +1029,20 @@ ImGui Node Editor concept map:
 - “Draw your content, we do the rest” → presenter/viewer surface: the canvas owns interaction; the
   caller owns node/pin/wire UI.
 - `Suspend/Resume` → canvas coordinate escape hatch for screen-space overlays (menus/searchers).
+
+egui-snarl concept map:
+
+- Typed node parameter (`Snarl<T>`) → data-only `Graph` + typed connections via `TypeDesc` (the node
+  data itself remains domain-owned extension data).
+- Viewer (`SnarlViewer<T>`) → `NodeGraphPresenter`/`NodeGraphProfile` split:
+  - presenter provides UI-facing descriptions (titles, port rows, inline content),
+  - profile/rules provide validation, compatibility, and connection policy.
+- Five spaces (header/inputs/body/outputs/footer) → standardized node regions in the presenter API
+  to keep layout, hit-testing, and styling stable across domains.
+- “User controlled responses for wire connections” → connection/reconnection is always mediated by
+  `ConnectPlan` + `GraphTransaction`, never by direct edge mutation from the UI.
+- Multiconnections → canvas interaction supports bundled connect/reconnect flows (view policy; graph
+  semantics remain single-edge records).
 
 Unity ShaderGraph concept map:
 
