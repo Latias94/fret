@@ -538,9 +538,9 @@ fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
             });
         }
 
-        if series.stack.is_some() && !matches!(series.kind, SeriesKind::Line) {
+        if series.stack.is_some() && !matches!(series.kind, SeriesKind::Line | SeriesKind::Area) {
             return Err(ModelError::InvalidSpec {
-                reason: "stack is only supported for line in v1",
+                reason: "stack is only supported for line/area in v1",
             });
         }
     }

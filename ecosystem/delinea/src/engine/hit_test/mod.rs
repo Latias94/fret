@@ -32,6 +32,12 @@ pub fn hover_hit_test(
         if !series.visible {
             continue;
         }
+        if series.kind == SeriesKind::Area && series.stack.is_some() {
+            let variant = (node.id.0 & 0x7) as u8;
+            if variant == 1 {
+                continue;
+            }
+        }
 
         let table = datasets
             .datasets

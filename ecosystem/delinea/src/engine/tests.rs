@@ -490,6 +490,120 @@ fn band_emits_two_polylines() {
 }
 
 #[test]
+fn stacked_area_emits_two_polylines() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+    let stack = crate::ids::StackId::new(1);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: Some("Time".to_string()),
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: Some("Value".to_string()),
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Area,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: Some(stack),
+            stack_strategy: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let n = 4096usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n - 1) as f64;
+        xs.push(t * 10.0);
+        ys.push((t * core::f64::consts::TAU).sin());
+    }
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..64 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(16_384, 0, 4))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let out = engine.output();
+    let variants: Vec<u8> = out
+        .marks
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.source_series == Some(series_id) && n.kind == crate::marks::MarkKind::Polyline
+        })
+        .map(|n| (n.id.0 & 0x7) as u8)
+        .collect();
+
+    assert!(
+        variants.contains(&1) && variants.contains(&2),
+        "expected stacked area to emit base/top polyline variants, got: {variants:?}"
+    );
+}
+
+#[test]
 fn row_range_limits_mark_indices() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

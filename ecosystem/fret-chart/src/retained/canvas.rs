@@ -1046,7 +1046,12 @@ impl ChartCanvas {
                 .source_series
                 .and_then(|id| model.series.get(&id).map(|s| s.kind));
 
-            if series_kind == Some(delinea::SeriesKind::Band)
+            let is_stacked_area = series_kind == Some(delinea::SeriesKind::Area)
+                && node
+                    .source_series
+                    .is_some_and(|id| model.series.get(&id).is_some_and(|s| s.stack.is_some()));
+
+            if (series_kind == Some(delinea::SeriesKind::Band) || is_stacked_area)
                 && let Some(series_id) = node.source_series
             {
                 let variant = (node.id.0 & 0x7) as u8;
@@ -1065,9 +1070,13 @@ impl ChartCanvas {
                 }
             }
 
-            let baseline_y_local = node
-                .source_series
-                .and_then(|id| area_baseline_y_local.get(&id).copied());
+            let baseline_y_local = node.source_series.and_then(|id| {
+                let series = model.series.get(&id)?;
+                if series.kind == delinea::SeriesKind::Area && series.stack.is_some() {
+                    return None;
+                }
+                area_baseline_y_local.get(&id).copied()
+            });
 
             let start = poly.points.start;
             let end = poly.points.end;
@@ -1208,9 +1217,15 @@ impl ChartCanvas {
                 },
             );
 
+            let fill_alpha = match model.series.get(&series_id).map(|s| s.kind) {
+                Some(delinea::SeriesKind::Band) => self.style.band_fill_color.a,
+                Some(delinea::SeriesKind::Area) => self.style.area_fill_color.a,
+                _ => self.style.area_fill_color.a,
+            };
+
             if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
                 cached.fill = Some(fill_path);
-                cached.fill_alpha = Some(self.style.band_fill_color.a);
+                cached.fill_alpha = Some(fill_alpha);
             } else {
                 cx.services.path().release(fill_path);
             }
@@ -1920,6 +1935,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             rect: self.last_layout.plot,
         });
 
+        let model = self.engine.model();
+
         for cached in &self.cached_rects {
             let base_order = self
                 .style
@@ -1950,7 +1967,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
-        for cached in self.cached_paths.values() {
+        for (mark_id, cached) in &self.cached_paths {
             let base_order = self
                 .style
                 .draw_order
@@ -1980,12 +1997,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     color: fill_color,
                 });
             }
-            cx.scene.push(SceneOp::Path {
-                order: DrawOrder(base_order.saturating_add(1)),
-                origin: self.last_layout.plot.origin,
-                path: cached.stroke,
-                color: stroke_color,
+
+            let suppress_stroke = cached.source_series.is_some_and(|series_id| {
+                model
+                    .series
+                    .get(&series_id)
+                    .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
+                    && (mark_id.0 & 0x7) == 1
             });
+            if !suppress_stroke {
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(base_order.saturating_add(1)),
+                    origin: self.last_layout.plot.origin,
+                    path: cached.stroke,
+                    color: stroke_color,
+                });
+            }
         }
 
         let point_r = self.style.scatter_point_radius.0.max(1.0);

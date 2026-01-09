@@ -21,6 +21,7 @@ use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
 use crate::spec::StackStrategy;
 use crate::stats::EngineStats;
+use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use core::ops::Range;
 use std::collections::BTreeMap;
@@ -952,6 +953,90 @@ impl MarksStage {
 
                     stats.points_emitted += (lower_range.end - lower_range.start) as u64;
                     stats.points_emitted += (upper_range.end - upper_range.start) as u64;
+                    stats.marks_emitted += 2;
+                    marks.revision.bump();
+                } else if series.kind == crate::spec::SeriesKind::Area && series.stack.is_some() {
+                    let upper_range = range.clone();
+                    let start_lower = marks.arena.points.len();
+
+                    let x_span = bounds.x_max - bounds.x_min;
+                    let y_span = bounds.y_max - bounds.y_min;
+                    let x_span = if x_span.is_finite() && x_span > 0.0 {
+                        x_span
+                    } else {
+                        1.0
+                    };
+                    let y_span = if y_span.is_finite() && y_span > 0.0 {
+                        y_span
+                    } else {
+                        1.0
+                    };
+
+                    let indices = scratch.tmp_indices_mut();
+                    indices.clear();
+                    indices.extend(
+                        marks.arena.data_indices[upper_range.clone()]
+                            .iter()
+                            .copied()
+                            .map(|i| i as usize),
+                    );
+
+                    marks.arena.points.reserve(indices.len());
+                    marks.arena.data_indices.reserve(indices.len());
+
+                    for &i in indices.iter() {
+                        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                        let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        let Some(base) = stack_base_at_index(model, datasets, series.id, i, yi)
+                        else {
+                            continue;
+                        };
+                        let y_base = base.base;
+
+                        let y_base = y_base.clamp(bounds.y_min, bounds.y_max);
+                        let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
+                        let ty = ((y_base - bounds.y_min) / y_span).clamp(0.0, 1.0);
+
+                        let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        let px_y =
+                            viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
+
+                        marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
+                        marks.arena.data_indices.push(i as u32);
+                    }
+
+                    let lower_range = start_lower..marks.arena.points.len();
+
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 1),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2)),
+                        kind: MarkKind::Polyline,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                            points: lower_range.clone(),
+                            stroke: stroke.clone(),
+                        }),
+                    });
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 2),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2).saturating_add(1)),
+                        kind: MarkKind::Polyline,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                            points: upper_range.clone(),
+                            stroke: stroke.clone(),
+                        }),
+                    });
+
+                    stats.points_emitted += (lower_range.end - lower_range.start) as u64;
+                    stats.points_emitted += range_len;
                     stats.marks_emitted += 2;
                     marks.revision.bump();
                 } else {
