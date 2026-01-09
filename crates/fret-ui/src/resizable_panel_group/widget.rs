@@ -263,6 +263,22 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
         self.last_handle_centers = handle_centers;
         self.last_sizes = sizes;
 
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            // Avoid precomputing flow islands during "probe" layout passes that use an
+            // effectively-unbounded available size (important for scroll/virtualized descendants).
+            let is_probe_layout = cx.available.width.0 >= 1.0e8 || cx.available.height.0 >= 1.0e8;
+            if !is_probe_layout {
+                let sf = cx.scale_factor;
+                let app = &mut *cx.app;
+                let services = &mut *cx.services;
+                let tree = &mut *cx.tree;
+                for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
+                    tree.precompute_flow_root_island(app, services, child, rect, sf);
+                }
+            }
+        }
+
         for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
             let _ = cx.layout_in(child, rect);
         }
