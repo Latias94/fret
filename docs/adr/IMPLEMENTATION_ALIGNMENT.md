@@ -17,12 +17,12 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-09
 - ADR count (numbered): 139
 
-- Aligned: 36
+- Aligned: 37
 - Aligned (with known gaps): 5
 - N/A (superseded): 1
-- Not audited: 86
+- Not audited: 84
 - Not implemented: 3
-- Partially aligned: 8
+- Partially aligned: 9
 
 ## Matrix
 
@@ -143,9 +143,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0112-golden-path-ui-app-driver-and-pipelines.md`](0112-golden-path-ui-app-driver-and-pipelines.md) | Accepted | Not audited |  |
 | [`0113-ecosystem-integration-contracts.md`](0113-ecosystem-integration-contracts.md) | Accepted | Not audited |  |
 | [`0114-ui-assets-facade-and-golden-path-wiring.md`](0114-ui-assets-facade-and-golden-path-wiring.md) | Accepted | Not audited |  |
-| [`0115-available-space-and-non-reentrant-measurement.md`](0115-available-space-and-non-reentrant-measurement.md) | Proposed | Not audited |  |
+| [`0115-available-space-and-non-reentrant-measurement.md`](0115-available-space-and-non-reentrant-measurement.md) | Proposed | Partially aligned | `AvailableSpace` + `LayoutConstraints`: `crates/fret-ui/src/layout_constraints.rs`; non-reentrant `measure_in` with recursion guard: `crates/fret-ui/src/tree/layout.rs` (`measure_stack`); Flex/Grid measure callbacks use `measure_in` (no layout re-entry): `crates/fret-ui/src/declarative/host_widget.rs`, `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`, `grid.rs`; engine v2 also passes `AvailableSpace` through `compute_root_with_measure`: `crates/fret-ui/src/layout_engine.rs`. Gaps: `Length::Fill` still maps to `percent(1.0)` under `MinContent/MaxContent` (`crates/fret-ui/src/declarative/taffy_layout.rs`, `crates/fret-ui/src/layout_engine/flow.rs`); release-mode diagnostics are not rate-limited yet. |
 | [`0116-window-scoped-layout-engine-and-viewport-roots.md`](0116-window-scoped-layout-engine-and-viewport-roots.md) | Proposed | Partially aligned | Prototype window-owned engine + viewport roots exist behind `layout-engine-v2`: engine core `crates/fret-ui/src/layout_engine.rs` + flow builder `crates/fret-ui/src/layout_engine/flow.rs`; viewport root registration + independent solves: `crates/fret-ui/src/tree/layout.rs` (`register_viewport_root`, `precompute_viewport_root_flow_island`) + tests `crates/fret-ui/src/declarative/tests/layout.rs` (viewport roots do not couple fill). Gaps vs ADR: not yet a full window-wide “request/build then compute/apply” graph; current usage is still container-driven islands that temporarily take/put the engine (e.g. `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`, `grid.rs`). |
-| [`0117-trigger-composition-and-no-slot-aschild.md`](0117-trigger-composition-and-no-slot-aschild.md) | Proposed | Not audited |  |
+| [`0117-trigger-composition-and-no-slot-aschild.md`](0117-trigger-composition-and-no-slot-aschild.md) | Proposed | Aligned | No general Slot/`asChild` mechanism is implemented; triggers are modeled as typed elements (typically `Pressable`) with children-based visuals across shadcn surfaces (e.g. `ecosystem/fret-ui-shadcn/src/popover.rs`, `tooltip.rs`, `select.rs`). A11y/relations are stamped via narrow helper functions (e.g. `ecosystem/fret-ui-kit/src/primitives/trigger_a11y.rs` + `apply_*_trigger_a11y` call sites). Layout engine wrapper skipping is explicit and restricted (not prop merging): `crates/fret-ui/src/layout_engine/flow.rs` (`passthrough_wrapper_child`). |
 | [`0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`](0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md) | Proposed | Not audited |  |
 | [`0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`](0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md) | Proposed | Not audited |  |
 | [`0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`](0120-renderer-intermediate-budgets-and-effect-degradation-v1.md) | Proposed | Not audited |  |
