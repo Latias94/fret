@@ -127,6 +127,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         };
 
+        self.init_renderdoc_if_needed();
+
         let (context, surface) =
             match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
                 WgpuInit::CreateDefault => {
@@ -157,6 +159,23 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 },
             };
         let mut renderer = Renderer::new(&context.adapter, &context.device);
+
+        if let Some(raw) = std::env::var_os("FRET_WGPU_BACKEND")
+            && !raw.is_empty()
+        {
+            tracing::info!(requested = ?raw, "wgpu backend requested");
+        }
+        let info = context.adapter.get_info();
+        tracing::info!(
+            backend = ?info.backend,
+            name = info.name,
+            driver = info.driver,
+            driver_info = info.driver_info,
+            vendor = info.vendor,
+            device = info.device,
+            "wgpu adapter selected"
+        );
+
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
@@ -562,6 +581,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         return;
                     };
 
+                    let capturing = self
+                        .renderdoc
+                        .as_mut()
+                        .is_some_and(|r| r.begin_capture_if_requested());
+
                     // Apply any pending window-side state (IME/cursor) once per frame, similar to
                     // Dear ImGui's backend `prepare_frame` pattern.
                     state.platform.prepare_frame(state.window.as_ref());
@@ -666,6 +690,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         cmd_buffers
                     });
 
+                    if capturing && let Some(r) = self.renderdoc.as_mut() {
+                        r.end_capture();
+                    }
+
                     if let Err(err) = draw_result {
                         match err {
                             fret_render::RenderError::SurfaceAcquireFailed {
@@ -710,6 +738,31 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                     mapped
                 };
+
+                if mapped.iter().any(|evt| {
+                    matches!(
+                        evt,
+                        Event::KeyDown {
+                            key: fret_core::KeyCode::F12,
+                            ..
+                        }
+                    )
+                }) {
+                    if let Some(r) = self.renderdoc.as_mut() {
+                        r.request_capture();
+                        self.app.request_redraw(app_window);
+                    } else if std::env::var_os("FRET_RENDERDOC")
+                        .filter(|v| !v.is_empty())
+                        .is_some()
+                        || std::env::var_os("FRET_RENDERDOC_DLL")
+                            .filter(|v| !v.is_empty())
+                            .is_some()
+                    {
+                        tracing::warn!(
+                            "renderdoc capture requested but renderdoc was not initialized (restart with renderdoc.dll available)"
+                        );
+                    }
+                }
 
                 // ADR 0072 (proposed): Escape cancels an active cross-window dock drag session.
                 if mapped.iter().any(|evt| {

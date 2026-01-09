@@ -21,6 +21,37 @@ pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 pub use text::TextFontFamilyConfig;
 
+fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
+    let raw = std::env::var("FRET_WGPU_BACKEND").ok()?;
+    let mut backends = wgpu::Backends::empty();
+
+    for part in raw.split(|c| c == ',' || c == '|' || c == '+' || c == ' ') {
+        let token = part.trim().to_ascii_lowercase();
+        if token.is_empty() {
+            continue;
+        }
+
+        match token.as_str() {
+            "dx12" | "d3d12" => backends |= wgpu::Backends::DX12,
+            "vulkan" | "vk" => backends |= wgpu::Backends::VULKAN,
+            "metal" => backends |= wgpu::Backends::METAL,
+            "gl" | "opengl" => backends |= wgpu::Backends::GL,
+            "all" => return Some(wgpu::Backends::all()),
+            _ => {}
+        }
+    }
+
+    (!backends.is_empty()).then_some(backends)
+}
+
+fn create_wgpu_instance() -> wgpu::Instance {
+    let backends = parse_wgpu_backends_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+    wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends,
+        ..Default::default()
+    })
+}
+
 pub struct WgpuContext {
     pub instance: wgpu::Instance,
     pub adapter: wgpu::Adapter,
@@ -30,7 +61,7 @@ pub struct WgpuContext {
 
 impl WgpuContext {
     pub async fn new() -> Result<Self, RenderError> {
-        let instance = wgpu::Instance::default();
+        let instance = create_wgpu_instance();
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions::default())
             .await
@@ -59,7 +90,7 @@ impl WgpuContext {
     pub async fn new_with_surface<'window>(
         target: impl Into<wgpu::SurfaceTarget<'window>>,
     ) -> Result<(Self, wgpu::Surface<'window>), RenderError> {
-        let instance = wgpu::Instance::default();
+        let instance = create_wgpu_instance();
         let surface = instance
             .create_surface(target)
             .map_err(|source| RenderError::CreateSurfaceFailed { source })?;
