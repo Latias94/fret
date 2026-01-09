@@ -7,9 +7,10 @@ impl Renderer {
             return;
         }
 
+        let clip_mask_shader_source = clip_mask_shader_source();
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret clip-mask shader"),
-            source: wgpu::ShaderSource::Wgsl(CLIP_MASK_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(clip_mask_shader_source.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

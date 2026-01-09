@@ -224,7 +224,8 @@ This section is intentionally lightweight and should be updated as work lands.
     - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter) with deterministic sampling.
     - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
       forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
-    - Next: share SDF/coverage helpers across quads + clip masks (ADR 0030) and consider region/tiled masks to reduce peak bytes.
+    - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
+    - Next: extend the shared SDF/coverage helpers across other clip-evaluating fullscreen shaders, and consider region/tiled masks to reduce peak bytes.
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
