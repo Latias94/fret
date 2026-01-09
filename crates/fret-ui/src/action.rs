@@ -36,6 +36,11 @@ pub enum PressablePointerDownResult {
 pub enum DismissReason {
     Escape,
     OutsidePress,
+    /// The trigger (or another registered subtree) was scrolled.
+    ///
+    /// This is used for Radix-aligned tooltip semantics: a tooltip should close when its trigger
+    /// is inside the scroll target that received a wheel/scroll gesture.
+    Scroll,
 }
 
 /// Pointer down payload for component-owned pointer handlers.

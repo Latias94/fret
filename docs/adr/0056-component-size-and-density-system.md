@@ -151,6 +151,7 @@ Cons:
 - gpui-component sizing ergonomics:
   - `repo-ref/gpui-component/crates/ui/src/styled.rs`
   - `repo-ref/gpui-component/crates/ui/src/list/list.rs` (search `.with_size(...)`)
+- Zed/GPUI style extension traits (similar “typed style patches” ergonomics, non-normative): `repo-ref/zed/crates/gpui/src/styled.rs`
 - shadcn/ui vocabulary reference:
   - `repo-ref/ui/apps/v4/content/docs/components/`
   - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/`

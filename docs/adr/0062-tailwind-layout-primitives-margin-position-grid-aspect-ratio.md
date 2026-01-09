@@ -105,3 +105,18 @@ Grid is not a substitute for virtualization (ADR 0042). Large tables/lists remai
 - Full CSS layout model parity (CSS grid areas, auto-flow, subgrid, etc.).
 - Global z-index ordering across arbitrary clips and overlay roots.
 - Implicit “layout engine everywhere”: docking/splits/virtualization remain explicit containers.
+
+## Notes (Zed/GPUI reference, non-normative)
+
+- GPUI’s style vocabulary includes `margin`, `position`, `inset`, `aspect_ratio`, and a minimal grid API, with explicit
+  Taffy mapping at the boundary:
+  - Style fields and enums: `repo-ref/zed/crates/gpui/src/style.rs`
+  - Builder/extension methods: `repo-ref/zed/crates/gpui/src/styled.rs`
+  - Taffy conversion: `repo-ref/zed/crates/gpui/src/taffy.rs`
+  - Grid placement types: `repo-ref/zed/crates/gpui/src/geometry.rs`
+
+## References
+
+- Flex sizing vocabulary baseline: `docs/adr/0057-tailwind-flex-and-size-vocabulary.md`
+- Overlays and portals: `docs/adr/0011-overlays-and-multi-root.md`, `docs/adr/0067-window-overlays-and-portals.md`
+- Renderer ordering contract: `docs/adr/0009-renderer-ordering-and-batching.md`

@@ -202,6 +202,7 @@ mod focus_scope;
 mod globals;
 mod hit_test;
 mod interactivity_gate;
+mod measure_in;
 mod models;
 mod outside_press;
 mod paint_cache;

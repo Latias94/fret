@@ -63,6 +63,12 @@ pub fn shadcn_enter_slide_transform(side: Side, opacity: f32, opening: bool) -> 
     Transform2D::translation(shadcn_enter_slide_offset(side, opacity, opening))
 }
 
+pub fn shadcn_zoom_transform_with_scale(origin: Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
+}
+
 pub fn shadcn_modal_slide_offset(side: Side, distance: Px, opacity: f32) -> Point {
     // Used by modal panels like `Sheet`, which slide in/out from the same side.
     // This differs from popper overlays (Tooltip/HoverCard/Popover) that slide towards the anchor.
@@ -87,6 +93,17 @@ pub fn shadcn_zoom_transform(origin: Point, opacity: f32) -> Transform2D {
     Transform2D::translation(origin)
         * Transform2D::scale_uniform(scale)
         * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
+}
+
+pub fn shadcn_popper_presence_transform(
+    side: Side,
+    origin: Point,
+    opacity: f32,
+    scale: f32,
+    opening: bool,
+) -> Transform2D {
+    shadcn_enter_slide_transform(side, opacity, opening)
+        * shadcn_zoom_transform_with_scale(origin, scale)
 }
 
 /// Infer the anchored placement side from the relative positions of the reference and floating

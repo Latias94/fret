@@ -1,6 +1,75 @@
 use super::*;
 
 #[test]
+fn fill_only_resolves_under_definite_available_space_in_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fill-measure",
+        |cx| {
+            let mut props = crate::element::ContainerProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            vec![cx.container(props, |cx| vec![cx.text("x")])]
+        },
+    );
+    ui.set_root(root);
+
+    let container = ui.children(root)[0];
+
+    let min_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, min_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MinContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected Fill to behave like auto under MinContent, got {:?}",
+        measured.height
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(123.0)),
+            AvailableSpace::Definite(Px(45.0)),
+        ),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, definite_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 123.0).abs() < 0.01,
+        "expected Fill to resolve width under definite available space, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 45.0).abs() < 0.01,
+        "expected Fill to resolve height under definite available space, got {:?}",
+        measured.height
+    );
+}
+
+#[test]
 fn hover_region_reports_hovered_even_when_child_is_pressable() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

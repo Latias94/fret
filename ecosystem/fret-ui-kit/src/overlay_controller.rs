@@ -446,6 +446,7 @@ impl OverlayController {
                     window_overlays::TooltipRequest {
                         id: request.id,
                         root_name,
+                        trigger: request.trigger,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,

@@ -43,6 +43,8 @@ Fret does not have CSS animation events. Motion is composed from:
   - `shadcn_modal_slide_transform(side, distance, opacity)`
 - Zoom-in/zoom-out around a popper transform origin:
   - `shadcn_zoom_transform(origin, opacity)` (95% -> 100%)
+- Shared popper overlay transform assembly (enter-only slide + zoom):
+  - `shadcn_popper_presence_transform(side, origin, opacity, scale, opening)`
 
 ### Timing presets
 

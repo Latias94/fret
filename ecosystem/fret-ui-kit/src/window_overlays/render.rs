@@ -587,6 +587,8 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             OverlayLayer::tooltip(true).apply(ui, entry.layer);
+
+            ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
         });
     }
 

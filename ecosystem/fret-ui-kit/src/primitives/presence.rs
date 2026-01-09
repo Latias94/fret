@@ -6,8 +6,9 @@
 //!
 //! Fret splits this into:
 //!
-//! - `crate::headless::presence`: deterministic state machine (`FadePresence`).
-//! - `crate::declarative::presence`: runtime-driven driver (frame clock + redraw scheduling).
+//! - `crate::headless::transition`: deterministic timeline (`TransitionTimeline`).
+//! - `crate::declarative::transition`: runtime-driven driver (frame clock + redraw scheduling).
+//! - `crate::declarative::presence`: thin mapping helpers (fade / scale+fade).
 //!
 //! This module provides a stable, Radix-named facade surface and keeps call sites from reaching
 //! into the `declarative` module directly. See <https://github.com/radix-ui/primitives>.

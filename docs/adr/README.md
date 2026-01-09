@@ -6,6 +6,7 @@ Notes:
 
 - ADR filenames keep their numeric IDs stable.
 - Cross-references in `docs/architecture.md` should remain valid even as the code evolves.
+- Implementation audit tracking: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 

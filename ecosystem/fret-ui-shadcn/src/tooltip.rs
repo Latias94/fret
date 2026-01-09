@@ -15,9 +15,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{
-    KeyCode, Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
@@ -28,12 +26,6 @@ use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
-
-fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
-    Transform2D::translation(origin)
-        * Transform2D::scale_uniform(scale)
-        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
-}
 
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
     match &mut element.kind {
@@ -726,14 +718,13 @@ impl Tooltip {
                     anchor,
                     arrow.then_some(arrow_size),
                 );
-
-                let zoom = shadcn_zoom_transform(origin, scale);
-                let slide = if opening {
-                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
-                } else {
-                    Transform2D::IDENTITY
-                };
-                let transform = slide * zoom;
+                let transform = overlay_motion::shadcn_popper_presence_transform(
+                    layout.side,
+                    origin,
+                    opacity,
+                    scale,
+                    opening,
+                );
 
                 let overlay_layout = LayoutStyle {
                     size: SizeStyle {
@@ -763,6 +754,7 @@ impl Tooltip {
 
             let mut request =
                 radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
+            request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
                 let close_requested = event_models.close_requested.clone();
                 move |host, acx, _reason| {
@@ -902,8 +894,8 @@ mod tests {
     };
     use fret_runtime::FrameId;
     use fret_ui::element::{
-        ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
-        TextProps,
+        ContainerProps, FlexProps, LayoutStyle, Length, PressableA11y, PressableProps,
+        SemanticsProps, TextProps,
     };
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
@@ -2523,6 +2515,510 @@ mod tests {
         assert!(
             trigger_node.described_by.is_empty(),
             "expected tooltip to remain closed while focused after Escape dismissal"
+        );
+    }
+
+    #[test]
+    fn tooltip_closes_when_trigger_scrolls() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let scroll_handle = fret_ui::scroll::ScrollHandle::default();
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        fn render_scroll_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            scroll_handle: &fret_ui::scroll::ScrollHandle,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let scroll = cx.scroll(
+                                fret_ui::element::ScrollProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(320.0));
+                                        layout.size.height = Length::Px(Px(180.0));
+                                        layout
+                                    },
+                                    axis: fret_ui::element::ScrollAxis::Y,
+                                    scroll_handle: Some(scroll_handle.clone()),
+                                    probe_unbounded: true,
+                                },
+                                |cx| {
+                                    let trigger = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, id| {
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+
+                                    let content = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip")),
+                                    ])
+                                    .into_element(cx);
+                                    content_id_out.set(Some(content.id));
+
+                                    vec![cx.column(
+                                        fret_ui::element::ColumnProps {
+                                            gap: Px(0.0),
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            let mut out: Vec<AnyElement> = Vec::new();
+                                            out.push(
+                                                Tooltip::new(trigger, content)
+                                                    .open_delay_frames(0)
+                                                    .close_delay_frames(0)
+                                                    .disable_hoverable_content(false)
+                                                    .into_element(cx),
+                                            );
+                                            for _ in 0..50 {
+                                                out.push(cx.text("filler"));
+                                            }
+                                            out
+                                        },
+                                    )]
+                                },
+                            );
+
+                            vec![scroll]
+                        })
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: layout and read trigger bounds.
+        app.set_frame_id(FrameId(1));
+        render_scroll_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            &scroll_handle,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger node");
+        let trigger_point = center(trigger_node.bounds);
+
+        // Hover trigger to open tooltip.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: trigger_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: tooltip should be open.
+        app.set_frame_id(FrameId(2));
+        render_scroll_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            &scroll_handle,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip content to be mounted after opening"
+        );
+
+        // Scrolling the trigger's scroll container should close the tooltip (Radix scroll target
+        // contains trigger).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                position: trigger_point,
+                delta: Point::new(Px(0.0), Px(-40.0)),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert!(
+            scroll_handle.offset().y.0 > 0.01,
+            "expected the trigger scroll container to consume wheel input"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_scroll_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            &scroll_handle,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger node");
+        assert!(
+            trigger_node.described_by.is_empty(),
+            "expected aria-describedby to be cleared after scroll dismissal"
+        );
+    }
+
+    #[test]
+    fn tooltip_does_not_close_on_unrelated_scroll() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let scroll_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let scroll_with_trigger_handle = fret_ui::scroll::ScrollHandle::default();
+        let other_scroll_handle = fret_ui::scroll::ScrollHandle::default();
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            scroll_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            scroll_with_trigger_handle: fret_ui::scroll::ScrollHandle,
+            other_scroll_handle: fret_ui::scroll::ScrollHandle,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let mut flex_layout = LayoutStyle::default();
+                            flex_layout.size.width = Length::Px(Px(800.0));
+                            flex_layout.size.height = Length::Px(Px(600.0));
+
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: flex_layout,
+                                    direction: fret_core::Axis::Vertical,
+                                    gap: Px(24.0),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    let scroll_with_trigger = cx.scroll(
+                                        fret_ui::element::ScrollProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(320.0));
+                                                layout.size.height = Length::Px(Px(180.0));
+                                                layout
+                                            },
+                                            axis: fret_ui::element::ScrollAxis::Y,
+                                            scroll_handle: Some(scroll_with_trigger_handle.clone()),
+                                            probe_unbounded: true,
+                                        },
+                                        |cx| {
+                                            let trigger = cx.pressable_with_id(
+                                                PressableProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.size.width = Length::Px(Px(120.0));
+                                                        layout.size.height = Length::Px(Px(40.0));
+                                                        layout
+                                                    },
+                                                    enabled: true,
+                                                    focusable: true,
+                                                    a11y: PressableA11y {
+                                                        role: Some(SemanticsRole::Button),
+                                                        label: Some(Arc::from("trigger")),
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                |cx, _st, id| {
+                                                    trigger_id_out.set(Some(id));
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )]
+                                                },
+                                            );
+
+                                            let content = TooltipContent::new(vec![
+                                                cx.text_props(TextProps::new("tip")),
+                                            ])
+                                            .into_element(cx);
+                                            content_id_out.set(Some(content.id));
+
+                                            vec![cx.column(
+                                                fret_ui::element::ColumnProps {
+                                                    gap: Px(0.0),
+                                                    ..Default::default()
+                                                },
+                                                |cx| {
+                                                    let mut out: Vec<AnyElement> = Vec::new();
+                                                    out.push(
+                                                        Tooltip::new(trigger, content)
+                                                            .open_delay_frames(0)
+                                                            .close_delay_frames(0)
+                                                            .disable_hoverable_content(false)
+                                                            .into_element(cx),
+                                                    );
+                                                    for _ in 0..50 {
+                                                        out.push(cx.text("filler"));
+                                                    }
+                                                    out
+                                                },
+                                            )]
+                                        },
+                                    );
+
+                                    let other_scroll = cx.scroll(
+                                        fret_ui::element::ScrollProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(320.0));
+                                                layout.size.height = Length::Px(Px(180.0));
+                                                layout
+                                            },
+                                            axis: fret_ui::element::ScrollAxis::Y,
+                                            scroll_handle: Some(other_scroll_handle.clone()),
+                                            probe_unbounded: true,
+                                        },
+                                        |cx| {
+                                            vec![cx.column(
+                                                fret_ui::element::ColumnProps {
+                                                    gap: Px(0.0),
+                                                    ..Default::default()
+                                                },
+                                                |cx| {
+                                                    let mut out: Vec<AnyElement> = Vec::new();
+                                                    for _ in 0..50 {
+                                                        out.push(cx.text("filler"));
+                                                    }
+                                                    out
+                                                },
+                                            )]
+                                        },
+                                    );
+                                    scroll_id_out.set(Some(other_scroll.id));
+
+                                    vec![scroll_with_trigger, other_scroll]
+                                },
+                            )]
+                        })
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: layout and read trigger/scroll bounds.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger node");
+        let trigger_point = center(trigger_node.bounds);
+
+        let other_scroll_element = scroll_id.get().expect("other scroll element id");
+        let other_scroll_node =
+            fret_ui::elements::node_for_element(&mut app, window, other_scroll_element)
+                .expect("other scroll node");
+        let other_scroll_bounds = ui
+            .debug_node_bounds(other_scroll_node)
+            .expect("other scroll bounds");
+        let other_scroll_point = center(other_scroll_bounds);
+
+        // Hover trigger to open tooltip.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: trigger_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: tooltip should be open.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip content to be mounted after opening"
+        );
+
+        // Scrolling a different scroll container should not close the tooltip.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                position: other_scroll_point,
+                delta: Point::new(Px(0.0), Px(-40.0)),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert!(
+            other_scroll_handle.offset().y.0 > 0.01,
+            "expected the unrelated scroll container to consume wheel input"
+        );
+
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            scroll_id.clone(),
+            scroll_with_trigger_handle.clone(),
+            other_scroll_handle.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip to remain open when an unrelated scroll container scrolls"
         );
     }
 
