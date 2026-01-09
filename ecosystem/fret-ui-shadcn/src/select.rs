@@ -1096,8 +1096,6 @@ fn select_impl<H: UiHost>(
                     let text_style_for_overlay = text_style.clone();
                     let open_for_overlay = open_for_trigger.clone();
                     let trigger_state_for_overlay = trigger_state.clone();
-                    let list_focus_id_out_cell = Cell::new(None::<GlobalElementId>);
-                    let list_focus_id_out = &list_focus_id_out_cell;
                     let viewport_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let viewport_id_out = &viewport_id_out_cell;
                     let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
@@ -1138,13 +1136,9 @@ fn select_impl<H: UiHost>(
                                         let mut state = state_for_guard
                                             .lock()
                                             .unwrap_or_else(|e| e.into_inner());
-                                        let Some(down) = state.mouse_open_guard.take() else {
-                                            return false;
-                                        };
-
-                                        if radix_select::select_mouse_open_is_within_click_slop(
-                                            down,
-                                            up.position,
+                                        if radix_select::select_mouse_open_guard_should_suppress_pointer_up(
+                                            &mut state.mouse_open_guard,
+                                            up,
                                         ) {
                                             return true;
                                         }
@@ -1305,8 +1299,6 @@ fn select_impl<H: UiHost>(
                                             let loop_navigation_for_key = loop_navigation;
 
                                             vec![radix_select::select_listbox_pressable_with_id_props(cx, move |cx, _st, listbox_id| {
-                                                list_focus_id_out.set(Some(listbox_id));
-
                                                 cx.key_on_key_down_for(
                                                     listbox_id,
                                                     Arc::new(move |host, action_cx, it| {
@@ -1590,15 +1582,11 @@ fn select_impl<H: UiHost>(
                                                                                                             state_for_pointer_up
                                                                                                                 .lock()
                                                                                                                 .unwrap_or_else(|e| e.into_inner());
-                                                                                                        if let Some(down) =
-                                                                                                            state.mouse_open_guard.take()
-                                                                                                        {
-                                                                                                            if radix_select::select_mouse_open_is_within_click_slop(
-                                                                                                                down,
-                                                                                                                up.position,
-                                                                                                            ) {
-                                                                                                                return true;
-                                                                                                            }
+                                                                                                        if radix_select::select_mouse_open_guard_should_suppress_pointer_up(
+                                                                                                            &mut state.mouse_open_guard,
+                                                                                                            up,
+                                                                                                        ) {
+                                                                                                            return true;
                                                                                                         }
 
                                                                                                         let _ = host.models_mut().update(
@@ -1834,7 +1822,7 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
                             state.viewport = viewport_id_out.get();
-                            state.listbox = list_focus_id_out.get();
+                            state.listbox = Some(listbox_id_for_trigger);
                             state.content_panel = content_panel_id_out.get();
                             state.selected_item = selected_item_id_out.get();
                             state.selected_item_text = selected_item_text_id_out.get();
@@ -1859,7 +1847,7 @@ fn select_impl<H: UiHost>(
                         overlay_presence,
                         overlay_children,
                     );
-                    request.initial_focus = list_focus_id_out.get();
+                    request.initial_focus = Some(listbox_id_for_trigger);
                     radix_select::request_select(cx, request);
                 } else {
                     let open_for_overlay = open_for_trigger.clone();

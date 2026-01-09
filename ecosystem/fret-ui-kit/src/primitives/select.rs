@@ -245,6 +245,29 @@ pub fn select_mouse_open_is_within_click_slop(down: Point, up: Point) -> bool {
     dx <= SELECT_TRIGGER_CLICK_SLOP_PX && dy <= SELECT_TRIGGER_CLICK_SLOP_PX
 }
 
+/// Returns `true` when a pointer-up event should be treated as the original trigger click release
+/// after opening via mouse `pointerdown`.
+///
+/// Upstream Radix installs a one-shot guard to avoid the `pointerup` immediately selecting an
+/// option or dismissing the overlay. We model that guard via `SelectMouseOpenGuardState`.
+pub fn select_mouse_open_guard_should_suppress_pointer_up(
+    guard: &mut SelectMouseOpenGuardState,
+    up: PointerUpCx,
+) -> bool {
+    if up.button != fret_core::MouseButton::Left {
+        return false;
+    }
+    if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+        return false;
+    }
+
+    let Some(down) = guard.take() else {
+        return false;
+    };
+
+    select_mouse_open_is_within_click_slop(down, up.position)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SelectItemAlignedLayout {
     pub outputs: SelectItemAlignedOutputs,
