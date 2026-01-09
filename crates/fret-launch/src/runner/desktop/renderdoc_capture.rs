@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use renderdoc::{RenderDoc, V100};
+use renderdog::{InAppError, RenderDog};
 
 pub struct RenderDocCapture {
-    api: RenderDoc<V100>,
+    api: RenderDog,
     pending: bool,
     capture_dir: PathBuf,
 }
@@ -15,7 +15,7 @@ impl RenderDocCapture {
             Self::try_preload_windows_dll_from_env();
         }
 
-        let mut api = RenderDoc::new().ok()?;
+        let api = RenderDog::new().ok()?;
 
         let capture_dir = std::env::var_os("FRET_RENDERDOC_CAPTURE_DIR")
             .filter(|v| !v.is_empty())
@@ -23,7 +23,15 @@ impl RenderDocCapture {
             .unwrap_or_else(|| PathBuf::from(".fret").join("renderdoc"));
 
         let _ = std::fs::create_dir_all(&capture_dir);
-        RenderDoc::<V100>::set_log_file_path_template(&mut api, capture_dir.join("fret"));
+        // RenderDoc expects a UTF-8 template string.
+        if let Some(template) = capture_dir.join("fret").to_str() {
+            let _ = api.inner().set_capture_file_path_template(template);
+        } else {
+            tracing::warn!(
+                capture_dir = ?capture_dir,
+                "renderdoc capture requested but capture dir is not valid UTF-8; leaving template unchanged"
+            );
+        }
 
         let pending = std::env::var_os("FRET_RENDERDOC_AUTOCAPTURE")
             .filter(|v| !v.is_empty())
@@ -64,22 +72,17 @@ impl RenderDocCapture {
             return false;
         }
 
-        RenderDoc::<V100>::start_frame_capture(
-            &mut self.api,
-            std::ptr::null::<std::ffi::c_void>(),
-            std::ptr::null(),
-        );
+        let _ = self.api.inner().start_frame_capture(None, None);
         true
     }
 
     pub fn end_capture(&mut self) {
-        RenderDoc::<V100>::end_frame_capture(
-            &mut self.api,
-            std::ptr::null::<std::ffi::c_void>(),
-            std::ptr::null(),
-        );
+        let _ = self.api.inner().end_frame_capture(None, None);
 
-        let count = RenderDoc::<V100>::get_num_captures(&self.api);
+        let Ok(count) = self.api.inner().get_num_captures() else {
+            tracing::warn!("renderdoc capture ended but capture list is unavailable");
+            return;
+        };
         if count == 0 {
             tracing::warn!(
                 capture_dir = ?self.capture_dir,
@@ -88,14 +91,21 @@ impl RenderDocCapture {
             return;
         }
 
-        if let Some((path, _time)) = RenderDoc::<V100>::get_capture(&self.api, count - 1) {
-            tracing::info!(capture = ?path, "renderdoc capture saved");
-        } else {
-            tracing::info!(
+        match self.api.inner().get_capture(count - 1) {
+            Ok((path, _timestamp_s)) => tracing::info!(capture = %path, "renderdoc capture saved"),
+            Err(InAppError::InvalidCaptureIndex) => tracing::warn!(
                 capture_dir = ?self.capture_dir,
                 count,
-                "renderdoc capture saved"
-            );
+                "renderdoc capture ended but capture index is invalid"
+            ),
+            Err(_) => {
+                // Keep the log forgiving: the capture may still be saved by RenderDoc even if metadata lookup fails.
+                tracing::info!(
+                    capture_dir = ?self.capture_dir,
+                    count,
+                    "renderdoc capture saved"
+                );
+            }
         }
     }
 }

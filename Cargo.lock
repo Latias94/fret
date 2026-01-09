@@ -997,9 +997,6 @@ name = "float-cmp"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98de4bbd547a563b716d8dfa9aad1cb19bfab00f4fa09a6a4ed21dbcf44ce9c4"
-dependencies = [
- "num-traits",
-]
 
 [[package]]
 name = "float_next_after"
@@ -1284,7 +1281,7 @@ dependencies = [
  "fret-runtime",
  "objc",
  "pollster",
- "renderdoc",
+ "renderdog",
  "serde_json",
  "slotmap",
  "subsecond",
@@ -3042,25 +3039,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
-name = "renderdoc"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac633a08f39bf3268714799bd8c4a1a19c19c203d817d3448bb8b91c97817cf0"
-dependencies = [
- "bitflags 2.10.0",
- "float-cmp",
- "libloading",
- "once_cell",
- "renderdoc-sys",
- "winapi",
- "wio",
-]
-
-[[package]]
 name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "renderdog"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a38c083b84940fa4f665ed2e778bfee19ed6ee9d0de23b4aa179f79c891dbea6"
+dependencies = [
+ "bitflags 2.10.0",
+ "libc",
+ "libloading",
+ "renderdog-sys",
+ "thiserror 2.0.17",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "renderdog-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f207270edb27e509869edd70d568e45c99b5eae240079f4fd28744663e00ee0"
 
 [[package]]
 name = "resvg"
@@ -5530,15 +5532,6 @@ name = "winsafe"
 version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d135d17ab770252ad95e9a872d365cf3090e3be864a34ab46f48555993efc904"
-
-[[package]]
-name = "wio"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d129932f4644ac2396cb456385cbf9e63b5b30c6e8dc4820bdca4eb082037a5"
-dependencies = [
- "winapi",
-]
 
 [[package]]
 name = "wit-bindgen"
