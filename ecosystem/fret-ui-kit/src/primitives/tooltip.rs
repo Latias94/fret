@@ -23,8 +23,8 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
 pub use crate::tooltip_provider::{
-    TooltipProviderConfig, current_config, note_closed, open_delay_ticks,
-    open_delay_ticks_with_base, with_tooltip_provider,
+    TooltipProviderConfig, current_config, last_opened_tooltip, note_closed, note_opened_tooltip,
+    open_delay_ticks, open_delay_ticks_with_base, with_tooltip_provider,
 };
 
 pub use crate::primitives::popper::{Align, ArrowOptions, LayoutDirection, Side};
@@ -90,6 +90,11 @@ struct TooltipFocusEdgeState {
     was_focused: bool,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct TooltipOpenBroadcastState {
+    last_seen_open_token: u64,
+}
+
 /// Returns a per-tooltip pointer tracking model stored in element state.
 ///
 /// Tooltip pointer tracking is used to approximate Radix Tooltip's hoverable-content grace area:
@@ -153,6 +158,18 @@ pub fn tooltip_update_interaction<H: UiHost>(
     floating_bounds: Option<Rect>,
     cfg: TooltipInteractionConfig,
 ) -> TooltipInteractionUpdate {
+    let tooltip_id = cx.root_id();
+    let (last_id, token) = last_opened_tooltip(cx).unwrap_or((tooltip_id, 0));
+    let should_close_because_other_opened =
+        cx.with_state(TooltipOpenBroadcastState::default, |st| {
+            let should_close = token > st.last_seen_open_token && last_id != tooltip_id;
+            st.last_seen_open_token = token;
+            should_close
+        });
+    if should_close_because_other_opened {
+        cx.with_state(HoverIntentState::default, |st| st.set_open(false));
+    }
+
     let now = cx.app.frame_id().0;
 
     let (close_delay_ticks, blurred) = cx.with_state(TooltipFocusEdgeState::default, |st| {
@@ -208,6 +225,13 @@ pub fn tooltip_update_interaction<H: UiHost>(
             intent_cfg,
         )
     });
+
+    if !was_open && open {
+        let token = note_opened_tooltip(cx, tooltip_id);
+        cx.with_state(TooltipOpenBroadcastState::default, |st| {
+            st.last_seen_open_token = token;
+        });
+    }
 
     if was_open && !open {
         note_closed(cx, now);

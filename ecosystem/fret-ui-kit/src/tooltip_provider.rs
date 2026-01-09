@@ -32,6 +32,8 @@ impl TooltipProviderConfig {
 struct ProviderState {
     config: TooltipProviderConfig,
     delay_group: TooltipDelayGroupState,
+    last_opened_token: u64,
+    last_opened_tooltip: Option<GlobalElementId>,
 }
 
 #[derive(Default)]
@@ -145,6 +147,31 @@ pub fn note_closed<H: UiHost>(cx: &mut ElementContext<'_, H>, now: u64) {
         });
 }
 
+pub fn last_opened_tooltip<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Option<(GlobalElementId, u64)> {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state();
+            st.last_opened_tooltip.map(|id| (id, st.last_opened_token))
+        })
+}
+
+pub fn note_opened_tooltip<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    tooltip: GlobalElementId,
+) -> u64 {
+    cx.app
+        .with_global_mut(TooltipProviderService::default, |svc, app| {
+            svc.begin_frame(app.frame_id());
+            let st = svc.current_state_mut();
+            st.last_opened_token = st.last_opened_token.saturating_add(1);
+            st.last_opened_tooltip = Some(tooltip);
+            st.last_opened_token
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,6 +246,30 @@ mod tests {
         app.set_frame_id(FrameId(2));
         fret_ui::elements::with_element_cx(&mut app, window, b, "frame2", |cx| {
             assert_eq!(current_config(cx), TooltipProviderConfig::default());
+        });
+    }
+
+    #[test]
+    fn note_opened_tracks_last_opened_tooltip() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let cfg = TooltipProviderConfig::new(10, 30);
+            with_tooltip_provider(cx, cfg, |cx| {
+                let t1 = GlobalElementId(0x101);
+                let t2 = GlobalElementId(0x202);
+
+                assert_eq!(last_opened_tooltip(cx), None);
+                let tok1 = note_opened_tooltip(cx, t1);
+                assert_eq!(last_opened_tooltip(cx), Some((t1, tok1)));
+                let tok2 = note_opened_tooltip(cx, t2);
+                assert_eq!(last_opened_tooltip(cx), Some((t2, tok2)));
+                assert!(tok2 > tok1);
+            });
         });
     }
 }

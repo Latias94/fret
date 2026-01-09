@@ -45,6 +45,9 @@ Fret models Radix tooltip outcomes by composing:
   - `primitives::tooltip::tooltip_install_pointer_move_tracker(...)`
   - `primitives::tooltip::tooltip_update_interaction(...)`
   (shadcn tooltip uses this wiring as a reference recipe).
+- Pass: Opening a tooltip closes other tooltips in the same provider scope (Radix `TOOLTIP_OPEN`
+  broadcast outcome), implemented via `tooltip_provider::note_opened_tooltip(...)` and
+  `primitives::tooltip::tooltip_update_interaction(...)`.
 
 ## Follow-ups (recommended)
 
