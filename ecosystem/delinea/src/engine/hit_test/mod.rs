@@ -21,7 +21,10 @@ pub fn hover_hit_test(
     let hover_y = hover_px.y.0;
 
     for node in &marks.nodes {
-        if node.kind != MarkKind::Polyline && node.kind != MarkKind::Points {
+        if node.kind != MarkKind::Polyline
+            && node.kind != MarkKind::Points
+            && node.kind != MarkKind::Rect
+        {
             continue;
         }
         let Some(series_id) = node.source_series else {
@@ -209,6 +212,56 @@ pub fn hover_hit_test(
                     }
                 }
             }
+            MarkPayloadRef::Rect(rects_ref) => {
+                let rects = &marks.arena.rects;
+                let indices = &marks.arena.rect_data_indices;
+
+                let start = rects_ref.rects.start;
+                let end = rects_ref.rects.end;
+                if end <= start || end > rects.len() || end > indices.len() {
+                    continue;
+                }
+
+                for global_i in start..end {
+                    let rect = rects[global_i];
+                    let idx = indices[global_i] as usize;
+                    if idx >= x.len() || idx >= y.len() {
+                        continue;
+                    }
+
+                    let (point_px, dist2_px) = closest_point_in_rect(hover_x, hover_y, rect);
+
+                    let x_value = x[idx];
+                    let y0 = y[idx];
+                    let y_value = if let Some(stack) = series.stack {
+                        stack_dims
+                            .stacked_y(stack, series_id, idx, model.revs.marks, table.revision)
+                            .unwrap_or_else(|| {
+                                stack_base_at_index(model, datasets, series_id, idx, y0)
+                                    .map(|b| y0 + b.base)
+                                    .unwrap_or(y0)
+                            })
+                    } else {
+                        y0
+                    };
+                    if !x_value.is_finite() || !y_value.is_finite() {
+                        continue;
+                    }
+
+                    let hit = HoverHit {
+                        series: series_id,
+                        data_index: indices[global_i],
+                        point_px,
+                        dist2_px,
+                        x_value,
+                        y_value,
+                    };
+
+                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                        best = Some(hit);
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -248,6 +301,28 @@ fn closest_point_on_segment(hover_x: f32, hover_y: f32, a: Point, b: Point) -> (
             y: fret_core::Px(py),
         },
         t,
+        dist2,
+    )
+}
+
+fn closest_point_in_rect(hover_x: f32, hover_y: f32, rect: fret_core::Rect) -> (Point, f32) {
+    let left = rect.origin.x.0;
+    let top = rect.origin.y.0;
+    let right = left + rect.size.width.0;
+    let bottom = top + rect.size.height.0;
+
+    let px = hover_x.clamp(left, right);
+    let py = hover_y.clamp(top, bottom);
+
+    let dx = px - hover_x;
+    let dy = py - hover_y;
+    let dist2 = dx * dx + dy * dy;
+
+    (
+        Point {
+            x: fret_core::Px(px),
+            y: fret_core::Px(py),
+        },
         dist2,
     )
 }
@@ -556,5 +631,130 @@ mod tests {
         // Interpolated at x=5 -> base=1, y=2 => stacked y=3
         assert!((hit.y_value - 3.0).abs() < 1e-9);
         assert!((hit.x_value - 5.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn hover_hit_returns_bar_hit_for_rect_marks() {
+        let chart_id = ChartId::new(1);
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let series_id = SeriesId::new(1);
+        let x_field = crate::ids::FieldId::new(1);
+        let y_field = crate::ids::FieldId::new(2);
+
+        let spec = crate::spec::ChartSpec {
+            id: chart_id,
+            viewport: None,
+            datasets: vec![crate::spec::DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    crate::spec::FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    crate::spec::FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![crate::spec::GridSpec { id: grid_id }],
+            axes: vec![
+                crate::spec::AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: crate::spec::AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                        categories: vec!["A".into()],
+                    }),
+                    range: None,
+                },
+                crate::spec::AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: crate::spec::AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![crate::spec::SeriesSpec {
+                id: series_id,
+                name: None,
+                kind: crate::spec::SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: crate::spec::SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            }],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut store = DatasetStore::default();
+        store.insert(dataset_id, {
+            let mut t = DataTable::default();
+            t.push_column(Column::F64(vec![0.0]));
+            t.push_column(Column::F64(vec![2.0]));
+            t
+        });
+
+        let mut marks = MarkTree::default();
+        marks.arena.rects.push(fret_core::Rect::new(
+            Point {
+                x: fret_core::Px(10.0),
+                y: fret_core::Px(20.0),
+            },
+            fret_core::Size::new(fret_core::Px(40.0), fret_core::Px(50.0)),
+        ));
+        marks.arena.rect_data_indices.push(0);
+        marks.nodes.push(crate::marks::MarkNode {
+            id: MarkId::new(1),
+            parent: None,
+            layer: LayerId::new(1),
+            order: crate::marks::MarkOrderKey(0),
+            kind: MarkKind::Rect,
+            source_series: Some(series_id),
+            payload: MarkPayloadRef::Rect(crate::marks::MarkRectRef {
+                rects: 0..1,
+                fill: None,
+                stroke: None,
+            }),
+        });
+
+        let hit = hover_hit_test(
+            &model,
+            &store,
+            &marks,
+            Point {
+                x: fret_core::Px(15.0),
+                y: fret_core::Px(25.0),
+            },
+            &StackDimsStage::default(),
+        )
+        .unwrap();
+
+        assert_eq!(hit.series, series_id);
+        assert_eq!(hit.data_index, 0);
+        assert_eq!(hit.x_value, 0.0);
+        assert_eq!(hit.y_value, 2.0);
+        assert!((hit.dist2_px - 0.0).abs() < 1e-6);
+        assert!((hit.point_px.x.0 - 15.0).abs() < 1e-6);
+        assert!((hit.point_px.y.0 - 25.0).abs() < 1e-6);
     }
 }
