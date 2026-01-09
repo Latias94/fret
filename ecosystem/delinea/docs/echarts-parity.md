@@ -29,7 +29,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `encode` | `SeriesEncode` | DONE | `x`, `y`, `y2` (for bands). |
 | `series` | `SeriesSpec` (`SeriesKind`) | PARTIAL | Currently `Line`, `Area`, `Band`, `Bar`, `Scatter`. |
 | `grid` | `GridSpec` | PARTIAL | Single-grid usage is primary; multi-grid is possible but not exercised. |
-| `xAxis/yAxis` | `AxisSpec` + `AxisScale` + `AxisRange` | PARTIAL | `Value/Category` scales; `Auto/LockMin/LockMax/Fixed` constraints. |
+| `xAxis/yAxis` | `AxisSpec` + `AxisScale` + `AxisRange` | PARTIAL | `Value/Category/Time` scales; `Auto/LockMin/LockMax/Fixed` constraints. |
 | `axisPointer` | `AxisPointerSpec` | PARTIAL | `trigger=Item` and `trigger=Axis` supported (cartesian X). |
 | `tooltip` | `AxisPointerOutput.tooltip` | PARTIAL | Headless-generated structured lines; styling/layout in UI. |
 | `legend` | `fret-chart` legend overlay | PARTIAL | Basic list + visibility toggles; no paging/scrolling yet. |
@@ -110,7 +110,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 1. Multi-axis / multiple y-axes (layout + mapping + label policy).
 2. Stacking transforms (stacked bars) and derived columns.
 3. Scatter parity: symbol/size options, large/progressive thresholds, and richer hit testing policies.
-4. Time/log scales + tick formatting policies.
+4. Log scales + richer tick/label formatting policies (locale/time zone).
 5. Styling/theming surface (colors, line styles, per-series overrides, legends/tooltip formatters).
 6. `dataZoom` slider UI + Y-axis zoom (and 2D brush/selection).
 
@@ -124,4 +124,6 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 - ADR 0133: `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
 - ADR 0134: `docs/adr/0134-delinea-multi-axis-and-layout-contract.md`
 - ADR 0135: `docs/adr/0135-delinea-axis-interaction-locks-and-shortcuts.md`
+- ADR 0139: `docs/adr/0139-delinea-time-axis-ticks-and-labels.md`
+- ADR 0140: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
 - `ecosystem/delinea/docs/transform-pipeline.md`
