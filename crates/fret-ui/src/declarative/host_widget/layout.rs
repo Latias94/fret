@@ -2,6 +2,7 @@ use super::super::frame::*;
 use super::super::layout_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
 mod flex;
 mod grid;
@@ -174,13 +175,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, inner_avail);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -236,13 +238,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -282,13 +285,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -328,13 +332,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -374,13 +379,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -424,13 +430,14 @@ impl ElementHostWidget {
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
                 // presence/interactivity gating handled via host widget flags.
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -470,13 +477,14 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -545,13 +553,14 @@ impl ElementHostWidget {
                 }
 
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -644,13 +653,14 @@ impl ElementHostWidget {
                 let probe_available =
                     clamp_to_constraints(cx.available, props.layout, cx.available);
                 let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -1005,4 +1015,14 @@ impl ElementHostWidget {
             ElementInstance::Scrollbar(props) => self.layout_scrollbar_impl(cx, props),
         }
     }
+}
+
+fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
+    LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(size.width),
+            AvailableSpace::Definite(size.height),
+        ),
+    )
 }
