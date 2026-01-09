@@ -455,15 +455,29 @@ where
         //
         // Clamp against the canvas default node size so portal content cannot shrink nodes below
         // their port chrome minimum.
+        //
+        // IMPORTANT: do not allow portal layout constraints (e.g. shrink-to-fit under absolute
+        // positioning near the viewport edge) to cause node sizes to "wobble" during pan/zoom.
+        // We treat portal measurements as a growth-only hint unless the node has an explicit size.
         let mut publish: Vec<(NodeId, (f32, f32))> = Vec::new();
         for (node_id, element) in &element_ids {
+            let Some(node) = graph_snapshot.nodes.get(node_id) else {
+                continue;
+            };
+            if node.size.is_some() {
+                continue;
+            }
             if let Some(bounds) = bounds_for_element(cx.app, window, *element) {
                 let (inputs, outputs) = node_ports(&graph_snapshot, *node_id);
                 let min = node_size_default_px(inputs.len(), outputs.len(), &self.style);
                 let measured_px = (bounds.size.width.0, bounds.size.height.0);
+                let prev_px = self.measured.node_size_px(*node_id).unwrap_or(min);
                 publish.push((
                     *node_id,
-                    (measured_px.0.max(min.0), measured_px.1.max(min.1)),
+                    (
+                        measured_px.0.max(min.0).max(prev_px.0),
+                        measured_px.1.max(min.1).max(prev_px.1),
+                    ),
                 ));
             }
         }

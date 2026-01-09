@@ -157,6 +157,7 @@ Invariants:
 
 - (prototype) Portal widgets never mutate graph directly; they emit commands and the handler decides.
 - (prototype) Drag sessions produce one commit (undo granularity).
+- (prototype) Portal-driven auto-sizing is stable under pan/zoom (no “shrink when near viewport edge” wobble).
 
 ## F) Derived Geometry and Internals (ReactFlow internals parity)
 
