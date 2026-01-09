@@ -170,13 +170,15 @@ High-level layering (ADR 0135):
   - XyFlow: `handleNodeClick(...)` used by `NodeWrapper` (`components/NodeWrapper/index.tsx`)
   - fret-node: selection logic in `NodeGraphCanvas` (click selects; supports marquee)
 
-- [ ] **Select edge / edge focus**
+- [~] **Select edge / edge focus**
   - XyFlow: edges are focusable and selectable; store fields `edgesFocusable`, `edgesReconnectable`, `elementsSelectable`
-  - fret-node: edge hover + context menus exist; selection model exists but UX parity TBD
+  - fret-node:
+    - pointer selection exists (click edge selects; drag edge starts reconnect)
+    - keyboard focus is available via `Ctrl/Cmd+Tab` cycling (opt-in policy until per-edge focus nodes exist)
 
-- [ ] **Selection keyboard a11y**
+- [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)
-  - fret-node: command set exists for view; selection keybindings need explicit policy + a11y semantics
+  - fret-node: `Ctrl/Cmd+Tab` cycles edge focus/selection; full a11y semantics (per-element focus nodes, arrow-key navigation) still TBD
 
 ## 3.2 Marquee selection
 

@@ -129,6 +129,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
     match hit {
         Hit::Port(port) => {
+            canvas.interaction.focused_edge = None;
             if snapshot.interaction.connect_on_click && canvas.interaction.click_connect {
                 if let Some(mut w) = canvas.interaction.wire_drag.take() {
                     w.pos = position;
@@ -159,6 +160,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
@@ -215,16 +217,18 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
-            canvas.update_view_state(cx.app, |s| {
-                s.selected_edges.clear();
-                s.selected_groups.clear();
-                if !s.selected_nodes.iter().any(|id| *id == node) {
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node);
-                }
-                s.draw_order.retain(|id| *id != node);
-                s.draw_order.push(node);
-            });
+            if snapshot.interaction.elements_selectable {
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_groups.clear();
+                    if !s.selected_nodes.iter().any(|id| *id == node) {
+                        s.selected_nodes.clear();
+                        s.selected_nodes.push(node);
+                    }
+                    s.draw_order.retain(|id| *id != node);
+                    s.draw_order.push(node);
+                });
+            }
 
             let start_size = crate::core::CanvasSize {
                 width: rect.size.width.0 * zoom,
@@ -261,6 +265,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
@@ -270,7 +275,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             );
             let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
             let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
-            let select_action = if multi_mod {
+            let selectable = snapshot.interaction.elements_selectable;
+            let select_action = if selectable && multi_mod {
                 if modifiers.shift && !(modifiers.ctrl || modifiers.meta) {
                     PendingNodeSelectAction::Add
                 } else {
@@ -280,7 +286,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 PendingNodeSelectAction::None
             };
 
-            if !multi_mod {
+            if selectable && !multi_mod {
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_groups.clear();
@@ -293,9 +299,10 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 });
             }
 
-            let nodes_for_drag = (already_selected && snapshot.selected_nodes.len() > 1)
-                .then(|| snapshot.selected_nodes.clone())
-                .unwrap_or_else(|| vec![node]);
+            let nodes_for_drag =
+                (selectable && already_selected && snapshot.selected_nodes.len() > 1)
+                    .then(|| snapshot.selected_nodes.clone())
+                    .unwrap_or_else(|| vec![node]);
             let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
                 NodeGraphDragHandleMode::Any => true,
                 NodeGraphDragHandleMode::Header => {
@@ -331,20 +338,25 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
             let multi = modifiers.ctrl || modifiers.meta;
-            canvas.update_view_state(cx.app, |s| {
-                s.selected_nodes.clear();
-                s.selected_groups.clear();
-                if multi {
-                    if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
-                        s.selected_edges.remove(ix);
+            let selectable =
+                snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
+            if selectable {
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_nodes.clear();
+                    s.selected_groups.clear();
+                    if multi {
+                        if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
+                            s.selected_edges.remove(ix);
+                        } else {
+                            s.selected_edges.push(edge);
+                        }
                     } else {
+                        s.selected_edges.clear();
                         s.selected_edges.push(edge);
                     }
-                } else {
-                    s.selected_edges.clear();
-                    s.selected_edges.push(edge);
-                }
-            });
+                });
+            }
+            canvas.interaction.focused_edge = snapshot.interaction.edges_focusable.then_some(edge);
             canvas.interaction.edge_drag = Some(EdgeDrag {
                 edge,
                 start_pos: position,
@@ -366,27 +378,30 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
             let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
-            canvas.update_view_state(cx.app, |s| {
-                s.selected_nodes.clear();
-                s.selected_edges.clear();
-                if multi_mod {
-                    if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
-                        s.selected_groups.remove(ix);
-                    } else {
+            if snapshot.interaction.elements_selectable {
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_nodes.clear();
+                    s.selected_edges.clear();
+                    if multi_mod {
+                        if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
+                            s.selected_groups.remove(ix);
+                        } else {
+                            s.selected_groups.push(group);
+                        }
+                    } else if !s.selected_groups.iter().any(|id| *id == group) {
+                        s.selected_groups.clear();
                         s.selected_groups.push(group);
                     }
-                } else if !s.selected_groups.iter().any(|id| *id == group) {
-                    s.selected_groups.clear();
-                    s.selected_groups.push(group);
-                }
-                s.group_draw_order.retain(|id| *id != group);
-                s.group_draw_order.push(group);
-            });
+                    s.group_draw_order.retain(|id| *id != group);
+                    s.group_draw_order.push(group);
+                });
+            }
 
             canvas.interaction.pending_group_resize = Some(PendingGroupResize {
                 group,
@@ -410,27 +425,30 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
             let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
-            canvas.update_view_state(cx.app, |s| {
-                s.selected_nodes.clear();
-                s.selected_edges.clear();
-                if multi_mod {
-                    if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
-                        s.selected_groups.remove(ix);
-                    } else {
+            if snapshot.interaction.elements_selectable {
+                canvas.update_view_state(cx.app, |s| {
+                    s.selected_nodes.clear();
+                    s.selected_edges.clear();
+                    if multi_mod {
+                        if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
+                            s.selected_groups.remove(ix);
+                        } else {
+                            s.selected_groups.push(group);
+                        }
+                    } else if !s.selected_groups.iter().any(|id| *id == group) {
+                        s.selected_groups.clear();
                         s.selected_groups.push(group);
                     }
-                } else if !s.selected_groups.iter().any(|id| *id == group) {
-                    s.selected_groups.clear();
-                    s.selected_groups.push(group);
-                }
-                s.group_draw_order.retain(|id| *id != group);
-                s.group_draw_order.push(group);
-            });
+                    s.group_draw_order.retain(|id| *id != group);
+                    s.group_draw_order.push(group);
+                });
+            }
 
             canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
                 group,
@@ -460,10 +478,13 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.click_connect = false;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
+            canvas.interaction.focused_edge = None;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
-            super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers);
+            if snapshot.interaction.elements_selectable {
+                super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers);
+            }
         }
     }
 

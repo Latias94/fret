@@ -328,6 +328,18 @@ impl Default for NodeGraphPanInertiaTuning {
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
+    /// Global master switch for selecting graph elements (nodes/edges/groups).
+    #[serde(default = "default_elements_selectable")]
+    pub elements_selectable: bool,
+
+    /// Whether edges can be selected via pointer/keyboard.
+    #[serde(default = "default_edges_selectable")]
+    pub edges_selectable: bool,
+
+    /// Whether edges can be focused via keyboard navigation.
+    #[serde(default = "default_edges_focusable")]
+    pub edges_focusable: bool,
+
     /// Connection targeting strategy.
     #[serde(default)]
     pub connection_mode: NodeGraphConnectionMode,
@@ -440,6 +452,9 @@ impl NodeGraphInteractionState {
 impl Default for NodeGraphInteractionState {
     fn default() -> Self {
         Self {
+            elements_selectable: default_elements_selectable(),
+            edges_selectable: default_edges_selectable(),
+            edges_focusable: default_edges_focusable(),
             connection_mode: NodeGraphConnectionMode::default(),
             connection_radius: default_connection_radius(),
             reconnect_radius: default_reconnect_radius(),
@@ -464,6 +479,18 @@ impl Default for NodeGraphInteractionState {
             node_extent: None,
         }
     }
+}
+
+fn default_elements_selectable() -> bool {
+    true
+}
+
+fn default_edges_selectable() -> bool {
+    true
+}
+
+fn default_edges_focusable() -> bool {
+    true
 }
 
 fn default_pan_on_scroll() -> bool {

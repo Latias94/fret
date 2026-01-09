@@ -3240,6 +3240,59 @@ impl NodeGraphCanvas {
             self.stop_auto_pan_timer(host);
         }
     }
+
+    fn focus_next_edge<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
+        let snapshot = self.sync_view_state(host);
+        if !snapshot.interaction.elements_selectable
+            || !snapshot.interaction.edges_selectable
+            || !snapshot.interaction.edges_focusable
+        {
+            return false;
+        }
+
+        let mut edges: Vec<EdgeId> = self
+            .graph
+            .read_ref(host, |g| g.edges.keys().copied().collect())
+            .ok()
+            .unwrap_or_default();
+        if edges.is_empty() {
+            return false;
+        }
+        edges.sort_unstable();
+
+        let current = self
+            .interaction
+            .focused_edge
+            .or_else(|| snapshot.selected_edges.first().copied());
+
+        let next = match current.and_then(|id| edges.iter().position(|e| *e == id)) {
+            Some(ix) => {
+                let len = edges.len();
+                let next_ix = if forward {
+                    (ix + 1) % len
+                } else {
+                    (ix + len - 1) % len
+                };
+                edges[next_ix]
+            }
+            None => {
+                if forward {
+                    edges[0]
+                } else {
+                    edges[edges.len() - 1]
+                }
+            }
+        };
+
+        self.interaction.focused_edge = Some(next);
+        self.update_view_state(host, |s| {
+            s.selected_nodes.clear();
+            s.selected_groups.clear();
+            s.selected_edges.clear();
+            s.selected_edges.push(next);
+        });
+        true
+    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
@@ -3571,6 +3624,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 true
             }
             CMD_NODE_GRAPH_SELECT_ALL => {
+                if !snapshot.interaction.elements_selectable {
+                    return true;
+                }
                 let nodes = self
                     .graph
                     .read_ref(cx.app, |graph| {
@@ -3578,6 +3634,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     })
                     .ok()
                     .unwrap_or_default();
+                self.interaction.focused_edge = None;
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_groups.clear();
@@ -3846,7 +3903,20 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
+                if cx.input_ctx.focus_is_text_input {
+                    return;
+                }
+
                 if modifiers.ctrl || modifiers.meta {
+                    if *key == fret_core::KeyCode::Tab {
+                        if self.focus_next_edge(cx.app, !modifiers.shift) {
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                        }
+                        return;
+                    }
+
                     match *key {
                         fret_core::KeyCode::KeyA => {
                             cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_SELECT_ALL));
