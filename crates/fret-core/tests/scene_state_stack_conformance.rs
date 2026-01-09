@@ -79,6 +79,8 @@ impl Interpreter {
             }
             SceneOp::PushLayer { .. }
             | SceneOp::PopLayer
+            | SceneOp::PushEffect { .. }
+            | SceneOp::PopEffect
             | SceneOp::Quad { .. }
             | SceneOp::Image { .. }
             | SceneOp::ImageRegion { .. }

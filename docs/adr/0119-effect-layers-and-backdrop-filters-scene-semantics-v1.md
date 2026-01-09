@@ -1,6 +1,6 @@
 # ADR 0119: Effect Layers and Backdrop Filters (Scene Semantics v1)
 
-Status: Proposed
+Status: Accepted (MVP implemented)
 
 ## Context
 
@@ -177,6 +177,19 @@ Implementations are considered conformant when:
 - `bounds` is treated as a computation bound, not an implicit clip (clip behavior remains solely stack-driven).
 - Nested clips/transforms inside and around effect groups render correctly in a harness scene.
 - When budgets are exceeded (ADR 0120), degradation behavior is deterministic and layout-invariant.
+
+## Implementation Notes (Renderer v3 / RenderPlan)
+
+Current v3 implementation is intentionally minimal and focuses on proving the substrate + ordering contract:
+
+- `SceneOp::PushEffect/PopEffect` are encoded as explicit markers (sequence points) and compiled into `RenderPlan`.
+- MVP supported effect:
+  - `EffectMode::Backdrop` + `EffectStep::GaussianBlur { .. }` (bounded by `bounds` and current clip/scissor).
+- Not yet implemented (treated as a no-op by the renderer):
+  - `EffectMode::FilterContent`,
+  - `ColorAdjust`, `Pixelate`, `Dither` as effect steps (debug-only postprocesses exist separately).
+- Blur kernel is currently a fixed separable 9-tap kernel (approx radius 4) and `radius_px` is treated as a hint for
+  future quality selection (downsample tier / kernel variants).
 
 ## References
 

@@ -126,25 +126,38 @@ impl Renderer {
         } else {
             DebugPostprocess::None
         };
-        if !matches!(postprocess, DebugPostprocess::None) {
-            self.ensure_blit_pipeline(device, format);
-        }
-        if matches!(
-            postprocess,
-            DebugPostprocess::Pixelate { .. } | DebugPostprocess::Blur { .. }
-        ) {
-            self.ensure_scale_nearest_pipelines(device, format);
-        }
-        if matches!(postprocess, DebugPostprocess::Blur { .. }) {
-            self.ensure_blur_pipelines(device, format);
-        }
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             viewport_size,
+            format,
             clear.0,
             path_samples,
             postprocess,
+            self.intermediate_budget_bytes,
         );
+
+        let needs_scale = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ScaleNearest(_)));
+        let needs_blur = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Blur(_)));
+        let needs_blit = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
+
+        if needs_blit || needs_blur {
+            self.ensure_blit_pipeline(device, format);
+        }
+        if needs_scale {
+            self.ensure_scale_nearest_pipelines(device, format);
+        }
+        if needs_blur {
+            self.ensure_blur_pipelines(device, format);
+        }
         if self.intermediate_perf_enabled {
             self.intermediate_perf.last_frame_release_targets = plan
                 .passes

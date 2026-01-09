@@ -1,6 +1,6 @@
 # ADR 0120: Renderer Intermediate Budgets and Effect Degradation (v1)
 
-Status: Proposed
+Status: Accepted (initial implementation landed)
 
 ## Context
 

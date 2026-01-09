@@ -197,7 +197,7 @@ accepted as ADRs, but they help keep early implementation aligned with long-term
 
 This section is intentionally lightweight and should be updated as work lands.
 
-- **ADRs drafted (Proposed):**
+- **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
@@ -209,13 +209,15 @@ This section is intentionally lightweight and should be updated as work lands.
     - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
     - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
   - M2: In progress:
-    - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample chain -> upscale chain -> blit).
-    - A debug-gated separable blur reference postprocess exists (downsample -> blur H/V -> upscale -> blit).
+    - Debug-gated "pixelate" is compiled into the plan (downsample chain -> upscale chain -> blit).
+    - Debug-gated separable blur exists (downsample -> blur H/V -> upscale -> blit).
+    - MVP public semantics: `SceneOp::PushEffect/PopEffect` are encoded as explicit markers and compiled into
+      `RenderPlan` as a bounded, scissored backdrop blur (ordering preserved).
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
     - Debug blur postprocess selects a cheaper downsample tier when `intermediate_budget_bytes` would be exceeded.
-    - Region-scissored blur preserves outside pixels (base blit + in-place scissored upscale) with a GPU conformance test.
+    - Region-scissored blur preserves outside pixels with GPU conformance tests (debug scissor + effect-bounds scissor).
   - M4: Deferred.
 
 Recent landing points (branch-local):

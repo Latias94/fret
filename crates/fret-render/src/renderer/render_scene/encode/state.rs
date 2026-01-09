@@ -18,6 +18,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) clips: &'a mut Vec<ClipRRectUniform>,
     pub(super) uniforms: &'a mut Vec<ViewportUniform>,
     pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
+    pub(super) effect_markers: &'a mut Vec<EffectMarker>,
 
     pub(super) scissor_stack: Vec<ScissorRect>,
     pub(super) current_scissor: ScissorRect,
@@ -48,6 +49,7 @@ impl<'a> EncodeState<'a> {
         let clips = &mut encoding.clips;
         let uniforms = &mut encoding.uniforms;
         let ordered_draws = &mut encoding.ordered_draws;
+        let effect_markers = &mut encoding.effect_markers;
 
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         let mut state = Self {
@@ -61,6 +63,7 @@ impl<'a> EncodeState<'a> {
             clips,
             uniforms,
             ordered_draws,
+            effect_markers,
             scissor_stack: vec![current_scissor],
             current_scissor,
             clip_pop_stack: Vec::new(),

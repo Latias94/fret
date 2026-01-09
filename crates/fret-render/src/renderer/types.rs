@@ -280,6 +280,23 @@ pub(super) enum OrderedDraw {
     Path(PathDraw),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum EffectMarkerKind {
+    Push {
+        scissor: ScissorRect,
+        mode: fret_core::EffectMode,
+        chain: fret_core::EffectChain,
+        quality: fret_core::EffectQuality,
+    },
+    Pop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct EffectMarker {
+    pub(super) draw_ix: usize,
+    pub(super) kind: EffectMarkerKind,
+}
+
 #[derive(Default)]
 pub(super) struct SceneEncoding {
     pub(super) instances: Vec<QuadInstance>,
@@ -289,6 +306,7 @@ pub(super) struct SceneEncoding {
     pub(super) clips: Vec<ClipRRectUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
+    pub(super) effect_markers: Vec<EffectMarker>,
 }
 
 impl SceneEncoding {
@@ -300,6 +318,7 @@ impl SceneEncoding {
         self.clips.clear();
         self.uniforms.clear();
         self.ordered_draws.clear();
+        self.effect_markers.clear();
     }
 }
 

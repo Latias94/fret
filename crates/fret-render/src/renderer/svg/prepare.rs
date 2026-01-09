@@ -75,7 +75,9 @@ impl Renderer {
                 | SceneOp::PopLayer
                 | SceneOp::PushClipRect { .. }
                 | SceneOp::PushClipRRect { .. }
-                | SceneOp::PopClip => {}
+                | SceneOp::PopClip
+                | SceneOp::PushEffect { .. }
+                | SceneOp::PopEffect => {}
                 SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
                     let s = current_transform_scale(
                         *transform_stack

@@ -1,6 +1,6 @@
 # ADR 0118: Renderer Architecture v3 - Render Plan and Post-Processing Substrate
 
-Status: Proposed
+Status: Accepted (initial implementation landed)
 
 ## Context
 

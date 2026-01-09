@@ -1,6 +1,7 @@
 use super::frame_targets::downsampled_size;
+use super::intermediate_pool::estimate_texture_bytes;
 use super::util::union_scissor;
-use super::{OrderedDraw, SceneEncoding, ScissorRect};
+use super::{EffectMarkerKind, OrderedDraw, SceneEncoding, ScissorRect};
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -109,27 +110,134 @@ impl RenderPlan {
     pub(super) fn compile_for_scene(
         encoding: &SceneEncoding,
         viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
         clear: wgpu::Color,
         path_samples: u32,
         postprocess: DebugPostprocess,
+        intermediate_budget_bytes: u64,
     ) -> Self {
-        let scene_target = match postprocess {
-            DebugPostprocess::None => PlanTarget::Output,
-            DebugPostprocess::OffscreenBlit
-            | DebugPostprocess::Pixelate { .. }
-            | DebugPostprocess::Blur { .. } => PlanTarget::Intermediate0,
+        let mut postprocess = postprocess;
+
+        let has_backdrop_blur = encoding.effect_markers.iter().any(|m| {
+            let EffectMarkerKind::Push { mode, chain, .. } = m.kind else {
+                return false;
+            };
+            mode == fret_core::EffectMode::Backdrop && effect_chain_has_gaussian_blur(chain)
+        });
+        let backdrop_blur_enabled = has_backdrop_blur
+            && choose_effect_blur_downsample_scale(
+                viewport_size,
+                format,
+                intermediate_budget_bytes,
+                2,
+                fret_core::EffectQuality::Auto,
+            )
+            .is_some();
+
+        let needs_intermediate = backdrop_blur_enabled
+            || matches!(
+                postprocess,
+                DebugPostprocess::OffscreenBlit
+                    | DebugPostprocess::Pixelate { .. }
+                    | DebugPostprocess::Blur { .. }
+            );
+
+        if needs_intermediate && matches!(postprocess, DebugPostprocess::None) {
+            postprocess = DebugPostprocess::OffscreenBlit;
+        }
+
+        let scene_target = if needs_intermediate {
+            PlanTarget::Intermediate0
+        } else {
+            PlanTarget::Output
         };
         let draws = &encoding.ordered_draws;
 
-        if path_samples <= 1 {
-            let mut plan = Self {
-                passes: vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+        if encoding.effect_markers.is_empty() {
+            if path_samples <= 1 {
+                let mut plan = Self {
+                    passes: vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                        segment: SceneSegmentId(0),
+                        target: scene_target,
+                        load: wgpu::LoadOp::Clear(clear),
+                        draw_range: 0..draws.len(),
+                    })],
+                };
+                append_postprocess(&mut plan, viewport_size, postprocess, clear);
+                insert_early_releases(&mut plan.passes);
+                return plan;
+            }
+
+            let mut passes: Vec<RenderPlanPass> = Vec::new();
+            let mut is_first_pass = true;
+            let mut scene_range_start: usize = 0;
+            let mut cursor: usize = 0;
+
+            while cursor < draws.len() {
+                if let OrderedDraw::Path(first) = &draws[cursor] {
+                    if is_first_pass {
+                        passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                            segment: SceneSegmentId(0),
+                            target: scene_target,
+                            load: wgpu::LoadOp::Clear(clear),
+                            draw_range: scene_range_start..cursor,
+                        }));
+                        is_first_pass = false;
+                    } else if scene_range_start < cursor {
+                        passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                            segment: SceneSegmentId(0),
+                            target: scene_target,
+                            load: wgpu::LoadOp::Load,
+                            draw_range: scene_range_start..cursor,
+                        }));
+                    }
+
+                    let batch_uniform_index = first.uniform_index;
+                    let mut union = first.scissor;
+                    let mut end = cursor + 1;
+                    while end < draws.len() {
+                        match &draws[end] {
+                            OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
+                                union = union_scissor(union, d.scissor);
+                                end += 1;
+                            }
+                            _ => break,
+                        }
+                    }
+
+                    passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+                        segment: SceneSegmentId(0),
+                        target: scene_target,
+                        draw_range: cursor..end,
+                        union_scissor: union,
+                        batch_uniform_index,
+                    }));
+
+                    cursor = end;
+                    scene_range_start = cursor;
+                    continue;
+                }
+
+                cursor += 1;
+            }
+
+            if is_first_pass {
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scene_target,
                     load: wgpu::LoadOp::Clear(clear),
                     draw_range: 0..draws.len(),
-                })],
-            };
+                }));
+            } else if scene_range_start < draws.len() {
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                    segment: SceneSegmentId(0),
+                    target: scene_target,
+                    load: wgpu::LoadOp::Load,
+                    draw_range: scene_range_start..draws.len(),
+                }));
+            }
+
+            let mut plan = Self { passes };
             append_postprocess(&mut plan, viewport_size, postprocess, clear);
             insert_early_releases(&mut plan.passes);
             return plan;
@@ -140,68 +248,122 @@ impl RenderPlan {
         let mut scene_range_start: usize = 0;
         let mut cursor: usize = 0;
 
-        while cursor < draws.len() {
-            if let OrderedDraw::Path(first) = &draws[cursor] {
-                if is_first_pass {
-                    passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                        segment: SceneSegmentId(0),
-                        target: scene_target,
-                        load: wgpu::LoadOp::Clear(clear),
-                        draw_range: scene_range_start..cursor,
-                    }));
-                    is_first_pass = false;
-                } else if scene_range_start < cursor {
-                    passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                        segment: SceneSegmentId(0),
-                        target: scene_target,
-                        load: wgpu::LoadOp::Load,
-                        draw_range: scene_range_start..cursor,
-                    }));
-                }
+        let mut marker_ix: usize = 0;
+        let markers = &encoding.effect_markers;
 
-                let batch_uniform_index = first.uniform_index;
-                let mut union = first.scissor;
-                let mut end = cursor + 1;
-                while end < draws.len() {
-                    match &draws[end] {
-                        OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
-                            union = union_scissor(union, d.scissor);
-                            end += 1;
-                        }
-                        _ => break,
-                    }
-                }
-
-                passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+        let flush_scene_range = |end: usize,
+                                 passes: &mut Vec<RenderPlanPass>,
+                                 is_first_pass: &mut bool,
+                                 scene_range_start: &mut usize| {
+            if *is_first_pass {
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
                     target: scene_target,
-                    draw_range: cursor..end,
-                    union_scissor: union,
-                    batch_uniform_index,
+                    load: wgpu::LoadOp::Clear(clear),
+                    draw_range: *scene_range_start..end,
                 }));
+                *is_first_pass = false;
+            } else if *scene_range_start < end {
+                passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                    segment: SceneSegmentId(0),
+                    target: scene_target,
+                    load: wgpu::LoadOp::Load,
+                    draw_range: *scene_range_start..end,
+                }));
+            }
+            *scene_range_start = end;
+        };
 
-                cursor = end;
-                scene_range_start = cursor;
+        while cursor <= draws.len() {
+            let next_marker_at = markers
+                .get(marker_ix)
+                .map(|m| m.draw_ix)
+                .unwrap_or(usize::MAX);
+
+            if cursor == next_marker_at || cursor == draws.len() {
+                flush_scene_range(
+                    cursor,
+                    &mut passes,
+                    &mut is_first_pass,
+                    &mut scene_range_start,
+                );
+
+                while marker_ix < markers.len() && markers[marker_ix].draw_ix == cursor {
+                    let marker = markers[marker_ix];
+                    if let EffectMarkerKind::Push {
+                        scissor,
+                        mode,
+                        chain,
+                        quality,
+                    } = marker.kind
+                        && mode == fret_core::EffectMode::Backdrop
+                        && scene_target == PlanTarget::Intermediate0
+                        && let Some(requested_downsample) = effect_chain_requested_downsample(chain)
+                    {
+                        if let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+                            viewport_size,
+                            format,
+                            intermediate_budget_bytes,
+                            requested_downsample,
+                            quality,
+                        ) {
+                            append_backdrop_blur_in_place(
+                                &mut passes,
+                                viewport_size,
+                                downsample_scale,
+                                Some(scissor),
+                                clear,
+                            );
+                        }
+                    }
+
+                    marker_ix += 1;
+                }
+
+                if cursor == draws.len() {
+                    break;
+                }
+
                 continue;
             }
 
-            cursor += 1;
-        }
+            if path_samples > 1 {
+                if let OrderedDraw::Path(first) = &draws[cursor] {
+                    flush_scene_range(
+                        cursor,
+                        &mut passes,
+                        &mut is_first_pass,
+                        &mut scene_range_start,
+                    );
 
-        if is_first_pass {
-            passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                segment: SceneSegmentId(0),
-                target: scene_target,
-                load: wgpu::LoadOp::Clear(clear),
-                draw_range: 0..draws.len(),
-            }));
-        } else if scene_range_start < draws.len() {
-            passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
-                segment: SceneSegmentId(0),
-                target: scene_target,
-                load: wgpu::LoadOp::Load,
-                draw_range: scene_range_start..draws.len(),
-            }));
+                    let batch_uniform_index = first.uniform_index;
+                    let mut union = first.scissor;
+                    let mut end = cursor + 1;
+                    while end < draws.len() && end < next_marker_at {
+                        match &draws[end] {
+                            OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
+                                union = union_scissor(union, d.scissor);
+                                end += 1;
+                            }
+                            _ => break,
+                        }
+                    }
+
+                    passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+                        segment: SceneSegmentId(0),
+                        target: scene_target,
+                        draw_range: cursor..end,
+                        union_scissor: union,
+                        batch_uniform_index,
+                    }));
+
+                    cursor = end;
+                    scene_range_start = cursor;
+                    continue;
+                }
+            }
+
+            cursor += 1;
         }
 
         let mut plan = Self { passes };
@@ -209,6 +371,119 @@ impl RenderPlan {
         insert_early_releases(&mut plan.passes);
         plan
     }
+}
+
+fn effect_chain_has_gaussian_blur(chain: fret_core::EffectChain) -> bool {
+    chain
+        .iter()
+        .any(|step| matches!(step, fret_core::EffectStep::GaussianBlur { .. }))
+}
+
+fn effect_chain_requested_downsample(chain: fret_core::EffectChain) -> Option<u32> {
+    for step in chain.iter() {
+        if let fret_core::EffectStep::GaussianBlur { downsample, .. } = step {
+            let downsample = if downsample >= 4 { 4 } else { 2 };
+            return Some(downsample);
+        }
+    }
+    None
+}
+
+fn choose_effect_blur_downsample_scale(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+    requested_downsample: u32,
+    quality: fret_core::EffectQuality,
+) -> Option<u32> {
+    if budget_bytes == 0 {
+        return None;
+    }
+
+    let full = estimate_texture_bytes(viewport_size, format, 1);
+    let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
+    let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
+
+    let required_half = full.saturating_add(half.saturating_mul(2));
+    let required_quarter = full.saturating_add(quarter.saturating_mul(2));
+
+    let mut desired = match quality {
+        fret_core::EffectQuality::Low => 4,
+        fret_core::EffectQuality::Medium | fret_core::EffectQuality::High => 2,
+        fret_core::EffectQuality::Auto => requested_downsample,
+    };
+
+    desired = if desired >= 4 { 4 } else { 2 };
+
+    if desired == 2 && required_half <= budget_bytes {
+        return Some(2);
+    }
+    if required_quarter <= budget_bytes {
+        return Some(4);
+    }
+    None
+}
+
+fn append_backdrop_blur_in_place(
+    passes: &mut Vec<RenderPlanPass>,
+    viewport_size: (u32, u32),
+    downsample_scale: u32,
+    scissor: Option<ScissorRect>,
+    clear: wgpu::Color,
+) {
+    let Some(scissor) = scissor else {
+        return;
+    };
+    if scissor.w == 0 || scissor.h == 0 {
+        return;
+    }
+
+    let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
+    let blur_size = downsampled_size(viewport_size, downsample_scale);
+
+    let down_scissor = map_scissor_to_size(Some(scissor), viewport_size, blur_size);
+    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+        src: PlanTarget::Intermediate0,
+        dst: PlanTarget::Intermediate1,
+        src_size: viewport_size,
+        dst_size: blur_size,
+        dst_scissor: down_scissor,
+        mode: ScaleMode::Downsample,
+        scale: downsample_scale,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+
+    let blur_scissor = map_scissor_to_size(Some(scissor), viewport_size, blur_size);
+    passes.push(RenderPlanPass::Blur(BlurPass {
+        src: PlanTarget::Intermediate1,
+        dst: PlanTarget::Intermediate2,
+        src_size: blur_size,
+        dst_size: blur_size,
+        dst_scissor: blur_scissor,
+        axis: BlurAxis::Horizontal,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::Blur(BlurPass {
+        src: PlanTarget::Intermediate2,
+        dst: PlanTarget::Intermediate1,
+        src_size: blur_size,
+        dst_size: blur_size,
+        dst_scissor: blur_scissor,
+        axis: BlurAxis::Vertical,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+
+    let final_scissor = map_scissor_to_size(Some(scissor), viewport_size, viewport_size);
+    passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+        src: PlanTarget::Intermediate1,
+        dst: PlanTarget::Intermediate0,
+        src_size: blur_size,
+        dst_size: viewport_size,
+        dst_scissor: final_scissor,
+        mode: ScaleMode::Upscale,
+        scale: downsample_scale,
+        load: wgpu::LoadOp::Load,
+    }));
 }
 
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
@@ -748,9 +1023,11 @@ mod tests {
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             (100, 100),
+            wgpu::TextureFormat::Bgra8UnormSrgb,
             wgpu::Color::TRANSPARENT,
             1,
             DebugPostprocess::None,
+            u64::MAX,
         );
 
         assert_eq!(plan.passes.len(), 1);
@@ -766,9 +1043,11 @@ mod tests {
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             (100, 100),
+            wgpu::TextureFormat::Bgra8UnormSrgb,
             wgpu::Color::TRANSPARENT,
             1,
             DebugPostprocess::OffscreenBlit,
+            u64::MAX,
         );
 
         let core = strip_releases(&plan.passes);
@@ -801,9 +1080,11 @@ mod tests {
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             viewport_size,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
             wgpu::Color::TRANSPARENT,
             1,
             DebugPostprocess::Pixelate { scale: 4 },
+            u64::MAX,
         );
 
         let core = strip_releases(&plan.passes);
@@ -948,6 +1229,7 @@ mod tests {
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             viewport_size,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
             wgpu::Color::TRANSPARENT,
             1,
             DebugPostprocess::Blur {
@@ -955,6 +1237,7 @@ mod tests {
                 downsample_scale: 2,
                 scissor: None,
             },
+            u64::MAX,
         );
 
         let core = strip_releases(&plan.passes);
@@ -1048,6 +1331,7 @@ mod tests {
         let plan = RenderPlan::compile_for_scene(
             &encoding,
             viewport_size,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
             wgpu::Color::TRANSPARENT,
             1,
             DebugPostprocess::Blur {
@@ -1060,6 +1344,7 @@ mod tests {
                     h: 50,
                 }),
             },
+            u64::MAX,
         );
 
         // Half target is (50, 50) for 100x100.
