@@ -25,6 +25,10 @@ use std::sync::{Arc, Mutex};
 #[cfg(feature = "layout-engine-v2")]
 use fret_ui::declarative;
 #[cfg(feature = "layout-engine-v2")]
+use fret_ui::overlay_placement::{
+    Align as OverlayAlign, Side as OverlaySide, anchored_panel_bounds,
+};
+#[cfg(feature = "layout-engine-v2")]
 use slotmap::KeyData;
 #[cfg(feature = "layout-engine-v2")]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -268,6 +272,11 @@ struct OverlayAssertsLastFrameElementBounds {
     expected_right_last: Rect,
     expected_left_now: Rect,
     expected_right_now: Rect,
+    outer: Rect,
+    desired: Size,
+    side_offset: Px,
+    side: OverlaySide,
+    align: OverlayAlign,
     ok: Arc<AtomicBool>,
 }
 
@@ -281,12 +290,48 @@ impl<H: UiHost> Widget<H> for OverlayAssertsLastFrameElementBounds {
         let left_now = cx.tree.debug_node_bounds(self.left_node);
         let right_now = cx.tree.debug_node_bounds(self.right_node);
 
+        let placed = left_last.map(|anchor| {
+            anchored_panel_bounds(
+                self.outer,
+                anchor,
+                self.desired,
+                self.side_offset,
+                self.side,
+                self.align,
+            )
+        });
+        let expected_placed_last = anchored_panel_bounds(
+            self.outer,
+            self.expected_left_last,
+            self.desired,
+            self.side_offset,
+            self.side,
+            self.align,
+        );
+        let expected_placed_now = anchored_panel_bounds(
+            self.outer,
+            self.expected_left_now,
+            self.desired,
+            self.side_offset,
+            self.side,
+            self.align,
+        );
+
         self.ok.store(
             left_last == Some(self.expected_left_last)
                 && right_last == Some(self.expected_right_last)
                 && left_now == Some(self.expected_left_now)
                 && right_now == Some(self.expected_right_now),
             Ordering::Relaxed,
+        );
+        assert!(
+            expected_placed_last != expected_placed_now,
+            "expected anchor change to affect overlay placement"
+        );
+        assert_eq!(
+            placed,
+            Some(expected_placed_last),
+            "expected overlay placement to use last-frame anchor bounds"
         );
 
         cx.available
@@ -641,6 +686,11 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
         expected_right_last: expected_right_0,
         expected_left_now: expected_left_1,
         expected_right_now: expected_right_1,
+        outer: bounds,
+        desired: Size::new(Px(80.0), Px(24.0)),
+        side_offset: Px(6.0),
+        side: OverlaySide::Bottom,
+        align: OverlayAlign::End,
         ok: ok.clone(),
     });
     ui.push_overlay_root(overlay, false);
