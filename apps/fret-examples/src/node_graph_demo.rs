@@ -747,7 +747,14 @@ impl PortalTextEditSpec for DemoFloatPortalSpec {
         }
     }
 
-    fn step_text(&self, graph: &Graph, node: NodeId, text: &str, delta: i32) -> Option<String> {
+    fn step_text_with_mode(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        text: &str,
+        delta: i32,
+        mode: fret_node::ui::PortalTextStepMode,
+    ) -> Option<String> {
         let base = text
             .trim()
             .parse::<f64>()
@@ -761,7 +768,11 @@ impl PortalTextEditSpec for DemoFloatPortalSpec {
             })
             .unwrap_or(0.0);
 
-        let step = 0.25;
+        let step = match mode {
+            fret_node::ui::PortalTextStepMode::Fine => 0.025,
+            fret_node::ui::PortalTextStepMode::Normal => 0.25,
+            fret_node::ui::PortalTextStepMode::Coarse => 2.5,
+        };
         Some(format!("{:.3}", base + step * delta as f64))
     }
 }
