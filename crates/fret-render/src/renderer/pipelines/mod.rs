@@ -1,5 +1,6 @@
 mod blit;
 mod blur;
+mod clip_mask;
 mod color_adjust;
 mod composite;
 mod mask;

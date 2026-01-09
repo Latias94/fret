@@ -144,6 +144,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::Blur(_)));
+        let needs_clip_mask = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ClipMask(_)));
         let needs_blit = plan
             .passes
             .iter()
@@ -165,6 +169,9 @@ impl Renderer {
         }
         if needs_blur {
             self.ensure_blur_pipelines(device, format);
+        }
+        if needs_clip_mask {
+            self.ensure_clip_mask_pipeline(device);
         }
         if needs_composite && path_samples <= 1 {
             self.ensure_composite_pipeline(device, format);
@@ -285,6 +292,10 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "SceneDrawRange cannot target Mask0");
+                            None
+                        }
                     };
                     let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
@@ -651,6 +662,10 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "PathMsaaBatch cannot target Mask0");
+                            None
+                        }
                     };
                     let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
@@ -829,13 +844,9 @@ impl Renderer {
                         bytemuck::cast_slice(&[scale, 0, 0, 0]),
                     );
 
-                    let layout = self
-                        .scale_bind_group_layout
-                        .as_ref()
-                        .expect("scale bind group layout must exist");
                     let src_view = match pass.src {
-                        PlanTarget::Output => {
-                            debug_assert!(false, "ScaleNearest src cannot be Output");
+                        PlanTarget::Output | PlanTarget::Mask0 => {
+                            debug_assert!(false, "ScaleNearest src cannot be Output/Mask0");
                             continue;
                         }
                         PlanTarget::Intermediate0
@@ -844,13 +855,6 @@ impl Renderer {
                             frame_targets.require_target(pass.src, pass.src_size)
                         }
                     };
-                    let bind_group = create_texture_uniform_bind_group(
-                        device,
-                        "fret scale-nearest bind group",
-                        layout,
-                        &src_view,
-                        self.scale_param_buffer.as_entire_binding(),
-                    );
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
@@ -865,10 +869,81 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "ScaleNearest dst cannot be Mask0");
+                            None
+                        }
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                    if let Some(mask_target) = pass.mask_target {
+                        debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+                        debug_assert_eq!(mask_target, PlanTarget::Mask0);
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based scale-nearest expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask pass needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask_target, viewport_size);
+                        let mask_layout = self
+                            .scale_mask_bind_group_layout
+                            .as_ref()
+                            .expect("scale mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret scale-nearest mask bind group"),
+                            layout: mask_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.scale_param_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let pipeline = self
+                            .upscale_mask_pipeline
+                            .as_ref()
+                            .expect("upscale mask pipeline must exist");
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret upscale-nearest mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
                         let pipeline = self
                             .upscale_masked_pipeline
@@ -876,6 +951,18 @@ impl Renderer {
                             .expect("upscale masked pipeline must exist");
                         let uniform_offset =
                             (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let layout = self
+                            .scale_bind_group_layout
+                            .as_ref()
+                            .expect("scale bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret scale-nearest bind group",
+                            layout,
+                            &src_view,
+                            self.scale_param_buffer.as_entire_binding(),
+                        );
 
                         let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                             label: Some("fret upscale-nearest masked pass"),
@@ -903,6 +990,17 @@ impl Renderer {
                         }
                         rp.draw(0..3, 0..1);
                     } else {
+                        let layout = self
+                            .scale_bind_group_layout
+                            .as_ref()
+                            .expect("scale bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret scale-nearest bind group",
+                            layout,
+                            &src_view,
+                            self.scale_param_buffer.as_entire_binding(),
+                        );
                         let (pipeline, label) = match pass.mode {
                             ScaleMode::Downsample => (
                                 self.downsample_pipeline
@@ -930,8 +1028,8 @@ impl Renderer {
                 }
                 RenderPlanPass::Blur(pass) => {
                     let src_view = match pass.src {
-                        PlanTarget::Output => {
-                            debug_assert!(false, "Blur src cannot be Output");
+                        PlanTarget::Output | PlanTarget::Mask0 => {
+                            debug_assert!(false, "Blur src cannot be Output/Mask0");
                             continue;
                         }
                         PlanTarget::Intermediate0
@@ -965,6 +1063,10 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "Blur dst cannot be Mask0");
+                            None
+                        }
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
@@ -1048,8 +1150,8 @@ impl Renderer {
                         .as_ref()
                         .expect("blit bind group layout must exist");
                     let src_view = match pass.src {
-                        PlanTarget::Output => {
-                            debug_assert!(false, "FullscreenBlit src cannot be Output");
+                        PlanTarget::Output | PlanTarget::Mask0 => {
+                            debug_assert!(false, "FullscreenBlit src cannot be Output/Mask0");
                             continue;
                         }
                         PlanTarget::Intermediate0
@@ -1078,6 +1180,10 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "FullscreenBlit dst cannot be Mask0");
+                            None
+                        }
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
@@ -1109,8 +1215,8 @@ impl Renderer {
                     );
 
                     let src_view = match pass.src {
-                        PlanTarget::Output => {
-                            debug_assert!(false, "ColorAdjust src cannot be Output");
+                        PlanTarget::Output | PlanTarget::Mask0 => {
+                            debug_assert!(false, "ColorAdjust src cannot be Output/Mask0");
                             continue;
                         }
                         PlanTarget::Intermediate0
@@ -1140,6 +1246,10 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "ColorAdjust dst cannot be Mask0");
+                            None
+                        }
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
@@ -1193,14 +1303,9 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::CompositePremul(pass) => {
-                    let composite_pipeline = self
-                        .composite_pipeline
-                        .as_ref()
-                        .expect("composite premul pipeline must exist");
-
                     let src_view = match pass.src {
-                        PlanTarget::Output => {
-                            debug_assert!(false, "CompositePremul src cannot be Output");
+                        PlanTarget::Output | PlanTarget::Mask0 => {
+                            debug_assert!(false, "CompositePremul src cannot be Output/Mask0");
                             continue;
                         }
                         PlanTarget::Intermediate0
@@ -1209,21 +1314,6 @@ impl Renderer {
                             frame_targets.require_target(pass.src, pass.src_size)
                         }
                     };
-
-                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("fret composite premul bind group"),
-                        layout: &self.viewport_bind_group_layout,
-                        entries: &[
-                            wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
-                                resource: wgpu::BindingResource::TextureView(&src_view),
-                            },
-                        ],
-                    });
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
@@ -1238,8 +1328,78 @@ impl Renderer {
                             usage,
                             self.intermediate_budget_bytes,
                         )),
+                        PlanTarget::Mask0 => {
+                            debug_assert!(false, "CompositePremul dst cannot be Mask0");
+                            None
+                        }
                     };
                     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    let (composite_pipeline, bind_group) = if let Some(mask_target) =
+                        pass.mask_target
+                    {
+                        debug_assert_eq!(mask_target, PlanTarget::Mask0);
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based composite expects full-size destination"
+                        );
+
+                        let mask_view = frame_targets.require_target(mask_target, viewport_size);
+                        let layout = self
+                            .composite_mask_bind_group_layout
+                            .as_ref()
+                            .expect("composite mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret composite premul mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::Sampler(
+                                        &self.viewport_sampler,
+                                    ),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        (
+                            self.composite_mask_pipeline
+                                .as_ref()
+                                .expect("composite premul mask pipeline must exist"),
+                            bind_group,
+                        )
+                    } else {
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret composite premul bind group"),
+                            layout: &self.viewport_bind_group_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::Sampler(
+                                        &self.viewport_sampler,
+                                    ),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                            ],
+                        });
+                        (
+                            self.composite_pipeline
+                                .as_ref()
+                                .expect("composite premul pipeline must exist"),
+                            bind_group,
+                        )
+                    };
 
                     let x0 = 0.0;
                     let y0 = 0.0;
@@ -1321,6 +1481,46 @@ impl Renderer {
                         }
                     }
                     rp.draw(0..6, 0..1);
+                }
+                RenderPlanPass::ClipMask(pass) => {
+                    debug_assert_eq!(pass.dst, PlanTarget::Mask0);
+                    debug_assert_eq!(pass.dst_size, viewport_size);
+                    let dst_view = frame_targets.ensure_target(
+                        &mut self.intermediate_pool,
+                        device,
+                        pass.dst,
+                        pass.dst_size,
+                        wgpu::TextureFormat::R8Unorm,
+                        usage,
+                        self.intermediate_budget_bytes,
+                    );
+
+                    let pipeline = self
+                        .clip_mask_pipeline
+                        .as_ref()
+                        .expect("clip mask pipeline must exist");
+                    let uniform_offset =
+                        (u64::from(pass.uniform_index) * self.uniform_stride) as u32;
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret clip mask pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &dst_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(pipeline);
+                    rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    rp.draw(0..3, 0..1);
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
                     frame_targets.release_target(

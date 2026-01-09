@@ -6,6 +6,7 @@ pub(in crate::renderer) struct FrameTargets {
     intermediate0: Option<FrameTarget>,
     intermediate1: Option<FrameTarget>,
     intermediate2: Option<FrameTarget>,
+    mask0: Option<FrameTarget>,
     bytes_in_use: u64,
     peak_bytes_in_use: u64,
 }
@@ -32,6 +33,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => &mut self.intermediate0,
             PlanTarget::Intermediate1 => &mut self.intermediate1,
             PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Mask0 => &mut self.mask0,
             PlanTarget::Output => unreachable!("Output is not an intermediate target"),
         };
 
@@ -65,6 +67,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => self.intermediate0.as_ref(),
             PlanTarget::Intermediate1 => self.intermediate1.as_ref(),
             PlanTarget::Intermediate2 => self.intermediate2.as_ref(),
+            PlanTarget::Mask0 => self.mask0.as_ref(),
             PlanTarget::Output => unreachable!("Output is not an intermediate target"),
         };
         let existing = slot.expect("required intermediate target must exist");
@@ -85,6 +88,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => &mut self.intermediate0,
             PlanTarget::Intermediate1 => &mut self.intermediate1,
             PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Mask0 => &mut self.mask0,
             PlanTarget::Output => unreachable!("Output is not an intermediate target"),
         };
         if let Some(t) = slot.take() {
@@ -97,6 +101,7 @@ impl FrameTargets {
         self.release_target(pool, PlanTarget::Intermediate0, budget_bytes);
         self.release_target(pool, PlanTarget::Intermediate1, budget_bytes);
         self.release_target(pool, PlanTarget::Intermediate2, budget_bytes);
+        self.release_target(pool, PlanTarget::Mask0, budget_bytes);
     }
 
     pub(super) fn in_use_bytes(&self) -> u64 {

@@ -13,6 +13,7 @@ pub(super) enum PlanTarget {
     Intermediate0,
     Intermediate1,
     Intermediate2,
+    Mask0,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +47,15 @@ pub(super) enum RenderPlanPass {
     ScaleNearest(ScaleNearestPass),
     Blur(BlurPass),
     ColorAdjust(ColorAdjustPass),
+    ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ClipMaskPass {
+    pub(super) dst: PlanTarget,
+    pub(super) dst_size: (u32, u32),
+    pub(super) uniform_index: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,6 +108,7 @@ pub(super) struct CompositePremulPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask_target: Option<PlanTarget>,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -116,6 +126,7 @@ pub(super) struct ScaleNearestPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask_target: Option<PlanTarget>,
     pub(super) mode: ScaleMode,
     pub(super) scale: u32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
@@ -377,6 +388,19 @@ impl RenderPlan {
                     return;
                 }
 
+                let mask_target = if let Some(uniform_index) = mask_uniform_index
+                    && clip_mask_enabled(viewport_size, intermediate_budget_bytes)
+                {
+                    passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
+                        dst: PlanTarget::Mask0,
+                        dst_size: viewport_size,
+                        uniform_index,
+                    }));
+                    Some(PlanTarget::Mask0)
+                } else {
+                    None
+                };
+
                 for step in chain.iter() {
                     match step {
                         fret_core::EffectStep::GaussianBlur {
@@ -405,6 +429,7 @@ impl RenderPlan {
                                     scissor,
                                     clear,
                                     mask_uniform_index,
+                                    mask_target,
                                 );
                                 continue;
                             }
@@ -481,6 +506,7 @@ impl RenderPlan {
                                 scale,
                                 clear,
                                 mask_uniform_index,
+                                mask_target,
                             );
                         }
                         fret_core::EffectStep::Dither { .. } => {
@@ -594,6 +620,19 @@ impl RenderPlan {
                                     None,
                                 );
 
+                                let composite_mask_target = if clip_mask_enabled(
+                                    viewport_size,
+                                    intermediate_budget_bytes,
+                                ) {
+                                    passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
+                                        dst: PlanTarget::Mask0,
+                                        dst_size: viewport_size,
+                                        uniform_index: scope.uniform_index,
+                                    }));
+                                    Some(PlanTarget::Mask0)
+                                } else {
+                                    None
+                                };
                                 passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
                                     src: content_target,
                                     dst: scope.parent_target,
@@ -601,6 +640,7 @@ impl RenderPlan {
                                     dst_size: viewport_size,
                                     dst_scissor: None,
                                     mask_uniform_index: Some(scope.uniform_index),
+                                    mask_target: composite_mask_target,
                                     load: wgpu::LoadOp::Load,
                                 }));
 
@@ -732,6 +772,13 @@ fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
+fn clip_mask_enabled(viewport_size: (u32, u32), budget_bytes: u64) -> bool {
+    if budget_bytes == 0 {
+        return false;
+    }
+    estimate_texture_bytes(viewport_size, wgpu::TextureFormat::R8Unorm, 1) <= budget_bytes
+}
+
 fn append_scissored_blur_in_place_two_scratch(
     passes: &mut Vec<RenderPlanPass>,
     srcdst: PlanTarget,
@@ -742,6 +789,7 @@ fn append_scissored_blur_in_place_two_scratch(
     scissor: ScissorRect,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
+    mask_target: Option<PlanTarget>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch_a, PlanTarget::Output);
@@ -765,6 +813,7 @@ fn append_scissored_blur_in_place_two_scratch(
         dst_size: blur_size,
         dst_scissor: down_scissor,
         mask_uniform_index: None,
+        mask_target: None,
         mode: ScaleMode::Downsample,
         scale: downsample_scale,
         load: wgpu::LoadOp::Clear(clear),
@@ -800,6 +849,7 @@ fn append_scissored_blur_in_place_two_scratch(
         dst_size: full_size,
         dst_scissor: final_scissor,
         mask_uniform_index,
+        mask_target,
         mode: ScaleMode::Upscale,
         scale: downsample_scale,
         load: wgpu::LoadOp::Load,
@@ -920,6 +970,7 @@ fn append_pixelate_in_place_single_scratch(
     scale: u32,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
+    mask_target: Option<PlanTarget>,
 ) {
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
@@ -943,6 +994,7 @@ fn append_pixelate_in_place_single_scratch(
         // targets are small, so prefer correctness over this micro-optimization.
         dst_scissor: None,
         mask_uniform_index: None,
+        mask_target: None,
         mode: ScaleMode::Downsample,
         scale,
         load: wgpu::LoadOp::Clear(clear),
@@ -959,6 +1011,7 @@ fn append_pixelate_in_place_single_scratch(
         } else {
             None
         },
+        mask_target: scissor.is_some().then_some(mask_target).flatten(),
         mode: ScaleMode::Upscale,
         scale,
         load: if scissor.is_some() {
@@ -970,7 +1023,7 @@ fn append_pixelate_in_place_single_scratch(
 }
 
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
-    let mut last_use: [Option<usize>; 3] = [None, None, None];
+    let mut last_use: [Option<usize>; 4] = [None, None, None, None];
 
     for (idx, pass) in passes.iter().enumerate() {
         let mut mark = |t: PlanTarget| {
@@ -978,6 +1031,7 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 PlanTarget::Intermediate0 => Some(0),
                 PlanTarget::Intermediate1 => Some(1),
                 PlanTarget::Intermediate2 => Some(2),
+                PlanTarget::Mask0 => Some(3),
                 PlanTarget::Output => None,
             };
             if let Some(slot) = slot {
@@ -995,10 +1049,16 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
             RenderPlanPass::CompositePremul(p) => {
                 mark(p.src);
                 mark(p.dst);
+                if let Some(t) = p.mask_target {
+                    mark(t);
+                }
             }
             RenderPlanPass::ScaleNearest(p) => {
                 mark(p.src);
                 mark(p.dst);
+                if let Some(t) = p.mask_target {
+                    mark(t);
+                }
             }
             RenderPlanPass::Blur(p) => {
                 mark(p.src);
@@ -1008,6 +1068,7 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 mark(p.src);
                 mark(p.dst);
             }
+            RenderPlanPass::ClipMask(p) => mark(p.dst),
             RenderPlanPass::ReleaseTarget(_target) => {}
         }
     }
@@ -1015,9 +1076,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
     let last0 = last_use[0];
     let last1 = last_use[1];
     let last2 = last_use[2];
+    let last_mask = last_use[3];
 
     let old = std::mem::take(passes);
-    let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 3);
+    let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 4);
     let mut inserted: u64 = 0;
 
     for (idx, pass) in old.into_iter().enumerate() {
@@ -1036,6 +1098,9 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
         }
         if last2 == Some(idx) {
             push_release(PlanTarget::Intermediate2);
+        }
+        if last_mask == Some(idx) {
+            push_release(PlanTarget::Mask0);
         }
     }
 
@@ -1159,6 +1224,7 @@ fn push_scale_nearest(
             dst_size,
             dst_scissor,
             mask_uniform_index: None,
+            mask_target: None,
             mode,
             scale,
             load,
@@ -1316,6 +1382,7 @@ fn append_upsample_chain(
         let dst_target = match current_target {
             PlanTarget::Intermediate1 => PlanTarget::Intermediate2,
             PlanTarget::Intermediate2 => PlanTarget::Intermediate1,
+            PlanTarget::Mask0 => unreachable!("upsample chain must read from Intermediate1/2"),
             PlanTarget::Intermediate0 | PlanTarget::Output => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }

@@ -100,6 +100,10 @@ pub struct Renderer {
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipeline: Option<wgpu::RenderPipeline>,
+    composite_mask_pipeline: Option<wgpu::RenderPipeline>,
+    composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    clip_mask_pipeline: Option<wgpu::RenderPipeline>,
 
     blit_pipeline_format: Option<wgpu::TextureFormat>,
     blit_pipeline: Option<wgpu::RenderPipeline>,
@@ -115,7 +119,9 @@ pub struct Renderer {
     downsample_pipeline: Option<wgpu::RenderPipeline>,
     upscale_pipeline: Option<wgpu::RenderPipeline>,
     upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
     scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
 
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
