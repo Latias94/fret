@@ -202,6 +202,8 @@ This section is intentionally lightweight and should be updated as work lands.
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- **ADRs (Proposed / pending implementation):**
+  - `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md` (mask-aware effects / rounded clip integration)
 - **Implementation status (as of now):**
   - M0: In progress (landed in `refactor/renderer-v3`):
     - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
@@ -218,6 +220,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - Next: rounded clip / soft mask integration for effect passes (ADR 0135).
+    - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
     - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
@@ -234,6 +237,9 @@ Recent landing points (branch-local):
 - `865d15d`: Debug-gated pixelate postprocess (downsample/upscale chain + blit).
 - `8ba9319`: Debug-gated separable blur postprocess (downsample -> blur H/V -> upscale -> blit).
 - `523d913`: Region-scissored fullscreen passes (required for bounded backdrop/glass).
+- `b64d623`: Pixelate effect step in `EffectChain` (+ conformance tests).
+- `2a2b962`: `effects_demo` for visual smoke checks.
+- `d4d0d7b`, `7dee14d`: ADR 0135 + mask semantics/budget clarifications.
 
 ## Work Breakdown (Actionable Checklist)
 
