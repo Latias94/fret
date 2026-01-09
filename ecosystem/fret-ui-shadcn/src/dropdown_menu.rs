@@ -7,6 +7,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
@@ -746,6 +747,7 @@ pub struct DropdownMenu {
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -757,6 +759,7 @@ impl std::fmt::Debug for DropdownMenu {
             .field("side_offset", &self.side_offset)
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -776,6 +779,7 @@ impl DropdownMenu {
             arrow_size_override: None,
             arrow_padding_override: None,
             align_leading_icons: true,
+            on_dismiss_request: None,
         }
     }
 
@@ -836,6 +840,15 @@ impl DropdownMenu {
         self
     }
 
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
+    /// default", do not close the `open` model inside the handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -884,6 +897,7 @@ impl DropdownMenu {
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger =
                 menu::trigger::apply_menu_trigger_a11y(trigger, is_open, Some(content_id_for_trigger));
+            let on_dismiss_request = self.on_dismiss_request.clone();
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
                 cx.with_root_name(&overlay_root_name, |cx| {
@@ -2411,7 +2425,7 @@ impl DropdownMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request_with_modal(
+                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     trigger_id,
                     trigger_id,
@@ -2420,6 +2434,7 @@ impl DropdownMenu {
                     overlay_children,
                     overlay_root_name,
                     content_focus_id.get(),
+                    on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
                 );
@@ -2434,6 +2449,8 @@ impl DropdownMenu {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{
@@ -2789,6 +2806,59 @@ mod tests {
         root
     }
 
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-dismiss-handler",
+            move |cx| {
+                vec![
+                    DropdownMenu::new(open)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            move |_cx| entries,
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_with_underlay(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3083,6 +3153,83 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
             "menu items should render after ArrowDown opens the menu"
         );
+    }
+
+    #[test]
+    fn dropdown_menu_modal_outside_press_can_be_prevented_via_dismiss_handler() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let dismiss_calls = Arc::new(AtomicUsize::new(0));
+        let dismiss_calls_for_handler = dismiss_calls.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+            dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+        });
+
+        let _ = render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler),
+            items,
+        );
+
+        let outside = Point::new(Px(390.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]

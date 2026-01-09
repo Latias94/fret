@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
@@ -1154,6 +1155,7 @@ pub struct ContextMenu {
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
+    on_dismiss_request: Option<OnDismissRequest>,
 }
 
 impl std::fmt::Debug for ContextMenu {
@@ -1165,6 +1167,7 @@ impl std::fmt::Debug for ContextMenu {
             .field("side_offset", &self.side_offset)
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .finish()
     }
 }
@@ -1185,6 +1188,7 @@ impl ContextMenu {
             arrow_size_override: None,
             arrow_padding_override: None,
             align_leading_icons: true,
+            on_dismiss_request: None,
         }
     }
 
@@ -1237,6 +1241,15 @@ impl ContextMenu {
 
     pub fn arrow_padding(mut self, padding: Px) -> Self {
         self.arrow_padding_override = Some(padding);
+        self
+    }
+
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
+    /// default", do not close the `open` model inside the handler.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
         self
     }
 
@@ -1295,6 +1308,7 @@ impl ContextMenu {
             menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
 
             let open = self.open;
+            let on_dismiss_request = self.on_dismiss_request.clone();
             let pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
 
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
@@ -2120,7 +2134,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request_with_modal(
+                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
                     trigger_id,
@@ -2129,6 +2143,7 @@ impl ContextMenu {
                     overlay_children,
                     overlay_root_name,
                     content_focus_id.get(),
+                    on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
                 );

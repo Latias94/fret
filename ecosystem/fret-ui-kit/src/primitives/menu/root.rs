@@ -7,7 +7,7 @@
 //! - installing a timer handler for submenu focus/close delays
 //! - producing a DismissableLayer pointer-move observer for submenu grace intent
 
-use fret_ui::action::OnDismissiblePointerMove;
+use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -126,6 +126,35 @@ pub fn dismissible_menu_request<H: UiHost>(
     )
 }
 
+/// Build a shadcn/Radix-aligned menu overlay request that routes dismissals through an optional
+/// dismiss handler (Radix `DismissableLayer` "preventDefault" outcome).
+pub fn dismissible_menu_request_with_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    children: Vec<AnyElement>,
+    root_name: String,
+    content_focus: Option<GlobalElementId>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
+) -> OverlayRequest {
+    dismissible_menu_request_with_modal_and_dismiss_handler(
+        cx,
+        id,
+        trigger,
+        open,
+        presence,
+        children,
+        root_name,
+        content_focus,
+        on_dismiss_request,
+        dismissible_on_pointer_move,
+        true,
+    )
+}
+
 /// Build a shadcn/Radix-aligned menu overlay request with explicit modal behavior.
 ///
 /// In Radix, the `modal` flag controls `disableOutsidePointerEvents`. In Fret we approximate this
@@ -144,8 +173,39 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     modal: bool,
 ) -> OverlayRequest {
+    dismissible_menu_request_with_modal_and_dismiss_handler(
+        cx,
+        id,
+        trigger,
+        open,
+        presence,
+        children,
+        root_name,
+        content_focus,
+        None,
+        dismissible_on_pointer_move,
+        modal,
+    )
+}
+
+/// Build a shadcn/Radix-aligned menu overlay request with explicit modal behavior and an optional
+/// dismiss handler.
+pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    children: Vec<AnyElement>,
+    root_name: String,
+    content_focus: Option<GlobalElementId>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
+    modal: bool,
+) -> OverlayRequest {
     let mut request = base_menu_overlay_request(id, trigger, open, presence, children, modal);
     request.root_name = Some(root_name);
+    request.dismissible_on_dismiss_request = on_dismiss_request;
     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
     if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
         request.initial_focus = content_focus;
@@ -157,7 +217,11 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::action::DismissReason;
 
     #[test]
     fn menu_modal_controls_underlay_pointer_blocking_and_click_through() {
@@ -185,5 +249,32 @@ mod tests {
         );
         assert!(!req.consume_outside_pointer_events);
         assert!(!req.disable_outside_pointer_events);
+    }
+
+    #[test]
+    fn menu_request_can_install_dismiss_handler() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let req = dismissible_menu_request_with_modal_and_dismiss_handler(
+                cx,
+                GlobalElementId(1),
+                GlobalElementId(2),
+                open.clone(),
+                OverlayPresence::hidden(),
+                Vec::new(),
+                "menu".to_string(),
+                None,
+                Some(handler.clone()),
+                None,
+                true,
+            );
+            assert!(req.dismissible_on_dismiss_request.is_some());
+        });
     }
 }
