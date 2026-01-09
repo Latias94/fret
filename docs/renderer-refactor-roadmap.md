@@ -220,6 +220,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
+    - GPU conformance tests cover rounded-clip pixelate for both effect modes.
     - Next: rounded clip / soft mask integration for effect passes (ADR 0135).
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
