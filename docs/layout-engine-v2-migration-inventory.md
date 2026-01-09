@@ -32,7 +32,7 @@ Related roadmap:
 | Positioned containers (PointerRegion/WheelRegion multi-child) | Done | These containers compute definite child rects; v2 precomputes flow islands for non-absolute children so subtrees can use engine fast paths. Probe sizing uses `measure_in` (no subtree `layout_in` during probe). | `declarative::tests::layout::positioned_container_precomputes_flow_islands_for_multiple_children` in `crates/fret-ui/src/declarative/tests/layout.rs`. |
 | HoverRegion (multi-child) | Done | Multi-child hover regions now precompute flow islands for non-absolute children, enabling engine-backed flow inside hover tracking regions. Probe sizing uses `measure_in` (no subtree `layout_in` during probe). | `declarative::tests::layout::hover_region_precomputes_flow_islands_for_multiple_children` in `crates/fret-ui/src/declarative/tests/layout.rs`. |
 | "Probe layout" heuristics | In progress | Sentinel/heuristics are centralized in `crates/fret-ui/src/layout_probe.rs`, but more call sites may still need migration. | Grep for `layout_probe::` and `is_probe_layout`. |
-| Remaining `1e9` usage (code) | In progress | v2 paths must not approximate `Min/MaxContent` as huge definite bounds. Remaining hits should only survive in tests where explicitly justified. Current hits: `crates/fret-ui/src/overlay_placement/tests.rs` (test-only unbounded desired). | Run the audit commands below. |
+| Remaining `1e9` usage (code) | Done | v2 paths must not approximate `Min/MaxContent` as huge definite bounds. No remaining `1e9`-style probe constants are used in runtime code; legacy probe detection uses `crates/fret-ui/src/layout_probe.rs` (sentinel threshold), and documentation still references the historical issue. | Run the audit commands below. |
 
 ## Audit Commands
 
