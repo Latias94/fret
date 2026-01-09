@@ -34,7 +34,7 @@ Recommended harness:
 - (prototype) Scroll wheel zooms the canvas without moving focus unexpectedly.
 - (prototype) Middle-drag or right-drag pans (whatever the demo binds; document the binding).
 - (todo) “Fit view” command frames all nodes with padding.
-- (todo) “Fit selection” frames selected nodes with padding.
+- (prototype) “Fit selection” frames selected nodes with padding.
 - (todo) “Reset view” restores canonical pan/zoom.
 
 ### Invariants
@@ -147,10 +147,12 @@ Invariants:
   - zoom change,
   - presenter/template change.
 
-## G) Clipboard (todo)
+## G) Clipboard (prototype)
 
 ### Manual script
 
+- (prototype) Copy selection puts a payload on the system clipboard.
+- (prototype) Paste creates nodes near the cursor (or last known canvas position).
 - (todo) Copy selection creates a deterministic `GraphFragment` payload.
 - (todo) Paste creates nodes with stable relative offsets and a deterministic paste offset strategy.
 - (todo) Paste is undoable as one transaction.
@@ -168,3 +170,42 @@ Invariants:
 - (todo) Minimap consumes derived geometry only; no graph semantics are stored in minimap state.
 - (todo) All navigation flows route through canonical view ops.
 
+## I) Edge Rendering and Interaction (todo)
+
+### Manual script
+
+- (todo) Edge hit-testing uses a larger interaction width than the visual stroke width.
+- (todo) Hovering an edge highlights it (without changing selection).
+- (todo) Selecting an edge is deterministic and undo/redo does not affect selection state unexpectedly.
+- (todo) Edge labels render with stable placement (and do not overlap node ports in common layouts).
+- (todo) Per-edge style overrides can affect color/width/label without breaking hit-testing.
+
+### Invariants
+
+- (todo) Edge styling does not affect graph semantics; it is derived from graph data + style/theme.
+- (todo) Edge label layout is deterministic given the same inputs (node rects, ports, zoom, style).
+
+## J) Productivity Commands (todo)
+
+### Manual script
+
+- (todo) `Frame all` frames all nodes with padding (same view op as “Fit view”).
+- (todo) Keyboard nudge moves selection by a fixed grid step (configurable).
+- (todo) Align/distribute commands operate on selection deterministically.
+
+### Invariants
+
+- (todo) Command handlers commit at most one `GraphTransaction` per user-intent (undo granularity).
+- (todo) Productivity commands do not depend on frame timing.
+
+## K) Performance and Large Graphs (todo)
+
+### Manual script
+
+- (todo) A 5k–20k node graph remains usable (target frame time TBD).
+- (todo) Offscreen nodes do not mount portal subtrees (or mount is throttled) to avoid UI tree blowup.
+
+### Invariants
+
+- (todo) Derived caches are invalidated by precise keys (layout/zoom/theme changes) and avoid full recompute when possible.
+- (todo) Rendering and hit-testing support culling (viewport-based) without changing graph semantics.
