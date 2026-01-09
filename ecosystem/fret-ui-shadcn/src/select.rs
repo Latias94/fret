@@ -27,13 +27,13 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::select as radix_select;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -659,11 +659,13 @@ fn select_impl<H: UiHost>(
         let theme = Theme::global(&*cx.app).clone();
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-        let motion = OverlayController::transition_with_durations_and_easing(
+        let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
             overlay_motion::SHADCN_MOTION_TICKS_100,
             overlay_motion::SHADCN_MOTION_TICKS_100,
+            0.95,
+            1.0,
             overlay_motion::shadcn_ease,
         );
         let overlay_presence = OverlayPresence {
@@ -1108,21 +1110,34 @@ fn select_impl<H: UiHost>(
                             .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion),
                         );
+                        motion_side = layout.side;
                         wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                         arrow_layout = Some((layout, arrow_protrusion));
                         layout.rect
                     };
 
-                    let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
-                        anchor,
-                        placed,
+                    let origin = if let Some((layout, _arrow_protrusion)) = arrow_layout.as_ref() {
+                        popper::popper_content_transform_origin(
+                            layout,
+                            anchor,
+                            arrow.then_some(arrow_size),
+                        )
+                    } else {
+                        overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                            anchor,
+                            placed,
+                            motion_side,
+                        )
+                    };
+                    let opacity = motion.opacity;
+                    let scale = motion.scale;
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
                         motion_side,
+                        origin,
+                        opacity,
+                        scale,
+                        is_open,
                     );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, motion.progress);
-                    let slide =
-                        overlay_motion::shadcn_enter_slide_transform(motion_side, motion.progress, is_open);
-                    let transform = slide * zoom;
-                    let opacity = motion.progress;
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
