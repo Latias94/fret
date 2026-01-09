@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
+use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -132,6 +133,26 @@ impl PopoverRoot {
         self.options
     }
 
+    pub fn request_with_dismiss_handler<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        on_dismiss_request: Option<OnDismissRequest>,
+        children: Vec<AnyElement>,
+    ) -> OverlayRequest {
+        popover_request_with_dismiss_handler(
+            id,
+            trigger,
+            self.open_model(cx),
+            presence,
+            self.options,
+            on_dismiss_request,
+            children,
+        )
+    }
+
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
     pub fn use_open_model<H: UiHost>(
         &self,
@@ -237,6 +258,24 @@ pub fn popover_request(
     request
 }
 
+/// Builds an overlay request for a Radix-style popover, with an explicit dismiss handler.
+///
+/// This mirrors the Radix `DismissableLayer` contract: callers may "prevent default" by not
+/// closing the `open` model in the handler.
+pub fn popover_request_with_dismiss_handler(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: PopoverOptions,
+    on_dismiss_request: Option<OnDismissRequest>,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request = popover_request(id, trigger, open, presence, options, children);
+    request.dismissible_on_dismiss_request = on_dismiss_request;
+    request
+}
+
 /// Builds an overlay request for a Radix-style popover, adding an optional anchor subtree as a
 /// dismissable branch.
 ///
@@ -258,6 +297,24 @@ pub fn popover_request_with_anchor(
     {
         request.dismissable_branches.push(anchor);
     }
+    request
+}
+
+/// Builds an overlay request for a Radix-style popover, adding an optional anchor subtree and a
+/// custom dismiss handler.
+pub fn popover_request_with_anchor_and_dismiss_handler(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    anchor: Option<GlobalElementId>,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: PopoverOptions,
+    on_dismiss_request: Option<OnDismissRequest>,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request =
+        popover_request_with_anchor(id, trigger, anchor, open, presence, options, children);
+    request.dismissible_on_dismiss_request = on_dismiss_request;
     request
 }
 
@@ -338,6 +395,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::action::DismissReason;
     use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, PressableProps};
 
     fn bounds() -> Rect {
@@ -432,6 +490,25 @@ mod tests {
         );
         let expected = popover_root_name(GlobalElementId(0x123));
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn popover_request_with_dismiss_handler_sets_dismiss_handler() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let req = popover_request_with_dismiss_handler(
+            GlobalElementId(0x123),
+            GlobalElementId(0x123),
+            open,
+            OverlayPresence::instant(true),
+            PopoverOptions::default(),
+            Some(handler),
+            Vec::new(),
+        );
+
+        assert!(req.dismissible_on_dismiss_request.is_some());
     }
 
     #[test]
