@@ -341,6 +341,37 @@ impl<H: UiHost> Widget<H> for OverlayAssertsLastFrameElementBounds {
 }
 
 #[cfg(feature = "layout-engine-v2")]
+struct OverlayAssertsWindowScopedBoundsForElement {
+    window_a: AppWindowId,
+    window_b: AppWindowId,
+    element_a: fret_ui::elements::GlobalElementId,
+    element_b: fret_ui::elements::GlobalElementId,
+    expected_a_last: Rect,
+    expected_b_last: Rect,
+    ok: Arc<AtomicBool>,
+}
+
+#[cfg(feature = "layout-engine-v2")]
+impl<H: UiHost> Widget<H> for OverlayAssertsWindowScopedBoundsForElement {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let a_from_a = fret_ui::elements::bounds_for_element(cx.app, self.window_a, self.element_a);
+        let b_from_b = fret_ui::elements::bounds_for_element(cx.app, self.window_b, self.element_b);
+        let a_from_b = fret_ui::elements::bounds_for_element(cx.app, self.window_b, self.element_a);
+        let b_from_a = fret_ui::elements::bounds_for_element(cx.app, self.window_a, self.element_b);
+
+        self.ok.store(
+            a_from_a == Some(self.expected_a_last)
+                && b_from_b == Some(self.expected_b_last)
+                && a_from_b.is_none()
+                && b_from_a.is_none(),
+            Ordering::Relaxed,
+        );
+
+        cx.available
+    }
+}
+
+#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_fill() {
     let window = AppWindowId::default();
@@ -924,6 +955,159 @@ fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_corre
     assert!(
         list_extent.0 > 100.0 && list_extent.0 < 100_000.0,
         "expected virtual list extent to be finite and measured, got {list_extent:?}"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn bounds_for_element_is_window_scoped_across_multi_window_docking() {
+    let window_a = AppWindowId::default();
+    let window_b = AppWindowId::from(KeyData::from_ffi(42));
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(240.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(480.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut services = FakeTextService::default();
+
+    let panel_a = PanelKey::new("mw.viewport.a");
+    let panel_b = PanelKey::new("mw.viewport.b");
+    let target_a = fret_core::RenderTargetId::from(KeyData::from_ffi(10));
+    let target_b = fret_core::RenderTargetId::from(KeyData::from_ffi(11));
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel_a, || DockPanel {
+            title: "A".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_a,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        dock.ensure_panel(&panel_b, || DockPanel {
+            title: "B".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_b,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+
+        let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_a, tabs_a);
+
+        let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_b.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window_b, tabs_b);
+    });
+
+    let root_a_name = "mw-panel-a";
+    let root_b_name = "mw-panel-b";
+
+    let mut ui_a: UiTree<TestHost> = UiTree::new();
+    ui_a.set_window(window_a);
+    let node_a = declarative::render_root(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds_a,
+        root_a_name,
+        |cx| vec![cx.text("a")],
+    );
+    let dock_space_a = ui_a
+        .create_node_retained(DockSpace::new(window_a).with_panel_content(panel_a.clone(), node_a));
+    ui_a.set_children(dock_space_a, vec![node_a]);
+    ui_a.set_root(dock_space_a);
+
+    let mut ui_b: UiTree<TestHost> = UiTree::new();
+    ui_b.set_window(window_b);
+    let node_b = declarative::render_root(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds_b,
+        root_b_name,
+        |cx| vec![cx.text("b")],
+    );
+    let dock_space_b = ui_b
+        .create_node_retained(DockSpace::new(window_b).with_panel_content(panel_b.clone(), node_b));
+    ui_b.set_children(dock_space_b, vec![node_b]);
+    ui_b.set_root(dock_space_b);
+
+    // Frame 0: write current bounds (stored as "cur_bounds" in the element runtime).
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    let expected_a_0 = ui_a
+        .debug_node_bounds(node_a)
+        .expect("expected window a bounds");
+    let expected_b_0 = ui_b
+        .debug_node_bounds(node_b)
+        .expect("expected window b bounds");
+
+    let element_a = fret_ui::elements::global_root(window_a, root_a_name);
+    let element_b = fret_ui::elements::global_root(window_b, root_b_name);
+
+    // Frame 1: swap prev/cur, so `bounds_for_element` returns frame 0 bounds.
+    app.advance_frame();
+    let _ = declarative::render_root(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds_a,
+        root_a_name,
+        |cx| vec![cx.text("a")],
+    );
+    let _ = declarative::render_root(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds_b,
+        root_b_name,
+        |cx| vec![cx.text("b")],
+    );
+    ui_a.invalidate(dock_space_a, Invalidation::Layout);
+    ui_b.invalidate(dock_space_b, Invalidation::Layout);
+
+    let ok = Arc::new(AtomicBool::new(false));
+    let overlay = ui_b.create_node_retained(OverlayAssertsWindowScopedBoundsForElement {
+        window_a,
+        window_b,
+        element_a,
+        element_b,
+        expected_a_last: expected_a_0,
+        expected_b_last: expected_b_0,
+        ok: ok.clone(),
+    });
+    ui_b.push_overlay_root(overlay, false);
+
+    ui_a.layout_all(&mut app, &mut services, bounds_a, 1.0);
+    ui_b.layout_all(&mut app, &mut services, bounds_b, 1.0);
+
+    assert!(
+        ok.load(Ordering::Relaxed),
+        "expected bounds_for_element to be window-scoped across multi-window docking"
     );
 }
 
