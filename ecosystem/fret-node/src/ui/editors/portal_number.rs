@@ -114,6 +114,10 @@ pub trait PortalNumberEditSpec: Clone + 'static {
         false
     }
 
+    fn drag_threshold_px(&self, _graph: &Graph, _node: NodeId) -> f32 {
+        1.0
+    }
+
     fn drag_sensitivity_per_px(
         &self,
         _graph: &Graph,
@@ -764,6 +768,8 @@ struct PortalNumberDragSession {
     start_pos: fret_core::Point,
     start_value: f64,
     mode: PortalTextStepMode,
+    threshold_px: f32,
+    started: bool,
 }
 
 fn is_dragging<H: UiHost>(
@@ -807,16 +813,16 @@ fn handle_drag_pointer_down<S: PortalNumberEditSpec>(
         .ok()
         .unwrap_or_default();
 
-    let start_value = host
+    let (start_value, threshold_px) = host
         .models_mut()
         .read(graph_model, |graph| {
             let initial = spec.initial_value(graph, node)?;
             let parsed = spec.parse_text(&current_text).ok().unwrap_or(initial);
-            Some(parsed)
+            Some((parsed, spec.drag_threshold_px(graph, node)))
         })
         .ok()
         .flatten()
-        .unwrap_or(0.0);
+        .unwrap_or((0.0, 1.0));
 
     let _ = host.models_mut().update(drag_state, |v| {
         *v = Some(PortalNumberDragSession {
@@ -824,6 +830,8 @@ fn handle_drag_pointer_down<S: PortalNumberEditSpec>(
             start_pos: down.position,
             start_value,
             mode,
+            threshold_px: threshold_px.max(0.0),
+            started: false,
         });
     });
 
@@ -849,6 +857,32 @@ fn handle_drag_pointer_move<S: PortalNumberEditSpec>(
     };
     if active.node != node {
         return false;
+    }
+
+    let threshold = active.threshold_px.max(0.0);
+    let dx0 = mv.position.x.0 - active.start_pos.x.0;
+    let dy0 = mv.position.y.0 - active.start_pos.y.0;
+
+    let mut active = active;
+    if !active.started {
+        let dist2 = dx0 * dx0 + dy0 * dy0;
+        if dist2 <= threshold * threshold {
+            return true;
+        }
+
+        let sign = if dx0 >= 0.0 { 1.0 } else { -1.0 };
+        let adjusted = Px(active.start_pos.x.0 + sign * threshold);
+        active.started = true;
+        active.start_pos.x = adjusted;
+
+        let _ = host.models_mut().update(drag_state, |v| {
+            if let Some(s) = v.as_mut() {
+                if s.node == node {
+                    s.started = true;
+                    s.start_pos.x = adjusted;
+                }
+            }
+        });
     }
 
     let dx = mv.position.x.0 - active.start_pos.x.0;
@@ -898,7 +932,9 @@ fn handle_drag_pointer_up(
 
     host.release_pointer_capture();
     host.set_cursor_icon(fret_core::CursorIcon::Default);
-    host.dispatch_command(Some(window), portal_submit_text_command(node));
+    if ended.started {
+        host.dispatch_command(Some(window), portal_submit_text_command(node));
+    }
     host.request_redraw(window);
     true
 }
