@@ -577,7 +577,7 @@ pub fn render<H: UiHost>(
         );
 
         let key = (window, req.id);
-        app.with_global_mut(WindowOverlays::default, |overlays, app| {
+        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
             let entry = overlays
                 .tooltips
                 .entry(key)
@@ -588,12 +588,7 @@ pub fn render<H: UiHost>(
             entry.root_name = req.root_name.clone();
             OverlayLayer::tooltip(true).apply(ui, entry.layer);
 
-            let scroll_dismiss_descendants = req
-                .trigger
-                .and_then(|trigger| fret_ui::elements::node_for_element(app, window, trigger))
-                .into_iter()
-                .collect::<Vec<_>>();
-            ui.set_layer_scroll_dismiss_descendants(entry.layer, scroll_dismiss_descendants);
+            ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
         });
     }
 

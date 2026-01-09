@@ -13,9 +13,9 @@ pub(super) struct UiLayer {
     pub(super) wants_pointer_down_outside_events: bool,
     pub(super) consume_pointer_down_outside_events: bool,
     pub(super) pointer_down_outside_branches: Vec<NodeId>,
-    /// Descendant nodes that should cause this overlay to dismiss when they are inside the
-    /// scroll-event target (Radix Tooltip "close on scroll" outcome).
-    pub(super) scroll_dismiss_descendants: Vec<NodeId>,
+    /// Elements that should cause this overlay to dismiss when they are inside the scroll-event
+    /// target (Radix Tooltip "close on scroll" outcome).
+    pub(super) scroll_dismiss_elements: Vec<crate::GlobalElementId>,
     pub(super) wants_pointer_move_events: bool,
     pub(super) wants_timer_events: bool,
 }
@@ -35,7 +35,7 @@ impl<H: UiHost> UiTree<H> {
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
-            scroll_dismiss_descendants: Vec::new(),
+            scroll_dismiss_elements: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: true,
         });
@@ -63,7 +63,7 @@ impl<H: UiHost> UiTree<H> {
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
-            scroll_dismiss_descendants: Vec::new(),
+            scroll_dismiss_elements: Vec::new(),
             wants_pointer_move_events: false,
             wants_timer_events: false,
         });
@@ -198,20 +198,20 @@ impl<H: UiHost> UiTree<H> {
         l.pointer_down_outside_branches = branches;
     }
 
-    /// Register descendant nodes that should dismiss this overlay when a scroll event targets an
-    /// ancestor of any registered node.
+    /// Register elements that should dismiss this overlay when a scroll event targets an ancestor
+    /// of any element's current node.
     ///
     /// This is intended for Radix-aligned tooltip behavior: when the tooltip trigger is scrolled,
     /// the tooltip should close (Radix closes when `event.target.contains(trigger)` on scroll).
-    pub fn set_layer_scroll_dismiss_descendants(
+    pub fn set_layer_scroll_dismiss_elements(
         &mut self,
         layer: UiLayerId,
-        descendants: Vec<NodeId>,
+        elements: Vec<crate::GlobalElementId>,
     ) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;
         };
-        l.scroll_dismiss_descendants = descendants;
+        l.scroll_dismiss_elements = elements;
     }
 
     pub fn set_layer_wants_timer_events(&mut self, layer: UiLayerId, wants: bool) {

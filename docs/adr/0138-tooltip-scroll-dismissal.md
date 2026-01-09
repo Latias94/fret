@@ -35,11 +35,11 @@ overlay-layer-level contract to express the Radix outcome precisely.
 
 We model "close tooltip on scroll" as an opt-in **overlay-layer dismissal contract**:
 
-1) An overlay layer may register one or more **scroll-dismiss descendants** (`NodeId`s).
+1) An overlay layer may register one or more **scroll-dismiss elements** (`GlobalElementId`s).
 2) When a wheel/scroll gesture is consumed by a scrollable element, the runtime identifies the
    **scroll target node** (the scrollable node that stopped propagation for the wheel event).
-3) Any visible overlay layer that has at least one registered scroll-dismiss descendant which is a
-   descendant of the scroll target node is dismissed.
+3) Any visible overlay layer that has at least one registered scroll-dismiss element whose current
+   node is a descendant of the scroll target node is dismissed.
 
 This matches the Radix semantic check:
 
@@ -50,9 +50,9 @@ This matches the Radix semantic check:
 
 The UI runtime exposes a per-layer property:
 
-- `UiTree::set_layer_scroll_dismiss_descendants(layer, Vec<NodeId>)`
+- `UiTree::set_layer_scroll_dismiss_elements(layer, Vec<GlobalElementId>)`
 
-Overlay policy code sets this for tooltip layers by registering the tooltip trigger's `NodeId`.
+Overlay policy code sets this for tooltip layers by registering the tooltip trigger's `GlobalElementId`.
 
 ### Dismiss hooks
 
@@ -68,4 +68,3 @@ Dismissal uses the existing dismissible-root contract (ADR 0069 / ADR 0067):
 - The contract is overlay-generic and can be reused by other overlays if needed, but is opt-in.
 - The initial implementation targets `PointerEvent::Wheel` consumption. Future work may extend this
   to other scroll sources (e.g. scrollbar drags, programmatic scroll) if required for strict parity.
-

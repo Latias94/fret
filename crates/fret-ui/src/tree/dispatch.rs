@@ -926,13 +926,16 @@ impl<H: UiHost> UiTree<H> {
                     let Some(layer) = self.layers.get(layer_id) else {
                         continue;
                     };
-                    if layer.scroll_dismiss_descendants.is_empty() {
+                    if layer.scroll_dismiss_elements.is_empty() {
                         continue;
                     }
                     let should_dismiss = layer
-                        .scroll_dismiss_descendants
+                        .scroll_dismiss_elements
                         .iter()
                         .copied()
+                        .filter_map(|element| {
+                            crate::elements::node_for_element(app, window, element)
+                        })
                         .any(|node| self.is_descendant(scroll_target, node));
                     if !should_dismiss {
                         continue;
