@@ -48,8 +48,10 @@ Recommended harness:
 
 - (implemented) Click node selects it.
 - (implemented) Click empty space clears selection.
-- (prototype) Shift-click toggles additive selection (verify exact behavior).
+- (prototype) Shift-click adds to selection (no drag).
+- (prototype) Ctrl/Cmd-click toggles selection (no drag).
 - (implemented) Drag marquee selects nodes inside the rect.
+  - Zoom to 0.5 and 2.0 and verify marquee threshold behavior is consistent (no “zoom makes it too sensitive”).
 
 ### Invariants
 
@@ -63,6 +65,10 @@ Recommended harness:
 - (implemented) Dragging a selected node moves it.
 - (prototype) Dragging multiple selected nodes preserves relative offsets.
 - (implemented) Snaplines appear and apply predictable snapping deltas.
+- (prototype) Drag thresholds are screen-space:
+  - Set zoom to 0.5 and try a tiny move: does not start a drag.
+  - Set zoom to 2.0 and try the same tiny move: does not start a drag.
+  - Increase `node_drag_threshold` in the demo tuning overlay and verify it scales in screen px (not canvas px).
 
 ### Invariants
 
@@ -110,6 +116,8 @@ Auto-pan:
 Drag threshold:
 
 - (prototype) A small movement threshold prevents accidental “start connection” on click.
+- (prototype) Connection drag threshold is screen-space:
+  - Zoom to 0.5 and 2.0 and verify the connection-start threshold feels the same.
 
 ## E) Portal Editors (embedded node UI)
 

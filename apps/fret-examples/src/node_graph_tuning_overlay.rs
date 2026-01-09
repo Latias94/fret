@@ -21,6 +21,12 @@ enum TuningHit {
     NodeDragThresholdInc,
     NodeClickDistanceDec,
     NodeClickDistanceInc,
+    ToggleTranslateExtent,
+    TranslateExtentDec,
+    TranslateExtentInc,
+    ToggleNodeExtent,
+    NodeExtentDec,
+    NodeExtentInc,
     AutoPanMarginDec,
     AutoPanMarginInc,
     AutoPanSpeedDec,
@@ -66,8 +72,8 @@ impl NodeGraphTuningOverlay {
         let row_h = self.style.context_menu_item_height.max(22.0);
         let btn = self.style.controls_button_size.max(22.0);
 
-        let panel_w = 280.0;
-        let rows = 8.0;
+        let panel_w = 340.0;
+        let rows = 12.0;
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -107,6 +113,38 @@ impl NodeGraphTuningOverlay {
             hits.push((dec, dec_rect));
             hits.push((inc, inc_rect));
             (label_rect, dec_rect, inc_rect)
+        };
+
+        let add_row3 = |hits: &mut Vec<(TuningHit, Rect)>,
+                        cy: f32,
+                        left: f32,
+                        right: f32,
+                        row_h: f32,
+                        btn: f32,
+                        toggle: TuningHit,
+                        dec: TuningHit,
+                        inc: TuningHit| {
+            let y = cy + 0.5 * (row_h - btn).max(0.0);
+            let inc_rect = Rect::new(
+                Point::new(Px(right - btn), Px(y)),
+                Size::new(Px(btn), Px(btn)),
+            );
+            let dec_rect = Rect::new(
+                Point::new(Px(right - 2.0 * btn - 6.0), Px(y)),
+                Size::new(Px(btn), Px(btn)),
+            );
+            let toggle_rect = Rect::new(
+                Point::new(Px(right - 3.0 * btn - 12.0), Px(y)),
+                Size::new(Px(btn), Px(btn)),
+            );
+            let label_rect = Rect::new(
+                Point::new(Px(left), Px(cy)),
+                Size::new(Px((right - left - 3.0 * btn - 18.0).max(0.0)), Px(row_h)),
+            );
+            hits.push((toggle, toggle_rect));
+            hits.push((dec, dec_rect));
+            hits.push((inc, inc_rect));
+            (label_rect, toggle_rect, dec_rect, inc_rect)
         };
 
         // Row 0: mode
@@ -182,7 +220,35 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 6: auto_pan.margin
+        // Row 6: translate_extent
+        let _ = add_row3(
+            &mut hits,
+            cy,
+            left,
+            right,
+            row_h,
+            btn,
+            TuningHit::ToggleTranslateExtent,
+            TuningHit::TranslateExtentDec,
+            TuningHit::TranslateExtentInc,
+        );
+        cy += row_h + gap;
+
+        // Row 7: node_extent
+        let _ = add_row3(
+            &mut hits,
+            cy,
+            left,
+            right,
+            row_h,
+            btn,
+            TuningHit::ToggleNodeExtent,
+            TuningHit::NodeExtentDec,
+            TuningHit::NodeExtentInc,
+        );
+        cy += row_h + gap;
+
+        // Row 8: auto_pan.margin
         let _ = add_row(
             &mut hits,
             cy,
@@ -195,7 +261,7 @@ impl NodeGraphTuningOverlay {
         );
         cy += row_h + gap;
 
-        // Row 7: auto_pan.speed
+        // Row 9: auto_pan.speed
         let _ = add_row(
             &mut hits,
             cy,
@@ -236,6 +302,56 @@ impl NodeGraphTuningOverlay {
     }
 
     fn apply_hit(&mut self, host: &mut impl UiHost, hit: TuningHit, step_scale: f32) {
+        fn default_translate_extent() -> fret_node::core::CanvasRect {
+            fret_node::core::CanvasRect {
+                origin: fret_node::core::CanvasPoint {
+                    x: -1200.0,
+                    y: -900.0,
+                },
+                size: fret_node::core::CanvasSize {
+                    width: 2400.0,
+                    height: 1800.0,
+                },
+            }
+        }
+
+        fn default_node_extent() -> fret_node::core::CanvasRect {
+            fret_node::core::CanvasRect {
+                origin: fret_node::core::CanvasPoint {
+                    x: -600.0,
+                    y: -450.0,
+                },
+                size: fret_node::core::CanvasSize {
+                    width: 2400.0,
+                    height: 1800.0,
+                },
+            }
+        }
+
+        fn resize_extent(
+            rect: fret_node::core::CanvasRect,
+            delta: f32,
+        ) -> fret_node::core::CanvasRect {
+            let w = rect.size.width.max(0.0);
+            let h = rect.size.height.max(0.0);
+            let cx = rect.origin.x + 0.5 * w;
+            let cy = rect.origin.y + 0.5 * h;
+
+            let next_w = (w + 2.0 * delta).max(200.0);
+            let next_h = (h + 2.0 * delta).max(200.0);
+
+            fret_node::core::CanvasRect {
+                origin: fret_node::core::CanvasPoint {
+                    x: cx - 0.5 * next_w,
+                    y: cy - 0.5 * next_h,
+                },
+                size: fret_node::core::CanvasSize {
+                    width: next_w,
+                    height: next_h,
+                },
+            }
+        }
+
         let _ = self.view_state.update(host, |s, _cx| match hit {
             TuningHit::ToggleMode => {
                 s.interaction.connection_mode = match s.interaction.connection_mode {
@@ -282,6 +398,52 @@ impl NodeGraphTuningOverlay {
             TuningHit::NodeClickDistanceInc => {
                 s.interaction.node_click_distance =
                     (s.interaction.node_click_distance + 0.5 * step_scale).clamp(0.0, 24.0);
+            }
+            TuningHit::ToggleTranslateExtent => {
+                s.interaction.translate_extent = if s.interaction.translate_extent.is_some() {
+                    None
+                } else {
+                    Some(default_translate_extent())
+                };
+            }
+            TuningHit::TranslateExtentDec => {
+                let delta = 200.0 * step_scale;
+                let cur = s
+                    .interaction
+                    .translate_extent
+                    .unwrap_or_else(default_translate_extent);
+                s.interaction.translate_extent = Some(resize_extent(cur, -delta));
+            }
+            TuningHit::TranslateExtentInc => {
+                let delta = 200.0 * step_scale;
+                let cur = s
+                    .interaction
+                    .translate_extent
+                    .unwrap_or_else(default_translate_extent);
+                s.interaction.translate_extent = Some(resize_extent(cur, delta));
+            }
+            TuningHit::ToggleNodeExtent => {
+                s.interaction.node_extent = if s.interaction.node_extent.is_some() {
+                    None
+                } else {
+                    Some(default_node_extent())
+                };
+            }
+            TuningHit::NodeExtentDec => {
+                let delta = 200.0 * step_scale;
+                let cur = s
+                    .interaction
+                    .node_extent
+                    .unwrap_or_else(default_node_extent);
+                s.interaction.node_extent = Some(resize_extent(cur, -delta));
+            }
+            TuningHit::NodeExtentInc => {
+                let delta = 200.0 * step_scale;
+                let cur = s
+                    .interaction
+                    .node_extent
+                    .unwrap_or_else(default_node_extent);
+                s.interaction.node_extent = Some(resize_extent(cur, delta));
             }
             TuningHit::AutoPanMarginDec => {
                 s.interaction.auto_pan.margin =
@@ -612,6 +774,148 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             format!("{:.2}", state.interaction.node_click_distance),
             TuningHit::NodeClickDistanceDec,
             TuningHit::NodeClickDistanceInc,
+        );
+        cy += row_h + gap;
+
+        let draw_extent_row = |this: &mut Self,
+                               cx: &mut PaintCx<'_, H>,
+                               y: f32,
+                               label: &str,
+                               enabled: bool,
+                               value: String,
+                               toggle: TuningHit,
+                               dec: TuningHit,
+                               inc: TuningHit| {
+            let text = row(label, &value);
+            this.draw_text(
+                cx,
+                22_010,
+                Point::new(Px(left), Px(y)),
+                &text,
+                this.style.context_menu_text,
+            );
+
+            let toggle_rect = Rect::new(
+                Point::new(
+                    Px(right - 3.0 * btn - 12.0),
+                    Px(y + 0.5 * (row_h - btn).max(0.0)),
+                ),
+                Size::new(Px(btn), Px(btn)),
+            );
+            let dec_rect = Rect::new(
+                Point::new(
+                    Px(right - 2.0 * btn - 6.0),
+                    Px(y + 0.5 * (row_h - btn).max(0.0)),
+                ),
+                Size::new(Px(btn), Px(btn)),
+            );
+            let inc_rect = Rect::new(
+                Point::new(Px(right - btn), Px(y + 0.5 * (row_h - btn).max(0.0))),
+                Size::new(Px(btn), Px(btn)),
+            );
+
+            let bg = |hit: TuningHit| {
+                if this.hovered == Some(hit) {
+                    this.style.controls_hover_background
+                } else {
+                    Color::TRANSPARENT
+                }
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(22_020),
+                rect: toggle_rect,
+                background: bg(toggle),
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(corner.max(4.0))),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(22_020),
+                rect: dec_rect,
+                background: bg(dec),
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(corner.max(4.0))),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(22_020),
+                rect: inc_rect,
+                background: bg(inc),
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(corner.max(4.0))),
+            });
+
+            let toggle_text = if enabled { "On" } else { "Off" };
+            this.draw_text(
+                cx,
+                22_021,
+                Point::new(
+                    Px(toggle_rect.origin.x.0 + 4.0),
+                    Px(toggle_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+                ),
+                toggle_text,
+                this.style.controls_text,
+            );
+
+            this.draw_text(
+                cx,
+                22_021,
+                Point::new(
+                    Px(dec_rect.origin.x.0 + 0.5 * (btn - 8.0)),
+                    Px(dec_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+                ),
+                "−",
+                this.style.controls_text,
+            );
+            this.draw_text(
+                cx,
+                22_021,
+                Point::new(
+                    Px(inc_rect.origin.x.0 + 0.5 * (btn - 8.0)),
+                    Px(inc_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+                ),
+                "+",
+                this.style.controls_text,
+            );
+        };
+
+        let translate_enabled = state.interaction.translate_extent.is_some();
+        let translate_value = state
+            .interaction
+            .translate_extent
+            .map(|r| format!("{:.0}×{:.0}", r.size.width.max(0.0), r.size.height.max(0.0)))
+            .unwrap_or_else(|| "Off".to_string());
+        draw_extent_row(
+            self,
+            cx,
+            cy,
+            "Translate extent",
+            translate_enabled,
+            translate_value,
+            TuningHit::ToggleTranslateExtent,
+            TuningHit::TranslateExtentDec,
+            TuningHit::TranslateExtentInc,
+        );
+        cy += row_h + gap;
+
+        let node_extent_enabled = state.interaction.node_extent.is_some();
+        let node_extent_value = state
+            .interaction
+            .node_extent
+            .map(|r| format!("{:.0}×{:.0}", r.size.width.max(0.0), r.size.height.max(0.0)))
+            .unwrap_or_else(|| "Off".to_string());
+        draw_extent_row(
+            self,
+            cx,
+            cy,
+            "Node extent",
+            node_extent_enabled,
+            node_extent_value,
+            TuningHit::ToggleNodeExtent,
+            TuningHit::NodeExtentDec,
+            TuningHit::NodeExtentInc,
         );
         cy += row_h + gap;
 
