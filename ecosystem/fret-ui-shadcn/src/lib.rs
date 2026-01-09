@@ -112,8 +112,8 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
 pub use drawer::{
-    Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide, DrawerTitle,
-    drawer,
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,
+    DrawerTitle, DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
