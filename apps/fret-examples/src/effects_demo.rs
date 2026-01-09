@@ -106,6 +106,8 @@ impl WinitAppDriver for EffectsDemoDriver {
             Size::new(Px(panel_w), Px(panel_h)),
         );
 
+        let panel_radii = Corners::all(Px(18.0));
+
         let panel_border = |scene: &mut Scene, order: u32, rect: Rect, color: Color| {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(order),
@@ -118,11 +120,15 @@ impl WinitAppDriver for EffectsDemoDriver {
                 },
                 border: Edges::all(Px(2.0)),
                 border_color: color,
-                corner_radii: Corners::all(Px(0.0)),
+                corner_radii: panel_radii,
             });
         };
 
         // Panel 0: backdrop blur + slight color adjust (glass-ish).
+        scene.push(SceneOp::PushClipRRect {
+            rect: panel0,
+            corner_radii: panel_radii,
+        });
         scene.push(SceneOp::PushEffect {
             bounds: panel0,
             mode: EffectMode::Backdrop,
@@ -150,7 +156,7 @@ impl WinitAppDriver for EffectsDemoDriver {
             },
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
+            corner_radii: panel_radii,
         });
         panel_border(
             scene,
@@ -164,8 +170,13 @@ impl WinitAppDriver for EffectsDemoDriver {
             },
         );
         scene.push(SceneOp::PopEffect);
+        scene.push(SceneOp::PopClip);
 
         // Panel 1: backdrop pixelate.
+        scene.push(SceneOp::PushClipRRect {
+            rect: panel1,
+            corner_radii: panel_radii,
+        });
         scene.push(SceneOp::PushEffect {
             bounds: panel1,
             mode: EffectMode::Backdrop,
@@ -183,7 +194,7 @@ impl WinitAppDriver for EffectsDemoDriver {
             },
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
+            corner_radii: panel_radii,
         });
         panel_border(
             scene,
@@ -197,8 +208,13 @@ impl WinitAppDriver for EffectsDemoDriver {
             },
         );
         scene.push(SceneOp::PopEffect);
+        scene.push(SceneOp::PopClip);
 
         // Panel 2: filter-content pixelate applied to a subtree (content drawn inside the group).
+        scene.push(SceneOp::PushClipRRect {
+            rect: panel2,
+            corner_radii: panel_radii,
+        });
         scene.push(SceneOp::PushEffect {
             bounds: panel2,
             mode: EffectMode::FilterContent,
@@ -250,7 +266,7 @@ impl WinitAppDriver for EffectsDemoDriver {
             },
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
+            corner_radii: panel_radii,
         });
         scene.push(SceneOp::PopEffect);
         panel_border(
@@ -264,6 +280,7 @@ impl WinitAppDriver for EffectsDemoDriver {
                 a: 0.55,
             },
         );
+        scene.push(SceneOp::PopClip);
 
         // Foreground marker (ordering sanity).
         scene.push(SceneOp::Quad {
