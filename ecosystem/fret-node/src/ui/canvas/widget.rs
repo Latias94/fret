@@ -2923,19 +2923,7 @@ impl NodeGraphCanvas {
             1.0
         };
 
-        let dir = match route {
-            EdgeRouteKind::Bezier => {
-                let (c1, c2) = wire_ctrl_points(from, to, zoom);
-                let d = cubic_bezier_derivative(from, c1, c2, to, 1.0);
-                Point::new(Px(d.x.0), Px(d.y.0))
-            }
-            EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
-            EdgeRouteKind::Step => {
-                let mx = 0.5 * (from.x.0 + to.x.0);
-                let p2 = Point::new(Px(mx), to.y);
-                Point::new(Px(to.x.0 - p2.x.0), Px(to.y.0 - p2.y.0))
-            }
-        };
+        let dir = edge_route_end_tangent(route, from, to, zoom);
 
         let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
         if !len.is_finite() || len <= 1.0e-6 {
@@ -2995,19 +2983,7 @@ impl NodeGraphCanvas {
             1.0
         };
 
-        let dir = match route {
-            EdgeRouteKind::Bezier => {
-                let (c1, c2) = wire_ctrl_points(from, to, zoom);
-                let d = cubic_bezier_derivative(from, c1, c2, to, 0.0);
-                Point::new(Px(d.x.0), Px(d.y.0))
-            }
-            EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
-            EdgeRouteKind::Step => {
-                let mx = 0.5 * (from.x.0 + to.x.0);
-                let p1 = Point::new(Px(mx), from.y);
-                Point::new(Px(p1.x.0 - from.x.0), Px(p1.y.0 - from.y.0))
-            }
-        };
+        let dir = edge_route_start_tangent(route, from, to, zoom);
 
         let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
         if !len.is_finite() || len <= 1.0e-6 {
@@ -5310,6 +5286,54 @@ fn cubic_bezier_derivative(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -
         Px(w0 * (p1.x.0 - p0.x.0) + w1 * (p2.x.0 - p1.x.0) + w2 * (p3.x.0 - p2.x.0)),
         Px(w0 * (p1.y.0 - p0.y.0) + w1 * (p2.y.0 - p1.y.0) + w2 * (p3.y.0 - p2.y.0)),
     )
+}
+
+fn edge_route_start_tangent(route: EdgeRouteKind, from: Point, to: Point, zoom: f32) -> Point {
+    match route {
+        EdgeRouteKind::Bezier => {
+            let (c1, c2) = wire_ctrl_points(from, to, zoom);
+            cubic_bezier_derivative(from, c1, c2, to, 0.0)
+        }
+        EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
+        EdgeRouteKind::Step => {
+            let mx = 0.5 * (from.x.0 + to.x.0);
+            let p1 = Point::new(Px(mx), from.y);
+            let p2 = Point::new(Px(mx), to.y);
+            let d0 = Point::new(Px(p1.x.0 - from.x.0), Px(p1.y.0 - from.y.0));
+            if (d0.x.0 * d0.x.0 + d0.y.0 * d0.y.0) > 1.0e-12 {
+                return d0;
+            }
+            let d1 = Point::new(Px(p2.x.0 - p1.x.0), Px(p2.y.0 - p1.y.0));
+            if (d1.x.0 * d1.x.0 + d1.y.0 * d1.y.0) > 1.0e-12 {
+                return d1;
+            }
+            Point::new(Px(to.x.0 - p2.x.0), Px(to.y.0 - p2.y.0))
+        }
+    }
+}
+
+fn edge_route_end_tangent(route: EdgeRouteKind, from: Point, to: Point, zoom: f32) -> Point {
+    match route {
+        EdgeRouteKind::Bezier => {
+            let (c1, c2) = wire_ctrl_points(from, to, zoom);
+            cubic_bezier_derivative(from, c1, c2, to, 1.0)
+        }
+        EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
+        EdgeRouteKind::Step => {
+            let mx = 0.5 * (from.x.0 + to.x.0);
+            let p1 = Point::new(Px(mx), from.y);
+            let p2 = Point::new(Px(mx), to.y);
+            let d2 = Point::new(Px(to.x.0 - p2.x.0), Px(to.y.0 - p2.y.0));
+            if (d2.x.0 * d2.x.0 + d2.y.0 * d2.y.0) > 1.0e-12 {
+                return d2;
+            }
+            let d1 = Point::new(Px(p2.x.0 - p1.x.0), Px(p2.y.0 - p1.y.0));
+            if (d1.x.0 * d1.x.0 + d1.y.0 * d1.y.0) > 1.0e-12 {
+                return d1;
+            }
+            Point::new(Px(p1.x.0 - from.x.0), Px(p1.y.0 - from.y.0))
+        }
+    }
 }
 
 fn normal_from_tangent(tangent: Point) -> Point {
