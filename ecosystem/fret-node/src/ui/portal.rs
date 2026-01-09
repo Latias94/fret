@@ -28,6 +28,7 @@ use super::canvas::{node_order, node_ports, node_size_default_px};
 
 pub const CMD_SUBMIT_TEXT_PREFIX: &str = "fret_node.portal.submit_text:";
 pub const CMD_CANCEL_TEXT_PREFIX: &str = "fret_node.portal.cancel_text:";
+pub const CMD_STEP_TEXT_PREFIX: &str = "fret_node.portal.step_text:";
 
 pub fn portal_submit_text_command(node: NodeId) -> CommandId {
     CommandId::new(format!("{CMD_SUBMIT_TEXT_PREFIX}{}", node.0))
@@ -35,6 +36,10 @@ pub fn portal_submit_text_command(node: NodeId) -> CommandId {
 
 pub fn portal_cancel_text_command(node: NodeId) -> CommandId {
     CommandId::new(format!("{CMD_CANCEL_TEXT_PREFIX}{}", node.0))
+}
+
+pub fn portal_step_text_command(node: NodeId, delta: i32) -> CommandId {
+    CommandId::new(format!("{CMD_STEP_TEXT_PREFIX}{}:{delta}", node.0))
 }
 
 pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextCommand> {
@@ -47,6 +52,15 @@ pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextComman
         let uuid = Uuid::parse_str(rest).ok()?;
         return Some(PortalTextCommand::Cancel { node: NodeId(uuid) });
     }
+    if let Some(rest) = s.strip_prefix(CMD_STEP_TEXT_PREFIX) {
+        let (uuid_str, delta_str) = rest.split_once(':')?;
+        let uuid = Uuid::parse_str(uuid_str).ok()?;
+        let delta = delta_str.parse::<i32>().ok()?;
+        return Some(PortalTextCommand::Step {
+            node: NodeId(uuid),
+            delta,
+        });
+    }
     None
 }
 
@@ -54,6 +68,7 @@ pub fn parse_portal_text_command(command: &CommandId) -> Option<PortalTextComman
 pub enum PortalTextCommand {
     Submit { node: NodeId },
     Cancel { node: NodeId },
+    Step { node: NodeId, delta: i32 },
 }
 
 #[derive(Debug, Clone)]

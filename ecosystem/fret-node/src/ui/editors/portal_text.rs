@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Color, Px, TextStyle};
-use fret_runtime::Model;
+use fret_core::{AppWindowId, Color, Edges, Px, TextStyle};
+use fret_runtime::{Effect, Model};
 use fret_ui::element::{
-    ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, SizeStyle, TextInputProps,
-    TextProps,
+    ColumnProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, RowProps,
+    SizeStyle, TextInputProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{TextInputStyle, ThemeSnapshot, UiHost};
@@ -14,7 +14,8 @@ use crate::core::{Graph, NodeId};
 use crate::ops::GraphTransaction;
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalNodeLayout, PortalCommandOutcome,
-    PortalTextCommand, portal_cancel_text_command, portal_submit_text_command,
+    PortalTextCommand, portal_cancel_text_command, portal_step_text_command,
+    portal_submit_text_command,
 };
 use crate::ui::style::NodeGraphStyle;
 
@@ -87,9 +88,17 @@ impl PortalTextEditor {
         let desired_text = spec.initial_text(graph, node);
         let input_model = self.ensure_input_model(ecx.app, ecx.window, graph, node, spec);
         let error_model = self.ensure_error_model(ecx.app, ecx.window, node);
-        let error_text = error_model.read_ref(ecx.app, |v| v.clone()).ok().flatten();
 
         self.maybe_sync_from_graph(ecx.app, ecx.window, node, &input_model, desired_text);
+        self.maybe_clear_error_on_input_change(
+            ecx.app,
+            ecx.window,
+            node,
+            &input_model,
+            &error_model,
+        );
+
+        let error_text = error_model.read_ref(ecx.app, |v| v.clone()).ok().flatten();
 
         let max_w = (layout.node_window.size.width.0 - 2.0 * style.node_padding)
             .max(80.0)
@@ -118,15 +127,86 @@ impl PortalTextEditor {
 
         let submit = portal_submit_text_command(node);
         let cancel = portal_cancel_text_command(node);
+        let step_down = portal_step_text_command(node, -1);
+        let step_up = portal_step_text_command(node, 1);
 
         vec![ecx.column(column, |cx| {
-            let mut props = TextInputProps::new(input_model);
-            props.chrome = chrome;
-            props.submit_command = Some(submit);
-            props.cancel_command = Some(cancel);
-            props.layout.size.width = Length::Fill;
+            let current_text = input_model
+                .read_ref(cx.app, |v| v.clone())
+                .ok()
+                .unwrap_or_default();
+            let show_stepper = spec.step_text(graph, node, &current_text, 1).is_some()
+                || spec.step_text(graph, node, &current_text, -1).is_some();
 
-            let mut children = vec![cx.text_input(props)];
+            let input_row = if show_stepper {
+                let mut row = RowProps::default();
+                row.gap = Px(ui.gap);
+                row.layout.size.width = Length::Fill;
+
+                cx.row(row, |cx| {
+                    let mut props = TextInputProps::new(input_model.clone());
+                    props.chrome = chrome.clone();
+                    props.submit_command = Some(submit.clone());
+                    props.cancel_command = Some(cancel.clone());
+                    props.layout.size.width = Length::Fill;
+
+                    let mut btn_col = ColumnProps::default();
+                    btn_col.gap = Px(2.0);
+                    btn_col.padding = Edges::all(Px(0.0));
+                    btn_col.layout.size.width = Length::Px(Px(20.0));
+
+                    let mut minus = PressableProps::default();
+                    minus.focusable = false;
+                    minus.a11y.label = Some(Arc::from("Decrement"));
+                    minus.layout.size.width = Length::Px(Px(20.0));
+                    minus.layout.size.height = Length::Px(Px(20.0));
+
+                    let mut plus = PressableProps::default();
+                    plus.focusable = false;
+                    plus.a11y.label = Some(Arc::from("Increment"));
+                    plus.layout.size.width = Length::Px(Px(20.0));
+                    plus.layout.size.height = Length::Px(Px(20.0));
+
+                    vec![
+                        cx.text_input(props),
+                        cx.column(btn_col, |cx| {
+                            let down = step_down.clone();
+                            let up = step_up.clone();
+
+                            let dec = cx.pressable(minus, |cx, _state| {
+                                cx.pressable_on_activate(Arc::new(move |host, cx, _reason| {
+                                    host.push_effect(Effect::Command {
+                                        window: Some(cx.window),
+                                        command: down.clone(),
+                                    });
+                                }));
+                                vec![cx.text("-")]
+                            });
+
+                            let inc = cx.pressable(plus, |cx, _state| {
+                                cx.pressable_on_activate(Arc::new(move |host, cx, _reason| {
+                                    host.push_effect(Effect::Command {
+                                        window: Some(cx.window),
+                                        command: up.clone(),
+                                    });
+                                }));
+                                vec![cx.text("+")]
+                            });
+
+                            vec![dec, inc]
+                        }),
+                    ]
+                })
+            } else {
+                let mut props = TextInputProps::new(input_model);
+                props.chrome = chrome;
+                props.submit_command = Some(submit);
+                props.cancel_command = Some(cancel);
+                props.layout.size.width = Length::Fill;
+                cx.text_input(props)
+            };
+
+            let mut children = vec![input_row];
 
             if let Some(err) = error_text {
                 let mut text = TextProps::new(err);
@@ -166,6 +246,7 @@ impl PortalTextEditor {
             session.inputs.retain(|k, _| live.contains(k));
             session.errors.retain(|k, _| live.contains(k));
             session.last_synced.retain(|k, _| live.contains(k));
+            session.last_seen.retain(|k, _| live.contains(k));
         });
     }
 
@@ -181,6 +262,7 @@ impl PortalTextEditor {
             session.inputs.entry(node).or_insert_with(|| {
                 let text = spec.initial_text(graph, node);
                 session.last_synced.insert(node, text.clone());
+                session.last_seen.insert(node, text.clone());
                 app.models_mut().insert(text)
             });
             session.inputs.get(&node).expect("model exists").clone()
@@ -230,7 +312,8 @@ impl PortalTextEditor {
             *v = text;
         });
         self.with_session_mut(app, window, |session, _app| {
-            session.last_synced.insert(node, synced);
+            session.last_synced.insert(node, synced.clone());
+            session.last_seen.insert(node, synced);
         });
     }
 
@@ -264,7 +347,8 @@ impl PortalTextEditor {
             *v = normalized;
         });
         self.with_session_mut(app, window, |session, _app| {
-            session.last_synced.insert(node, synced);
+            session.last_synced.insert(node, synced.clone());
+            session.last_seen.insert(node, synced);
         });
     }
 
@@ -302,8 +386,40 @@ impl PortalTextEditor {
         });
 
         if should_update {
+            let next = desired_text.clone();
             let _ = input_model.update(app, |v, _cx| {
                 *v = desired_text;
+            });
+            self.with_session_mut(app, window, |session, _app| {
+                session.last_seen.insert(node, next);
+            });
+        }
+    }
+
+    fn maybe_clear_error_on_input_change<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        input_model: &Model<String>,
+        error_model: &Model<Option<Arc<str>>>,
+    ) {
+        let current = input_model
+            .read_ref(app, |v| v.clone())
+            .ok()
+            .unwrap_or_default();
+
+        let changed = self.with_session_mut(app, window, |session, _app| {
+            if session.last_seen.get(&node).is_some_and(|v| v == &current) {
+                return false;
+            }
+            session.last_seen.insert(node, current);
+            true
+        });
+
+        if changed {
+            let _ = error_model.update(app, |err, _cx| {
+                *err = None;
             });
         }
     }
@@ -327,6 +443,10 @@ pub enum PortalTextEditSubmit {
 pub trait PortalTextEditSpec {
     fn initial_text(&self, graph: &Graph, node: NodeId) -> String;
     fn submit(&self, graph: &Graph, node: NodeId, text: &str) -> PortalTextEditSubmit;
+
+    fn step_text(&self, _graph: &Graph, _node: NodeId, _text: &str, _delta: i32) -> Option<String> {
+        None
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -357,21 +477,56 @@ impl<H: UiHost, S: PortalTextEditSpec> NodeGraphPortalCommandHandler<H>
             return PortalCommandOutcome::NotHandled;
         };
 
-        let (node, is_submit) = match command {
-            PortalTextCommand::Submit { node } => (node, true),
-            PortalTextCommand::Cancel { node } => (node, false),
-        };
+        match command {
+            PortalTextCommand::Cancel { node } => {
+                self.editor
+                    .reset_input(cx.app, window, graph, node, &self.spec);
+                self.editor.set_error(cx.app, window, node, None);
+                PortalCommandOutcome::Handled
+            }
+            PortalTextCommand::Submit { node } => {
+                let text = self
+                    .editor
+                    .read_input(cx.app, window, graph, node, &self.spec);
+                self.handle_submit(cx, window, graph, node, text)
+            }
+            PortalTextCommand::Step { node, delta } => {
+                let text = self
+                    .editor
+                    .read_input(cx.app, window, graph, node, &self.spec);
+                let Some(next_text) = self.spec.step_text(graph, node, &text, delta) else {
+                    return PortalCommandOutcome::NotHandled;
+                };
 
-        if !is_submit {
-            self.editor
-                .reset_input(cx.app, window, graph, node, &self.spec);
-            self.editor.set_error(cx.app, window, node, None);
-            return PortalCommandOutcome::Handled;
+                let model = self
+                    .editor
+                    .ensure_input_model(cx.app, window, graph, node, &self.spec);
+                let submit_text = next_text.clone();
+                let _ = model.update(cx.app, |v, _cx| {
+                    *v = next_text;
+                });
+                self.editor
+                    .with_session_mut(cx.app, window, |session, _app| {
+                        session.last_synced.insert(node, submit_text.clone());
+                        session.last_seen.insert(node, submit_text.clone());
+                    });
+
+                self.editor.set_error(cx.app, window, node, None);
+                self.handle_submit(cx, window, graph, node, submit_text)
+            }
         }
+    }
+}
 
-        let text = self
-            .editor
-            .read_input(cx.app, window, graph, node, &self.spec);
+impl<S: PortalTextEditSpec> PortalTextEditHandler<S> {
+    fn handle_submit<H: UiHost>(
+        &mut self,
+        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
+        window: AppWindowId,
+        graph: &Graph,
+        node: NodeId,
+        text: String,
+    ) -> PortalCommandOutcome {
         match self.spec.submit(graph, node, &text) {
             PortalTextEditSubmit::NotHandled => PortalCommandOutcome::NotHandled,
             PortalTextEditSubmit::Handled { normalized_text } => {
@@ -425,4 +580,5 @@ struct PortalTextEditorSession {
     inputs: HashMap<NodeId, Model<String>>,
     errors: HashMap<NodeId, Model<Option<Arc<str>>>>,
     last_synced: HashMap<NodeId, String>,
+    last_seen: HashMap<NodeId, String>,
 }
