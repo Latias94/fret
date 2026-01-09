@@ -61,6 +61,8 @@ Fret models Radix tooltip outcomes by composing:
   `onPointerDownOutside` + `onDismiss` outcomes). The shadcn tooltip recipe installs a dismiss
   handler on its overlay request (`OverlayRequest.dismissible_on_dismiss_request`) so an outside
   press requests close without blocking underlay input.
+- Pass: Escape-to-dismiss is supported for focused triggers by installing an Escape key hook on the
+  trigger element (Radix `onEscapeKeyDown` outcome for the common focus-open case).
 - Pass: Provider-scoped pointer-in-transit suppression is modeled via a provider model:
   - The currently open tooltip publishes a transit corridor geometry via
     `tooltip_provider::set_pointer_transit_geometry(...)`.

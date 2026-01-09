@@ -16,7 +16,7 @@ use fret_ui_kit::{
 use std::sync::Arc;
 
 use fret_core::{
-    Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
+    KeyCode, Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -552,6 +552,25 @@ impl Tooltip {
                             .models_mut()
                             .update(&suppress_focus_open, |v| *v = true);
                         host.request_redraw(acx.window);
+                    }
+                }),
+            );
+
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    move |host, acx, down| {
+                        if down.repeat || down.key != KeyCode::Escape {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                        true
                     }
                 }),
             );
@@ -2322,6 +2341,188 @@ mod tests {
         assert!(
             trigger_node.described_by.is_empty(),
             "expected aria-describedby to be cleared after outside press dismissal"
+        );
+    }
+
+    #[test]
+    fn tooltip_closes_on_escape_while_focused() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let trigger = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let content =
+                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                    .into_element(cx);
+                            content_id_out.set(Some(content.id));
+
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .disable_hoverable_content(false)
+                                    .into_element(cx),
+                            ]
+                        })
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: mount and focus the trigger.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_element).expect("node");
+        ui.set_focus(Some(trigger_node));
+
+        // Frame 2: focus opens tooltip.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip content to be mounted after focus open"
+        );
+
+        // Escape closes and suppresses focus-driven reopen.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 3: described-by should be cleared and tooltip should stay closed while focused.
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger node");
+        assert!(
+            trigger_node.described_by.is_empty(),
+            "expected aria-describedby to be cleared after Escape dismissal"
+        );
+
+        app.set_frame_id(FrameId(4));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger node");
+        assert!(
+            trigger_node.described_by.is_empty(),
+            "expected tooltip to remain closed while focused after Escape dismissal"
         );
     }
 
