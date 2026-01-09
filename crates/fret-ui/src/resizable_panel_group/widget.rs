@@ -265,17 +265,14 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
 
         #[cfg(feature = "layout-engine-v2")]
         {
-            // Avoid precomputing flow islands during "probe" layout passes that use an
+            // Avoid registering viewport roots during "probe" layout passes that use an
             // effectively-unbounded available size (important for scroll/virtualized descendants).
             let is_probe_layout = crate::layout_probe::is_probe_layout_any_axis(cx.available);
             if !is_probe_layout {
-                let sf = cx.scale_factor;
-                let app = &mut *cx.app;
-                let services = &mut *cx.services;
-                let tree = &mut *cx.tree;
                 for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
-                    tree.precompute_flow_root_island(app, services, child, rect, sf);
+                    let _ = cx.layout_viewport_root(child, rect);
                 }
+                return cx.available;
             }
         }
 

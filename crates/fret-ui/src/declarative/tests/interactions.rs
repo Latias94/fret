@@ -825,7 +825,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
-fn resizable_panel_group_precomputes_flow_islands_for_panels() {
+fn resizable_panel_group_registers_viewport_roots_for_panels() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -900,6 +900,15 @@ fn resizable_panel_group_precomputes_flow_islands_for_panels() {
     let hover = ui.children(panel_a)[0];
     let hover_text = ui.children(hover)[0];
     let panel_b_text = ui.children(panel_b)[0];
+
+    let viewport_root_nodes: Vec<_> = ui
+        .viewport_roots()
+        .iter()
+        .map(|(node, _bounds)| *node)
+        .collect();
+    assert_eq!(viewport_root_nodes.len(), 2);
+    assert!(viewport_root_nodes.contains(&panel_a));
+    assert!(viewport_root_nodes.contains(&panel_b));
 
     let engine = ui.take_layout_engine();
     assert!(engine.layout_id_for_node(panel_a).is_some());
