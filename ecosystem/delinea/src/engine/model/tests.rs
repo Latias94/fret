@@ -83,11 +83,21 @@ fn band_requires_y2_col() {
 }
 
 #[test]
-fn bar_requires_category_x_axis() {
+fn bar_requires_exactly_one_category_axis() {
     let mut spec = basic_spec();
     spec.series[0].kind = SeriesKind::Bar;
     let err = ChartModel::from_spec(spec).unwrap_err();
     assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn bar_allows_category_y_axis_for_horizontal_bars() {
+    let mut spec = basic_spec();
+    spec.series[0].kind = SeriesKind::Bar;
+    spec.axes[1].scale = crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+        categories: vec!["A".into(), "B".into()],
+    });
+    ChartModel::from_spec(spec).unwrap();
 }
 
 #[test]

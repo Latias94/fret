@@ -23,6 +23,7 @@ use fret_core::Point;
 use std::collections::BTreeMap;
 
 pub mod axis;
+pub mod bar;
 pub mod hit_test;
 pub mod interaction;
 pub mod lod;
@@ -877,20 +878,41 @@ fn compute_axis_axis_pointer_output(
     spec: crate::engine::model::AxisPointerModel,
 ) -> Option<AxisPointerOutput> {
     let primary = model.series_in_order().find(|s| s.visible)?;
-    let x_axis = primary.x_axis;
+    let trigger_axis = if primary.kind == crate::spec::SeriesKind::Bar {
+        crate::engine::bar::bar_mapping_for_series(model, primary.id)
+            .map(|m| m.category_axis)
+            .unwrap_or(primary.x_axis)
+    } else {
+        primary.x_axis
+    };
+    let trigger_axis_kind = model
+        .axes
+        .get(&trigger_axis)
+        .map(|a| a.kind)
+        .unwrap_or(crate::spec::AxisKind::X);
 
-    let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
+    let trigger_window = axis_windows.get(&trigger_axis).copied().unwrap_or_default();
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
     let hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
 
-    let x_value = if spec.snap
+    let axis_value = if spec.snap
         && let Some(hit) = hit_for_marker
     {
-        hit.x_value
+        match trigger_axis_kind {
+            crate::spec::AxisKind::X => hit.x_value,
+            crate::spec::AxisKind::Y => hit.y_value,
+        }
     } else {
-        crate::engine::axis::data_at_x_in_rect(x_window, hover_px.x.0, viewport)
+        match trigger_axis_kind {
+            crate::spec::AxisKind::X => {
+                crate::engine::axis::data_at_x_in_rect(trigger_window, hover_px.x.0, viewport)
+            }
+            crate::spec::AxisKind::Y => {
+                crate::engine::axis::data_at_y_in_rect(trigger_window, hover_px.y.0, viewport)
+            }
+        }
     };
-    if !x_value.is_finite() {
+    if !axis_value.is_finite() {
         return None;
     }
 
@@ -904,25 +926,45 @@ fn compute_axis_axis_pointer_output(
 
     let mut tooltip = TooltipOutput::default();
 
-    let x_label = model
+    let axis_label = model
         .axes
-        .get(&x_axis)
+        .get(&trigger_axis)
         .and_then(|a| a.name.as_deref())
-        .map(|n| format!("x ({n})"))
-        .unwrap_or_else(|| "x".to_string());
+        .map(|n| match trigger_axis_kind {
+            crate::spec::AxisKind::X => format!("x ({n})"),
+            crate::spec::AxisKind::Y => format!("y ({n})"),
+        })
+        .unwrap_or_else(|| match trigger_axis_kind {
+            crate::spec::AxisKind::X => "x".to_string(),
+            crate::spec::AxisKind::Y => "y".to_string(),
+        });
     tooltip.lines.push(TooltipLine {
-        label: x_label,
-        value: crate::engine::axis::format_value_for(model, x_axis, x_window, x_value),
+        label: axis_label,
+        value: crate::engine::axis::format_value_for(
+            model,
+            trigger_axis,
+            trigger_window,
+            axis_value,
+        ),
     });
 
-    let category_len = model.axes.get(&x_axis).and_then(|a| match &a.scale {
+    let category_len = model.axes.get(&trigger_axis).and_then(|a| match &a.scale {
         crate::scale::AxisScale::Category(scale) => Some(scale.len()),
         _ => None,
     });
-    let category_ordinal = category_len.and_then(|len| ordinal_from_value(x_value, len));
+    let category_ordinal = category_len.and_then(|len| ordinal_from_value(axis_value, len));
 
     for series in model.series_in_order() {
-        if !series.visible || series.x_axis != x_axis {
+        if !series.visible {
+            continue;
+        }
+
+        let bar_mapping = crate::engine::bar::bar_mapping_for_series(model, series.id)
+            .filter(|_| series.kind == crate::spec::SeriesKind::Bar);
+        let series_trigger_axis = bar_mapping
+            .map(|m| m.category_axis)
+            .unwrap_or(series.x_axis);
+        if series_trigger_axis != trigger_axis {
             continue;
         }
 
@@ -932,19 +974,11 @@ fn compute_axis_axis_pointer_output(
         let Some(dataset) = model.datasets.get(&series.dataset) else {
             continue;
         };
-        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
-            continue;
-        };
-        let Some(y0_col) = dataset.fields.get(&series.encode.y).copied() else {
-            continue;
-        };
+        let x_col = dataset.fields.get(&series.encode.x).copied();
+        let y0_col = dataset.fields.get(&series.encode.y).copied();
 
-        let Some(x) = table.column_f64(x_col) else {
-            continue;
-        };
-        let Some(y0) = table.column_f64(y0_col) else {
-            continue;
-        };
+        let x = x_col.and_then(|c| table.column_f64(c));
+        let y0 = y0_col.and_then(|c| table.column_f64(c));
 
         let y1 = if series.kind == crate::spec::SeriesKind::Band {
             series
@@ -980,14 +1014,22 @@ fn compute_axis_axis_pointer_output(
         };
 
         let selection_for_index = base_selection.clone();
-        let table_view = data_views.table_view_for(
-            table,
-            series.dataset,
-            x_col,
-            selection_range,
-            filter,
-            base_selection,
-        );
+        let filter_for_index = if series_trigger_axis == series.x_axis {
+            filter
+        } else {
+            crate::engine::window_policy::AxisFilter1D::default()
+        };
+
+        let table_view = x_col.map(|x_col| {
+            data_views.table_view_for(
+                table,
+                series.dataset,
+                x_col,
+                selection_range,
+                filter,
+                base_selection,
+            )
+        });
 
         let model_rev = model.revs.marks;
         let table_rev = table.revision;
@@ -996,47 +1038,75 @@ fn compute_axis_axis_pointer_output(
         if let (Some(category_len), Some(ordinal)) = (category_len, category_ordinal)
             && !matches!(selection_for_index, RowSelection::Indices(_))
         {
-            let key = crate::engine::stages::OrdinalIndexKey::new(
-                series.dataset,
-                x_col,
-                category_len,
-                selection_range,
-                filter,
-            );
-            if let Some(raw_index) = ordinal_indices.raw_index_of_ordinal(key, ordinal, table_rev) {
-                sample = sample_at_raw_index(
-                    model, datasets, stack_dims, model_rev, table_rev, series.id, raw_index, y0, y1,
+            let ordinal_col = if let Some(mapping) = bar_mapping {
+                dataset.fields.get(&mapping.category_field).copied()
+            } else {
+                x_col
+            };
+            if let Some(ordinal_col) = ordinal_col {
+                let key = crate::engine::stages::OrdinalIndexKey::new(
+                    series.dataset,
+                    ordinal_col,
+                    category_len,
+                    selection_range,
+                    filter_for_index,
                 );
+                if let Some(raw_index) =
+                    ordinal_indices.raw_index_of_ordinal(key, ordinal, table_rev)
+                {
+                    if let Some(mapping) = bar_mapping {
+                        let value_col = dataset.fields.get(&mapping.value_field).copied();
+                        let value = value_col
+                            .and_then(|c| table.column_f64(c))
+                            .and_then(|v| v.get(raw_index).copied())
+                            .unwrap_or(f64::NAN);
+                        if value.is_finite() {
+                            let value = if let Some(stack) = series.stack {
+                                stack_dims
+                                    .stacked_value(
+                                        stack, series.id, raw_index, model_rev, table_rev,
+                                    )
+                                    .unwrap_or(value)
+                            } else {
+                                value
+                            };
+                            sample = Some(SampledSeriesValue {
+                                y0: value,
+                                y1: None,
+                            });
+                        }
+                    } else if let (Some(y0), Some(_x)) = (y0, x) {
+                        sample = sample_at_raw_index(
+                            model, datasets, stack_dims, model_rev, table_rev, series.id,
+                            raw_index, y0, y1,
+                        );
+                    }
+                }
             }
         }
 
         let Some(sample) = sample.or_else(|| {
+            if series.kind == crate::spec::SeriesKind::Bar {
+                return None;
+            }
+            let Some(x) = x else {
+                return None;
+            };
+            let Some(y0) = y0 else {
+                return None;
+            };
+            let Some(table_view) = table_view.as_ref() else {
+                return None;
+            };
             if series.kind == crate::spec::SeriesKind::Scatter {
                 sample_scatter_at_x_view(
-                    model,
-                    datasets,
-                    stack_dims,
-                    model_rev,
-                    table_rev,
-                    series.id,
-                    x_value,
-                    x,
-                    y0,
-                    &table_view,
+                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
+                    y0, table_view,
                 )
             } else {
                 sample_series_at_x_view(
-                    model,
-                    datasets,
-                    stack_dims,
-                    model_rev,
-                    table_rev,
-                    series.id,
-                    x_value,
-                    x,
-                    y0,
-                    y1,
-                    &table_view,
+                    model, datasets, stack_dims, model_rev, table_rev, series.id, axis_value, x,
+                    y0, y1, table_view,
                 )
             }
         }) else {
@@ -1049,17 +1119,15 @@ fn compute_axis_axis_pointer_output(
             .map(|n| n.to_string())
             .unwrap_or_else(|| format!("Series {}", series.id.0));
 
-        let y_window = axis_windows
-            .get(&series.y_axis)
-            .copied()
-            .unwrap_or_default();
+        let value_axis = bar_mapping.map(|m| m.value_axis).unwrap_or(series.y_axis);
+        let value_window = axis_windows.get(&value_axis).copied().unwrap_or_default();
         let value = if let Some(y1) = sample.y1 {
             let a =
-                crate::engine::axis::format_value_for(model, series.y_axis, y_window, sample.y0);
-            let b = crate::engine::axis::format_value_for(model, series.y_axis, y_window, y1);
+                crate::engine::axis::format_value_for(model, value_axis, value_window, sample.y0);
+            let b = crate::engine::axis::format_value_for(model, value_axis, value_window, y1);
             format!("{a} .. {b}")
         } else {
-            crate::engine::axis::format_value_for(model, series.y_axis, y_window, sample.y0)
+            crate::engine::axis::format_value_for(model, value_axis, value_window, sample.y0)
         };
 
         tooltip.lines.push(TooltipLine { label, value });
@@ -1142,7 +1210,13 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         }
 
-        let category_len = model.axes.get(&series.x_axis).and_then(|a| match &a.scale {
+        let bar_mapping = crate::engine::bar::bar_mapping_for_series(model, series.id)
+            .filter(|_| series.kind == crate::spec::SeriesKind::Bar);
+        let category_axis = bar_mapping
+            .map(|m| m.category_axis)
+            .unwrap_or(series.x_axis);
+
+        let category_len = model.axes.get(&category_axis).and_then(|a| match &a.scale {
             crate::scale::AxisScale::Category(scale) => Some(scale.len()),
             _ => None,
         });
@@ -1156,7 +1230,12 @@ fn request_ordinal_indices_for_axis_pointer(
         let Some(dataset) = model.datasets.get(&series.dataset) else {
             continue;
         };
-        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+        let ordinal_col = if let Some(mapping) = bar_mapping {
+            dataset.fields.get(&mapping.category_field).copied()
+        } else {
+            dataset.fields.get(&series.encode.x).copied()
+        };
+        let Some(ordinal_col) = ordinal_col else {
             continue;
         };
 
@@ -1187,12 +1266,17 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         }
 
+        let filter_for_index = if category_axis == series.x_axis {
+            filter
+        } else {
+            crate::engine::window_policy::AxisFilter1D::default()
+        };
         let key = crate::engine::stages::OrdinalIndexKey::new(
             series.dataset,
-            x_col,
+            ordinal_col,
             category_len,
             selection_range,
-            filter,
+            filter_for_index,
         );
         ordinal_indices.request(key);
     }

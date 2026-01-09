@@ -216,6 +216,11 @@ pub fn hover_hit_test(
                 let rects = &marks.arena.rects;
                 let indices = &marks.arena.rect_data_indices;
 
+                let is_horizontal_bar = series.kind == SeriesKind::Bar
+                    && crate::engine::bar::bar_mapping_for_series(model, series_id).is_some_and(
+                        |m| m.orientation == crate::engine::bar::BarOrientation::Horizontal,
+                    );
+
                 let start = rects_ref.rects.start;
                 let end = rects_ref.rects.end;
                 if end <= start || end > rects.len() || end > indices.len() {
@@ -231,18 +236,29 @@ pub fn hover_hit_test(
 
                     let (point_px, dist2_px) = closest_point_in_rect(hover_x, hover_y, rect);
 
-                    let x_value = x[idx];
-                    let y0 = y[idx];
-                    let y_value = if let Some(stack) = series.stack {
+                    let cat_value = if is_horizontal_bar { y[idx] } else { x[idx] };
+                    let value0 = if is_horizontal_bar { x[idx] } else { y[idx] };
+
+                    let value = if let Some(stack) = series.stack {
                         stack_dims
-                            .stacked_y(stack, series_id, idx, model.revs.marks, table.revision)
+                            .stacked_value(stack, series_id, idx, model.revs.marks, table.revision)
                             .unwrap_or_else(|| {
-                                stack_base_at_index(model, datasets, series_id, idx, y0)
-                                    .map(|b| y0 + b.base)
-                                    .unwrap_or(y0)
+                                if is_horizontal_bar {
+                                    value0
+                                } else {
+                                    stack_base_at_index(model, datasets, series_id, idx, value0)
+                                        .map(|b| value0 + b.base)
+                                        .unwrap_or(value0)
+                                }
                             })
                     } else {
-                        y0
+                        value0
+                    };
+
+                    let (x_value, y_value) = if is_horizontal_bar {
+                        (value, cat_value)
+                    } else {
+                        (cat_value, value)
                     };
                     if !x_value.is_finite() || !y_value.is_finite() {
                         continue;

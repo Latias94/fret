@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::data::DatasetStore;
+use crate::engine::bar::bar_mapping_for_series;
 use crate::engine::model::ChartModel;
 use crate::ids::{DatasetId, Revision, SeriesId};
 use crate::scheduler::WorkBudget;
@@ -17,9 +18,9 @@ pub struct BarLayoutStage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BarLayoutGroupKey {
     dataset: DatasetId,
-    x_axis: crate::ids::AxisId,
-    y_axis: crate::ids::AxisId,
-    x_col: u32,
+    category_axis: crate::ids::AxisId,
+    value_axis: crate::ids::AxisId,
+    category_col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -32,10 +33,10 @@ enum BarLayoutGroupEntry {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BarSeriesLayout {
-    /// X offset in data space, relative to the category ordinal center.
-    pub offset_x: f64,
-    /// Bar width in data space (category bands have width 1.0).
-    pub width_x: f64,
+    /// Offset in category data space, relative to the category ordinal center.
+    pub offset_cat: f64,
+    /// Bar thickness in category data space (category bands have width 1.0).
+    pub width_cat: f64,
     /// Slot index within the group (0..slot_count-1).
     pub slot_index: u16,
     /// Slot count within the group.
@@ -69,18 +70,21 @@ impl BarLayoutStage {
                 continue;
             }
 
+            let Some(mapping) = bar_mapping_for_series(model, series.id) else {
+                continue;
+            };
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 continue;
             };
-            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            let Some(category_col) = dataset.fields.get(&mapping.category_field).copied() else {
                 continue;
             };
 
             let key = BarLayoutGroupKey {
                 dataset: series.dataset,
-                x_axis: series.x_axis,
-                y_axis: series.y_axis,
-                x_col: x_col.min(u32::MAX as usize) as u32,
+                category_axis: mapping.category_axis,
+                value_axis: mapping.value_axis,
+                category_col: category_col.min(u32::MAX as usize) as u32,
             };
             if self.requested_set.insert(key) {
                 self.requested.push(key);
@@ -126,14 +130,16 @@ impl BarLayoutStage {
         &self,
         model: &ChartModel,
         series_id: SeriesId,
-        x_col: usize,
     ) -> Option<BarSeriesLayout> {
         let series = model.series.get(&series_id)?;
+        let mapping = bar_mapping_for_series(model, series_id)?;
+        let dataset = model.datasets.get(&series.dataset)?;
+        let category_col = *dataset.fields.get(&mapping.category_field)?;
         let key = BarLayoutGroupKey {
             dataset: series.dataset,
-            x_axis: series.x_axis,
-            y_axis: series.y_axis,
-            x_col: x_col.min(u32::MAX as usize) as u32,
+            category_axis: mapping.category_axis,
+            value_axis: mapping.value_axis,
+            category_col: category_col.min(u32::MAX as usize) as u32,
         };
 
         match self.cache.get(&key) {
@@ -160,19 +166,22 @@ fn build_layouts_for_group(
         if !series.visible || series.kind != SeriesKind::Bar {
             continue;
         }
-        if series.dataset != key.dataset
-            || series.x_axis != key.x_axis
-            || series.y_axis != key.y_axis
-        {
+        if series.dataset != key.dataset {
+            continue;
+        }
+        let Some(mapping) = bar_mapping_for_series(model, series.id) else {
+            continue;
+        };
+        if mapping.category_axis != key.category_axis || mapping.value_axis != key.value_axis {
             continue;
         }
         let Some(dataset) = model.datasets.get(&series.dataset) else {
             continue;
         };
-        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+        let Some(category_col) = dataset.fields.get(&mapping.category_field).copied() else {
             continue;
         };
-        if x_col != key.x_col as usize {
+        if category_col != key.category_col as usize {
             continue;
         }
         if datasets.dataset(series.dataset).is_none() {
@@ -236,12 +245,12 @@ fn build_layouts_for_group(
     for series_id in series_in_group {
         let slot_index = slot_for_series.get(&series_id).copied().unwrap_or(0);
         let slot_left = group_left + (slot_index as f64) * (bar_width + gap_width);
-        let offset_x = slot_left + 0.5 * bar_width;
+        let offset_cat = slot_left + 0.5 * bar_width;
         layouts.insert(
             series_id,
             BarSeriesLayout {
-                offset_x,
-                width_x: bar_width,
+                offset_cat,
+                width_cat: bar_width,
                 slot_index: slot_index.min(u16::MAX as usize) as u16,
                 slot_count: slot_count.min(u16::MAX as usize) as u16,
                 bar_width: requested_bar_width,
@@ -478,9 +487,9 @@ mod tests {
         stage.prepare_requests();
         assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
 
-        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
-        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
-        let layout_c = stage.layout_for_series(&model, c, 0).unwrap();
+        let layout_a = stage.layout_for_series(&model, a).unwrap();
+        let layout_b = stage.layout_for_series(&model, b).unwrap();
+        let layout_c = stage.layout_for_series(&model, c).unwrap();
 
         assert_eq!(layout_a, layout_b);
         assert_ne!(layout_a, layout_c);
@@ -602,12 +611,12 @@ mod tests {
         stage.prepare_requests();
         assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
 
-        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
-        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+        let layout_a = stage.layout_for_series(&model, a).unwrap();
+        let layout_b = stage.layout_for_series(&model, b).unwrap();
 
-        assert!((layout_a.width_x - 0.4).abs() < 1e-6);
-        assert!((layout_b.width_x - 0.4).abs() < 1e-6);
-        assert!(layout_a.offset_x < layout_b.offset_x);
+        assert!((layout_a.width_cat - 0.4).abs() < 1e-6);
+        assert!((layout_b.width_cat - 0.4).abs() < 1e-6);
+        assert!(layout_a.offset_cat < layout_b.offset_cat);
     }
 
     #[test]
@@ -726,12 +735,12 @@ mod tests {
         stage.prepare_requests();
         assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
 
-        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
-        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+        let layout_a = stage.layout_for_series(&model, a).unwrap();
+        let layout_b = stage.layout_for_series(&model, b).unwrap();
 
-        assert!((layout_a.width_x - 1.0).abs() < 1e-9);
-        assert!((layout_b.width_x - 1.0).abs() < 1e-9);
-        assert!((layout_a.offset_x - layout_b.offset_x).abs() < 1e-9);
+        assert!((layout_a.width_cat - 1.0).abs() < 1e-9);
+        assert!((layout_b.width_cat - 1.0).abs() < 1e-9);
+        assert!((layout_a.offset_cat - layout_b.offset_cat).abs() < 1e-9);
     }
 
     #[test]
@@ -850,8 +859,8 @@ mod tests {
         stage.prepare_requests();
         assert!(stage.step(&model, &datasets, &mut WorkBudget::new(1_000_000, 0, 64)));
 
-        let layout_a = stage.layout_for_series(&model, a, 0).unwrap();
-        let layout_b = stage.layout_for_series(&model, b, 0).unwrap();
+        let layout_a = stage.layout_for_series(&model, a).unwrap();
+        let layout_b = stage.layout_for_series(&model, b).unwrap();
 
         assert_eq!(
             layout_a.bar_width,

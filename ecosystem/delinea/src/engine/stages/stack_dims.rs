@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use crate::data::DatasetStore;
+use crate::engine::bar::bar_mapping_for_series;
 use crate::engine::model::ChartModel;
 use crate::ids::{DatasetId, Revision, SeriesId, StackId};
 use crate::scale::AxisScale;
@@ -19,7 +20,7 @@ pub struct StackDimsStage {
 #[derive(Debug, Clone)]
 struct StackSeriesInput {
     series: SeriesId,
-    y_col: usize,
+    value_col: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +30,7 @@ enum StackIndexing {
         accum_neg: Vec<f64>,
     },
     ByOrdinal {
-        x_col: usize,
+        category_col: usize,
         accum_pos: Vec<f64>,
         accum_neg: Vec<f64>,
     },
@@ -205,14 +206,16 @@ impl StackDimsStage {
                 }
 
                 let input = series[*series_index].clone();
-                let Some(y) = table.column_f64(input.y_col) else {
+                let Some(y) = table.column_f64(input.value_col) else {
                     self.cursor += 1;
                     break;
                 };
 
                 let x = match indexing {
                     StackIndexing::ByRowIndex { .. } => None,
-                    StackIndexing::ByOrdinal { x_col, .. } => table.column_f64(*x_col),
+                    StackIndexing::ByOrdinal { category_col, .. } => {
+                        table.column_f64(*category_col)
+                    }
                 };
 
                 let end = (*next_row + points_budget).min(*row_count);
@@ -368,6 +371,17 @@ impl StackDimsStage {
         model_rev: Revision,
         data_rev: Revision,
     ) -> Option<f64> {
+        self.stacked_value(stack, series, raw_index, model_rev, data_rev)
+    }
+
+    pub fn stacked_value(
+        &self,
+        stack: StackId,
+        series: SeriesId,
+        raw_index: usize,
+        model_rev: Revision,
+        data_rev: Revision,
+    ) -> Option<f64> {
         match self.cache.get(&stack) {
             Some(StackGroupEntry::Ready {
                 model_rev: mr,
@@ -391,8 +405,8 @@ pub struct StackSeriesArrays {
 #[derive(Debug, Clone)]
 struct StackGroupInputs {
     dataset_id: DatasetId,
-    x_axis: crate::ids::AxisId,
-    x_col: usize,
+    category_axis: crate::ids::AxisId,
+    category_col: usize,
     strategy: StackStrategy,
     series: Vec<StackSeriesInput>,
 }
@@ -404,8 +418,9 @@ fn stack_group_inputs(
 ) -> Option<StackGroupInputs> {
     let mut dataset_id: Option<DatasetId> = None;
     let mut strategy: Option<StackStrategy> = None;
-    let mut x_axis: Option<crate::ids::AxisId> = None;
-    let mut x_col: Option<usize> = None;
+    let mut category_axis: Option<crate::ids::AxisId> = None;
+    let mut value_axis: Option<crate::ids::AxisId> = None;
+    let mut category_col: Option<usize> = None;
     let mut inputs = Vec::<StackSeriesInput>::new();
 
     for series in model.series_in_order() {
@@ -414,7 +429,6 @@ fn stack_group_inputs(
         }
         dataset_id.get_or_insert(series.dataset);
         strategy.get_or_insert(series.stack_strategy);
-        x_axis.get_or_insert(series.x_axis);
 
         if dataset_id != Some(series.dataset) || strategy != Some(series.stack_strategy) {
             return None;
@@ -427,31 +441,55 @@ fn stack_group_inputs(
             return None;
         };
 
-        let group_x_col = *dataset.fields.get(&series.encode.x)?;
-        x_col.get_or_insert(group_x_col);
-        if x_col != Some(group_x_col) {
+        let (category_axis_id, value_axis_id, series_category_col, series_value_col) =
+            if series.kind == crate::spec::SeriesKind::Bar {
+                let mapping = bar_mapping_for_series(model, series.id)?;
+                (
+                    mapping.category_axis,
+                    mapping.value_axis,
+                    *dataset.fields.get(&mapping.category_field)?,
+                    *dataset.fields.get(&mapping.value_field)?,
+                )
+            } else {
+                (
+                    series.x_axis,
+                    series.y_axis,
+                    *dataset.fields.get(&series.encode.x)?,
+                    *dataset.fields.get(&series.encode.y)?,
+                )
+            };
+
+        category_axis.get_or_insert(category_axis_id);
+        value_axis.get_or_insert(value_axis_id);
+        category_col.get_or_insert(series_category_col);
+
+        if category_axis != Some(category_axis_id)
+            || value_axis != Some(value_axis_id)
+            || category_col != Some(series_category_col)
+        {
             return None;
         }
 
-        let y_col = *dataset.fields.get(&series.encode.y)?;
-        if table.column_f64(y_col).is_none() {
+        if table.column_f64(series_category_col).is_none()
+            || table.column_f64(series_value_col).is_none()
+        {
             return None;
         }
 
         inputs.push(StackSeriesInput {
             series: series.id,
-            y_col,
+            value_col: series_value_col,
         });
     }
 
     let dataset_id = dataset_id?;
     let strategy = strategy.unwrap_or_default();
-    let x_axis = x_axis?;
-    let x_col = x_col?;
+    let category_axis = category_axis?;
+    let category_col = category_col?;
     Some(StackGroupInputs {
         dataset_id,
-        x_axis,
-        x_col,
+        category_axis,
+        category_col,
         strategy,
         series: inputs,
     })
@@ -474,7 +512,7 @@ fn stack_indexing_for_group(
         };
     };
 
-    let axis = model.axes.get(&inputs.x_axis);
+    let axis = model.axes.get(&inputs.category_axis);
     let ordinal_len = axis.and_then(|a| match &a.scale {
         AxisScale::Category(scale) => Some(scale.len()),
         _ => None,
@@ -482,10 +520,10 @@ fn stack_indexing_for_group(
 
     if let Some(ordinal_len) = ordinal_len
         && ordinal_len > 0
-        && table.column_f64(inputs.x_col).is_some()
+        && table.column_f64(inputs.category_col).is_some()
     {
         return StackIndexing::ByOrdinal {
-            x_col: inputs.x_col,
+            category_col: inputs.category_col,
             accum_pos: vec![0.0; ordinal_len],
             accum_neg: if inputs.strategy == StackStrategy::SameSign {
                 vec![0.0; ordinal_len]

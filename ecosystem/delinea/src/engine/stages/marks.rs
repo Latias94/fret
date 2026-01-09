@@ -668,6 +668,13 @@ impl MarksStage {
             }
 
             if series.kind == crate::spec::SeriesKind::Bar {
+                let Some(mapping) = crate::engine::bar::bar_mapping_for_series(model, series.id)
+                else {
+                    return false;
+                };
+                let is_vertical =
+                    mapping.orientation == crate::engine::bar::BarOrientation::Vertical;
+
                 let stack_arrays = series.stack.and_then(|stack| {
                     stack_dims.stack_arrays(stack, series.id, model.revs.marks, table.revision)
                 });
@@ -675,25 +682,46 @@ impl MarksStage {
                     return false;
                 }
 
-                let Some(layout) = bar_layout.layout_for_series(model, series.id, x_col) else {
+                let Some(layout) = bar_layout.layout_for_series(model, series.id) else {
                     return false;
                 };
 
-                let x_axis = model.axes.get(&series.x_axis);
-                let x_window = x_axis.and_then(crate::engine::axis::category_domain_window);
-                let x_window = view_x_mapping_window.or(x_window).unwrap_or(DataWindow {
-                    min: bounds.x_min,
-                    max: bounds.x_max,
-                });
-                let mut x_window = x_window;
-                x_window.clamp_non_degenerate();
+                let (category_window, value_window) = if is_vertical {
+                    let x_axis = model.axes.get(&series.x_axis);
+                    let x_domain = x_axis.and_then(crate::engine::axis::category_domain_window);
+                    let x_window = view_x_mapping_window.or(x_domain).unwrap_or(DataWindow {
+                        min: bounds.x_min,
+                        max: bounds.x_max,
+                    });
+                    let mut category_window = x_window;
+                    category_window.clamp_non_degenerate();
 
-                let y_window = DataWindow {
-                    min: bounds.y_min,
-                    max: bounds.y_max,
+                    let mut value_window = DataWindow {
+                        min: bounds.y_min,
+                        max: bounds.y_max,
+                    };
+                    value_window.clamp_non_degenerate();
+
+                    (category_window, value_window)
+                } else {
+                    let y_axis = model.axes.get(&series.y_axis);
+                    let y_domain = y_axis.and_then(crate::engine::axis::category_domain_window);
+                    let y_window = y_domain.unwrap_or(DataWindow {
+                        min: bounds.y_min,
+                        max: bounds.y_max,
+                    });
+                    let mut category_window = y_window;
+                    category_window.clamp_non_degenerate();
+
+                    let x_window = view_x_mapping_window.unwrap_or(DataWindow {
+                        min: bounds.x_min,
+                        max: bounds.x_max,
+                    });
+                    let mut value_window = x_window;
+                    value_window.clamp_non_degenerate();
+
+                    (category_window, value_window)
                 };
-                let mut y_window = y_window;
-                y_window.clamp_non_degenerate();
 
                 if self.bar_node_index.is_none() {
                     if budget.take_marks(1) == 0 {
@@ -731,9 +759,13 @@ impl MarksStage {
 
                     let chunk_end = (self.bar_next_index + points_budget).min(row_end);
 
-                    let x_span = x_window.span();
-                    let band_px = (viewport.size.width.0 as f64 / x_span.max(1.0)).max(1.0);
-                    let mut bar_w = (layout.width_x * band_px).max(1.0) as f32;
+                    let cat_span = category_window.span();
+                    let band_px = if is_vertical {
+                        (viewport.size.width.0 as f64 / cat_span.max(1.0)).max(1.0)
+                    } else {
+                        (viewport.size.height.0 as f64 / cat_span.max(1.0)).max(1.0)
+                    };
+                    let mut bar_thickness_px = (layout.width_cat * band_px).max(1.0) as f32;
                     let mut slot_offset_px: Option<f64> = None;
 
                     if let Some(BarWidthSpec::Px(px)) = layout.bar_width {
@@ -742,7 +774,7 @@ impl MarksStage {
                         let group_width_px =
                             (1.0 - layout.bar_category_gap).clamp(0.0, 1.0) * band_px;
                         let mut bar_w_px = px.max(1.0);
-                        let mut gap_px = bar_w_px * layout.bar_gap.max(0.0);
+                        let mut gap_px = bar_w_px * layout.bar_gap;
                         let mut total_px = (slot_count as f64) * bar_w_px
                             + (slot_count.saturating_sub(1) as f64) * gap_px;
 
@@ -760,7 +792,7 @@ impl MarksStage {
                         let slot_left_px =
                             group_left_px + (slot_index as f64) * (bar_w_px + gap_px);
                         slot_offset_px = Some(slot_left_px + 0.5 * bar_w_px);
-                        bar_w = bar_w_px.max(1.0) as f32;
+                        bar_thickness_px = bar_w_px.max(1.0) as f32;
                     }
 
                     let mut rects = Vec::new();
@@ -783,42 +815,76 @@ impl MarksStage {
                             continue;
                         }
 
-                        let (y_top, y_base) = if let Some(arrays) = &stack_arrays {
-                            let y_base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
-                            let y_top = arrays.stacked.get(i).copied().unwrap_or(f64::NAN);
-                            (y_top, y_base)
+                        let (cat_v, value_v0) = if is_vertical { (xi, yi) } else { (yi, xi) };
+
+                        let (value_top, value_base) = if let Some(arrays) = &stack_arrays {
+                            let base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
+                            let top = arrays.stacked.get(i).copied().unwrap_or(f64::NAN);
+                            (top, base)
                         } else {
-                            (yi, 0.0)
+                            (value_v0, 0.0)
                         };
-                        if !y_top.is_finite() || !y_base.is_finite() {
+                        if !value_top.is_finite() || !value_base.is_finite() {
                             continue;
                         }
 
-                        let tx0 = ((xi - x_window.min) / x_window.span()).clamp(0.0, 1.0);
-                        let ty = ((y_top - y_window.min) / y_window.span()).clamp(0.0, 1.0);
-                        let ty0 = ((y_base - y_window.min) / y_window.span()).clamp(0.0, 1.0);
+                        let cat_span = category_window.span();
+                        let val_span = value_window.span();
+                        let t_cat = ((cat_v - category_window.min) / cat_span).clamp(0.0, 1.0);
+                        let t_val = ((value_top - value_window.min) / val_span).clamp(0.0, 1.0);
+                        let t_val0 = ((value_base - value_window.min) / val_span).clamp(0.0, 1.0);
 
-                        let mut px_x = viewport.origin.x.0 + (tx0 as f32) * viewport.size.width.0;
-                        if let Some(offset_px) = slot_offset_px {
-                            px_x += offset_px as f32;
+                        if is_vertical {
+                            let mut px_x =
+                                viewport.origin.x.0 + (t_cat as f32) * viewport.size.width.0;
+                            if let Some(offset_px) = slot_offset_px {
+                                px_x += offset_px as f32;
+                            } else {
+                                let x_center = cat_v + layout.offset_cat;
+                                let t_center =
+                                    ((x_center - category_window.min) / cat_span).clamp(0.0, 1.0);
+                                px_x =
+                                    viewport.origin.x.0 + (t_center as f32) * viewport.size.width.0;
+                            }
+
+                            let px_y = viewport.origin.y.0
+                                + (1.0 - (t_val as f32)) * viewport.size.height.0;
+                            let px_y0 = viewport.origin.y.0
+                                + (1.0 - (t_val0 as f32)) * viewport.size.height.0;
+
+                            let top = px_y.min(px_y0);
+                            let bottom = px_y.max(px_y0);
+                            let h = (bottom - top).max(1.0);
+
+                            rects.push(Rect::new(
+                                Point::new(Px(px_x - 0.5 * bar_thickness_px), Px(top)),
+                                fret_core::Size::new(Px(bar_thickness_px), Px(h)),
+                            ));
                         } else {
-                            let x_center = xi + layout.offset_x;
-                            let tx = ((x_center - x_window.min) / x_window.span()).clamp(0.0, 1.0);
-                            px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let mut px_y = viewport.origin.y.0
+                                + (1.0 - (t_cat as f32)) * viewport.size.height.0;
+                            if let Some(offset_px) = slot_offset_px {
+                                px_y -= offset_px as f32;
+                            } else {
+                                let y_center = cat_v + layout.offset_cat;
+                                let t_center =
+                                    ((y_center - category_window.min) / cat_span).clamp(0.0, 1.0);
+                                px_y = viewport.origin.y.0
+                                    + (1.0 - (t_center as f32)) * viewport.size.height.0;
+                            }
+
+                            let px_x = viewport.origin.x.0 + (t_val as f32) * viewport.size.width.0;
+                            let px_x0 =
+                                viewport.origin.x.0 + (t_val0 as f32) * viewport.size.width.0;
+                            let left = px_x.min(px_x0);
+                            let right = px_x.max(px_x0);
+                            let w = (right - left).max(1.0);
+
+                            rects.push(Rect::new(
+                                Point::new(Px(left), Px(px_y - 0.5 * bar_thickness_px)),
+                                fret_core::Size::new(Px(w), Px(bar_thickness_px)),
+                            ));
                         }
-                        let px_y =
-                            viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
-                        let px_y0 =
-                            viewport.origin.y.0 + (1.0 - (ty0 as f32)) * viewport.size.height.0;
-
-                        let top = px_y.min(px_y0);
-                        let bottom = px_y.max(px_y0);
-                        let h = (bottom - top).max(1.0);
-
-                        rects.push(Rect::new(
-                            Point::new(Px(px_x - 0.5 * bar_w), Px(top)),
-                            fret_core::Size::new(Px(bar_w), Px(h)),
-                        ));
                         indices.push(i as u32);
                     }
 
@@ -1282,8 +1348,28 @@ fn compute_series_bounds(
         bounds.y_max = w.max;
     }
     if kind == crate::spec::SeriesKind::Bar {
-        bounds.y_min = bounds.y_min.min(0.0);
-        bounds.y_max = bounds.y_max.max(0.0);
+        let x_is_category = model
+            .axes
+            .get(&x_axis)
+            .is_some_and(|a| matches!(a.scale, crate::scale::AxisScale::Category(_)));
+        let y_is_category = model
+            .axes
+            .get(&y_axis)
+            .is_some_and(|a| matches!(a.scale, crate::scale::AxisScale::Category(_)));
+
+        // ECharts-like bar baseline:
+        // - Vertical bars: include 0 on Y (value axis).
+        // - Horizontal bars: include 0 on X (value axis).
+        if x_is_category && !y_is_category {
+            bounds.y_min = bounds.y_min.min(0.0);
+            bounds.y_max = bounds.y_max.max(0.0);
+        } else if !x_is_category && y_is_category {
+            bounds.x_min = bounds.x_min.min(0.0);
+            bounds.x_max = bounds.x_max.max(0.0);
+        } else {
+            bounds.y_min = bounds.y_min.min(0.0);
+            bounds.y_max = bounds.y_max.max(0.0);
+        }
     }
     apply_axis_constraints(model, x_axis, y_axis, &mut bounds);
     bounds.clamp_non_degenerate();

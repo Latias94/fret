@@ -177,6 +177,103 @@ fn bar_emits_rect_batch() {
 }
 
 #[test]
+fn horizontal_bar_emits_rect_batch() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let value_field = crate::ids::FieldId::new(1);
+    let category_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: value_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: category_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into(), "D".into()],
+                }),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: value_field,
+                y: category_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![1.0, -2.0, 3.0, 0.5]));
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(16_384, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+    assert!(!marks.arena.rects.is_empty());
+    assert_eq!(marks.arena.rects.len(), 4);
+    assert!(
+        marks
+            .nodes
+            .iter()
+            .any(|n| n.kind == crate::marks::MarkKind::Rect && n.source_series == Some(series_id))
+    );
+}
+
+#[test]
 fn stacked_bar_uses_stack_base() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

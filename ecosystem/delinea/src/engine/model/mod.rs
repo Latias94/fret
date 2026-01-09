@@ -218,14 +218,33 @@ impl ChartModel {
                 });
             }
             if series.kind == SeriesKind::Bar {
-                let Some(x_axis) = model.axes.get(&series.x_axis) else {
+                let Some(_) = model.axes.get(&series.x_axis) else {
                     return Err(ModelError::MissingReference {
                         kind: "axis.x_axis",
                     });
                 };
-                if !matches!(x_axis.scale, crate::scale::AxisScale::Category(_)) {
+                let Some(_) = model.axes.get(&series.y_axis) else {
+                    return Err(ModelError::MissingReference {
+                        kind: "axis.y_axis",
+                    });
+                };
+
+                // For bars we support both orientations (ECharts-like):
+                // - Vertical: X is category, Y is value -> encode.x is category, encode.y is value.
+                // - Horizontal: Y is category, X is value -> encode.y is category, encode.x is value.
+                //
+                // Exactly one axis must be Category in v1.
+                let x_is_category = model
+                    .axes
+                    .get(&series.x_axis)
+                    .is_some_and(|a| matches!(a.scale, AxisScale::Category(_)));
+                let y_is_category = model
+                    .axes
+                    .get(&series.y_axis)
+                    .is_some_and(|a| matches!(a.scale, AxisScale::Category(_)));
+                if x_is_category == y_is_category {
                     return Err(ModelError::InvalidSpec {
-                        reason: "series.kind=Bar requires a Category x axis",
+                        reason: "series.kind=Bar requires exactly one Category axis (either x_axis or y_axis)",
                     });
                 }
             }
@@ -309,7 +328,23 @@ impl ChartModel {
             let Some(stack) = s.stack else {
                 continue;
             };
-            let key = (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy);
+            let key = if s.kind == SeriesKind::Bar {
+                let mapping = crate::engine::bar::bar_mapping_for_series(&model, s.id).ok_or(
+                    ModelError::InvalidSpec {
+                        reason:
+                            "stacked bar series requires a valid bar orientation (exactly one Category axis)",
+                    },
+                )?;
+                (
+                    mapping.category_axis,
+                    mapping.value_axis,
+                    s.dataset,
+                    mapping.category_field,
+                    s.stack_strategy,
+                )
+            } else {
+                (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy)
+            };
             if let Some(existing) = stack_groups.insert(stack, key) {
                 if existing != key {
                     return Err(ModelError::StackGroupMismatch { stack });
