@@ -5,7 +5,7 @@ use crate::data::DatasetStore;
 use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
-use crate::engine::stages::{DataViewStage, MarksStage, StackDimsStage};
+use crate::engine::stages::{DataViewStage, MarksStage, OrdinalIndexStage, StackDimsStage};
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
@@ -110,6 +110,7 @@ pub struct ChartEngine {
     stats: EngineStats,
     view: ViewState,
     data_view_stage: DataViewStage,
+    ordinal_index_stage: OrdinalIndexStage,
     stack_dims_stage: StackDimsStage,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
@@ -152,6 +153,7 @@ impl ChartEngine {
             stats: EngineStats::default(),
             view: ViewState::default(),
             data_view_stage: DataViewStage::default(),
+            ordinal_index_stage: OrdinalIndexStage::default(),
             stack_dims_stage: StackDimsStage::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
@@ -595,6 +597,10 @@ impl ChartEngine {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
         }
 
+        self.ordinal_index_stage.begin_frame();
+        self.ordinal_index_stage.prepare_requests(&self.datasets);
+        let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
+
         self.stack_dims_stage.begin_frame();
         self.stack_dims_stage
             .request_for_visible_stacks(&self.model);
@@ -659,7 +665,7 @@ impl ChartEngine {
             }
         }
 
-        let unfinished = !done || !selection_done || !stack_dims_done;
+        let unfinished = !done || !selection_done || !stack_dims_done || !ordinal_indices_done;
 
         let hover_px = self.state.hover_px;
         let marks_rev = self.output.marks.revision;
