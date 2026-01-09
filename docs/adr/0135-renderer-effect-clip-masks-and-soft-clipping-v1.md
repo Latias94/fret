@@ -161,6 +161,11 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 - Nested rounded clips: whether to rasterize full clip stack into one mask, or limit to a bounded maximum and degrade.
 - Path clips (`PushClipPath`): when and how to extend beyond rounded rects.
 
+## Implementation Status (Branch-local)
+
+- `FilterContent` composite binds the effect-boundary clip stack uniform so rounded clips do not leak on composite.
+- A dedicated mask texture substrate (R8 coverage) for effect passes is not implemented yet.
+
 ## References
 
 - Rounded clipping semantics: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`

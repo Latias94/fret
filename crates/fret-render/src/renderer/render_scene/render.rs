@@ -1306,11 +1306,19 @@ impl Renderer {
                         multiview_mask: None,
                     });
                     rp.set_pipeline(composite_pipeline);
-                    rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
+                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    } else {
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
+                    }
                     rp.set_bind_group(1, &bind_group, &[]);
                     rp.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
                     if let Some(scissor) = pass.dst_scissor {
-                        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        if scissor.w != 0 && scissor.h != 0 {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        }
                     }
                     rp.draw(0..6, 0..1);
                 }

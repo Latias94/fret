@@ -98,6 +98,7 @@ pub(super) struct CompositePremulPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -303,6 +304,7 @@ impl RenderPlan {
             chain: fret_core::EffectChain,
             quality: fret_core::EffectQuality,
             scissor: ScissorRect,
+            uniform_index: u32,
             parent_target: PlanTarget,
             content_target: Option<PlanTarget>,
         }
@@ -529,6 +531,7 @@ impl RenderPlan {
                                         chain,
                                         quality,
                                         scissor,
+                                        uniform_index,
                                         parent_target,
                                         content_target: None,
                                     });
@@ -560,6 +563,7 @@ impl RenderPlan {
                                         chain,
                                         quality,
                                         scissor,
+                                        uniform_index,
                                         parent_target,
                                         content_target,
                                     });
@@ -596,6 +600,7 @@ impl RenderPlan {
                                     src_size: viewport_size,
                                     dst_size: viewport_size,
                                     dst_scissor: None,
+                                    mask_uniform_index: Some(scope.uniform_index),
                                     load: wgpu::LoadOp::Load,
                                 }));
 
