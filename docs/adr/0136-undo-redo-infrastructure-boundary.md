@@ -226,6 +226,11 @@ Note (Zed reference, non-normative):
   general undo) via separate commands (`editor::UndoSelection` / `editor::RedoSelection` in
   `repo-ref/zed`). This reinforces the need for explicit target resolution rather than assuming a
   single global history.
+- Zed’s text buffers implement explicit transactions with time-based grouping/coalescing and
+  transaction composition/merging (e.g. `group_interval`, `push_empty_transaction`,
+  `merge_transactions`) (`repo-ref/zed/crates/text/src/text.rs`). This is a concrete example of
+  domain-local history that stays outside the UI runtime while still requiring stable begin/end
+  boundaries and coalescing hooks.
 
 ### 5) Patterns from existing editors (examples)
 

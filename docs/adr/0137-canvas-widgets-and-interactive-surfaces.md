@@ -188,6 +188,10 @@ Zed/GPUI reference (non-normative):
 - GPUI provides a lightweight declarative `Canvas` element implemented as a pair of callbacks:
   `prepaint(bounds) -> T` and `paint(bounds, T)` (`repo-ref/zed/crates/gpui/src/elements/canvas.rs`).
   This is used for “short term custom drawing” without defining a full custom widget type.
+- GPUI’s canvas paint runs inside the normal style paint pipeline (via `Style::paint`), ensuring
+  that clipping/background/border radius behavior stays consistent with other elements. A future
+  `fret-canvas` declarative canvas should follow the same principle and must not bypass core clip
+  and effect semantics (ADR 0088 / ADR 0063 / ADR 0119).
 
 Implication for Fret:
 

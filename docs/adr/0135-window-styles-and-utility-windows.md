@@ -87,7 +87,7 @@ Rationale:
 
 The request is intentionally small and “intent-oriented”:
 
-- `decorations: Option<bool>` — frameless when `false`.
+- `decorations: Option<WindowDecorationsRequest>` — request a window decoration policy.
 - `resizable: Option<bool>`
 - `transparent: Option<bool>` — requests a transparent composited window background.
 - `z_level: Option<WindowZLevel>` — `Normal`, `AlwaysOnTop`.
@@ -101,6 +101,14 @@ Notes:
 - `NonActivating` defines focus semantics; it is allowed to still receive pointer events.
 - `Passthrough` is defined at the window level (not per-pixel). Per-pixel hit regions are out of
   scope for v1.
+- `decorations` refers to the window frame/titlebar/controls policy, not to alpha transparency.
+
+`WindowDecorationsRequest` v1:
+
+- `System` (default): compositor/system decorations (platform default).
+- `None`: request a frameless window (client-drawn).
+- `Server`: request server-side decorations (Wayland only; best-effort).
+- `Client`: request client-side decorations (Wayland only; best-effort).
 
 Future extensions (explicitly out of scope for v1):
 
@@ -197,6 +205,16 @@ Note (Zed/GPUI reference, non-normative):
   `Transparent`, `Blurred`, and Windows 11 `Mica*` variants (`repo-ref/zed/crates/gpui/src/platform.rs`).
   Fret’s `transparent` facet in v1 is intentionally narrower; richer OS background materials should
   be treated as a follow-up contract (likely tied to renderer effect semantics and capability gates).
+- GPUI exposes a richer “window kind” concept (`WindowKind::{Normal, PopUp, Floating, Dialog, ...}`),
+  including Wayland `LayerShell` windows on Linux (`repo-ref/zed/crates/gpui/src/platform.rs`).
+  Fret intentionally treats menus/popovers as *in-window overlays* (ADR 0011 / ADR 0064) rather than
+  relying on OS popup windows, to keep single-window platforms viable (ADR 0084).
+- GPUI’s `WindowDecorations` request is a concrete reason to keep `decorations` extensible (Wayland
+  client vs server side decorations) (`repo-ref/zed/crates/gpui/src/window.rs`,
+  `repo-ref/zed/crates/gpui/src/platform.rs`).
+- On Windows, GPUI maps `WindowKind::PopUp` to a tool window style (`WS_EX_TOOLWINDOW`), which avoids
+  taskbar/Alt-Tab presence by design; Fret’s `TaskbarVisibility::Hide` is intended to capture the
+  same portable intent without adopting GPUI’s window taxonomy (`repo-ref/zed/crates/gpui/src/platform/windows/window.rs`).
 
 ### 7) Optional backend escape hatch: raw window handle access (non-portable)
 
