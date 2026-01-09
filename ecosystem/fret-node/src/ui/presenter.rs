@@ -19,6 +19,7 @@ use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
 use fret_runtime::CommandId;
 
+use super::canvas::NodeResizeHandle;
 use super::style::NodeGraphStyle;
 use fret_core::{Point, Rect};
 
@@ -63,6 +64,97 @@ pub struct InsertNodeCandidate {
 pub struct PortAnchorHint {
     pub center: Point,
     pub bounds: Rect,
+}
+
+/// A bitset defining which resize handles are enabled for a node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeResizeHandleSet {
+    bits: u16,
+}
+
+impl NodeResizeHandleSet {
+    const fn mask(handle: NodeResizeHandle) -> u16 {
+        match handle {
+            NodeResizeHandle::TopLeft => 1 << 0,
+            NodeResizeHandle::Top => 1 << 1,
+            NodeResizeHandle::TopRight => 1 << 2,
+            NodeResizeHandle::Right => 1 << 3,
+            NodeResizeHandle::BottomRight => 1 << 4,
+            NodeResizeHandle::Bottom => 1 << 5,
+            NodeResizeHandle::BottomLeft => 1 << 6,
+            NodeResizeHandle::Left => 1 << 7,
+        }
+    }
+
+    pub const NONE: Self = Self { bits: 0 };
+    pub const ALL: Self = Self { bits: (1 << 8) - 1 };
+
+    pub const fn none() -> Self {
+        Self::NONE
+    }
+
+    pub const fn all() -> Self {
+        Self::ALL
+    }
+
+    pub const fn from_bits(bits: u16) -> Self {
+        Self { bits }
+    }
+
+    pub const fn bits(self) -> u16 {
+        self.bits
+    }
+
+    pub const fn contains(self, handle: NodeResizeHandle) -> bool {
+        (self.bits & Self::mask(handle)) != 0
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.bits == 0
+    }
+
+    pub fn insert(&mut self, handle: NodeResizeHandle) {
+        self.bits |= Self::mask(handle);
+    }
+
+    pub fn remove(&mut self, handle: NodeResizeHandle) {
+        self.bits &= !Self::mask(handle);
+    }
+}
+
+impl Default for NodeResizeHandleSet {
+    fn default() -> Self {
+        Self::all()
+    }
+}
+
+/// Optional per-node resize constraints expressed in screen-space pixels (logical px).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NodeResizeConstraintsPx {
+    /// Minimum node size override (width, height) in logical px.
+    pub min_size_px: Option<(f32, f32)>,
+    /// Maximum node size override (width, height) in logical px.
+    pub max_size_px: Option<(f32, f32)>,
+}
+
+impl NodeResizeConstraintsPx {
+    pub fn normalized(mut self) -> Self {
+        let normalize = |v: &mut Option<(f32, f32)>| {
+            if let Some((w, h)) = *v {
+                if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
+                    *v = None;
+                }
+            }
+        };
+        normalize(&mut self.min_size_px);
+        normalize(&mut self.max_size_px);
+
+        if let (Some(min), Some(max)) = (self.min_size_px, self.max_size_px) {
+            self.max_size_px = Some((max.0.max(min.0), max.1.max(min.1)));
+        }
+
+        self
+    }
 }
 
 /// Edge routing kind for the canvas renderer.
@@ -225,6 +317,31 @@ pub trait NodeGraphPresenter {
         _style: &NodeGraphStyle,
     ) -> Option<PortAnchorHint> {
         None
+    }
+
+    /// Enabled resize handles for a node.
+    ///
+    /// Returning `NodeResizeHandleSet::none()` disables resizing for the node.
+    fn node_resize_handles(
+        &self,
+        _graph: &Graph,
+        _node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> NodeResizeHandleSet {
+        NodeResizeHandleSet::all()
+    }
+
+    /// Optional per-node resize constraints in screen-space pixels (logical px).
+    ///
+    /// These are combined with style- and port-driven minimum size, and with `node_extent` / group
+    /// bounds used as maximum bounds. Returning `None` values keeps the defaults.
+    fn node_resize_constraints_px(
+        &self,
+        _graph: &Graph,
+        _node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> NodeResizeConstraintsPx {
+        NodeResizeConstraintsPx::default()
     }
 
     /// Lists nodes that can be inserted into the graph from a palette (background insert).

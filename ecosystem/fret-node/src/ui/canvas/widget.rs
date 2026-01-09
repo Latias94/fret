@@ -36,7 +36,8 @@ use crate::ui::commands::{
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
-    NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+    NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
+    PortAnchorHint,
 };
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
@@ -4587,7 +4588,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         struct RenderData {
             groups: Vec<(Rect, Arc<str>, bool)>,
             edges: Vec<EdgeRender>,
-            nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>, Option<Arc<str>>, usize)>,
+            nodes: Vec<(
+                GraphNodeId,
+                Rect,
+                bool,
+                Arc<str>,
+                Option<Arc<str>>,
+                usize,
+                NodeResizeHandleSet,
+            )>,
             pins: Vec<(PortId, Rect, Color)>,
             port_labels: HashMap<PortId, PortLabelRender>,
             port_centers: HashMap<PortId, Point>,
@@ -4673,8 +4682,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let (inputs, outputs) = node_ports(graph, node);
                         let pin_rows = inputs.len().max(outputs.len());
                         let body = presenter.node_body_label(graph, node);
-                        out.nodes
-                            .push((node, node_geom.rect, is_selected, title, body, pin_rows));
+                        let resize_handles =
+                            presenter.node_resize_handles(graph, node, &this.style);
+                        out.nodes.push((
+                            node,
+                            node_geom.rect,
+                            is_selected,
+                            title,
+                            body,
+                            pin_rows,
+                            resize_handles,
+                        ));
                     }
 
                     for (&port_id, handle) in &geom.ports {
@@ -5117,7 +5135,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
-        for (node, rect, is_selected, title, body, pin_rows) in &render.nodes {
+        for (node, rect, is_selected, title, body, pin_rows, resize_handles) in &render.nodes {
             let rect = *rect;
             let border_color = if *is_selected {
                 self.style.node_border_selected
@@ -5145,6 +5163,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         .is_some_and(|p| Self::rect_contains(rect, p)));
             if show_resize_handle {
                 for handle in NodeResizeHandle::ALL {
+                    if !resize_handles.contains(handle) {
+                        continue;
+                    }
                     let rect = self.node_resize_handle_rect(rect, handle, zoom);
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(5),

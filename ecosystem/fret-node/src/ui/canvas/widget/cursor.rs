@@ -63,22 +63,40 @@ fn update_resize_handle_cursor<H: UiHost>(
     }
 
     let geom = canvas.canvas_geometry(&*cx.app, snapshot);
-    for node_id in &snapshot.selected_nodes {
-        let Some(node_geom) = geom.nodes.get(node_id) else {
-            continue;
-        };
-        for handle in NodeResizeHandle::ALL {
-            let rect = canvas.node_resize_handle_rect(node_geom.rect, handle, zoom);
-            if NodeGraphCanvas::rect_contains(rect, position) {
-                let icon = match handle {
-                    NodeResizeHandle::Top | NodeResizeHandle::Bottom => CursorIcon::RowResize,
-                    NodeResizeHandle::Left | NodeResizeHandle::Right => CursorIcon::ColResize,
-                    _ => CursorIcon::ColResize,
+    let presenter = &*canvas.presenter;
+    let style = &canvas.style;
+    let icon = canvas
+        .graph
+        .read_ref(cx.app, |graph| {
+            for node_id in &snapshot.selected_nodes {
+                let Some(node_geom) = geom.nodes.get(node_id) else {
+                    continue;
                 };
-                cx.set_cursor_icon(icon);
-                return;
+                let handles = presenter.node_resize_handles(graph, *node_id, style);
+                for handle in NodeResizeHandle::ALL {
+                    if !handles.contains(handle) {
+                        continue;
+                    }
+                    let rect = canvas.node_resize_handle_rect(node_geom.rect, handle, zoom);
+                    if NodeGraphCanvas::rect_contains(rect, position) {
+                        return Some(match handle {
+                            NodeResizeHandle::Top | NodeResizeHandle::Bottom => {
+                                CursorIcon::RowResize
+                            }
+                            NodeResizeHandle::Left | NodeResizeHandle::Right => {
+                                CursorIcon::ColResize
+                            }
+                            _ => CursorIcon::ColResize,
+                        });
+                    }
+                }
             }
-        }
+            None
+        })
+        .ok()
+        .flatten();
+    if let Some(icon) = icon {
+        cx.set_cursor_icon(icon);
     }
 }
 

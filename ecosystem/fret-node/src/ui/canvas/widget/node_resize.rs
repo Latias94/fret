@@ -57,6 +57,7 @@ fn apply_resize_handle(
     pointer: Point,
     zoom: f32,
     min_size_px: CanvasSize,
+    max_size_px: Option<CanvasSize>,
     max_bounds_canvas: Option<crate::core::CanvasRect>,
     snap_grid: Option<crate::core::CanvasSize>,
 ) -> (crate::core::CanvasPoint, CanvasSize) {
@@ -141,6 +142,30 @@ fn apply_resize_handle(
         }
     }
 
+    // Enforce maximum size (in canvas units) if present.
+    if let Some(max_size_px) = max_size_px {
+        let max_w_canvas = (max_size_px.width / zoom).max(min_w_canvas);
+        let max_h_canvas = (max_size_px.height / zoom).max(min_h_canvas);
+
+        if w.is_finite() && w > max_w_canvas {
+            w = max_w_canvas;
+            if handle.affects_left() && !handle.affects_right() {
+                left = right - w;
+            } else {
+                right = left + w;
+            }
+        }
+
+        if h.is_finite() && h > max_h_canvas {
+            h = max_h_canvas;
+            if handle.affects_top() && !handle.affects_bottom() {
+                top = bottom - h;
+            } else {
+                bottom = top + h;
+            }
+        }
+    }
+
     // Enforce max bounds (in canvas units) if present.
     if let Some(extent) = max_bounds_canvas {
         let min_x = extent.origin.x;
@@ -197,7 +222,27 @@ pub(super) fn handle_node_resize_move<H: UiHost>(
         return false;
     };
 
-    let min_size_px = resolve_min_size_px(canvas, cx.app, resize.node, (0.0, 0.0));
+    let constraints = canvas
+        .graph
+        .read_ref(cx.app, |graph| {
+            canvas
+                .presenter
+                .node_resize_constraints_px(graph, resize.node, &canvas.style)
+                .normalized()
+        })
+        .ok()
+        .unwrap_or_default();
+
+    let min_size_px = resolve_min_size_px(
+        canvas,
+        cx.app,
+        resize.node,
+        constraints.min_size_px.unwrap_or((0.0, 0.0)),
+    );
+    let max_size_px = constraints.max_size_px.map(|(w, h)| CanvasSize {
+        width: clamp_finite_positive(w, 0.0),
+        height: clamp_finite_positive(h, 0.0),
+    });
 
     let max_bounds_canvas = canvas
         .graph
@@ -253,6 +298,7 @@ pub(super) fn handle_node_resize_move<H: UiHost>(
         position,
         zoom,
         min_size_px,
+        max_size_px,
         max_bounds_canvas,
         snapshot
             .interaction
@@ -306,6 +352,7 @@ mod tests {
             min,
             None,
             None,
+            None,
         );
         assert_eq!(pos, start_pos);
         assert_eq!(size.width, 110.0);
@@ -335,6 +382,7 @@ mod tests {
             pointer,
             zoom,
             min,
+            None,
             None,
             None,
         );
@@ -374,6 +422,7 @@ mod tests {
             pointer,
             zoom,
             min,
+            None,
             Some(extent),
             None,
         );
@@ -408,8 +457,44 @@ mod tests {
             zoom,
             min,
             None,
+            None,
             Some(grid),
         );
         assert_eq!(size.width, 110.0);
+    }
+
+    #[test]
+    fn resize_respects_max_size_constraints() {
+        let start_pos = CanvasPoint { x: 0.0, y: 0.0 };
+        let start_size_px = CanvasSize {
+            width: 100.0,
+            height: 50.0,
+        };
+        let start_pointer = Point::new(Px(0.0), Px(0.0));
+        let pointer = Point::new(Px(200.0), Px(200.0)); // attempt to grow a lot
+        let zoom = 1.0;
+        let min = CanvasSize {
+            width: 10.0,
+            height: 10.0,
+        };
+        let max = CanvasSize {
+            width: 120.0,
+            height: 80.0,
+        };
+
+        let (_pos, size) = apply_resize_handle(
+            NodeResizeHandle::BottomRight,
+            start_pos,
+            start_size_px,
+            start_pointer,
+            pointer,
+            zoom,
+            min,
+            Some(max),
+            None,
+            None,
+        );
+        assert_eq!(size.width, 120.0);
+        assert_eq!(size.height, 80.0);
     }
 }

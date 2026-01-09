@@ -15,6 +15,7 @@ pub mod presenter;
 pub mod style;
 
 pub use canvas::NodeGraphCanvas;
+pub use canvas::NodeResizeHandle;
 pub use commands::register_node_graph_commands;
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
@@ -39,7 +40,7 @@ pub use portal::{
 pub use presenter::{
     DefaultNodeGraphPresenter, EdgeMarker, EdgeMarkerKind, EdgeRenderHint, EdgeRouteKind,
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
-    RegistryNodeGraphPresenter,
+    NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
 pub use style::NodeGraphStyle;
 

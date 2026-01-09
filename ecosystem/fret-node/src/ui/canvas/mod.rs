@@ -15,6 +15,7 @@ mod state;
 mod widget;
 mod workflow;
 
+pub use state::NodeResizeHandle;
 pub use widget::NodeGraphCanvas;
 
 pub(crate) use geometry::{node_order, node_ports, node_size_default_px};

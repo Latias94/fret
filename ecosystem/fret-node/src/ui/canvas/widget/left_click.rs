@@ -133,7 +133,12 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 };
                 let is_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
                 if is_selected {
+                    let resize_handles =
+                        this.presenter.node_resize_handles(graph, node, &this.style);
                     for handle in NodeResizeHandle::ALL {
+                        if !resize_handles.contains(handle) {
+                            continue;
+                        }
                         let hit_rect = this.node_resize_handle_rect(rect, handle, zoom);
                         if NodeGraphCanvas::rect_contains(hit_rect, position) {
                             return Hit::Resize(node, rect, handle);

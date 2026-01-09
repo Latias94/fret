@@ -261,7 +261,7 @@ pub(crate) struct NodeResize {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum NodeResizeHandle {
+pub enum NodeResizeHandle {
     TopLeft,
     Top,
     TopRight,
@@ -273,7 +273,7 @@ pub(crate) enum NodeResizeHandle {
 }
 
 impl NodeResizeHandle {
-    pub(crate) const ALL: [Self; 8] = [
+    pub const ALL: [Self; 8] = [
         Self::TopLeft,
         Self::Top,
         Self::TopRight,
@@ -284,19 +284,19 @@ impl NodeResizeHandle {
         Self::Left,
     ];
 
-    pub(crate) fn affects_left(self) -> bool {
+    pub fn affects_left(self) -> bool {
         matches!(self, Self::TopLeft | Self::Left | Self::BottomLeft)
     }
 
-    pub(crate) fn affects_right(self) -> bool {
+    pub fn affects_right(self) -> bool {
         matches!(self, Self::TopRight | Self::Right | Self::BottomRight)
     }
 
-    pub(crate) fn affects_top(self) -> bool {
+    pub fn affects_top(self) -> bool {
         matches!(self, Self::TopLeft | Self::Top | Self::TopRight)
     }
 
-    pub(crate) fn affects_bottom(self) -> bool {
+    pub fn affects_bottom(self) -> bool {
         matches!(self, Self::BottomLeft | Self::Bottom | Self::BottomRight)
     }
 }

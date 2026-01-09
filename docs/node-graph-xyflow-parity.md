@@ -359,18 +359,18 @@ High-level layering (ADR 0135):
     - 8 handles (4 corners + 4 edges) rendered by the canvas for selected/hovered nodes
     - resizing from left/top adjusts node origin (not just size)
   - TODO:
-    - per-node-kind opt-in via presenter/profile (domain policy)
     - cursor parity (diagonal resize cursors are not yet in `fret-core` cursor set)
 
 ## 7.2 Resize constraints and snapping
 
-- [~] **Min/max size constraints per node kind**
+- [x] **Min/max size constraints per node kind**
   - XyFlow: `NodeResizeControl` boundaries
   - fret-node:
     - minimum size is derived from port chrome defaults (`node_size_default_px`) to avoid collapsing below pins
     - maximum size is constrained by `node_extent` and parent group bounds when present
-  - TODO:
-    - explicit per-node-kind min/max constraints via presenter/profile
+    - presenter hooks:
+      - enable/disable handles: `NodeGraphPresenter::node_resize_handles`
+      - explicit min/max size: `NodeGraphPresenter::node_resize_constraints_px`
 
 - [ ] **Keep aspect ratio**
   - XyFlow: `keepAspectRatio`
