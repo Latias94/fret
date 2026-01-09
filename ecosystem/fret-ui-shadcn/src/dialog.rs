@@ -1163,6 +1163,137 @@ mod tests {
     }
 
     #[test]
+    fn dialog_overlay_click_can_be_intercepted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
+            Rc::new(Cell::new(None));
+        let dismiss_reason_cell = dismiss_reason.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            dismiss_reason_cell.set(Some(reason));
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.top = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.top = Some(Px(200.0));
+                            layout.inset.left = Some(Px(200.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .overlay_closable(true)
+                    .on_dismiss_request(Some(handler.clone()))
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            DialogContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![underlay, dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Click the underlay area. The modal barrier should catch the click and route it through
+        // the dismiss handler without closing.
+        let point = Point::new(Px(4.0), Px(4.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: point,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should not activate while modal dialog is open"
+        );
+        assert_eq!(
+            dismiss_reason.get(),
+            Some(fret_ui::action::DismissReason::OutsidePress)
+        );
+    }
+
+    #[test]
     fn dialog_focuses_first_focusable_on_open_and_restores_trigger_on_close() {
         let window = AppWindowId::default();
         let mut app = App::new();
