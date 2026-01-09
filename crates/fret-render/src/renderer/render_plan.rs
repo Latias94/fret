@@ -19,6 +19,7 @@ pub(super) enum DebugPostprocess {
     None,
     OffscreenBlit,
     Pixelate { scale: u32 },
+    Blur { radius: u32 },
 }
 
 #[derive(Debug)]
@@ -35,6 +36,23 @@ pub(super) enum RenderPlanPass {
     PathMsaaBatch(PathMsaaBatchPass),
     FullscreenBlit(FullscreenBlitPass),
     ScaleNearest(ScaleNearestPass),
+    Blur(BlurPass),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BlurAxis {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct BlurPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) axis: BlurAxis,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -87,9 +105,9 @@ impl RenderPlan {
     ) -> Self {
         let scene_target = match postprocess {
             DebugPostprocess::None => PlanTarget::Output,
-            DebugPostprocess::OffscreenBlit | DebugPostprocess::Pixelate { .. } => {
-                PlanTarget::Intermediate0
-            }
+            DebugPostprocess::OffscreenBlit
+            | DebugPostprocess::Pixelate { .. }
+            | DebugPostprocess::Blur { .. } => PlanTarget::Intermediate0,
         };
         let draws = &encoding.ordered_draws;
 
@@ -232,6 +250,25 @@ fn push_fullscreen_blit(
         }));
 }
 
+fn push_blur(
+    plan: &mut RenderPlan,
+    src: PlanTarget,
+    dst: PlanTarget,
+    src_size: (u32, u32),
+    dst_size: (u32, u32),
+    axis: BlurAxis,
+    clear: wgpu::Color,
+) {
+    plan.passes.push(RenderPlanPass::Blur(BlurPass {
+        src,
+        dst,
+        src_size,
+        dst_size,
+        axis,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
 fn append_downsample_chain(
     plan: &mut RenderPlan,
     mut current_target: PlanTarget,
@@ -265,18 +302,10 @@ fn append_downsample_chain(
 #[derive(Debug, Clone)]
 struct DownsampleHalfQuarter {
     half_target: PlanTarget,
+    half_size: (u32, u32),
     quarter_target: PlanTarget,
     quarter_size: (u32, u32),
     stack: Vec<((u32, u32), u32)>,
-}
-
-impl DownsampleHalfQuarter {
-    fn half_size(&self) -> (u32, u32) {
-        self.stack
-            .get(1)
-            .map(|(size, _)| *size)
-            .expect("half size must exist")
-    }
 }
 
 fn append_downsample_half_quarter(
@@ -318,6 +347,7 @@ fn append_downsample_half_quarter(
 
     DownsampleHalfQuarter {
         half_target,
+        half_size,
         quarter_target,
         quarter_size,
         stack: vec![(src_size, 2), (half_size, 2)],
@@ -385,7 +415,6 @@ fn append_postprocess(
                         PlanTarget::Intermediate1,
                         clear,
                     );
-                    let _ = half_quarter.half_size();
 
                     let mut stack = half_quarter.stack;
                     let (current_target, current_size, rest_stack) = append_downsample_chain(
@@ -415,6 +444,71 @@ fn append_postprocess(
             push_fullscreen_blit(
                 plan,
                 current_target,
+                PlanTarget::Output,
+                viewport_size,
+                viewport_size,
+                clear,
+            );
+        }
+        DebugPostprocess::Blur { radius } => {
+            let radius = radius.max(1);
+            let half_quarter = append_downsample_half_quarter(
+                plan,
+                PlanTarget::Intermediate0,
+                viewport_size,
+                PlanTarget::Intermediate2,
+                PlanTarget::Intermediate1,
+                clear,
+            );
+
+            let use_quarter = radius > 4;
+            let (blur_src, blur_size, scratch) = if use_quarter {
+                (
+                    half_quarter.quarter_target,
+                    half_quarter.quarter_size,
+                    half_quarter.half_target,
+                )
+            } else {
+                (
+                    half_quarter.half_target,
+                    half_quarter.half_size,
+                    PlanTarget::Intermediate0,
+                )
+            };
+
+            push_blur(
+                plan,
+                blur_src,
+                scratch,
+                blur_size,
+                blur_size,
+                BlurAxis::Horizontal,
+                clear,
+            );
+            push_blur(
+                plan,
+                scratch,
+                blur_src,
+                blur_size,
+                blur_size,
+                BlurAxis::Vertical,
+                clear,
+            );
+
+            let upscale_scale = if use_quarter { 4 } else { 2 };
+            push_scale_nearest(
+                plan,
+                blur_src,
+                PlanTarget::Intermediate0,
+                blur_size,
+                viewport_size,
+                ScaleMode::Upscale,
+                upscale_scale,
+                clear,
+            );
+            push_fullscreen_blit(
+                plan,
+                PlanTarget::Intermediate0,
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
@@ -550,9 +644,9 @@ mod tests {
             wgpu::Color::TRANSPARENT,
         );
 
+        assert_eq!(info.half_size, (64, 32));
         assert_eq!(info.quarter_size, (32, 16));
         assert_eq!(info.stack, vec![((128, 64), 2), ((64, 32), 2)]);
-        assert_eq!(info.half_size(), (64, 32));
 
         assert_eq!(plan.passes.len(), 2);
         let RenderPlanPass::ScaleNearest(pass0) = &plan.passes[0] else {
@@ -574,5 +668,80 @@ mod tests {
         assert_eq!(pass1.dst_size, (32, 16));
         assert_eq!(pass1.mode, ScaleMode::Downsample);
         assert_eq!(pass1.scale, 2);
+    }
+
+    #[test]
+    fn compile_for_scene_blur_emits_separable_passes() {
+        let encoding = SceneEncoding::default();
+        let viewport_size = (128, 64);
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::Blur { radius: 2 },
+        );
+
+        assert_eq!(plan.passes.len(), 7);
+        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+            panic!("expected SceneDrawRange pass");
+        };
+        assert_eq!(scene.target, PlanTarget::Intermediate0);
+
+        let RenderPlanPass::ScaleNearest(half) = &plan.passes[1] else {
+            panic!("expected half downsample pass");
+        };
+        assert_eq!(half.src, PlanTarget::Intermediate0);
+        assert_eq!(half.dst, PlanTarget::Intermediate2);
+        assert_eq!(half.src_size, viewport_size);
+        assert_eq!(half.dst_size, (64, 32));
+        assert_eq!(half.mode, ScaleMode::Downsample);
+        assert_eq!(half.scale, 2);
+
+        let RenderPlanPass::ScaleNearest(quarter) = &plan.passes[2] else {
+            panic!("expected quarter downsample pass");
+        };
+        assert_eq!(quarter.src, PlanTarget::Intermediate2);
+        assert_eq!(quarter.dst, PlanTarget::Intermediate1);
+        assert_eq!(quarter.src_size, (64, 32));
+        assert_eq!(quarter.dst_size, (32, 16));
+        assert_eq!(quarter.mode, ScaleMode::Downsample);
+        assert_eq!(quarter.scale, 2);
+
+        let RenderPlanPass::Blur(blur_h) = &plan.passes[3] else {
+            panic!("expected blur-h pass");
+        };
+        assert_eq!(blur_h.axis, BlurAxis::Horizontal);
+        assert_eq!(blur_h.src, PlanTarget::Intermediate2);
+        assert_eq!(blur_h.dst, PlanTarget::Intermediate0);
+        assert_eq!(blur_h.src_size, (64, 32));
+        assert_eq!(blur_h.dst_size, (64, 32));
+
+        let RenderPlanPass::Blur(blur_v) = &plan.passes[4] else {
+            panic!("expected blur-v pass");
+        };
+        assert_eq!(blur_v.axis, BlurAxis::Vertical);
+        assert_eq!(blur_v.src, PlanTarget::Intermediate0);
+        assert_eq!(blur_v.dst, PlanTarget::Intermediate2);
+        assert_eq!(blur_v.src_size, (64, 32));
+        assert_eq!(blur_v.dst_size, (64, 32));
+
+        let RenderPlanPass::ScaleNearest(upscale) = &plan.passes[5] else {
+            panic!("expected upscale pass");
+        };
+        assert_eq!(upscale.src, PlanTarget::Intermediate2);
+        assert_eq!(upscale.dst, PlanTarget::Intermediate0);
+        assert_eq!(upscale.src_size, (64, 32));
+        assert_eq!(upscale.dst_size, viewport_size);
+        assert_eq!(upscale.mode, ScaleMode::Upscale);
+        assert_eq!(upscale.scale, 2);
+
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[6] else {
+            panic!("expected blit pass");
+        };
+        assert_eq!(blit.src, PlanTarget::Intermediate0);
+        assert_eq!(blit.dst, PlanTarget::Output);
+        assert_eq!(blit.src_size, viewport_size);
+        assert_eq!(blit.dst_size, viewport_size);
     }
 }

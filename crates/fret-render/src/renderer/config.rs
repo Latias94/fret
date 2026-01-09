@@ -155,6 +155,15 @@ impl Renderer {
         self.debug_pixelate_scale = scale.min(128);
     }
 
+    pub fn debug_blur_radius(&self) -> u32 {
+        self.debug_blur_radius
+    }
+
+    pub fn set_debug_blur_radius(&mut self, radius: u32) {
+        // 0 disables the debug blur path; otherwise clamp to a sane upper bound.
+        self.debug_blur_radius = radius.min(64);
+    }
+
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
     }

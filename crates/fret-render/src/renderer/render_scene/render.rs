@@ -81,6 +81,10 @@ impl Renderer {
             DebugPostprocess::Pixelate {
                 scale: self.debug_pixelate_scale,
             }
+        } else if self.debug_blur_radius > 0 {
+            DebugPostprocess::Blur {
+                radius: self.debug_blur_radius,
+            }
         } else if self.debug_offscreen_blit_enabled {
             DebugPostprocess::OffscreenBlit
         } else {
@@ -89,8 +93,14 @@ impl Renderer {
         if !matches!(postprocess, DebugPostprocess::None) {
             self.ensure_blit_pipeline(device, format);
         }
-        if matches!(postprocess, DebugPostprocess::Pixelate { .. }) {
+        if matches!(
+            postprocess,
+            DebugPostprocess::Pixelate { .. } | DebugPostprocess::Blur { .. }
+        ) {
             self.ensure_scale_nearest_pipelines(device, format);
+        }
+        if matches!(postprocess, DebugPostprocess::Blur { .. }) {
+            self.ensure_blur_pipelines(device, format);
         }
         let plan = RenderPlan::compile_for_scene(
             &encoding,
@@ -799,6 +809,69 @@ impl Renderer {
                         &mut encoder,
                         label,
                         pipeline,
+                        dst_view,
+                        pass.load,
+                        &bind_group,
+                    );
+                }
+                RenderPlanPass::Blur(pass) => {
+                    let blur_pipeline = match pass.axis {
+                        BlurAxis::Horizontal => self
+                            .blur_h_pipeline
+                            .as_ref()
+                            .expect("blur-h pipeline must exist"),
+                        BlurAxis::Vertical => self
+                            .blur_v_pipeline
+                            .as_ref()
+                            .expect("blur-v pipeline must exist"),
+                    };
+                    let label = match pass.axis {
+                        BlurAxis::Horizontal => "fret blur-h pass",
+                        BlurAxis::Vertical => "fret blur-v pass",
+                    };
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output => {
+                            debug_assert!(false, "Blur src cannot be Output");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let layout = self
+                        .blit_bind_group_layout
+                        .as_ref()
+                        .expect("blit bind group layout must exist");
+                    let bind_group = create_texture_bind_group(
+                        device,
+                        "fret blur bind group",
+                        layout,
+                        &src_view,
+                    );
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                        )),
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    run_fullscreen_triangle_pass(
+                        &mut encoder,
+                        label,
+                        blur_pipeline,
                         dst_view,
                         pass.load,
                         &bind_group,

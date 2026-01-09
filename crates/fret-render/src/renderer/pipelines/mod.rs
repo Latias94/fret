@@ -1,4 +1,5 @@
 mod blit;
+mod blur;
 mod composite;
 mod mask;
 mod path;

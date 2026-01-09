@@ -209,6 +209,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
   - M2: In progress:
     - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample chain -> upscale chain -> blit).
+    - A debug-gated separable blur reference postprocess exists (downsample -> blur H/V -> upscale -> blit).
   - M3: Not started.
   - M4: Deferred.
 
