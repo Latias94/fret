@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -14,6 +15,7 @@ use fret_runtime::{
     PlatformFilter, WhenExpr, keymap::Binding,
 };
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
+use fret_ui::{TextInputStyle, element::*};
 use fret_ui::{UiFrameCx, UiTree};
 
 use fret_node::Graph;
@@ -31,8 +33,10 @@ use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
     NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    RegistryNodeGraphPresenter, register_node_graph_commands,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
 };
+use fret_ui::element::AnyElement;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -699,6 +703,11 @@ struct NodeGraphDemoWindowState {
 }
 
 #[derive(Default)]
+struct NodeGraphDemoPortalState {
+    float_value_inputs: BTreeMap<NodeId, fret_runtime::Model<String>>,
+}
+
+#[derive(Default)]
 struct NodeGraphDemoDriver;
 
 impl NodeGraphDemoDriver {
@@ -752,8 +761,70 @@ impl NodeGraphDemoDriver {
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
 
+        let portal = NodeGraphPortalHost::new(
+            models.graph.clone(),
+            models.view.clone(),
+            measured.manual.clone(),
+            NodeGraphStyle::default(),
+            "node_graph_demo.portal",
+            |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
+             graph: &Graph,
+             layout: NodeGraphPortalNodeLayout|
+             -> Vec<AnyElement> {
+                let Some(node) = graph.nodes.get(&layout.node) else {
+                    return Vec::new();
+                };
+                if node.kind.0.as_str() != "demo.float" {
+                    return Vec::new();
+                }
+
+                let model = ecx.app.with_global_mut(
+                    NodeGraphDemoPortalState::default,
+                    |st, app: &mut App| {
+                        st.float_value_inputs
+                            .entry(layout.node)
+                            .or_insert_with(|| {
+                                let value = node
+                                    .data
+                                    .get("value")
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(0.0);
+                                app.models_mut().insert(format!("{value:.3}"))
+                            })
+                            .clone()
+                    },
+                );
+
+                // Place the input under the header, inside the node rect.
+                let pad_x = 10.0;
+                let pad_top = 28.0 + 10.0;
+                let max_w = (layout.node_window.size.width.0 - 2.0 * pad_x).max(80.0);
+
+                let chrome = TextInputStyle::from_theme(ecx.theme().snapshot());
+                let mut props = TextInputProps::new(model);
+                props.chrome = chrome;
+                props.layout = LayoutStyle {
+                    position: PositionStyle::Relative,
+                    size: SizeStyle {
+                        width: Length::Px(Px(max_w.min(180.0))),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    margin: MarginEdges {
+                        top: MarginEdge::Px(Px(pad_top)),
+                        left: MarginEdge::Px(Px(pad_x)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                vec![ecx.text_input(props)]
+            },
+        );
+        let portal_node = ui.create_node_retained(portal);
+
         let root = ui.create_node_retained(NodeGraphEditor::new());
-        ui.set_children(root, vec![canvas_node, overlay_node]);
+        ui.set_children(root, vec![canvas_node, overlay_node, portal_node]);
         ui.set_root(root);
 
         NodeGraphDemoWindowState { ui, root }
