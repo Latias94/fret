@@ -1842,7 +1842,21 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
             ..Default::default()
         };
 
-        let inner = crate::element::FlexProps {
+        let inner_a = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        let inner_b = crate::element::FlexProps {
             layout: crate::element::LayoutStyle {
                 size: crate::element::SizeStyle {
                     width: Length::Fill,
@@ -1859,7 +1873,12 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
         vec![cx.flex(outer, |cx| {
             vec![cx.hover_region(
                 crate::element::HoverRegionProps::default(),
-                |cx, _hovered| vec![cx.flex(inner, |cx| vec![cx.text("hello")])],
+                |cx, _hovered| {
+                    vec![
+                        cx.flex(inner_a, |cx| vec![cx.text("hello")]),
+                        cx.flex(inner_b, |cx| vec![cx.text("world")]),
+                    ]
+                },
             )]
         })]
     }
@@ -1889,13 +1908,17 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
 
     let outer = ui.children(viewport_child)[0];
     let hover = ui.children(outer)[0];
-    let inner = ui.children(hover)[0];
-    let text = ui.children(inner)[0];
+    let inner_a = ui.children(hover)[0];
+    let inner_b = ui.children(hover)[1];
+    let text_a = ui.children(inner_a)[0];
+    let text_b = ui.children(inner_b)[0];
 
     let engine = ui.take_layout_engine();
     assert!(engine.layout_id_for_node(hover).is_some());
-    assert!(engine.layout_id_for_node(inner).is_some());
-    assert!(engine.layout_id_for_node(text).is_some());
+    assert!(engine.layout_id_for_node(inner_a).is_some());
+    assert!(engine.layout_id_for_node(inner_b).is_some());
+    assert!(engine.layout_id_for_node(text_a).is_some());
+    assert!(engine.layout_id_for_node(text_b).is_some());
     ui.put_layout_engine(engine);
 }
 

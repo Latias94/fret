@@ -288,7 +288,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             }
         }
         Some(
-            ElementInstance::Container(_)
+            instance @ (ElementInstance::Container(_)
             | ElementInstance::Pressable(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
@@ -296,9 +296,13 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::PointerRegion(_)
+            | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
-            | ElementInstance::Stack(_),
-        ) if !tree.children(node).is_empty() => {
+            | ElementInstance::Stack(_)),
+        ) if !tree.children(node).is_empty()
+            && (!matches!(&instance, ElementInstance::HoverRegion(_))
+                || !hover_region_has_absolute_child(app, tree, window, node)) =>
+        {
             let mut style = style_for_item_in_parent(
                 app,
                 window,
@@ -361,6 +365,18 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_measured(node, true);
         }
     }
+}
+
+fn hover_region_has_absolute_child<H: UiHost>(
+    app: &mut H,
+    tree: &UiTree<H>,
+    window: AppWindowId,
+    node: NodeId,
+) -> bool {
+    tree.children(node).iter().copied().any(|child| {
+        layout_style_for_node(app, window, child).position
+            == crate::element::PositionStyle::Absolute
+    })
 }
 
 fn style_for_item_in_parent<H: UiHost>(
