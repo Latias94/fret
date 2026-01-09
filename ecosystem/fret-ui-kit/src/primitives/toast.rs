@@ -20,8 +20,9 @@ use crate::window_overlays;
 use crate::{OverlayController, OverlayRequest};
 
 pub use window_overlays::{
-    DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition,
-    ToastRequest, ToastStore, ToastSwipeDirection, ToastVariant,
+    DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
+    DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
+    ToastSwipeConfig, ToastSwipeDirection, ToastVariant,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -34,6 +35,8 @@ pub struct ToastViewport {
     max_toasts: Option<usize>,
     swipe_direction: ToastSwipeDirection,
     swipe_threshold: Px,
+    swipe_max_drag: Px,
+    swipe_dragging_threshold: Px,
 }
 
 #[derive(Debug, Default)]
@@ -41,6 +44,8 @@ struct ToastViewportConfigState {
     max_toasts: Option<usize>,
     swipe_direction: Option<ToastSwipeDirection>,
     swipe_threshold: Option<Px>,
+    swipe_max_drag: Option<Px>,
+    swipe_dragging_threshold: Option<Px>,
 }
 
 impl Default for ToastViewport {
@@ -54,6 +59,8 @@ impl Default for ToastViewport {
             max_toasts: Some(DEFAULT_MAX_TOASTS),
             swipe_direction: ToastSwipeDirection::default(),
             swipe_threshold: Px(DEFAULT_SWIPE_THRESHOLD_PX),
+            swipe_max_drag: Px(DEFAULT_SWIPE_MAX_DRAG_PX),
+            swipe_dragging_threshold: Px(DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX),
         }
     }
 }
@@ -108,6 +115,16 @@ impl ToastViewport {
         self
     }
 
+    pub fn swipe_max_drag(mut self, max_drag: Px) -> Self {
+        self.swipe_max_drag = max_drag;
+        self
+    }
+
+    pub fn swipe_dragging_threshold(mut self, threshold: Px) -> Self {
+        self.swipe_dragging_threshold = threshold;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
@@ -127,15 +144,27 @@ impl ToastViewport {
                     st.swipe_threshold = Some(self.swipe_threshold);
                     changed = true;
                 }
+                if st.swipe_max_drag != Some(self.swipe_max_drag) {
+                    st.swipe_max_drag = Some(self.swipe_max_drag);
+                    changed = true;
+                }
+                if st.swipe_dragging_threshold != Some(self.swipe_dragging_threshold) {
+                    st.swipe_dragging_threshold = Some(self.swipe_dragging_threshold);
+                    changed = true;
+                }
                 changed
             });
             if config_changed {
                 let _ = cx.app.models_mut().update(&store, |st| {
                     st.set_window_max_toasts(cx.window, self.max_toasts);
-                    st.set_window_swipe_config(
+                    st.set_window_swipe_config_ex(
                         cx.window,
-                        self.swipe_direction,
-                        self.swipe_threshold,
+                        ToastSwipeConfig {
+                            direction: self.swipe_direction,
+                            threshold: self.swipe_threshold,
+                            max_drag: self.swipe_max_drag,
+                            dragging_threshold: self.swipe_dragging_threshold,
+                        },
                     );
                 });
             }

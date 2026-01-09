@@ -35,9 +35,10 @@ pub use requests::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
 pub use toast::{
-    DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition,
-    ToastRequest, ToastStore, ToastSwipeDirection, ToastVariant, dismiss_toast_action,
-    toast_action, toast_store,
+    DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
+    DEFAULT_SWIPE_THRESHOLD_PX, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
+    ToastSwipeConfig, ToastSwipeDirection, ToastVariant, dismiss_toast_action, toast_action,
+    toast_store,
 };
 
 /// Radix `ToastViewport` focus-jump command (default hotkey: `F8`).
