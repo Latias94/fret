@@ -643,6 +643,231 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
 }
 
 #[test]
+fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let stack_1 = crate::ids::StackId::new(1);
+    let stack_2 = crate::ids::StackId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let series_c = crate::ids::SeriesId::new(3);
+    let series_d = crate::ids::SeriesId::new(4);
+    let series_e = crate::ids::SeriesId::new(5);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+    let y_c_field = crate::ids::FieldId::new(4);
+    let y_d_field = crate::ids::FieldId::new(5);
+    let y_e_field = crate::ids::FieldId::new(6);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(600.0), Px(240.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+                FieldSpec {
+                    id: y_c_field,
+                    column: 3,
+                },
+                FieldSpec {
+                    id: y_d_field,
+                    column: 4,
+                },
+                FieldSpec {
+                    id: y_e_field,
+                    column: 5,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into()],
+                }),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack_1),
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack_1),
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_c,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_c_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack_2),
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_d,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_d_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: Some(stack_2),
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_e,
+                name: None,
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_e_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![1.0, 1.0]));
+    table.push_column(Column::F64(vec![2.0, 2.0]));
+    table.push_column(Column::F64(vec![3.0, 3.0]));
+    table.push_column(Column::F64(vec![4.0, 4.0]));
+    table.push_column(Column::F64(vec![5.0, 5.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let marks = &engine.output().marks;
+
+    let center_x_for_series_at_index_0 = |series_id: crate::ids::SeriesId| -> f32 {
+        let node = marks
+            .nodes
+            .iter()
+            .find(|n| n.kind == crate::marks::MarkKind::Rect && n.source_series == Some(series_id))
+            .unwrap();
+        let MarkPayloadRef::Rect(rect_ref) = &node.payload else {
+            panic!("expected rect payload");
+        };
+
+        rect_ref
+            .rects
+            .clone()
+            .filter(|&i| marks.arena.rect_data_indices[i] == 0)
+            .map(|i| {
+                let rect = marks.arena.rects[i];
+                rect.origin.x.0 + 0.5 * rect.size.width.0
+            })
+            .next()
+            .unwrap()
+    };
+
+    let ax = center_x_for_series_at_index_0(series_a);
+    let bx = center_x_for_series_at_index_0(series_b);
+    let cx = center_x_for_series_at_index_0(series_c);
+    let dx = center_x_for_series_at_index_0(series_d);
+    let ex = center_x_for_series_at_index_0(series_e);
+
+    assert!((ax - bx).abs() < 1.0);
+    assert!((cx - dx).abs() < 1.0);
+
+    assert!(ax < cx);
+    assert!(cx < ex);
+    assert!((ax - cx).abs() > 5.0);
+    assert!((cx - ex).abs() > 5.0);
+}
+
+#[test]
 fn set_view_window_2d_updates_both_axes() {
     let mut engine = ChartEngine::new(basic_spec()).unwrap();
     engine.apply_action(Action::SetViewWindow2D {
