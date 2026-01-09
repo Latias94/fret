@@ -71,20 +71,37 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     if let Some(resize) = canvas.interaction.node_resize.take() {
         canvas.interaction.pending_node_resize = None;
 
-        let end = canvas
+        let (end_pos, end_size) = canvas
             .graph
-            .read_ref(cx.app, |g| g.nodes.get(&resize.node).and_then(|n| n.size))
+            .read_ref(cx.app, |g| {
+                g.nodes
+                    .get(&resize.node)
+                    .map(|n| (n.pos, n.size))
+                    .unwrap_or((resize.start_node_pos, resize.start_size_opt))
+            })
             .ok()
-            .flatten();
+            .unwrap_or((resize.start_node_pos, resize.start_size_opt));
 
-        if resize.start_size_opt != end {
+        let mut ops: Vec<GraphOp> = Vec::new();
+        if resize.start_node_pos != end_pos {
+            ops.push(GraphOp::SetNodePos {
+                id: resize.node,
+                from: resize.start_node_pos,
+                to: end_pos,
+            });
+        }
+        if resize.start_size_opt != end_size {
+            ops.push(GraphOp::SetNodeSize {
+                id: resize.node,
+                from: resize.start_size_opt,
+                to: end_size,
+            });
+        }
+
+        if !ops.is_empty() {
             canvas.history.record(crate::ops::GraphTransaction {
                 label: Some("Resize Node".to_string()),
-                ops: vec![GraphOp::SetNodeSize {
-                    id: resize.node,
-                    from: resize.start_size_opt,
-                    to: end,
-                }],
+                ops,
             });
         }
 

@@ -243,7 +243,9 @@ pub(crate) struct GroupResize {
 #[derive(Debug, Clone)]
 pub(crate) struct PendingNodeResize {
     pub(crate) node: GraphNodeId,
+    pub(crate) handle: NodeResizeHandle,
     pub(crate) start_pos: Point,
+    pub(crate) start_node_pos: CanvasPoint,
     pub(crate) start_size: crate::core::CanvasSize,
     pub(crate) start_size_opt: Option<crate::core::CanvasSize>,
 }
@@ -251,9 +253,52 @@ pub(crate) struct PendingNodeResize {
 #[derive(Debug, Clone)]
 pub(crate) struct NodeResize {
     pub(crate) node: GraphNodeId,
+    pub(crate) handle: NodeResizeHandle,
     pub(crate) start_pos: Point,
+    pub(crate) start_node_pos: CanvasPoint,
     pub(crate) start_size: crate::core::CanvasSize,
     pub(crate) start_size_opt: Option<crate::core::CanvasSize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NodeResizeHandle {
+    TopLeft,
+    Top,
+    TopRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft,
+    Left,
+}
+
+impl NodeResizeHandle {
+    pub(crate) const ALL: [Self; 8] = [
+        Self::TopLeft,
+        Self::Top,
+        Self::TopRight,
+        Self::Right,
+        Self::BottomRight,
+        Self::Bottom,
+        Self::BottomLeft,
+        Self::Left,
+    ];
+
+    pub(crate) fn affects_left(self) -> bool {
+        matches!(self, Self::TopLeft | Self::Left | Self::BottomLeft)
+    }
+
+    pub(crate) fn affects_right(self) -> bool {
+        matches!(self, Self::TopRight | Self::Right | Self::BottomRight)
+    }
+
+    pub(crate) fn affects_top(self) -> bool {
+        matches!(self, Self::TopLeft | Self::Top | Self::TopRight)
+    }
+
+    pub(crate) fn affects_bottom(self) -> bool {
+        matches!(self, Self::BottomLeft | Self::Bottom | Self::BottomRight)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

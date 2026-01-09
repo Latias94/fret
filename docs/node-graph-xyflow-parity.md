@@ -355,16 +355,22 @@ High-level layering (ADR 0135):
 - [~] **Resize affordance**
   - XyFlow: `NodeResizeControl` (`packages/react/src/additional-components/NodeResizer/NodeResizeControl.tsx`)
     uses `XYResizer` (`packages/system/src/xyresizer/XYResizer.ts`) and supports multiple control positions.
-  - fret-node: currently single “bottom-right” handle drawn by canvas for selected nodes
-  - TODO: upgrade path:
-    - support 8 handles (4 corners + 4 edges)
-    - allow per-node-kind opt-in via presenter/profile (domain policy)
+  - fret-node:
+    - 8 handles (4 corners + 4 edges) rendered by the canvas for selected/hovered nodes
+    - resizing from left/top adjusts node origin (not just size)
+  - TODO:
+    - per-node-kind opt-in via presenter/profile (domain policy)
+    - cursor parity (diagonal resize cursors are not yet in `fret-core` cursor set)
 
 ## 7.2 Resize constraints and snapping
 
-- [ ] **Min/max size constraints per node kind**
+- [~] **Min/max size constraints per node kind**
   - XyFlow: `NodeResizeControl` boundaries
-  - fret-node: not implemented; should come from presenter/profile
+  - fret-node:
+    - minimum size is derived from port chrome defaults (`node_size_default_px`) to avoid collapsing below pins
+    - maximum size is constrained by `node_extent` and parent group bounds when present
+  - TODO:
+    - explicit per-node-kind min/max constraints via presenter/profile
 
 - [ ] **Keep aspect ratio**
   - XyFlow: `keepAspectRatio`

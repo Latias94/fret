@@ -6,8 +6,8 @@ use crate::io::NodeGraphDragHandleMode;
 use crate::rules::EdgeEndpoint;
 
 use super::super::state::{
-    EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
-    PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
+    EdgeDrag, NodeResizeHandle, PendingGroupDrag, PendingGroupResize, PendingNodeDrag,
+    PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -44,7 +44,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     enum Hit {
         Port(PortId),
         EdgeAnchor(EdgeId, EdgeEndpoint, PortId),
-        Resize(GraphNodeId, Rect),
+        Resize(GraphNodeId, Rect, NodeResizeHandle),
         Node(GraphNodeId, Rect),
         Edge(EdgeId),
         GroupResize(GroupId, crate::core::CanvasRect),
@@ -131,13 +131,17 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 let Some(rect) = geom.nodes.get(&node).map(|ng| ng.rect) else {
                     return Hit::Background;
                 };
-                let handle = this.resize_handle_rect(rect, zoom);
                 let is_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-                if is_selected && NodeGraphCanvas::rect_contains(handle, position) {
-                    Hit::Resize(node, rect)
-                } else {
-                    Hit::Node(node, rect)
+                if is_selected {
+                    for handle in NodeResizeHandle::ALL {
+                        let hit_rect = this.node_resize_handle_rect(rect, handle, zoom);
+                        if NodeGraphCanvas::rect_contains(hit_rect, position) {
+                            return Hit::Resize(node, rect, handle);
+                        }
+                    }
                 }
+
+                Hit::Node(node, rect)
             })
             .unwrap_or(Hit::Background)
     };
@@ -266,7 +270,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
-        Hit::Resize(node, rect) => {
+        Hit::Resize(node, rect, handle) => {
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
             canvas.interaction.pending_group_resize = None;
@@ -307,10 +311,18 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 .read_ref(cx.app, |g| g.nodes.get(&node).and_then(|n| n.size))
                 .ok()
                 .flatten();
+            let start_node_pos = canvas
+                .graph
+                .read_ref(cx.app, |g| g.nodes.get(&node).map(|n| n.pos))
+                .ok()
+                .flatten()
+                .unwrap_or_default();
 
             canvas.interaction.pending_node_resize = Some(PendingNodeResize {
                 node,
+                handle,
                 start_pos: position,
+                start_node_pos,
                 start_size,
                 start_size_opt,
             });

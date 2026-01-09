@@ -77,8 +77,8 @@ use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
     ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, PanInertiaState, PasteSeries, PendingPaste, SearcherState,
-    ToastState, ViewSnapshot, WireDrag, WireDragKind,
+    InternalsCacheKey, MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste,
+    SearcherState, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -424,9 +424,44 @@ impl NodeGraphCanvas {
     }
 
     fn resize_handle_rect(&self, node_rect: Rect, zoom: f32) -> Rect {
+        self.node_resize_handle_rect(node_rect, NodeResizeHandle::BottomRight, zoom)
+    }
+
+    pub(crate) fn node_resize_handle_rect(
+        &self,
+        node_rect: Rect,
+        handle: NodeResizeHandle,
+        zoom: f32,
+    ) -> Rect {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
         let size = (self.style.resize_handle_size / zoom).max(1.0 / zoom.max(1.0e-6));
-        let x = node_rect.origin.x.0 + node_rect.size.width.0 - size;
-        let y = node_rect.origin.y.0 + node_rect.size.height.0 - size;
+        let size = size
+            .min(node_rect.size.width.0.max(0.0))
+            .min(node_rect.size.height.0.max(0.0));
+
+        let x0 = node_rect.origin.x.0;
+        let y0 = node_rect.origin.y.0;
+        let x1 = node_rect.origin.x.0 + node_rect.size.width.0;
+        let y1 = node_rect.origin.y.0 + node_rect.size.height.0;
+
+        let cx = x0 + 0.5 * (x1 - x0 - size);
+        let cy = y0 + 0.5 * (y1 - y0 - size);
+
+        let (x, y) = match handle {
+            NodeResizeHandle::TopLeft => (x0, y0),
+            NodeResizeHandle::Top => (cx, y0),
+            NodeResizeHandle::TopRight => (x1 - size, y0),
+            NodeResizeHandle::Right => (x1 - size, cy),
+            NodeResizeHandle::BottomRight => (x1 - size, y1 - size),
+            NodeResizeHandle::Bottom => (cx, y1 - size),
+            NodeResizeHandle::BottomLeft => (x0, y1 - size),
+            NodeResizeHandle::Left => (x0, cy),
+        };
+
         Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(size), Px(size)))
     }
 
@@ -5109,15 +5144,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         .last_pos
                         .is_some_and(|p| Self::rect_contains(rect, p)));
             if show_resize_handle {
-                let handle = self.resize_handle_rect(rect, zoom);
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(5),
-                    rect: handle,
-                    background: self.style.resize_handle_background,
-                    border: Edges::all(Px(1.0 / zoom)),
-                    border_color: self.style.resize_handle_border,
-                    corner_radii: Corners::all(Px(2.0 / zoom)),
-                });
+                for handle in NodeResizeHandle::ALL {
+                    let rect = self.node_resize_handle_rect(rect, handle, zoom);
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect,
+                        background: self.style.resize_handle_background,
+                        border: Edges::all(Px(1.0 / zoom)),
+                        border_color: self.style.resize_handle_border,
+                        corner_radii: Corners::all(Px(2.0 / zoom)),
+                    });
+                }
             }
 
             if !title.is_empty() {

@@ -1,7 +1,7 @@
 use fret_core::{CursorIcon, Point};
 use fret_ui::UiHost;
 
-use super::super::state::ViewSnapshot;
+use super::super::state::{NodeResizeHandle, ViewSnapshot};
 use super::NodeGraphCanvas;
 
 pub(super) fn update_cursors<H: UiHost>(
@@ -67,10 +67,17 @@ fn update_resize_handle_cursor<H: UiHost>(
         let Some(node_geom) = geom.nodes.get(node_id) else {
             continue;
         };
-        let handle = canvas.resize_handle_rect(node_geom.rect, zoom);
-        if NodeGraphCanvas::rect_contains(handle, position) {
-            cx.set_cursor_icon(CursorIcon::ColResize);
-            return;
+        for handle in NodeResizeHandle::ALL {
+            let rect = canvas.node_resize_handle_rect(node_geom.rect, handle, zoom);
+            if NodeGraphCanvas::rect_contains(rect, position) {
+                let icon = match handle {
+                    NodeResizeHandle::Top | NodeResizeHandle::Bottom => CursorIcon::RowResize,
+                    NodeResizeHandle::Left | NodeResizeHandle::Right => CursorIcon::ColResize,
+                    _ => CursorIcon::ColResize,
+                };
+                cx.set_cursor_icon(icon);
+                return;
+            }
         }
     }
 }

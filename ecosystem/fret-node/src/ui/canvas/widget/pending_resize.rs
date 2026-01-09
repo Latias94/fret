@@ -28,7 +28,9 @@ pub(super) fn handle_pending_node_resize_move<H: UiHost>(
     canvas.interaction.pending_node_resize = None;
     canvas.interaction.node_resize = Some(NodeResize {
         node: pending.node,
+        handle: pending.handle,
         start_pos: pending.start_pos,
+        start_node_pos: pending.start_node_pos,
         start_size: pending.start_size,
         start_size_opt: pending.start_size_opt,
     });
