@@ -14,8 +14,8 @@ use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use crate::tooltip::{TooltipLine, TooltipOutput};
-use crate::transform::RowRange;
 use crate::transform::stack_base_at_index;
+use crate::transform::{RowRange, RowSelection};
 use crate::view::ViewState;
 use fret_core::Point;
 use std::collections::BTreeMap;
@@ -705,6 +705,7 @@ impl ChartEngine {
                                     &self.model,
                                     &self.datasets,
                                     &self.view,
+                                    &self.data_view_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
@@ -816,6 +817,7 @@ fn compute_axis_axis_pointer_output(
     model: &ChartModel,
     datasets: &DatasetStore,
     view: &ViewState,
+    data_views: &DataViewStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     hover_px: Point,
@@ -887,28 +889,51 @@ fn compute_axis_axis_pointer_output(
         };
 
         let y1 = if series.kind == crate::spec::SeriesKind::Band {
-            if let Some(y2_field) = series.encode.y2
-                && let Some(y2_col) = dataset.fields.get(&y2_field).copied()
-                && let Some(y1) = table.column_f64(y2_col)
-            {
-                Some(y1)
-            } else {
-                None
-            }
+            series
+                .encode
+                .y2
+                .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
+                .and_then(|y2_col| table.column_f64(y2_col))
         } else {
             None
         };
 
-        let selection = view
-            .series_view(series.id)
-            .map(|v| v.selection.clone())
-            .unwrap_or_default();
-        let row_range = selection.as_range(table.row_count);
+        let (selection_range, filter, base_selection) = match view.series_view(series.id) {
+            Some(series_view) => {
+                let selection_range = series_view.selection.as_range(table.row_count);
+                let selection_range = RowRange {
+                    start: selection_range.start,
+                    end: selection_range.end,
+                };
+                (
+                    selection_range,
+                    series_view.x_policy.filter,
+                    series_view.selection.clone(),
+                )
+            }
+            None => (
+                RowRange {
+                    start: 0,
+                    end: table.row_count,
+                },
+                crate::engine::window_policy::AxisFilter1D::default(),
+                RowSelection::default(),
+            ),
+        };
+
+        let table_view = data_views.table_view_for(
+            table,
+            series.dataset,
+            x_col,
+            selection_range,
+            filter,
+            base_selection,
+        );
 
         let Some(sample) = (if series.kind == crate::spec::SeriesKind::Scatter {
-            sample_scatter_at_x(model, datasets, series.id, x_value, x, y0, row_range)
+            sample_scatter_at_x_view(model, datasets, series.id, x_value, x, y0, &table_view)
         } else {
-            sample_series_at_x(model, datasets, series.id, x_value, x, y0, y1, row_range)
+            sample_series_at_x_view(model, datasets, series.id, x_value, x, y0, y1, &table_view)
         }) else {
             continue;
         };
@@ -948,71 +973,9 @@ struct SampledSeriesValue {
     y1: Option<f64>,
 }
 
-fn sample_scatter_at_x(
-    model: &ChartModel,
-    datasets: &DatasetStore,
-    series_id: crate::ids::SeriesId,
-    x_value: f64,
-    x: &[f64],
-    y0: &[f64],
-    row_range: core::ops::Range<usize>,
-) -> Option<SampledSeriesValue> {
-    let len = x.len().min(y0.len());
-    if len == 0 {
-        return None;
-    }
-    let start = row_range.start.min(len);
-    let end = row_range.end.min(len);
-    if end <= start {
-        return None;
-    }
+const MAX_UNSORTED_AXIS_SCAN_POINTS: usize = 200_000;
 
-    if crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_none() {
-        return None;
-    }
-
-    let xs = &x[start..end];
-    if xs.len() == 1 {
-        return Some(SampledSeriesValue {
-            y0: y0[start],
-            y1: None,
-        });
-    }
-
-    let idx = lower_bound(xs, x_value);
-    let i1 = (start + idx).min(end - 1);
-    let i0 = i1.saturating_sub(1).max(start);
-
-    let x0 = x.get(i0).copied().unwrap_or(f64::NAN);
-    let x1 = x.get(i1).copied().unwrap_or(f64::NAN);
-    if !x0.is_finite() || !x1.is_finite() {
-        return None;
-    }
-
-    let d0 = (x_value - x0).abs();
-    let d1 = (x_value - x1).abs();
-    let i = if d1 < d0 { i1 } else { i0 };
-
-    let y = y0.get(i).copied()?;
-    if !y.is_finite() {
-        return None;
-    }
-
-    let y = if model
-        .series
-        .get(&series_id)
-        .is_some_and(|s| s.stack.is_some())
-    {
-        let base = stack_base_at_index(model, datasets, series_id, i, y)?.base;
-        y + base
-    } else {
-        y
-    };
-
-    Some(SampledSeriesValue { y0: y, y1: None })
-}
-
-fn sample_series_at_x(
+fn sample_nearest_at_x_view(
     model: &ChartModel,
     datasets: &DatasetStore,
     series_id: crate::ids::SeriesId,
@@ -1020,73 +983,207 @@ fn sample_series_at_x(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
-    row_range: core::ops::Range<usize>,
+    table_view: &crate::data::DataTableView<'_>,
+) -> Option<SampledSeriesValue> {
+    let view_len = table_view.len();
+    if view_len == 0 {
+        return None;
+    }
+    if view_len > MAX_UNSORTED_AXIS_SCAN_POINTS {
+        return None;
+    }
+
+    let mut best_raw_index: Option<usize> = None;
+    let mut best_dist = f64::INFINITY;
+
+    for view_index in 0..view_len {
+        let Some(raw_index) = table_view.get_raw_index(view_index) else {
+            continue;
+        };
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() {
+            continue;
+        }
+        let dist = (x_value - x_raw).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best_raw_index = Some(raw_index);
+        }
+    }
+
+    let raw_index = best_raw_index?;
+
+    let mut y = y0.get(raw_index).copied()?;
+    if !y.is_finite() {
+        return None;
+    }
+
+    if model
+        .series
+        .get(&series_id)
+        .is_some_and(|s| s.stack.is_some())
+    {
+        let base = stack_base_at_index(model, datasets, series_id, raw_index, y)?.base;
+        y += base;
+    }
+
+    let y1_out = y1.and_then(|s| s.get(raw_index).copied());
+    Some(SampledSeriesValue { y0: y, y1: y1_out })
+}
+
+fn sample_scatter_at_x_view(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    series_id: crate::ids::SeriesId,
+    x_value: f64,
+    x: &[f64],
+    y0: &[f64],
+    table_view: &crate::data::DataTableView<'_>,
 ) -> Option<SampledSeriesValue> {
     let len = x.len().min(y0.len());
     if len == 0 {
         return None;
     }
-    let start = row_range.start.min(len);
-    let end = row_range.end.min(len);
-    if end <= start {
-        return None;
-    }
 
-    if crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_none() {
-        return None;
-    }
-
-    let xs = &x[start..end];
-    if xs.len() == 1 {
-        return Some(SampledSeriesValue {
-            y0: y0[start],
-            y1: y1.and_then(|s| s.get(start).copied()),
-        });
-    }
-
-    let idx = lower_bound(xs, x_value);
-    let i1 = (start + idx).min(end - 1);
-    let i0 = i1.saturating_sub(1).max(start);
-
-    let x0 = x[i0];
-    let x1v = x[i1];
-    if !x0.is_finite() || !x1v.is_finite() || x1v <= x0 {
-        return None;
-    }
-
-    let t = ((x_value - x0) / (x1v - x0)).clamp(0.0, 1.0);
-    let y0a = y0.get(i0).copied()?;
-    let y0b = y0.get(i1).copied()?;
-    if !y0a.is_finite() || !y0b.is_finite() {
-        return None;
-    }
-
-    let y = if model
-        .series
-        .get(&series_id)
-        .is_some_and(|s| s.stack.is_some())
-    {
-        let base0 = stack_base_at_index(model, datasets, series_id, i0, y0a)?.base;
-        let base1 = stack_base_at_index(model, datasets, series_id, i1, y0b)?.base;
-        let y_eff0 = y0a + base0;
-        let y_eff1 = y0b + base1;
-        y_eff0 + t * (y_eff1 - y_eff0)
-    } else {
-        y0a + t * (y0b - y0a)
+    let selection = table_view.selection();
+    let (start, end) = match selection {
+        RowSelection::All => (0usize, len),
+        RowSelection::Range(range) => {
+            let r = range.as_std_range(len);
+            (r.start, r.end)
+        }
+        RowSelection::Indices(_) => (0usize, 0usize),
     };
 
-    let y1_out = if let Some(y1) = y1 {
-        let y1a = y1.get(i0).copied()?;
-        let y1b = y1.get(i1).copied()?;
-        if !y1a.is_finite() || !y1b.is_finite() {
+    if start < end
+        && crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_some()
+    {
+        let xs = &x[start..end];
+        if xs.len() == 1 {
+            return Some(SampledSeriesValue {
+                y0: y0[start],
+                y1: None,
+            });
+        }
+
+        let idx = lower_bound(xs, x_value);
+        let i1 = (start + idx).min(end - 1);
+        let i0 = i1.saturating_sub(1).max(start);
+
+        let x0 = x.get(i0).copied().unwrap_or(f64::NAN);
+        let x1 = x.get(i1).copied().unwrap_or(f64::NAN);
+        if !x0.is_finite() || !x1.is_finite() {
             return None;
         }
-        Some(y1a + t * (y1b - y1a))
-    } else {
-        None
+
+        let d0 = (x_value - x0).abs();
+        let d1 = (x_value - x1).abs();
+        let i = if d1 < d0 { i1 } else { i0 };
+
+        let y = y0.get(i).copied()?;
+        if !y.is_finite() {
+            return None;
+        }
+
+        let y = if model
+            .series
+            .get(&series_id)
+            .is_some_and(|s| s.stack.is_some())
+        {
+            let base = stack_base_at_index(model, datasets, series_id, i, y)?.base;
+            y + base
+        } else {
+            y
+        };
+
+        return Some(SampledSeriesValue { y0: y, y1: None });
+    }
+
+    sample_nearest_at_x_view(model, datasets, series_id, x_value, x, y0, None, table_view)
+}
+
+fn sample_series_at_x_view(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    series_id: crate::ids::SeriesId,
+    x_value: f64,
+    x: &[f64],
+    y0: &[f64],
+    y1: Option<&[f64]>,
+    table_view: &crate::data::DataTableView<'_>,
+) -> Option<SampledSeriesValue> {
+    let len = x.len().min(y0.len());
+    if len == 0 {
+        return None;
+    }
+
+    let selection = table_view.selection();
+    let (start, end) = match selection {
+        RowSelection::All => (0usize, len),
+        RowSelection::Range(range) => {
+            let r = range.as_std_range(len);
+            (r.start, r.end)
+        }
+        RowSelection::Indices(_) => (0usize, 0usize),
     };
 
-    Some(SampledSeriesValue { y0: y, y1: y1_out })
+    if start < end
+        && crate::transform::is_probably_monotonic_in_range(x, RowRange { start, end }).is_some()
+    {
+        let xs = &x[start..end];
+        if xs.len() == 1 {
+            return Some(SampledSeriesValue {
+                y0: y0[start],
+                y1: y1.and_then(|s| s.get(start).copied()),
+            });
+        }
+
+        let idx = lower_bound(xs, x_value);
+        let i1 = (start + idx).min(end - 1);
+        let i0 = i1.saturating_sub(1).max(start);
+
+        let x0 = x[i0];
+        let x1v = x[i1];
+        if !x0.is_finite() || !x1v.is_finite() || x1v <= x0 {
+            return None;
+        }
+
+        let t = ((x_value - x0) / (x1v - x0)).clamp(0.0, 1.0);
+        let y0a = y0.get(i0).copied()?;
+        let y0b = y0.get(i1).copied()?;
+        if !y0a.is_finite() || !y0b.is_finite() {
+            return None;
+        }
+
+        let y = if model
+            .series
+            .get(&series_id)
+            .is_some_and(|s| s.stack.is_some())
+        {
+            let base0 = stack_base_at_index(model, datasets, series_id, i0, y0a)?.base;
+            let base1 = stack_base_at_index(model, datasets, series_id, i1, y0b)?.base;
+            let y_eff0 = y0a + base0;
+            let y_eff1 = y0b + base1;
+            y_eff0 + t * (y_eff1 - y_eff0)
+        } else {
+            y0a + t * (y0b - y0a)
+        };
+
+        let y1_out = if let Some(y1) = y1 {
+            let y1a = y1.get(i0).copied()?;
+            let y1b = y1.get(i1).copied()?;
+            if !y1a.is_finite() || !y1b.is_finite() {
+                return None;
+            }
+            Some(y1a + t * (y1b - y1a))
+        } else {
+            None
+        };
+
+        return Some(SampledSeriesValue { y0: y, y1: y1_out });
+    }
+
+    sample_nearest_at_x_view(model, datasets, series_id, x_value, x, y0, y1, table_view)
 }
 
 fn lower_bound(xs: &[f64], value: f64) -> usize {

@@ -376,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn selection_stage_builds_indices_incrementally_and_exposes_row_selection() {
+    fn data_view_stage_builds_indices_incrementally_and_exposes_row_selection() {
         let dataset_id = DatasetId::new(1);
 
         let mut store = DatasetStore::default();
@@ -412,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn selection_stage_invalidates_indices_on_data_revision_change() {
+    fn data_view_stage_invalidates_indices_on_data_revision_change() {
         let dataset_id = DatasetId::new(1);
 
         let mut store = DatasetStore::default();
