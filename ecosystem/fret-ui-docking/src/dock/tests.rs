@@ -29,6 +29,8 @@ use fret_ui::overlay_placement::{
     Align as OverlayAlign, Side as OverlaySide, anchored_panel_bounds,
 };
 #[cfg(feature = "layout-engine-v2")]
+use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
+#[cfg(feature = "layout-engine-v2")]
 use slotmap::KeyData;
 #[cfg(feature = "layout-engine-v2")]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -713,6 +715,215 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
     assert_eq!(
         ui.debug_node_bounds(right_root_node),
         Some(expected_right_1)
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_correct() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(600.0), Px(240.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let mut services = FakeTextService::default();
+
+    let panel_left = PanelKey::new("test.viewport.scroll");
+    let panel_right = PanelKey::new("test.viewport.vlist");
+
+    let target_left = fret_core::RenderTargetId::from(KeyData::from_ffi(3));
+    let target_right = fret_core::RenderTargetId::from(KeyData::from_ffi(4));
+
+    let scroll_handle = ScrollHandle::default();
+    let vlist_handle = VirtualListScrollHandle::new();
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel_left, || DockPanel {
+            title: "Scroll".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_left,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+        dock.ensure_panel(&panel_right, || DockPanel {
+            title: "List".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(super::ViewportPanel {
+                target: target_right,
+                target_px_size: (320, 240),
+                fit: fret_core::ViewportFit::Stretch,
+                context_menu_enabled: true,
+            }),
+        });
+
+        let left_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_left.clone()],
+            active: 0,
+        });
+        let right_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel_right.clone()],
+            active: 0,
+        });
+        let root = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left_tabs, right_tabs],
+            fractions: vec![0.5, 0.5],
+        });
+        dock.graph.set_window_root(window, root);
+    });
+
+    fn build_scroll_panel(
+        cx: &mut fret_ui::ElementContext<'_, TestHost>,
+        handle: ScrollHandle,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        let mut props = fret_ui::element::ScrollProps::default();
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        props.layout.size.height = fret_ui::element::Length::Fill;
+        props.axis = fret_ui::element::ScrollAxis::Y;
+        props.scroll_handle = Some(handle);
+        props.probe_unbounded = true;
+
+        vec![cx.scroll(props, |cx| {
+            let flex = fret_ui::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Fill,
+                        height: fret_ui::element::Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                vec![
+                    cx.text("hello"),
+                    cx.spacer(fret_ui::element::SpacerProps::default()),
+                ]
+            })]
+        })]
+    }
+
+    fn build_vlist_panel(
+        cx: &mut fret_ui::ElementContext<'_, TestHost>,
+        handle: &VirtualListScrollHandle,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        let options = fret_ui::element::VirtualListOptions::new(Px(10.0), 0);
+        vec![cx.virtual_list(50, options, handle, |cx, items| {
+            items
+                .iter()
+                .copied()
+                .map(|item| {
+                    cx.keyed(item.key, |cx| {
+                        let flex = fret_ui::element::FlexProps {
+                            direction: fret_core::Axis::Vertical,
+                            layout: fret_ui::element::LayoutStyle {
+                                size: fret_ui::element::SizeStyle {
+                                    width: fret_ui::element::Length::Fill,
+                                    height: fret_ui::element::Length::Auto,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        cx.flex(flex, |cx| {
+                            vec![
+                                cx.text("row"),
+                                cx.spacer(fret_ui::element::SpacerProps::default()),
+                            ]
+                        })
+                    })
+                })
+                .collect()
+        })]
+    }
+
+    let left_root_name = "dock-scroll-panel";
+    let right_root_name = "dock-vlist-panel";
+
+    let left_node = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        left_root_name,
+        |cx| build_scroll_panel(cx, scroll_handle.clone()),
+    );
+    let right_node = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        right_root_name,
+        |cx| build_vlist_panel(cx, &vlist_handle),
+    );
+
+    let dock_space = ui.create_node_retained(
+        DockSpace::new(window)
+            .with_panel_content(panel_left.clone(), left_node)
+            .with_panel_content(panel_right.clone(), right_node),
+    );
+    ui.set_children(dock_space, vec![left_node, right_node]);
+    ui.set_root(dock_space);
+
+    // Frame 0: virtual list has not recorded viewport size yet, so it will mount no rows. Scroll
+    // extents should still be constraint-correct and should not explode due to unbounded probes.
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let scroll_extent_0 = scroll_handle.content_size().height;
+    assert!(
+        scroll_extent_0.0 > 10.0 && scroll_extent_0.0 < 300.0,
+        "expected scroll content height to stay bounded, got {scroll_extent_0:?}"
+    );
+
+    // Frame 1: virtual list now mounts rows and measures them. Its content extent must still stay
+    // bounded (no 1e9-style probe expansion).
+    app.advance_frame();
+    let _ = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        left_root_name,
+        |cx| build_scroll_panel(cx, scroll_handle.clone()),
+    );
+    let _ = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        right_root_name,
+        |cx| build_vlist_panel(cx, &vlist_handle),
+    );
+    ui.invalidate(dock_space, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_extent_1 = scroll_handle.content_size().height;
+    assert!(
+        scroll_extent_1.0 > 10.0 && scroll_extent_1.0 < 300.0,
+        "expected scroll content height to stay bounded after second frame, got {scroll_extent_1:?}"
+    );
+
+    let list_extent = vlist_handle.content_size().height;
+    assert!(
+        list_extent.0 > 100.0 && list_extent.0 < 100_000.0,
+        "expected virtual list extent to be finite and measured, got {list_extent:?}"
     );
 }
 
