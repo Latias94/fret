@@ -109,6 +109,24 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
     match hit {
         Hit::Port(port) => {
+            if snapshot.interaction.connect_on_click && canvas.interaction.click_connect {
+                if let Some(mut w) = canvas.interaction.wire_drag.take() {
+                    w.pos = position;
+                    canvas.interaction.wire_drag = Some(w);
+                    canvas.interaction.click_connect = false;
+                    canvas.interaction.pending_wire_drag = None;
+                    let _ = super::wire_drag::handle_wire_left_up_with_forced_target(
+                        canvas,
+                        cx,
+                        snapshot,
+                        zoom,
+                        Some(port),
+                    );
+                    return true;
+                }
+                canvas.interaction.click_connect = false;
+            }
+
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
             canvas.interaction.pending_group_resize = None;
@@ -116,6 +134,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_wire_drag = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -216,6 +236,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -277,6 +298,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
@@ -312,6 +334,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -355,6 +378,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
@@ -405,6 +429,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.node_resize = None;
             canvas.interaction.pending_wire_drag = None;
             canvas.interaction.wire_drag = None;
+            canvas.interaction.click_connect = false;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
             canvas.interaction.hover_port = None;

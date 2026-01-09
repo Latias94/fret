@@ -286,6 +286,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_connection_drag_threshold")]
     pub connection_drag_threshold: f32,
 
+    /// Enables click-to-connect behavior (XyFlow `connectOnClick`).
+    ///
+    /// When enabled, a click on a port handle starts a connection preview; the next handle click
+    /// attempts to create a connection and ends the click-connect session (regardless of validity).
+    #[serde(default)]
+    pub connect_on_click: bool,
+
     /// Auto-pan configuration.
     #[serde(default)]
     pub auto_pan: NodeGraphAutoPanTuning,
@@ -325,6 +332,7 @@ impl Default for NodeGraphInteractionState {
             node_drag_threshold: default_node_drag_threshold(),
             node_click_distance: default_node_click_distance(),
             connection_drag_threshold: default_connection_drag_threshold(),
+            connect_on_click: false,
             auto_pan: NodeGraphAutoPanTuning::default(),
             translate_extent: None,
             node_extent: None,

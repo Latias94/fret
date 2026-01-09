@@ -223,6 +223,16 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
     snapshot: &ViewSnapshot,
     zoom: f32,
 ) -> bool {
+    handle_wire_left_up_with_forced_target(canvas, cx, snapshot, zoom, None)
+}
+
+pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    zoom: f32,
+    forced_target: Option<PortId>,
+) -> bool {
     let Some(w) = canvas.interaction.wire_drag.take() else {
         return false;
     };
@@ -232,26 +242,28 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
         WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
         WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
     };
-    let target = from_port.and_then(|from_port| {
-        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
-        let this = &*canvas;
-        let index = index.clone();
-        this.graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch_ports: Vec<PortId> = Vec::new();
-                this.pick_target_port(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    from_port,
-                    w.pos,
-                    zoom,
-                    &mut scratch_ports,
-                )
-            })
-            .ok()
-            .flatten()
+    let target = forced_target.or_else(|| {
+        from_port.and_then(|from_port| {
+            let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+            let this = &*canvas;
+            let index = index.clone();
+            this.graph
+                .read_ref(cx.app, |graph| {
+                    let mut scratch_ports: Vec<PortId> = Vec::new();
+                    this.pick_target_port(
+                        graph,
+                        snapshot,
+                        geom.as_ref(),
+                        index.as_ref(),
+                        from_port,
+                        w.pos,
+                        zoom,
+                        &mut scratch_ports,
+                    )
+                })
+                .ok()
+                .flatten()
+        })
     });
     canvas.interaction.hover_port = None;
     canvas.interaction.hover_port_valid = false;

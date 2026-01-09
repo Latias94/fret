@@ -8,6 +8,7 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
 ) {
     let mut canceled = false;
     if canvas.interaction.wire_drag.take().is_some() {
+        canvas.interaction.click_connect = false;
         canceled = true;
     }
     if canvas.interaction.edge_drag.take().is_some() {

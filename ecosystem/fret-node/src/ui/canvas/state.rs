@@ -30,6 +30,11 @@ pub(crate) struct InteractionState {
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) panning: bool,
+    /// Whether the current `wire_drag` session was initiated via click-to-connect.
+    ///
+    /// When set, the next handle click should attempt to finalize the connection and then clear
+    /// this flag (regardless of validity), matching XyFlow's `connectOnClick` behavior.
+    pub(crate) click_connect: bool,
     pub(crate) pending_marquee: Option<PendingMarqueeDrag>,
     pub(crate) marquee: Option<MarqueeDrag>,
     pub(crate) pending_node_drag: Option<PendingNodeDrag>,

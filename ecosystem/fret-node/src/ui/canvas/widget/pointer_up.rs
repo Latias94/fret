@@ -4,7 +4,7 @@ use fret_ui::UiHost;
 use crate::core::GroupId;
 use crate::ops::GraphOp;
 
-use super::super::state::{PendingNodeSelectAction, ViewSnapshot};
+use super::super::state::{PendingNodeSelectAction, ViewSnapshot, WireDrag, WireDragKind};
 use super::NodeGraphCanvas;
 
 pub(super) fn handle_pointer_up<H: UiHost>(
@@ -356,7 +356,17 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
-    if canvas.interaction.pending_wire_drag.take().is_some() {
+    if let Some(pending) = canvas.interaction.pending_wire_drag.take() {
+        if snapshot.interaction.connect_on_click {
+            if matches!(pending.kind, WireDragKind::New { .. }) {
+                canvas.interaction.wire_drag = Some(WireDrag {
+                    kind: pending.kind,
+                    pos: position,
+                });
+                canvas.interaction.click_connect = true;
+            }
+        }
+
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
