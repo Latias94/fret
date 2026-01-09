@@ -455,7 +455,6 @@ impl MarksStage {
                         x,
                         y0,
                         y1,
-                        None,
                         row_range.clone(),
                         view_x_filter,
                         view_x_mapping_window,
@@ -1048,7 +1047,6 @@ fn compute_series_bounds(
     x: &[f64],
     y0: &[f64],
     y1: Option<&[f64]>,
-    stack: Option<&StackAccum>,
     row_range: Range<usize>,
     x_filter: crate::engine::window_policy::AxisFilter1D,
     x_mapping_window: Option<DataWindowX>,
@@ -1077,18 +1075,8 @@ fn compute_series_bounds(
             w.clamp_non_degenerate();
             (w.min, w.max)
         } else {
-            let mut bounds = if let Some(stack) = stack {
-                compute_bounds_in_range_filtered_with(x, row_range, x_filter, |i| {
-                    let yi = y0.get(i).copied().unwrap_or(f64::NAN);
-                    if !yi.is_finite() {
-                        return yi;
-                    }
-                    yi + stack.base_for(yi, i)
-                })
-                .unwrap_or_default()
-            } else {
-                compute_bounds_in_range_filtered(x, y0, row_range, x_filter).unwrap_or_default()
-            };
+            let mut bounds =
+                compute_bounds_in_range_filtered(x, y0, row_range, x_filter).unwrap_or_default();
             bounds.clamp_non_degenerate();
             (bounds.x_min, bounds.x_max)
         };
@@ -1137,70 +1125,32 @@ fn compute_series_bounds(
         return Some(combined);
     }
 
-    let mut done = if let Some(stack) = stack {
-        compute_bounds_step_with(
-            bounds_cursor,
-            bounds_accum,
-            x,
-            row_range.clone(),
-            x_filter,
-            initial_points_budget,
-            |i| {
-                let yi = y0.get(i).copied().unwrap_or(f64::NAN);
-                if !yi.is_finite() {
-                    return yi;
-                }
-                yi + stack.base_for(yi, i)
-            },
-        )
-        .unwrap_or(true)
-    } else {
-        compute_bounds_step(
-            bounds_cursor,
-            bounds_accum,
-            x,
-            y0,
-            row_range.clone(),
-            x_filter,
-            initial_points_budget,
-        )
-        .unwrap_or(true)
-    };
+    let mut done = compute_bounds_step(
+        bounds_cursor,
+        bounds_accum,
+        x,
+        y0,
+        row_range.clone(),
+        x_filter,
+        initial_points_budget,
+    )
+    .unwrap_or(true);
 
     while !done {
         let points_budget = budget.take_points(4096) as usize;
         if points_budget == 0 {
             return None;
         }
-        done = if let Some(stack) = stack {
-            compute_bounds_step_with(
-                bounds_cursor,
-                bounds_accum,
-                x,
-                row_range.clone(),
-                x_filter,
-                points_budget,
-                |i| {
-                    let yi = y0.get(i).copied().unwrap_or(f64::NAN);
-                    if !yi.is_finite() {
-                        return yi;
-                    }
-                    yi + stack.base_for(yi, i)
-                },
-            )
-            .unwrap_or(true)
-        } else {
-            compute_bounds_step(
-                bounds_cursor,
-                bounds_accum,
-                x,
-                y0,
-                row_range.clone(),
-                x_filter,
-                points_budget,
-            )
-            .unwrap_or(true)
-        };
+        done = compute_bounds_step(
+            bounds_cursor,
+            bounds_accum,
+            x,
+            y0,
+            row_range.clone(),
+            x_filter,
+            points_budget,
+        )
+        .unwrap_or(true);
     }
 
     let mut bounds = finalize_bounds(bounds_accum).unwrap_or_default();
@@ -1225,18 +1175,7 @@ fn compute_bounds_in_range_filtered(
     row_range: core::ops::Range<usize>,
     filter: crate::engine::window_policy::AxisFilter1D,
 ) -> Option<DataBounds> {
-    compute_bounds_in_range_filtered_with(x, row_range, filter, |i| {
-        y.get(i).copied().unwrap_or(f64::NAN)
-    })
-}
-
-fn compute_bounds_in_range_filtered_with(
-    x: &[f64],
-    row_range: core::ops::Range<usize>,
-    filter: crate::engine::window_policy::AxisFilter1D,
-    mut y_at: impl FnMut(usize) -> f64,
-) -> Option<DataBounds> {
-    let len = x.len();
+    let len = x.len().min(y.len());
     let start = row_range.start.min(len);
     let end = row_range.end.min(len);
     if start >= end {
@@ -1252,7 +1191,7 @@ fn compute_bounds_in_range_filtered_with(
 
     for i in start..end {
         let xi = x[i];
-        let yi = y_at(i);
+        let yi = y[i];
         if !xi.is_finite() || !yi.is_finite() {
             continue;
         }

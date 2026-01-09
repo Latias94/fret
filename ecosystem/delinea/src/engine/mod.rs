@@ -14,6 +14,7 @@ use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use crate::tooltip::{TooltipLine, TooltipOutput};
+use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use fret_core::Point;
 use std::collections::BTreeMap;
@@ -866,9 +867,9 @@ fn compute_axis_axis_pointer_output(
         let row_range = selection.as_range(table.row_count);
 
         let Some(sample) = (if series.kind == crate::spec::SeriesKind::Scatter {
-            sample_scatter_at_x(x_value, x, y0, row_range)
+            sample_scatter_at_x(model, datasets, series.id, x_value, x, y0, row_range)
         } else {
-            sample_series_at_x(x_value, x, y0, y1, row_range)
+            sample_series_at_x(model, datasets, series.id, x_value, x, y0, y1, row_range)
         }) else {
             continue;
         };
@@ -909,6 +910,9 @@ struct SampledSeriesValue {
 }
 
 fn sample_scatter_at_x(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    series_id: crate::ids::SeriesId,
     x_value: f64,
     x: &[f64],
     y0: &[f64],
@@ -951,10 +955,24 @@ fn sample_scatter_at_x(
         return None;
     }
 
+    let y = if model
+        .series
+        .get(&series_id)
+        .is_some_and(|s| s.stack.is_some())
+    {
+        let base = stack_base_at_index(model, datasets, series_id, i, y)?.base;
+        y + base
+    } else {
+        y
+    };
+
     Some(SampledSeriesValue { y0: y, y1: None })
 }
 
 fn sample_series_at_x(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    series_id: crate::ids::SeriesId,
     x_value: f64,
     x: &[f64],
     y0: &[f64],
@@ -995,7 +1013,20 @@ fn sample_series_at_x(
     if !y0a.is_finite() || !y0b.is_finite() {
         return None;
     }
-    let y = y0a + t * (y0b - y0a);
+
+    let y = if model
+        .series
+        .get(&series_id)
+        .is_some_and(|s| s.stack.is_some())
+    {
+        let base0 = stack_base_at_index(model, datasets, series_id, i0, y0a)?.base;
+        let base1 = stack_base_at_index(model, datasets, series_id, i1, y0b)?.base;
+        let y_eff0 = y0a + base0;
+        let y_eff1 = y0b + base1;
+        y_eff0 + t * (y_eff1 - y_eff0)
+    } else {
+        y0a + t * (y0b - y0a)
+    };
 
     let y1_out = if let Some(y1) = y1 {
         let y1a = y1.get(i0).copied()?;

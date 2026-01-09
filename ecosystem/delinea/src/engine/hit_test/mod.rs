@@ -5,6 +5,7 @@ use crate::engine::HoverHit;
 use crate::engine::model::ChartModel;
 use crate::marks::{MarkKind, MarkPayloadRef, MarkTree};
 use crate::spec::SeriesKind;
+use crate::transform::stack_base_at_index;
 
 pub fn hover_hit_test(
     model: &ChartModel,
@@ -102,7 +103,32 @@ pub fn hover_hit_test(
 
                     let t64 = t as f64;
                     let x_value = x[ia] + t64 * (x[ib] - x[ia]);
-                    let y_value = y[ia] + t64 * (y[ib] - y[ia]);
+                    let y0a = y[ia];
+                    let y0b = y[ib];
+                    if !y0a.is_finite() || !y0b.is_finite() {
+                        continue;
+                    }
+
+                    let y_eff_a = if series.stack.is_some() {
+                        let Some(base) = stack_base_at_index(model, datasets, series_id, ia, y0a)
+                        else {
+                            continue;
+                        };
+                        y0a + base.base
+                    } else {
+                        y0a
+                    };
+                    let y_eff_b = if series.stack.is_some() {
+                        let Some(base) = stack_base_at_index(model, datasets, series_id, ib, y0b)
+                        else {
+                            continue;
+                        };
+                        y0b + base.base
+                    } else {
+                        y0b
+                    };
+
+                    let y_value = y_eff_a + t64 * (y_eff_b - y_eff_a);
                     if !x_value.is_finite() || !y_value.is_finite() {
                         continue;
                     }
@@ -144,7 +170,16 @@ pub fn hover_hit_test(
                     let dist2_px = dx * dx + dy * dy;
 
                     let x_value = x[idx];
-                    let y_value = y[idx];
+                    let y0 = y[idx];
+                    let y_value = if series.stack.is_some() {
+                        let Some(base) = stack_base_at_index(model, datasets, series_id, idx, y0)
+                        else {
+                            continue;
+                        };
+                        y0 + base.base
+                    } else {
+                        y0
+                    };
                     if !x_value.is_finite() || !y_value.is_finite() {
                         continue;
                     }
@@ -212,13 +247,13 @@ mod tests {
 
     use crate::data::{Column, DataTable, DatasetStore};
     use crate::engine::model::ChartModel;
-    use crate::ids::{AxisId, ChartId, DatasetId, GridId, LayerId, MarkId, SeriesId};
+    use crate::ids::{AxisId, ChartId, DatasetId, GridId, LayerId, MarkId, SeriesId, StackId};
     use crate::marks::{
         MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree,
     };
     use crate::spec::{
         AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-        SeriesSpec,
+        SeriesSpec, StackStrategy,
     };
 
     #[test]
@@ -360,5 +395,150 @@ mod tests {
         assert!((hit.y_value - 0.0).abs() < 1e-9);
         assert!((hit.point_px.x.0 - 50.0).abs() < 1e-6);
         assert!((hit.point_px.y.0 - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn hover_hit_returns_stacked_y_for_stacked_series() {
+        let chart_id = ChartId::new(1);
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let stack = StackId::new(1);
+        let series_a = SeriesId::new(1);
+        let series_b = SeriesId::new(2);
+        let x_field = crate::ids::FieldId::new(1);
+        let y_a_field = crate::ids::FieldId::new(2);
+        let y_b_field = crate::ids::FieldId::new(3);
+
+        let spec = ChartSpec {
+            id: chart_id,
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_a_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_b_field,
+                        column: 2,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: series_a,
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_a_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: StackStrategy::All,
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: series_b,
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_b_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: Some(stack),
+                    stack_strategy: StackStrategy::All,
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut store = DatasetStore::default();
+        store.datasets.push((dataset_id, {
+            let mut t = DataTable::default();
+            t.push_column(Column::F64(vec![0.0, 10.0]));
+            t.push_column(Column::F64(vec![1.0, 1.0]));
+            t.push_column(Column::F64(vec![2.0, 2.0]));
+            t
+        }));
+
+        let mut marks = MarkTree::default();
+        let range = marks.arena.extend_points_with_indices(
+            [
+                Point {
+                    x: fret_core::Px(0.0),
+                    y: fret_core::Px(0.0),
+                },
+                Point {
+                    x: fret_core::Px(100.0),
+                    y: fret_core::Px(0.0),
+                },
+            ],
+            [0u32, 1u32],
+        );
+
+        marks.nodes.push(MarkNode {
+            id: MarkId::new(1),
+            parent: None,
+            layer: LayerId::new(1),
+            order: MarkOrderKey(0),
+            kind: MarkKind::Polyline,
+            source_series: Some(series_b),
+            payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                points: range,
+                stroke: None,
+            }),
+        });
+
+        let hit = hover_hit_test(
+            &model,
+            &store,
+            &marks,
+            Point::new(fret_core::Px(50.0), fret_core::Px(0.0)),
+        )
+        .expect("expected a hit");
+
+        // Interpolated at x=5 -> base=1, y=2 => stacked y=3
+        assert!((hit.y_value - 3.0).abs() < 1e-9);
+        assert!((hit.x_value - 5.0).abs() < 1e-9);
     }
 }

@@ -50,6 +50,10 @@ Contract:
 - `trigger=axis` produces a value per visible series when sampling is possible, even if no curve
   is within a hit threshold.
 
+`HoverHit.y_value` is the **rendered** Y value in data space for the hovered series. For stacked series,
+this means `y_value` includes the stack base (the same value used for coordinate mapping), so the tooltip
+and hit testing stay consistent with what is drawn.
+
 #### v1 tooltip defaults (ECharts-aligned)
 
 To match common “charting app” expectations (and avoid surprising “nothing happens” states), v1 defaults are:

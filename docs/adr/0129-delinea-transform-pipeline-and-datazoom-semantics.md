@@ -67,6 +67,13 @@ Transform outputs are cached by:
 This is the headless equivalent of ECharts’ `SourceManager` + `Scheduler` caching, but expressed via explicit
 revisions to keep behavior deterministic and testable.
 
+#### Note: stacking (v1)
+
+`SeriesSpec.stack` exists as a P0 escape hatch so we can ship stacked line charts without blocking on
+a full derived-column transform system. The intended direction is still to model stacking as a transform
+node that produces derived columns (base/top), so stacked areas and stacked bars can reuse the same
+headless contract.
+
 ### 3) DataZoom is a component with explicit axis bindings (v1: one per axis)
 
 We model DataZoom as a first-class component node:
