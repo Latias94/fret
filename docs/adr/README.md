@@ -302,6 +302,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0134-delinea-multi-axis-and-layout-contract.md`
 - `docs/adr/0135-delinea-axis-interaction-locks-and-shortcuts.md`
 - `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`
+- `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
 - `docs/archive/delinea-adr-bootstrap/README.md`
 - `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`

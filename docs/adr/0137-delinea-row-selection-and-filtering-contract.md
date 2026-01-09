@@ -1,0 +1,172 @@
+# ADR 0137: `delinea` RowSelection + Filtering Contract (ECharts-Inspired)
+
+Status: Proposed (P0)
+
+## Context
+
+`delinea` is intended to support “application charts” with an ECharts-inspired mental model
+(dataset + encode + transform pipeline + components like dataZoom) while remaining:
+
+- renderer-agnostic,
+- deterministic and unit-testable,
+- performant on large datasets (bounded work, minimal allocations).
+
+Today, our pipeline already relies on a selection abstraction:
+
+- `RowRange` (continuous slice of a dataset table),
+- `RowSelection` (`All` or `Range(RowRange)`),
+- X windowing via `DataZoomXSpec` + `FilterMode::{Filter,None}` (ADR 0129),
+- Y and 2D view windows (mapping-only; ADR 0136).
+
+This is sufficient for X-only slicing on monotonic columns, but it does not fully cover:
+
+- ECharts `filterMode` variants (`weakFilter`, `empty`) and multi-dimensional filtering,
+- 2D brush/selection semantics beyond “write view windows”,
+- future dataset transforms (stacking/aggregation) that may need derived columns and/or sparse row selection,
+- consistent composition rules that avoid later rewrites.
+
+ECharts filters series data using mechanisms like `selectRange` and, for some modes, per-row decisions.
+Those semantics usually imply **sparse** selection or value masking, which can be expensive if introduced
+without an explicit contract and budget-aware execution.
+
+This ADR locks the minimal selection/filter contract that keeps v1 fast while leaving an explicit path
+to ECharts-class behaviors.
+
+## Relationship to Other ADRs
+
+- ADR 0128: headless engine boundary.
+- ADR 0129: transform pipeline + X `FilterMode` semantics.
+- ADR 0132: large data + progressive rendering strategy.
+- ADR 0133: interaction + hit testing contract.
+- ADR 0136: Y + 2D zoom semantics (mapping-only Y in v1).
+
+## Decision
+
+### 1) Selection is a first-class transform output
+
+`RowSelection` is the canonical “which rows participate” contract between:
+
+- the transform pipeline (selection derivation),
+- the view state (per-series inputs),
+- marks/LOD/bounds/hit testing (consumers).
+
+Selection is always derived from a **base dataset row range**:
+
+- Base range comes from `ChartState.dataset_row_ranges[dataset]` (optional) and clamps to dataset length.
+- All selection operations must be expressible as `selection = f(base_range, transforms, view_state)`.
+
+### 2) v1 keeps selection contiguous (Range-only) for performance
+
+P0/v1 guarantees:
+
+- Selection will be either `All` or `Range(RowRange)`.
+- No sparse selection is required to implement:
+  - X window slicing (`FilterMode::Filter`),
+  - Y zoom/pan,
+  - 2D box zoom (as paired view windows).
+
+This preserves:
+
+- O(log n) slicing on monotonic X,
+- stable caching keys,
+- low memory overhead.
+
+### 3) Selection does not model “empty” masking in v1
+
+ECharts `filterMode='empty'` keeps rows but turns out-of-window values into `NaN`, causing line breaks.
+
+We do **not** model this in v1 because it introduces a second concept:
+
+- **row participation** (selection), vs
+- **value validity/masking** (per-point visibility/break rules).
+
+In v1:
+
+- `FilterMode::Filter` removes out-of-window rows by selection (contiguous slice when possible).
+- `FilterMode::None` keeps the base range unchanged.
+
+### 4) When sparse behaviors are added, they must be budget-aware and cacheable
+
+When we introduce ECharts-like `weakFilter` / `empty` / multi-dimensional filtering, we also introduce
+new internal representations. The contract constraints:
+
+- Selection and/or masking must be computed under `WorkBudget` and be resumable across `step()` calls.
+- Selection/masking results must be cacheable by:
+  - dataset revision,
+  - model revision (encode/series config),
+  - transform parameters (windows/modes),
+  - view revision (state changes).
+- The engine must remain deterministic given the same inputs and budget progression.
+
+### 5) P1 extension path: add sparse selection and value masking as separate concepts
+
+We explicitly separate two future mechanisms:
+
+1. **Sparse selection** (rows filtered out):
+   - Add `RowSelection::Indices(...)` or `RowSelection::Mask(...)` (exact type is a follow-up decision).
+   - Used for ECharts `weakFilter` and multi-dimensional filters that cannot be expressed as a contiguous range.
+
+2. **Value masking** (rows kept, but values become invalid):
+   - Add a per-series “validity” channel or derived-column transform that can mark points as `NaN`.
+   - Used for ECharts `empty` semantics (line breaks without removing rows).
+
+This avoids conflating “filtering” with “rendering rules” and keeps marks/hit-testing rules explicit.
+
+### 6) Composition order is fixed and documented
+
+To avoid future drift, we adopt a stable transform ordering for cartesian grids:
+
+1. Base dataset row range clamp.
+2. X selection transforms (including DataZoomX `FilterMode`).
+3. Y selection transforms (P1; if introduced).
+4. Derived-column transforms (stacking/aggregates) that are defined over the effective selection.
+5. LOD transforms (min/max per pixel, sampling) over the selected (and/or masked) view.
+
+This is consistent with the forward-compatibility rule in ADR 0129 (“apply X filters before Y filters”).
+
+### 7) “Decide early” ECharts-inspired capabilities (backlog)
+
+The following ECharts concepts are likely to force refactors if added late. They are not all P0 features,
+but the *contracts* should be decided early:
+
+DataZoom:
+
+- `rangeMode` (`percent` vs `value`): decide whether `DataWindow` is always “data value space” (recommended)
+  and whether percent windows are UI-only.
+- Span constraints: `minSpan/maxSpan` and `minValueSpan/maxValueSpan` (and how they compose with `AxisRange`).
+- `zoomLock`: treat as interaction gating (like locks), not as a hard override of programmatic window writes.
+- Multiple dataZoom components per axis (inside + slider): decide explicit composition rules (intersection vs “hosted by”).
+- Action coalescing / throttling: define where throttling lives (UI vs headless) and how it affects determinism.
+
+Transforms:
+
+- Derived columns: decide how to represent and cache computed columns (stack base/top, aggregates).
+- Category/time/log transforms: decide how scale parsing and tick formatting interact with selection and windows.
+
+Interaction and output:
+
+- Brush selection: decide whether brush produces a durable selection output (indices/mask) or only writes view windows.
+- Tooltip formatting contract: decide headless formatter surfaces (typed values + series meta) vs UI-only formatting.
+- Visual mapping: decide whether “visualMap”-like encodings (color/size/opacity) are a first-class contract or UI-only.
+
+## Consequences
+
+- v1 keeps the engine fast and simple: contiguous row slicing and mapping-only Y/2D zoom.
+- We explicitly reserve space for ECharts-class filtering without forcing a redesign of the v1 engine.
+- Future work can introduce sparse selection and masking in a budget-aware, cacheable manner.
+
+## Follow-ups
+
+P0:
+
+- Keep v1 behaviors aligned with ADR 0129 and ADR 0136 (no sparse selection requirements).
+- Add conformance demos that stress multi-axis + 2D box zoom + large datasets.
+
+P1:
+
+- Decide the concrete sparse representation:
+  - indices list vs bitset vs run-length encoding vs arena-backed scratch buffers.
+- Add `FilterMode::{WeakFilter,Empty}` only after:
+  - stacking/bar/categorical behaviors are locked,
+  - masking semantics are defined and tested.
+
