@@ -979,9 +979,11 @@ fn select_impl<H: UiHost>(
 
                     let border_width = resolved.border_width;
 
-                    let mut arrow_layout = None;
                     let mut wrapper_insets = Edges::all(Px(0.0));
                     let mut motion_side: Side = side.into();
+                    let mut popper_layout: Option<fret_ui::overlay_placement::AnchoredPanelLayout> =
+                        None;
+                    let mut transform_origin: Point = Point::new(Px(0.0), Px(0.0));
 
                     let mut item_aligned_rect: Option<Rect> = None;
                     if position == SelectPosition::ItemAligned {
@@ -1061,8 +1063,16 @@ fn select_impl<H: UiHost>(
                                     state.did_item_aligned_scroll = true;
                                 }
 
-                                motion_side = layout.side;
-                                item_aligned_rect = Some(layout.rect);
+                                let placement =
+                                    radix_select::select_content_placement_item_aligned(
+                                        anchor,
+                                        layout,
+                                    );
+                                wrapper_insets = placement.wrapper_insets;
+                                motion_side = placement.side;
+                                transform_origin = placement.transform_origin;
+                                popper_layout = placement.popper_layout;
+                                item_aligned_rect = Some(placement.placed);
                             }
                         }
                     }
@@ -1079,43 +1089,33 @@ fn select_impl<H: UiHost>(
                         let (arrow_options, arrow_protrusion) =
                             popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                        let layout = popper::popper_content_layout_sized(
+                        let placement_policy = popper::PopperContentPlacement::new(
+                            LayoutDirection::Ltr,
+                            side.into(),
+                            align.into(),
+                            side_offset,
+                        )
+                        .with_align_offset(align_offset)
+                        .with_arrow(arrow_options, arrow_protrusion);
+                        let placement = radix_select::select_content_placement_popper(
                             outer,
                             anchor,
                             desired,
-                            popper::PopperContentPlacement::new(
-                                LayoutDirection::Ltr,
-                                side.into(),
-                                align.into(),
-                                side_offset,
-                            )
-                            .with_align_offset(align_offset)
-                            .with_arrow(arrow_options, arrow_protrusion),
+                            placement_policy,
+                            arrow.then_some(arrow_size),
                         );
-                        motion_side = layout.side;
-                        wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                        arrow_layout = Some((layout, arrow_protrusion));
-                        layout.rect
+                        wrapper_insets = placement.wrapper_insets;
+                        motion_side = placement.side;
+                        transform_origin = placement.transform_origin;
+                        popper_layout = placement.popper_layout;
+                        placement.placed
                     };
 
-                    let origin = if let Some((layout, _arrow_protrusion)) = arrow_layout.as_ref() {
-                        popper::popper_content_transform_origin(
-                            layout,
-                            anchor,
-                            arrow.then_some(arrow_size),
-                        )
-                    } else {
-                        overlay_motion::shadcn_transform_origin_for_anchored_rect(
-                            anchor,
-                            placed,
-                            motion_side,
-                        )
-                    };
                     let opacity = motion.opacity;
                     let scale = motion.scale;
                     let transform = overlay_motion::shadcn_popper_presence_transform(
                         motion_side,
-                        origin,
+                        transform_origin,
                         opacity,
                         scale,
                         is_open,
@@ -1135,8 +1135,8 @@ fn select_impl<H: UiHost>(
                     let selected_item_id_out = &selected_item_id_out_cell;
                     let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let selected_item_text_id_out = &selected_item_text_id_out_cell;
-                    let arrow_layout_for_children = arrow_layout.clone();
                     let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
+                    let popper_layout_for_children = popper_layout;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
@@ -1278,7 +1278,7 @@ fn select_impl<H: UiHost>(
 
                         let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
                         let content = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
-                                let arrow_el = arrow_layout_for_children.as_ref().and_then(|(layout, _)| {
+                                let arrow_el = popper_layout_for_children.as_ref().and_then(|layout| {
                                     popper_arrow::diamond_arrow_element(
                                         cx,
                                         layout,

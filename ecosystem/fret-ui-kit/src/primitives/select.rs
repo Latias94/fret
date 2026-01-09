@@ -17,7 +17,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
+use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
@@ -35,6 +35,8 @@ pub use crate::headless::select_item_aligned::{
 };
 use crate::headless::typeahead;
 use crate::primitives::dialog;
+use crate::primitives::popper;
+use crate::primitives::popper_arrow;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -289,6 +291,55 @@ pub fn select_item_aligned_layout(inputs: SelectItemAlignedInputs) -> SelectItem
         outputs,
         rect: Rect::new(Point::new(x, y), Size::new(outputs.width, outputs.height)),
         side,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectContentPlacement {
+    pub placed: Rect,
+    pub wrapper_insets: Edges,
+    pub side: Side,
+    pub transform_origin: Point,
+    pub popper_layout: Option<fret_ui::overlay_placement::AnchoredPanelLayout>,
+}
+
+pub fn select_content_placement_item_aligned(
+    anchor: Rect,
+    layout: SelectItemAlignedLayout,
+) -> SelectContentPlacement {
+    let pseudo_layout = fret_ui::overlay_placement::AnchoredPanelLayout {
+        rect: layout.rect,
+        side: layout.side,
+        align: popper::Align::Center,
+        arrow: None,
+    };
+
+    SelectContentPlacement {
+        placed: layout.rect,
+        wrapper_insets: Edges::all(Px(0.0)),
+        side: layout.side,
+        transform_origin: popper::popper_content_transform_origin(&pseudo_layout, anchor, None),
+        popper_layout: None,
+    }
+}
+
+pub fn select_content_placement_popper(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    placement: popper::PopperContentPlacement,
+    arrow_size: Option<Px>,
+) -> SelectContentPlacement {
+    let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+    let wrapper_insets = popper_arrow::wrapper_insets(&layout, placement.arrow_protrusion);
+    let transform_origin = popper::popper_content_transform_origin(&layout, anchor, arrow_size);
+
+    SelectContentPlacement {
+        placed: layout.rect,
+        wrapper_insets,
+        side: layout.side,
+        transform_origin,
+        popper_layout: Some(layout),
     }
 }
 
@@ -972,6 +1023,101 @@ mod tests {
         );
         let expected = select_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn select_content_placement_item_aligned_has_no_wrapper_insets_and_origin_on_rect_edge() {
+        let window = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(100.0), Px(80.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+
+        let item_layout = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: popper::LayoutDirection::Ltr,
+            window,
+            trigger: anchor,
+            content: Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            value_node: Rect::new(
+                Point::new(Px(110.0), Px(84.0)),
+                Size::new(Px(60.0), Px(16.0)),
+            ),
+            selected_item_text: Rect::new(
+                Point::new(Px(20.0), Px(40.0)),
+                Size::new(Px(80.0), Px(16.0)),
+            ),
+            selected_item: Rect::new(
+                Point::new(Px(10.0), Px(36.0)),
+                Size::new(Px(140.0), Px(24.0)),
+            ),
+            viewport: Rect::new(
+                Point::new(Px(10.0), Px(30.0)),
+                Size::new(Px(160.0), Px(120.0)),
+            ),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            items_height: Px(240.0),
+        });
+
+        let placement = select_content_placement_item_aligned(anchor, item_layout);
+        assert_eq!(placement.wrapper_insets, Edges::all(Px(0.0)));
+        assert!(placement.popper_layout.is_none());
+
+        match placement.side {
+            Side::Bottom => assert_eq!(placement.transform_origin.y, placement.placed.origin.y),
+            Side::Top => {
+                assert_eq!(
+                    placement.transform_origin.y,
+                    Px(placement.placed.origin.y.0 + placement.placed.size.height.0)
+                )
+            }
+            Side::Left | Side::Right => {}
+        }
+    }
+
+    #[test]
+    fn select_content_placement_popper_exposes_layout_and_wrapper_insets_when_arrow_enabled() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(120.0), Px(40.0)),
+            Size::new(Px(80.0), Px(24.0)),
+        );
+        let desired = Size::new(Px(180.0), Px(120.0));
+
+        let (arrow_options, arrow_protrusion) =
+            popper::diamond_arrow_options(true, Px(12.0), Px(4.0));
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(6.0),
+        )
+        .with_align_offset(Px(0.0))
+        .with_arrow(arrow_options, arrow_protrusion);
+
+        let out =
+            select_content_placement_popper(outer, anchor, desired, placement, Some(Px(12.0)));
+        assert!(out.popper_layout.is_some());
+        assert_eq!(out.placed, out.popper_layout.unwrap().rect);
+        assert!(
+            out.wrapper_insets.top.0 > 0.0
+                || out.wrapper_insets.bottom.0 > 0.0
+                || out.wrapper_insets.left.0 > 0.0
+                || out.wrapper_insets.right.0 > 0.0
+        );
     }
 
     #[test]
