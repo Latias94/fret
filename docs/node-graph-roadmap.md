@@ -13,6 +13,7 @@ Authoritative contracts:
 Conformance:
 
 - Interaction checklist (manual script + invariants): `docs/node-graph-interaction-checklist.md`
+- XyFlow parity matrix (detailed feature map): `docs/node-graph-xyflow-parity.md`
 
 Upstream references (pinned locally):
 
@@ -55,7 +56,7 @@ Design constraints:
   - node selection + marquee,
   - node dragging, group dragging/resizing (where applicable),
   - edge connect/reconnect flows,
-  - multi-connection “bundle” interactions (Shift/Ctrl variants),
+  - multi-connection bundle interactions (Shift/Ctrl variants),
   - snaplines,
   - context menus + conversion picker/searcher flows (staged).
 - Derived internals separation:
@@ -79,66 +80,7 @@ Design constraints:
 
 ## Missing Pieces (Gap Analysis)
 
-This section lists “editor-grade” capabilities that we still need to reach XyFlow maturity and
-ShaderGraph-level workflows.
-
-### P0 gaps (block scaling the surface area)
-
-- Conformance harness for node graph interactions (like `docs/docking-arbitration-checklist.md`):
-  - connect/reconnect determinism,
-  - selection invariants,
-  - undo granularity (drag sessions commit once),
-  - modifier routing invariants (IME/shortcuts boundary).
-- Contract hardening around portal measurement injection ordering (frame-order hazards).
-- View-state persistence contract for multi-view graphs:
-  - stable view keys,
-  - what persists per-view vs per-asset.
-
-### P1 gaps (XyFlow-level editor usability parity)
-
-- Minimap / overview navigation polish (a11y, styling, edge cases).
-- Built-in canvas controls polish (icons, keybindings, a11y).
-- Auto-pan while connecting or dragging near canvas edges (configurable).
-- Better handle resolution policy:
-  - connection radius / strict vs loose mode tunables,
-  - deterministic tie-breakers when multiple handles are in range.
-- Selection UX parity:
-  - keyboard nudge,
-  - align/distribute,
-  - “frame selection / frame all”.
-- Clipboard UX:
-  - copy/paste selection as `GraphFragment`,
-  - deterministic paste offsets,
-  - cross-view paste.
-- Edge rendering parity:
-  - per-edge style overrides (interaction width, color, label),
-  - reroute nodes / edge splitting affordances.
-- Accessibility semantics baseline for the canvas and embedded controls.
-
-### P2 gaps (ShaderGraph / Blueprint readiness)
-
-- Blackboard/symbol workflows:
-  - variables as first-class, type-safe references,
-  - local vs graph-scoped symbol tables.
-- Subgraphs:
-  - explicit graph references + cycle safety,
-  - subgraph instance parameters.
-- Dynamic ports & concretization end-to-end (domain-driven):
-  - port add/remove flows with stable keys,
-  - validation + conversion insertion policies.
-- Domain toolchains:
-  - shader slot typing (vector/matrix/precision/color space),
-  - preview nodes (GPU-backed thumbnails),
-  - compile/validate pipelines with diagnostics and “quick fix” insertion.
-
-### P3 gaps (Large-graph performance & collaboration)
-
-- Large graph rendering:
-  - culling / incremental scene updates,
-  - cache invalidation strategy for derived geometry.
-- Collaboration readiness:
-  - deterministic diffs and patch sets,
-  - stable ordering and conflict handling.
+See `docs/node-graph-xyflow-parity.md` for the detailed parity and gap map (mechanism-first).
 
 ## Milestones and Exit Criteria
 
@@ -150,7 +92,7 @@ Exit criteria:
 - Portal command routing semantics locked (ADR 0135) and implemented consistently across editors.
 - View-state persistence contract decided (ADR 0135 open question resolved or deferred explicitly).
 
-### NG1 — Editor Usability Parity (P1)
+### NG1 — Editor Usability (P1)
 
 Exit criteria:
 
@@ -162,7 +104,7 @@ Exit criteria:
 
 Exit criteria:
 
-- Domain profile APIs proven by a “real” domain demo (shader-ish or blueprint-ish) without
+- Domain profile APIs proven by a "real" domain demo (shader-ish or blueprint-ish) without
   modifying core UI contracts.
 - Subgraph + symbol workflows implemented in headless substrate and surfaced in UI.
 
@@ -187,7 +129,7 @@ Legend:
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [x] Implement auto-pan during connect/drag near edges.
-- [ ] Add “drag handle tooltip/help” in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
+- [ ] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
 
 ### Medium-term
 
@@ -202,3 +144,4 @@ Legend:
 - [ ] Blackboard variables + typed symbol references (domain-ready).
 - [ ] Large-graph culling + incremental updates.
 - [ ] Deterministic graph diff/patch set for collaboration.
+
