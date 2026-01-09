@@ -46,6 +46,7 @@ Core crates live in `crates/` and must remain backend-agnostic:
 - `fret-app`: application runtime (models, effects, commands, scheduling).
 - `fret-ui`: UI runtime (tree/layout/hit-testing/focus/event routing) producing a backend-agnostic scene.
 - `fret-render`: renderer building blocks and text system implementation (currently wgpu-based).
+- `fret-fonts`: bundled default font bytes for wasm/bootstrap (fed to `Effect::TextAddFonts`).
 - `fret-platform`: portable platform I/O contracts (clipboard, file dialogs, external drop reading, open-url).
 - `fret`: facade crate (re-exports). It must not pull in backends by default.
 
@@ -53,12 +54,13 @@ Core crates live in `crates/` and must remain backend-agnostic:
 
 Backend crates also live in `crates/`, but are explicitly platform-/API-specific:
 
+- `fret-platform-desktop`: compatibility shim that re-exports `fret-platform-native`.
 - `fret-platform-native`: native (non-wasm) implementations of `fret-platform`.
 - `fret-platform-web`: wasm/browser implementations of `fret-platform` services.
 - `fret-runner-winit`: winit adapter responsible for translating winit window/input events into `fret-core::Event`
   and maintaining winit-specific per-window state (cursor, IME cursor area, etc).
-- `fret-runner-web`: browser adapter responsible for translating DOM events (`web-sys`) into `fret-core::Event`.
-  It may also expose web-only utilities required by apps (RAF scheduling, canvas wiring).
+- `fret-runner-web`: compatibility shim that re-exports `fret-platform-web`. A dedicated DOM adapter
+  (event translation, RAF scheduling, canvas wiring) may live here later.
 
 Notes:
 
