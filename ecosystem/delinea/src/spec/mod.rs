@@ -262,6 +262,9 @@ pub struct BarLayoutSpec {
     /// Gap between adjacent bar slots, expressed as a multiple of `bar_width`.
     ///
     /// Example: `0.3` means the gap is `0.3 * bar_width`.
+    ///
+    /// Negative values are allowed to overlap bars (ECharts `barGap`-like semantics):
+    /// `-1.0` means "full overlap" (all slots share the same center).
     #[cfg_attr(
         feature = "serde",
         serde(default, deserialize_with = "deserialize_ratio_opt")
