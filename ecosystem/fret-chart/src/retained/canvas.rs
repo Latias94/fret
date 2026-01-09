@@ -1,6 +1,7 @@
+use fret_core::time::Instant;
 use std::collections::BTreeMap;
 use std::ops::Range;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use delinea::FilterMode;
 use delinea::engine::EngineError;
