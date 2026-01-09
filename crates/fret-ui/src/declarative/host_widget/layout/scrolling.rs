@@ -2,7 +2,6 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 
-#[cfg(feature = "layout-engine-v2")]
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
 impl ElementHostWidget {
@@ -70,8 +69,8 @@ impl ElementHostWidget {
         let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
 
         // Avoid consuming deferred scroll requests during "probe" layout passes that use an
-        // effectively-unbounded available height (e.g. Stack/Pressable measuring with
-        // `Px(1.0e9)`). Those passes are not the final viewport constraints and would
+        // effectively-unbounded available space. Those passes are not the final viewport
+        // constraints and would
         // otherwise clear the request before the real layout happens.
         let is_probe_layout = crate::layout_probe::is_probe_layout_axis(axis, cx.available);
 
@@ -124,7 +123,6 @@ impl ElementHostWidget {
 
         match props.measure_mode {
             crate::element::VirtualListMeasureMode::Measured => {
-                #[cfg(feature = "layout-engine-v2")]
                 let item_constraints = LayoutConstraints::new(
                     LayoutSize::new(
                         match axis {
@@ -150,34 +148,7 @@ impl ElementHostWidget {
 
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-
-                    #[cfg(feature = "layout-engine-v2")]
                     let measured = cx.measure_in(child, item_constraints);
-
-                    #[cfg(not(feature = "layout-engine-v2"))]
-                    let measured = {
-                        let start = metrics.offset_for_index(idx);
-                        let origin = match axis {
-                            fret_core::Axis::Vertical => {
-                                let y = cx.bounds.origin.y.0 + start.0 - offset.0;
-                                fret_core::Point::new(cx.bounds.origin.x, Px(y))
-                            }
-                            fret_core::Axis::Horizontal => {
-                                let x = cx.bounds.origin.x.0 + start.0 - offset.0;
-                                fret_core::Point::new(Px(x), cx.bounds.origin.y)
-                            }
-                        };
-
-                        let measure_bounds = match axis {
-                            fret_core::Axis::Vertical => {
-                                Rect::new(origin, Size::new(size.width, Px(1.0e9)))
-                            }
-                            fret_core::Axis::Horizontal => {
-                                Rect::new(origin, Size::new(Px(1.0e9), size.height))
-                            }
-                        };
-                        cx.layout_in(child, measure_bounds)
-                    };
                     let measured_extent = match axis {
                         fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
                         fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
@@ -343,50 +314,25 @@ impl ElementHostWidget {
         props: crate::element::ScrollProps,
     ) -> Size {
         let mut max_child = Size::new(Px(0.0), Px(0.0));
-
-        #[cfg(feature = "layout-engine-v2")]
-        {
-            let child_constraints = LayoutConstraints::new(
-                LayoutSize::new(None, None),
-                LayoutSize::new(
-                    if props.axis.scroll_x() && props.probe_unbounded {
-                        AvailableSpace::MaxContent
-                    } else {
-                        AvailableSpace::Definite(cx.available.width)
-                    },
-                    if props.axis.scroll_y() && props.probe_unbounded {
-                        AvailableSpace::MaxContent
-                    } else {
-                        AvailableSpace::Definite(cx.available.height)
-                    },
-                ),
-            );
-            for &child in cx.children {
-                let child_size = cx.measure_in(child, child_constraints);
-                max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                max_child.height = Px(max_child.height.0.max(child_size.height.0));
-            }
-        }
-
-        #[cfg(not(feature = "layout-engine-v2"))]
-        {
-            let probe_w = if props.axis.scroll_x() && props.probe_unbounded {
-                Px(1.0e9)
-            } else {
-                cx.available.width
-            };
-            let probe_h = if props.axis.scroll_y() && props.probe_unbounded {
-                Px(1.0e9)
-            } else {
-                cx.available.height
-            };
-            let probe_bounds = Rect::new(cx.bounds.origin, Size::new(probe_w, probe_h));
-
-            for &child in cx.children {
-                let child_size = cx.layout_in(child, probe_bounds);
-                max_child.width = Px(max_child.width.0.max(child_size.width.0));
-                max_child.height = Px(max_child.height.0.max(child_size.height.0));
-            }
+        let child_constraints = LayoutConstraints::new(
+            LayoutSize::new(None, None),
+            LayoutSize::new(
+                if props.axis.scroll_x() && props.probe_unbounded {
+                    AvailableSpace::MaxContent
+                } else {
+                    AvailableSpace::Definite(cx.available.width)
+                },
+                if props.axis.scroll_y() && props.probe_unbounded {
+                    AvailableSpace::MaxContent
+                } else {
+                    AvailableSpace::Definite(cx.available.height)
+                },
+            ),
+        );
+        for &child in cx.children {
+            let child_size = cx.measure_in(child, child_constraints);
+            max_child.width = Px(max_child.width.0.max(child_size.width.0));
+            max_child.height = Px(max_child.height.0.max(child_size.height.0));
         }
 
         let desired = clamp_to_constraints(max_child, props.layout, cx.available);
@@ -408,8 +354,8 @@ impl ElementHostWidget {
         };
 
         // Avoid mutating the imperative handle during "probe" layout passes that use an
-        // effectively-unbounded available height (e.g. Stack/Pressable measuring with
-        // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
+        // effectively-unbounded available space, otherwise scroll position can be clamped to zero
+        // prematurely.
         let is_probe_layout = crate::layout_probe::is_probe_layout_any_axis(cx.available);
         let external_handle = props.scroll_handle.clone();
         let offset = crate::elements::with_element_state(
