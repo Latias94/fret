@@ -19,20 +19,24 @@ Key upstream concepts:
 
 Fret does not have DOM animation events. Instead, Presence is modeled as:
 
-- Headless state machine: `ecosystem/fret-ui-kit/src/headless/presence.rs` (`FadePresence`)
-- Runtime driver: `ecosystem/fret-ui-kit/src/declarative/presence.rs` (frame clock + redraw scheduling)
-- Facade surface: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+- Headless transition timeline: `ecosystem/fret-ui-kit/src/headless/transition.rs` (`TransitionTimeline`)
+  - deterministic `present` vs unmounted behavior
+  - normalized `progress` value (`0..1`) with configurable easing
+- Runtime driver: `ecosystem/fret-ui-kit/src/declarative/transition.rs` (frame clock + redraw scheduling)
+- Presence helpers (fade / scale+fade mapping): `ecosystem/fret-ui-kit/src/declarative/presence.rs`
+- Facade surfaces:
+  - `ecosystem/fret-ui-kit/src/primitives/presence.rs` (Radix-named presence helpers)
+  - `ecosystem/fret-ui-kit/src/primitives/transition.rs` (generic transition facade)
 
 ## Current parity notes
 
 - Pass: Presence exposes the core outcome: `present` vs unmounted, with a stable transition window.
 - Pass: While animating, the driver holds a continuous frames lease and requests redraws.
-- Intentional difference: Fret currently implements a deterministic fade-only presence model
-  (`opacity` progress), not CSS animation introspection.
+- Intentional difference: Fret does not inspect CSS `animation-name` nor listen to animation events.
+  Instead it exposes a deterministic transition progress value and lets component recipes map that
+  progress into opacity/scale/transforms (see `docs/audits/shadcn-motion.md`).
 
 ## Follow-ups (recommended)
 
-- Add additional presence drivers (e.g. scale/slide) if shadcn motion recipes need more than `opacity`.
-- Consider a generic "transition timeline" headless helper if multiple components converge on the
-  same easing/duration policies.
-
+- Consider adding additional mapping helpers (e.g. slide, clip) if multiple components converge on
+  the same progress->transform policies.

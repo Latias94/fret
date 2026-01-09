@@ -68,5 +68,6 @@ pub mod toolbar;
 pub mod tooltip;
 pub mod tooltip_delay_group;
 pub mod tooltip_provider;
+pub mod transition;
 pub mod trigger_a11y;
 pub mod visually_hidden;
