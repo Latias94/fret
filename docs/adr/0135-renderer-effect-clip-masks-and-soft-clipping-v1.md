@@ -1,6 +1,6 @@
 # ADR 0135: Renderer Effect Clip Masks and Soft Clipping (v1)
 
-Status: Proposed
+Status: Accepted (v1 substrate landed)
 
 ## Context
 
@@ -164,7 +164,14 @@ This is a renderer-internal refactor and does not change `SceneOp`.
 ## Implementation Status (Branch-local)
 
 - `FilterContent` composite binds the effect-boundary clip stack uniform so rounded clips do not leak on composite.
-- A dedicated mask texture substrate (R8 coverage) for effect passes is not implemented yet.
+- `ClipMaskPass` can generate `Mask0` (full-resolution `R8Unorm` coverage) from the effective clip stack.
+- `ScaleNearest` and `CompositePremul` can sample `Mask0` (`mask_target`) to gate writes without per-pixel clip-stack iteration.
+- `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.
+
+Remaining v1 follow-ups:
+
+- Consider downsampled mask tiers for blur/pixelate pipelines.
+- Share SDF + coverage helpers across quad rendering and clip-mask generation (ADR 0030).
 
 ## References
 

@@ -202,8 +202,7 @@ This section is intentionally lightweight and should be updated as work lands.
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
-- **ADRs (Proposed / pending implementation):**
-  - `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md` (mask-aware effects / rounded clip integration)
+  - `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md` (v1 clip mask substrate)
 - **Implementation status (as of now):**
   - M0: In progress (landed in `refactor/renderer-v3`):
     - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
@@ -221,7 +220,8 @@ This section is intentionally lightweight and should be updated as work lands.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
-    - Next: rounded clip / soft mask integration for effect passes (ADR 0135).
+    - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by effect writeback/composite passes.
+    - Next: expand mask sampling to more passes and add downsampled mask tiers (ADR 0135 follow-ups).
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:
     - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
