@@ -94,6 +94,14 @@ pub trait PortalNumberEditSpec: Clone + 'static {
             .map_err(|_| Arc::from("Invalid number"))
     }
 
+    fn clamp_range(&self, _graph: &Graph, _node: NodeId) -> Option<(f64, f64)> {
+        None
+    }
+
+    fn round_value(&self, _graph: &Graph, _node: NodeId, value: f64) -> f64 {
+        value
+    }
+
     fn submit_value(
         &self,
         graph: &Graph,
@@ -106,26 +114,49 @@ pub trait PortalNumberEditSpec: Clone + 'static {
         false
     }
 
-    fn drag_value_with_mode(
+    fn drag_sensitivity_per_px(
         &self,
         _graph: &Graph,
         _node: NodeId,
-        _start_value: f64,
-        _dx_px: f32,
         _mode: PortalTextStepMode,
     ) -> Option<f64> {
         None
     }
 
+    fn drag_value_with_mode(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        start_value: f64,
+        dx_px: f32,
+        mode: PortalTextStepMode,
+    ) -> Option<f64> {
+        let sensitivity = self.drag_sensitivity_per_px(graph, node, mode)?;
+        let next = start_value + dx_px as f64 * sensitivity;
+        Some(self.normalize_value(graph, node, next))
+    }
+
+    fn step_size(&self, _graph: &Graph, _node: NodeId, _mode: PortalTextStepMode) -> Option<f64> {
+        None
+    }
+
     fn step_value_with_mode(
         &self,
-        _graph: &Graph,
-        _node: NodeId,
-        _value: f64,
-        _delta: i32,
-        _mode: PortalTextStepMode,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
+        delta: i32,
+        mode: PortalTextStepMode,
     ) -> Option<f64> {
-        None
+        let step = self.step_size(graph, node, mode)?;
+        Some(self.normalize_value(graph, node, value + step * delta as f64))
+    }
+
+    fn normalize_value(&self, graph: &Graph, node: NodeId, mut value: f64) -> f64 {
+        if let Some((min, max)) = self.clamp_range(graph, node) {
+            value = value.clamp(min.min(max), max.max(min));
+        }
+        self.round_value(graph, node, value)
     }
 }
 

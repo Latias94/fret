@@ -758,44 +758,38 @@ impl PortalNumberEditSpec for DemoFloatPortalSpec {
         self.initial_value(graph, node).is_some()
     }
 
-    fn drag_value_with_mode(
+    fn drag_sensitivity_per_px(
         &self,
         graph: &Graph,
         node: NodeId,
-        start_value: f64,
-        dx_px: f32,
         mode: fret_node::ui::PortalTextStepMode,
     ) -> Option<f64> {
         if self.initial_value(graph, node).is_none() {
             return None;
         }
 
-        let per_px = match mode {
+        Some(match mode {
             fret_node::ui::PortalTextStepMode::Fine => 0.001,
             fret_node::ui::PortalTextStepMode::Normal => 0.01,
             fret_node::ui::PortalTextStepMode::Coarse => 0.1,
-        };
-        Some(start_value + dx_px as f64 * per_px)
+        })
     }
 
-    fn step_value_with_mode(
+    fn step_size(
         &self,
         graph: &Graph,
         node: NodeId,
-        value: f64,
-        delta: i32,
         mode: fret_node::ui::PortalTextStepMode,
     ) -> Option<f64> {
         if self.initial_value(graph, node).is_none() {
             return None;
         }
 
-        let step = match mode {
+        Some(match mode {
             fret_node::ui::PortalTextStepMode::Fine => 0.025,
             fret_node::ui::PortalTextStepMode::Normal => 0.25,
             fret_node::ui::PortalTextStepMode::Coarse => 2.5,
-        };
-        Some(value + step * delta as f64)
+        })
     }
 }
 
