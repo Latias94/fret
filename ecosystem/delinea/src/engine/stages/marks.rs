@@ -27,6 +27,8 @@ use crate::transform::stack_base_at_index;
 use crate::view::ViewState;
 use std::collections::BTreeMap;
 
+use super::DataViewStage;
+
 #[derive(Debug, Clone)]
 struct StackBoundsBuild {
     stack: StackId,
@@ -157,6 +159,18 @@ impl MarksStage {
         self.last_view_rev = view.revision;
     }
 
+    pub fn request_data_views(
+        &self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        view: &ViewState,
+        data_view: &mut DataViewStage,
+    ) {
+        for series_id in &model.series_order {
+            data_view.request_x_filter_for_series(model, datasets, view, *series_id);
+        }
+    }
+
     pub fn reset(&mut self) {
         self.series_index = 0;
         self.cursor = MinMaxPerPixelCursor::default();
@@ -189,7 +203,7 @@ impl MarksStage {
         datasets: &DatasetStore,
         state: &ChartState,
         view: &ViewState,
-        selection_stage: &crate::engine::stages::DataViewStage,
+        selection_stage: &DataViewStage,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,

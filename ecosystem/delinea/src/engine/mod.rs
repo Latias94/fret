@@ -594,14 +594,12 @@ impl ChartEngine {
         }
 
         self.data_view_stage.begin_frame();
-        for series_id in &self.model.series_order {
-            self.data_view_stage.request_x_filter_for_series(
-                &self.model,
-                &self.datasets,
-                &self.view,
-                *series_id,
-            );
-        }
+        self.marks_stage.request_data_views(
+            &self.model,
+            &self.datasets,
+            &self.view,
+            &mut self.data_view_stage,
+        );
         self.data_view_stage.prepare_requests(&self.datasets);
         let selection_done = self.data_view_stage.step(&self.datasets, &mut budget);
 
