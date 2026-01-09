@@ -17,12 +17,12 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Last updated: 2026-01-09
 - ADR count (numbered): 139
 
-- Aligned: 42
-- Aligned (with known gaps): 7
+- Aligned: 77
+- Aligned (with known gaps): 24
 - N/A (superseded): 1
-- Not audited: 71
+- Not audited: 15
 - Not implemented: 4
-- Partially aligned: 14
+- Partially aligned: 18
 
 ## Matrix
 
@@ -157,7 +157,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0126-streaming-image-update-effects-and-metadata-v1.md`](0126-streaming-image-update-effects-and-metadata-v1.md) | Proposed | Not audited |  |
 | [`0127-frame-capture-options-and-determinism-v1.md`](0127-frame-capture-options-and-determinism-v1.md) | Proposed | Not audited |  |
 | [`0128-delinea-headless-chart-engine.md`](0128-delinea-headless-chart-engine.md) | Accepted | Aligned | Headless chart engine lives as a dedicated ecosystem crate `ecosystem/delinea` (crate name `delinea`) and is renderer-agnostic (depends on `fret-core` only; no `wgpu`/`winit`/`fret-render` deps): `ecosystem/delinea/Cargo.toml`. Stable IDs and revisions exist as explicit newtypes (`SeriesId`, `AxisId`, `DatasetId`, `FieldId`, `Revision`): `ecosystem/delinea/src/ids.rs`. The engine exposes dataset/encode concepts via `DatasetSpec.fields` and `SeriesEncode` mapping channels to fields: `ecosystem/delinea/src/spec/mod.rs` (and validated model layer under `ecosystem/delinea/src/engine/model/`). Incremental/progressive work is modeled by a fixed `WorkBudget` with point/label/mark budgets: `ecosystem/delinea/src/scheduler/budget.rs`. Output is a stable `MarkTree` backed by an arena with a monotonic `revision` bump (`MarkTree::clear`): `ecosystem/delinea/src/marks/mod.rs`. UI bridge exists as `ecosystem/fret-chart` (depends on `delinea` + `fret-ui` retained bridge) and translates marks into portable scene primitives (`SceneOp::{Path,Quad,Text}` with `PathCommand` generation) inside a retained canvas: `ecosystem/fret-chart/src/retained/canvas.rs`. |
-| [`0129-delinea-transform-pipeline-and-datazoom-semantics.md`](0129-delinea-transform-pipeline-and-datazoom-semantics.md) | Proposed | Not audited |  |
+| [`0129-delinea-transform-pipeline-and-datazoom-semantics.md`](0129-delinea-transform-pipeline-and-datazoom-semantics.md) | Proposed | Partially aligned | Transform pipeline pieces exist and are revision-driven, but not yet a general ECharts-class graph. DataZoom is modeled as a first-class spec/model node (`DataZoomXSpec { id, axis, filter_mode }` + `FilterMode::{Filter,None}`): `ecosystem/delinea/src/spec/mod.rs`, validated as X-only and **one per axis** (`data_zoom_x_by_axis` rejects duplicates): `ecosystem/delinea/src/engine/model/mod.rs`. Runtime state is axis-scoped (`ChartState.data_zoom_x: BTreeMap<AxisId, DataZoomXState>`) and mutated through explicit actions (`SetDataWindowX*`, `SetDataWindowXFilterMode`) with a monotonic `state.revision` bump: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/action/mod.rs`. The DataZoom transform is an explicit node (`DataZoomXNode`) that computes an X policy and (when `FilterMode::Filter`) a `RowSelection::Range` using monotonic-X heuristics and a linear fallback: `ecosystem/delinea/src/transform/data_zoom_x.rs`, `ecosystem/delinea/src/transform/x_slice.rs`, `ecosystem/delinea/src/engine/window_policy.rs`. View rebuild is revision-based and consumes the transform to compute per-series view selection/policy (`ViewState::{sync_inputs,rebuild}`): `ecosystem/delinea/src/view/mod.rs`, with regression tests covering filter-mode behavior: `ecosystem/delinea/src/engine/tests.rs`. Gaps vs ADR: there is no generalized transform graph with per-node cached outputs/derived columns yet (beyond the X window selection policy), and no multi-dimension/multi-zoom ordering substrate (X-before-Y) is implemented yet. |
 | [`0130-delinea-axis-scales-and-coordinate-mapping.md`](0130-delinea-axis-scales-and-coordinate-mapping.md) | Proposed | Not audited |  |
 | [`0131-delinea-marks-identity-and-renderer-contract.md`](0131-delinea-marks-identity-and-renderer-contract.md) | Proposed | Not audited |  |
 | [`0132-delinea-large-data-and-progressive-rendering.md`](0132-delinea-large-data-and-progressive-rendering.md) | Proposed | Not audited |  |
