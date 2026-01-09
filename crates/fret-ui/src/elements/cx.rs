@@ -92,6 +92,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.focused_element == Some(element)
     }
 
+    pub fn has_active_text_selection(&self) -> bool {
+        self.window_state.active_text_selection().is_some()
+    }
+
+    pub fn has_active_text_selection_in_root(&self, root: GlobalElementId) -> bool {
+        self.window_state
+            .active_text_selection()
+            .is_some_and(|selection| selection.root == root)
+    }
+
     pub(crate) fn sync_focused_element_from_focused_node(&mut self, focused: Option<NodeId>) {
         self.window_state.focused_element =
             focused.and_then(|node| self.window_state.element_for_node(node));

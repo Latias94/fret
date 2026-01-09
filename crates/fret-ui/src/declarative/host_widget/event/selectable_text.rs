@@ -1,6 +1,40 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 
+fn sync_active_text_selection<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: crate::elements::GlobalElementId,
+) {
+    let (anchor, caret) = crate::elements::with_element_state(
+        app,
+        window,
+        element,
+        crate::element::SelectableTextState::default,
+        |state| (state.selection_anchor, state.caret),
+    );
+
+    crate::elements::with_window_state(app, window, |window_state| {
+        if anchor != caret {
+            let Some(entry) = window_state.node_entry(element) else {
+                return;
+            };
+            window_state.set_active_text_selection(Some(crate::elements::ActiveTextSelection {
+                root: entry.root,
+                element,
+            }));
+            return;
+        }
+
+        if window_state
+            .active_text_selection()
+            .is_some_and(|selection| selection.element == element)
+        {
+            window_state.set_active_text_selection(None);
+        }
+    });
+}
+
 pub(super) fn handle_selectable_text<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
@@ -99,6 +133,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 cx.request_redraw();
             }
 
+            sync_active_text_selection(&mut *cx.app, window, this.element);
             cx.stop_propagation();
         }
         Event::SetTextSelection { anchor, focus } => {
@@ -116,6 +151,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             );
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
+            sync_active_text_selection(&mut *cx.app, window, this.element);
             cx.stop_propagation();
         }
         Event::Pointer(fret_core::PointerEvent::Down {
@@ -254,6 +290,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
+            sync_active_text_selection(&mut *cx.app, window, this.element);
             cx.stop_propagation();
         }
         Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
@@ -305,6 +342,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
+                sync_active_text_selection(&mut *cx.app, window, this.element);
             }
 
             cx.stop_propagation();
@@ -328,6 +366,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             );
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
+            sync_active_text_selection(&mut *cx.app, window, this.element);
             cx.stop_propagation();
         }
         _ => {}

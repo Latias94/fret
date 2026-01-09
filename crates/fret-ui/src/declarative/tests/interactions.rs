@@ -545,6 +545,78 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_sets_active_text_selection() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = fret_core::RichText::new("hello world", Arc::<[fret_core::TextRun]>::from([]));
+    let root_name = "selectable-text-active-text-selection";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let record =
+        crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+            .expect("selectable record");
+    let element = record.element;
+
+    let pos = Point::new(Px(5.0), Px(5.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let active =
+        crate::elements::with_window_state(&mut app, window, |st| st.active_text_selection());
+    assert_eq!(
+        active,
+        Some(crate::elements::ActiveTextSelection {
+            root: crate::elements::global_root(window, root_name),
+            element,
+        }),
+        "expected active text selection to be tracked while selection is non-empty"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::SetTextSelection {
+            anchor: 0,
+            focus: 0,
+        },
+    );
+
+    let active =
+        crate::elements::with_window_state(&mut app, window, |st| st.active_text_selection());
+    assert_eq!(
+        active, None,
+        "expected active text selection to clear when selection is collapsed"
+    );
+}
+
+#[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

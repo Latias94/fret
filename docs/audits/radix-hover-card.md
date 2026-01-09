@@ -31,5 +31,6 @@ Key upstream concepts:
   (`open` / `defaultOpen`) and is exposed by the shadcn recipe via `HoverCard::{open, default_open}`.
 - Pass: Close delay is suppressed while the pointer is down on the hover card content (Radix
   `isPointerDownOnContentRef` outcome).
-- Gap: Text selection containment (`hasSelectionRef`) is not modeled yet; it depends on a
-  first-class runtime text selection contract.
+- Pass: Text selection containment (`hasSelectionRef`) is modeled by tracking the active non-empty
+  text selection at the window runtime level and suppressing close while a selection exists in the
+  hover card overlay root.

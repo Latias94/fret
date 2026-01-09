@@ -60,10 +60,17 @@ pub struct WindowElementState {
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
     pub(super) focused_element: Option<GlobalElementId>,
+    pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     continuous_frames: Arc<AtomicUsize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ActiveTextSelection {
+    pub root: GlobalElementId,
+    pub element: GlobalElementId,
 }
 
 #[derive(Debug)]
@@ -106,6 +113,14 @@ impl WindowElementState {
         self.focused_element = None;
     }
 
+    pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
+        self.active_text_selection
+    }
+
+    pub(crate) fn set_active_text_selection(&mut self, selection: Option<ActiveTextSelection>) {
+        self.active_text_selection = selection;
+    }
+
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
         self.nodes.get(&id).copied()
     }
@@ -122,6 +137,11 @@ impl WindowElementState {
 
     pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
         self.nodes.retain(f);
+        if let Some(selection) = self.active_text_selection
+            && !self.nodes.contains_key(&selection.element)
+        {
+            self.active_text_selection = None;
+        }
     }
 
     pub(crate) fn set_root_bounds(&mut self, root: GlobalElementId, bounds: Rect) {
