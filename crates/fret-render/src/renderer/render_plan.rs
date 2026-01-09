@@ -395,7 +395,7 @@ impl RenderPlan {
 
                 let mask_target = if let Some(uniform_index) = mask_uniform_index
                     && let Some(mask_target) =
-                        choose_clip_mask_target(viewport_size, intermediate_budget_bytes)
+                        choose_clip_mask_target(viewport_size, intermediate_budget_bytes, quality)
                 {
                     let mask_size = mask_target_size(viewport_size, mask_target);
                     let mask_scissor = map_scissor_to_size(Some(scissor), viewport_size, mask_size);
@@ -635,6 +635,7 @@ impl RenderPlan {
                                     choose_clip_mask_target(
                                         viewport_size,
                                         intermediate_budget_bytes,
+                                        scope.quality,
                                     ) {
                                     let mask_size = mask_target_size(viewport_size, mask_target);
                                     passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
@@ -786,26 +787,33 @@ fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
-fn choose_clip_mask_target(viewport_size: (u32, u32), budget_bytes: u64) -> Option<PlanTarget> {
+fn choose_clip_mask_target(
+    viewport_size: (u32, u32),
+    budget_bytes: u64,
+    quality: fret_core::EffectQuality,
+) -> Option<PlanTarget> {
     if budget_bytes == 0 {
         return None;
     }
 
-    let full = estimate_texture_bytes(viewport_size, wgpu::TextureFormat::R8Unorm, 1);
-    if full <= budget_bytes {
-        return Some(PlanTarget::Mask0);
-    }
+    let desired = match quality {
+        fret_core::EffectQuality::High => PlanTarget::Mask0,
+        fret_core::EffectQuality::Medium => PlanTarget::Mask1,
+        fret_core::EffectQuality::Low => PlanTarget::Mask2,
+        fret_core::EffectQuality::Auto => PlanTarget::Mask0,
+    };
 
-    let half_size = downsampled_size(viewport_size, 2);
-    let half = estimate_texture_bytes(half_size, wgpu::TextureFormat::R8Unorm, 1);
-    if half <= budget_bytes {
-        return Some(PlanTarget::Mask1);
-    }
-
-    let quarter_size = downsampled_size(viewport_size, 4);
-    let quarter = estimate_texture_bytes(quarter_size, wgpu::TextureFormat::R8Unorm, 1);
-    if quarter <= budget_bytes {
-        return Some(PlanTarget::Mask2);
+    for candidate in match desired {
+        PlanTarget::Mask0 => [PlanTarget::Mask0, PlanTarget::Mask1, PlanTarget::Mask2].as_slice(),
+        PlanTarget::Mask1 => [PlanTarget::Mask1, PlanTarget::Mask2].as_slice(),
+        PlanTarget::Mask2 => [PlanTarget::Mask2].as_slice(),
+        _ => unreachable!("desired mask tier must be a mask PlanTarget"),
+    } {
+        let size = mask_target_size(viewport_size, *candidate);
+        let bytes = estimate_texture_bytes(size, wgpu::TextureFormat::R8Unorm, 1);
+        if bytes <= budget_bytes {
+            return Some(*candidate);
+        }
     }
 
     None
@@ -1922,30 +1930,41 @@ mod tests {
         let half_budget = estimate_texture_bytes(half_size, wgpu::TextureFormat::R8Unorm, 1);
         let quarter_budget = estimate_texture_bytes(quarter_size, wgpu::TextureFormat::R8Unorm, 1);
 
-        let mut encoding = SceneEncoding::default();
-        encoding.effect_markers = vec![
-            EffectMarker {
-                draw_ix: 0,
-                kind: EffectMarkerKind::Push {
-                    scissor,
-                    uniform_index: 0,
-                    mode: fret_core::EffectMode::FilterContent,
-                    chain: fret_core::EffectChain::EMPTY,
-                    quality: fret_core::EffectQuality::Auto,
+        let make_encoding = |quality: fret_core::EffectQuality| {
+            let mut encoding = SceneEncoding::default();
+            encoding.effect_markers = vec![
+                EffectMarker {
+                    draw_ix: 0,
+                    kind: EffectMarkerKind::Push {
+                        scissor,
+                        uniform_index: 0,
+                        mode: fret_core::EffectMode::FilterContent,
+                        chain: fret_core::EffectChain::EMPTY,
+                        quality,
+                    },
                 },
-            },
-            EffectMarker {
-                draw_ix: 0,
-                kind: EffectMarkerKind::Pop,
-            },
-        ];
+                EffectMarker {
+                    draw_ix: 0,
+                    kind: EffectMarkerKind::Pop,
+                },
+            ];
+            encoding
+        };
 
-        for (budget, expected_mask_target) in [
-            (half_budget, PlanTarget::Mask1),
-            (quarter_budget, PlanTarget::Mask2),
+        for (budget, quality, expected_mask_target) in [
+            (
+                half_budget,
+                fret_core::EffectQuality::Auto,
+                PlanTarget::Mask1,
+            ),
+            (
+                quarter_budget,
+                fret_core::EffectQuality::Auto,
+                PlanTarget::Mask2,
+            ),
         ] {
             let plan = RenderPlan::compile_for_scene(
-                &encoding,
+                &make_encoding(quality),
                 viewport_size,
                 wgpu::TextureFormat::Bgra8UnormSrgb,
                 wgpu::Color::TRANSPARENT,
