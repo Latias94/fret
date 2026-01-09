@@ -752,7 +752,7 @@ fn append_scissored_blur_in_place_two_scratch(
     let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
     let blur_size = downsampled_size(full_size, downsample_scale);
 
-    let down_scissor = map_scissor_to_size(Some(scissor), full_size, blur_size);
+    let down_scissor = map_scissor_downsample_nearest(Some(scissor), downsample_scale, blur_size);
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
         src: srcdst,
         dst: scratch_a,
@@ -765,7 +765,7 @@ fn append_scissored_blur_in_place_two_scratch(
         load: wgpu::LoadOp::Clear(clear),
     }));
 
-    let blur_scissor = map_scissor_to_size(Some(scissor), full_size, blur_size);
+    let blur_scissor = down_scissor;
     passes.push(RenderPlanPass::Blur(BlurPass {
         src: scratch_a,
         dst: scratch_b,
@@ -926,7 +926,7 @@ fn append_pixelate_in_place_single_scratch(
     }
 
     let down_size = downsampled_size(full_size, scale);
-    let down_scissor = map_scissor_to_size(scissor, full_size, down_size);
+    let down_scissor = map_scissor_downsample_nearest(scissor, scale, down_size);
     if scissor.is_some() && down_scissor.is_none() {
         return;
     }
@@ -1088,6 +1088,50 @@ fn map_scissor_to_size(
         y: sy0 as u32,
         w: (sx1 - sx0) as u32,
         h: (sy1 - sy0) as u32,
+    })
+}
+
+fn map_scissor_downsample_nearest(
+    scissor_in_full: Option<ScissorRect>,
+    scale: u32,
+    dst_size: (u32, u32),
+) -> Option<ScissorRect> {
+    let scissor = scissor_in_full?;
+    if scissor.w == 0 || scissor.h == 0 {
+        return None;
+    }
+
+    let scale = scale.max(1);
+    let dst_w = dst_size.0;
+    let dst_h = dst_size.1;
+    if dst_w == 0 || dst_h == 0 {
+        return None;
+    }
+
+    let x0 = scissor.x;
+    let y0 = scissor.y;
+    let x1 = x0.saturating_add(scissor.w);
+    let y1 = y0.saturating_add(scissor.h);
+
+    let sx0 = x0 / scale;
+    let sy0 = y0 / scale;
+    let sx1 = x1.div_ceil(scale);
+    let sy1 = y1.div_ceil(scale);
+
+    let sx0 = sx0.min(dst_w);
+    let sy0 = sy0.min(dst_h);
+    let sx1 = sx1.min(dst_w);
+    let sy1 = sy1.min(dst_h);
+
+    if sx1 <= sx0 || sy1 <= sy0 {
+        return None;
+    }
+
+    Some(ScissorRect {
+        x: sx0,
+        y: sy0,
+        w: sx1 - sx0,
+        h: sy1 - sy0,
     })
 }
 
@@ -1409,7 +1453,7 @@ fn append_postprocess(
                 )
             };
 
-            let down_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
+            let down_scissor = map_scissor_downsample_nearest(scissor, downsample_scale, blur_size);
             push_scale_nearest(
                 plan,
                 PlanTarget::Intermediate0,
@@ -1422,7 +1466,7 @@ fn append_postprocess(
                 wgpu::LoadOp::Clear(clear),
             );
 
-            let blur_scissor = map_scissor_to_size(scissor, viewport_size, blur_size);
+            let blur_scissor = down_scissor;
             push_blur(
                 plan,
                 blur_src,
@@ -1903,6 +1947,30 @@ mod tests {
                 y: 10,
                 w: 50,
                 h: 50
+            })
+        );
+    }
+
+    #[test]
+    fn downsample_nearest_scissor_mapping_matches_integer_division_for_non_divisible_viewport() {
+        let full_size = (1654, 827);
+        let scale = 8;
+        let scissor = ScissorRect {
+            x: 567,
+            y: 24,
+            w: 500,
+            h: 700,
+        };
+
+        let down_size = downsampled_size(full_size, scale);
+        assert_eq!(down_size, (207, 104));
+        assert_eq!(
+            map_scissor_downsample_nearest(Some(scissor), scale, down_size),
+            Some(ScissorRect {
+                x: 70,
+                y: 3,
+                w: 64,
+                h: 88
             })
         );
     }
