@@ -21,9 +21,12 @@ Fret models Radix tooltip outcomes by composing:
 
 - Delay group state machine: `ecosystem/fret-ui-kit/src/headless/tooltip_delay_group.rs`
 - Provider scoping: `ecosystem/fret-ui-kit/src/tooltip_provider.rs`
+- Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
+- Pointer “safe hover” corridor math: `ecosystem/fret-ui-kit/src/headless/safe_hover.rs`
 - Placement: `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - Portal rendering: per-window overlay roots via `ecosystem/fret-ui-kit/src/window_overlays/*`
 - Radix-named facade: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
+- shadcn recipe wiring (reference implementation): `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 
 ## Current parity notes
 
@@ -33,4 +36,21 @@ Fret models Radix tooltip outcomes by composing:
 - Pass: Controlled/uncontrolled open modeling is available via
   `primitives::tooltip::tooltip_use_open_model(...)` (backed by the shared controllable-state
   substrate).
+- Pass: Hover open/close and blur-close behavior are modeled via a reusable primitives helper:
+  `primitives::tooltip::tooltip_update_interaction(...)` (built on `HoverIntentState` +
+  provider delay-group policy).
+- Pass: Hoverable-content grace behavior (`disableHoverableContent` outcome) is modeled via a
+  deterministic safe-hover corridor between trigger and content, wired via:
+  - `primitives::tooltip::tooltip_last_pointer_model(...)`
+  - `primitives::tooltip::tooltip_install_pointer_move_tracker(...)`
+  - `primitives::tooltip::tooltip_update_interaction(...)`
+  (shadcn tooltip uses this wiring as a reference recipe).
+- Pass: Opening a tooltip closes other tooltips in the same provider scope (Radix `TOOLTIP_OPEN`
+  broadcast outcome), implemented via `tooltip_provider::note_opened_tooltip(...)` and
+  `primitives::tooltip::tooltip_update_interaction(...)`.
 
+## Follow-ups (recommended)
+
+- Consider tightening parity with the upstream trigger event model (open-on-pointermove gating,
+  pointer-in-transit suppression, close-on-pointerdown/click) if strict behavioral matching becomes
+  a goal outside of the current shadcn recipes.

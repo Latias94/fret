@@ -21,4 +21,4 @@ pub(crate) use access::{
     update_hovered_hover_region, update_hovered_pressable, with_window_state,
 };
 pub(crate) use queries::{record_bounds_for_element, record_visual_bounds_for_element};
-pub(crate) use runtime::NodeEntry;
+pub(crate) use runtime::{ActiveTextSelection, NodeEntry};

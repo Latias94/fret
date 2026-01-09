@@ -297,6 +297,10 @@ impl HoverCard {
             let hovered =
                 radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused);
 
+            let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
+            let overlay_root_id = fret_ui::elements::global_root(cx.window, &overlay_root_name);
+            let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
+
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
 
             #[derive(Debug, Default, Clone, Copy)]
@@ -364,6 +368,7 @@ impl HoverCard {
                         signal_active
                             || pointer_down_on_content_now
                             || st.close_suppressed_after_pointer_down
+                            || has_text_selection
                             || !st.saw_active_since_open
                     } else {
                         signal_active || pointer_down_on_content_now
@@ -412,8 +417,6 @@ impl HoverCard {
                 }
                 return out;
             }
-
-            let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -1410,5 +1413,200 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
         let is_open = app.models().read(&open, |v| *v).expect("open");
         assert!(!is_open, "expected hover card to close after leave edge");
+    }
+
+    #[test]
+    fn hover_card_does_not_close_while_text_selection_active() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let selectable_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      frame: u64| {
+            let content_id_out = content_id.clone();
+            let selectable_id_out = selectable_id.clone();
+            let open = open.clone();
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "hover-card-text-selection-guard",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, _id| {
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let rich = fret_core::RichText::new(
+                        "hello world",
+                        Arc::<[fret_core::TextRun]>::from([]),
+                    );
+
+                    let content = cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                HoverCardContent::new(vec![{
+                                    let selectable = cx.selectable_text(rich.clone());
+                                    selectable_id_out.set(Some(selectable.id));
+                                    selectable
+                                }])
+                                .into_element(cx),
+                            ]
+                        },
+                    );
+                    content_id_out.set(Some(content.id));
+
+                    vec![
+                        HoverCard::new(trigger, content)
+                            .open(Some(open))
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(120.0)))
+                                    .h_px(MetricRef::Px(Px(40.0))),
+                            )
+                            .window_margin(Px(0.0))
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        };
+
+        // Frame 1: mount trigger and establish element/node mappings.
+        render(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Hover trigger to open (open_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: open model should flip to true.
+        render(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(is_open, "expected hover card to open on hover");
+
+        let selectable_element = selectable_id.get().expect("selectable element id");
+        let selectable_node =
+            fret_ui::elements::node_for_element(&mut app, window, selectable_element)
+                .expect("selectable node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let selectable_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == selectable_node)
+            .map(|n| n.bounds)
+            .expect("selectable bounds");
+
+        // Select text (double click selects the first word), then leave the hover card.
+        let select_pos = Point::new(
+            Px(selectable_bounds.origin.x.0 + 1.0),
+            Px(selectable_bounds.origin.y.0 + 1.0),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: select_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let outside = Point::new(Px(400.0), Px(400.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: outside,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 3/4: allow leave to propagate; selection should keep the hover card open.
+        render(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render(&mut ui, &mut app, &mut services, 4);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(
+            is_open,
+            "expected hover card to remain open while a text selection is active"
+        );
+
+        // Collapse selection; the hover card should close on the next frame.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::SetTextSelection {
+                anchor: 0,
+                focus: 0,
+            },
+        );
+        render(&mut ui, &mut app, &mut services, 5);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let is_open = app.models().read(&open, |v| *v).expect("open");
+        assert!(
+            !is_open,
+            "expected hover card to close after selection is cleared"
+        );
+
+        // Keep IDs live to avoid surprising drop-order side effects in future refactors.
+        let _ = content_id.get().expect("content element id");
     }
 }
