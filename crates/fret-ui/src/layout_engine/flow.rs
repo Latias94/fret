@@ -383,6 +383,7 @@ fn passthrough_wrapper_child<H: UiHost>(
     match instance {
         ElementInstance::InteractivityGate(gate) if gate.present => Some(child),
         ElementInstance::Container(_)
+        | ElementInstance::Anchored(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)
         | ElementInstance::WheelRegion(_)

@@ -504,6 +504,46 @@ impl ElementHostWidget {
                 // Layout-driven anchored placement. We measure the child subtree first, then
                 // compute a placement transform relative to the wrapper bounds.
 
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(child_bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, child_bounds);
+
+                        let desired_child = child_bounds.size;
+                        let outer =
+                            crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
+                        let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
+                            outer,
+                            props.anchor,
+                            desired_child,
+                            props.side_offset,
+                            props.side,
+                            props.align,
+                            props.options,
+                        );
+
+                        let delta = fret_core::Point::new(
+                            Px(layout.rect.origin.x.0 - cx.bounds.origin.x.0),
+                            Px(layout.rect.origin.y.0 - cx.bounds.origin.y.0),
+                        );
+                        self.render_transform = Some(fret_core::Transform2D::translation(delta));
+
+                        if let Some(out) = props.layout_out {
+                            let _ = cx.app.models_mut().update(&out, |v| {
+                                if *v != layout {
+                                    *v = layout;
+                                }
+                            });
+                        }
+
+                        return cx.available;
+                    }
+                }
+
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
