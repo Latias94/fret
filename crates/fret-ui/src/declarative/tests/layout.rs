@@ -1331,6 +1331,92 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn overlay_root_scroll_precomputes_child_flow_islands() {
+    let window = AppWindowId::default();
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeTextService::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+
+    let base = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-scroll-underlay",
+        |cx| vec![cx.text("underlay")],
+    );
+    ui.set_root(base);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "overlay-root-scroll-precompute",
+        |cx| {
+            let anchored = crate::element::AnchoredProps {
+                anchor: Rect::new(
+                    Point::new(Px(10.0), Px(10.0)),
+                    Size::new(Px(10.0), Px(10.0)),
+                ),
+                ..Default::default()
+            };
+
+            let inner = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(4.0),
+                ..Default::default()
+            };
+
+            let mut scroll = crate::element::ScrollProps::default();
+            scroll.layout.size.width = Length::Fill;
+            scroll.layout.size.height = Length::Fill;
+            scroll.probe_unbounded = true;
+
+            vec![cx.scroll(scroll, |cx| {
+                vec![cx.anchored_props(anchored, |cx| {
+                    vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+                })]
+            })]
+        },
+    );
+    let _layer = ui.push_overlay_root_ex(overlay_root, false, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll = ui.children(overlay_root)[0];
+    let anchored = ui.children(scroll)[0];
+    let inner = ui.children(anchored)[0];
+    let text = ui.children(inner)[0];
+
+    let engine = ui.take_layout_engine();
+    assert!(
+        engine.layout_id_for_node(anchored).is_some(),
+        "expected scroll to precompute its child flow island into the engine tree"
+    );
+    assert!(engine.layout_id_for_node(inner).is_some());
+    assert!(engine.layout_id_for_node(text).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn wrapper_chain_padding_is_applied_via_engine_rects() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

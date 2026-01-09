@@ -2,6 +2,9 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 
+#[cfg(feature = "layout-engine-v2")]
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
         &mut self,
@@ -298,23 +301,51 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
-        let probe_w = if props.axis.scroll_x() && props.probe_unbounded {
-            Px(1.0e9)
-        } else {
-            cx.available.width
-        };
-        let probe_h = if props.axis.scroll_y() && props.probe_unbounded {
-            Px(1.0e9)
-        } else {
-            cx.available.height
-        };
-        let probe_bounds = Rect::new(cx.bounds.origin, Size::new(probe_w, probe_h));
-
         let mut max_child = Size::new(Px(0.0), Px(0.0));
-        for &child in cx.children {
-            let child_size = cx.layout_in(child, probe_bounds);
-            max_child.width = Px(max_child.width.0.max(child_size.width.0));
-            max_child.height = Px(max_child.height.0.max(child_size.height.0));
+
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            let child_constraints = LayoutConstraints::new(
+                LayoutSize::new(None, None),
+                LayoutSize::new(
+                    if props.axis.scroll_x() && props.probe_unbounded {
+                        AvailableSpace::MaxContent
+                    } else {
+                        AvailableSpace::Definite(cx.available.width)
+                    },
+                    if props.axis.scroll_y() && props.probe_unbounded {
+                        AvailableSpace::MaxContent
+                    } else {
+                        AvailableSpace::Definite(cx.available.height)
+                    },
+                ),
+            );
+            for &child in cx.children {
+                let child_size = cx.measure_in(child, child_constraints);
+                max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                max_child.height = Px(max_child.height.0.max(child_size.height.0));
+            }
+        }
+
+        #[cfg(not(feature = "layout-engine-v2"))]
+        {
+            let probe_w = if props.axis.scroll_x() && props.probe_unbounded {
+                Px(1.0e9)
+            } else {
+                cx.available.width
+            };
+            let probe_h = if props.axis.scroll_y() && props.probe_unbounded {
+                Px(1.0e9)
+            } else {
+                cx.available.height
+            };
+            let probe_bounds = Rect::new(cx.bounds.origin, Size::new(probe_w, probe_h));
+
+            for &child in cx.children {
+                let child_size = cx.layout_in(child, probe_bounds);
+                max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                max_child.height = Px(max_child.height.0.max(child_size.height.0));
+            }
         }
 
         let desired = clamp_to_constraints(max_child, props.layout, cx.available);
@@ -375,6 +406,18 @@ impl ElementHostWidget {
             ),
             Size::new(content_w, content_h),
         );
+
+        #[cfg(feature = "layout-engine-v2")]
+        if !is_probe_layout {
+            let sf = cx.scale_factor;
+            let app = &mut *cx.app;
+            let services = &mut *cx.services;
+            let tree = &mut *cx.tree;
+            for &child in cx.children {
+                tree.precompute_flow_root_island(app, services, child, shifted, sf);
+            }
+        }
+
         for &child in cx.children {
             let _ = cx.layout_in(child, shifted);
         }
