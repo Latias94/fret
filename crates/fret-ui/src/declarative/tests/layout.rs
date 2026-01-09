@@ -2578,6 +2578,248 @@ fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.opacity(0.5, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-opacity-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let opacity = ui.children(outer)[0];
+    let a = ui.children(opacity)[0];
+    let b = ui.children(opacity)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(opacity).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let transform =
+            fret_core::Transform2D::translation(fret_core::Point::new(Px(1.0), Px(2.0)));
+        vec![cx.flex(outer, |cx| {
+            vec![cx.visual_transform(transform, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-visual-transform-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let transform = ui.children(outer)[0];
+    let a = ui.children(transform)[0];
+    let b = ui.children(transform)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(transform).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.interactivity_gate(true, true, |cx| vec![cx.text("a"), cx.text("b")])]
+        })]
+    }
+
+    let viewport_child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-interactivity-gate-multi-child-flow-tree",
+        build_root,
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child: viewport_child,
+    });
+    ui.set_root(base);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(viewport_child)[0];
+    let gate = ui.children(outer)[0];
+    let a = ui.children(gate)[0];
+    let b = ui.children(gate)[1];
+
+    let engine = ui.take_layout_engine();
+    assert!(engine.layout_id_for_node(gate).is_some());
+    assert!(engine.layout_id_for_node(a).is_some());
+    assert!(engine.layout_id_for_node(b).is_some());
+    ui.put_layout_engine(engine);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
         viewport: Rect,
