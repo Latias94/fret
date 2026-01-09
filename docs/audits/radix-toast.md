@@ -30,14 +30,12 @@ Fret does not use React context nor DOM events. Toast outcomes are composed via:
 
 - Pass: Upsert-by-id behavior (Radix `open` roots can be updated while present).
 - Pass: Auto-close timers, hover pause, and close transition removal are implemented in the store.
-- Pass: Swipe-to-dismiss is supported for dismissible toasts.
+- Pass: Swipe-to-dismiss supports Radix-aligned `swipeDirection` + `swipeThreshold` defaults.
 - Pass: Per-window max-toasts limiting is supported.
 - Pass: A reusable, Radix-named viewport root exists via `ToastViewport` (overlay-backed).
 
 ## Gaps / intentional differences
 
 - Not implemented: Radix `ToastViewport` hotkey focus-jump behavior.
-- Not implemented: Configurable swipe direction/threshold (Fret currently uses a fixed horizontal
-  swipe policy).
+- Deferred: Radix `ToastViewport` hotkey binding surface (default `F8`) and focus-jump behavior.
 - Deferred: A11y announcement semantics (Radix uses ARIA live region patterns).
-
