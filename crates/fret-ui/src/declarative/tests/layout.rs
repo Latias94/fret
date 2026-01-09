@@ -505,6 +505,94 @@ fn resizable_panel_group_viewport_roots_match_panel_bounds() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_root() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct RegistersViewport {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewport {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct MarksLayout {
+        did_layout: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for MarksLayout {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            self.did_layout.store(true, Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(200.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let base = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-root-registration-is-flushed-nested",
+        |cx| vec![cx.text("base")],
+    );
+
+    let inner_did_layout = Arc::new(AtomicBool::new(false));
+    let inner = ui.create_node(MarksLayout {
+        did_layout: inner_did_layout.clone(),
+    });
+    ui.set_children(inner, Vec::new());
+
+    let outer_viewport = Rect::new(
+        Point::new(Px(10.0), Px(10.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let inner_viewport = Rect::new(
+        Point::new(Px(20.0), Px(30.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let outer = ui.create_node(RegistersViewport {
+        viewport: inner_viewport,
+        child: inner,
+    });
+    ui.set_children(outer, Vec::new());
+
+    let root = ui.create_node(RegistersViewport {
+        viewport: outer_viewport,
+        child: outer,
+    });
+    ui.set_children(root, vec![base]);
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        inner_did_layout.load(Ordering::Relaxed),
+        "expected nested viewport root to be laid out in the same frame"
+    );
+    assert!(ui.viewport_roots().contains(&(outer, outer_viewport)));
+    assert!(ui.viewport_roots().contains(&(inner, inner_viewport)));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn layout_viewport_root_defers_child_layout_until_after_parent() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
