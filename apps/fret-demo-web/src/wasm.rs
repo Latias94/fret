@@ -11,6 +11,7 @@ thread_local! {
 enum Demo {
     ComponentsGallery,
     ChartDemo,
+    HorizontalBarsDemo,
     PlotDemo,
     PlotImageDemo,
     BarsDemo,
@@ -43,6 +44,9 @@ fn select_demo() -> Demo {
 
     if hash.contains("chart_demo") || search.contains("demo=chart_demo") {
         return Demo::ChartDemo;
+    }
+    if hash.contains("horizontal_bars_demo") || search.contains("demo=horizontal_bars_demo") {
+        return Demo::HorizontalBarsDemo;
     }
     if hash.contains("plot_demo") || search.contains("demo=plot_demo") {
         return Demo::PlotDemo;
@@ -121,6 +125,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::chart_demo::build_runner_config();
             config.main_window_title = "fret-demo chart_demo (web)".to_string();
             let driver = fret_examples::chart_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::HorizontalBarsDemo => {
+            let app = fret_examples::horizontal_bars_demo::build_app();
+            let mut config = fret_examples::horizontal_bars_demo::build_runner_config();
+            config.main_window_title = "fret-demo horizontal_bars_demo (web)".to_string();
+            let driver = fret_examples::horizontal_bars_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::PlotDemo => {
