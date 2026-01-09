@@ -20,9 +20,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 - Aligned: 37
 - Aligned (with known gaps): 5
 - N/A (superseded): 1
-- Not audited: 84
+- Not audited: 83
 - Not implemented: 3
-- Partially aligned: 9
+- Partially aligned: 10
 
 ## Matrix
 
@@ -51,7 +51,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Partially aligned | Keymap parsing + platform/when support: `crates/fret-runtime/src/keymap.rs` (v1 + sequences); disk IO helper: `crates/fret-app/src/keymap.rs`; end-to-end layered loading (user/project) not standardized yet. |
 | [`0022-when-expressions.md`](0022-when-expressions.md) | Accepted | Aligned | Parser/validator/evaluator: `crates/fret-runtime/src/when_expr.rs` (unknown identifiers evaluate false via `eval_ident_bool`). |
 | [`0023-command-metadata-menus-and-palette.md`](0023-command-metadata-menus-and-palette.md) | Accepted | Partially aligned | Command metadata + scopes: `crates/fret-runtime/src/commands.rs` (`CommandMeta`, `CommandScope`), stored on app: `crates/fret-app/src/app.rs`; menu model: `crates/fret-runtime/src/menu.rs`; command palette widget exists (`ecosystem/fret-ui-shadcn/src/command.rs`) but registry→palette wiring remains app-owned. |
-| [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Not audited |  |
+| [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Partially aligned | Domain-local, op-based undo/redo exists for the node-graph editor: `GraphTransaction` + `GraphHistory` (invert + linear stacks) in `ecosystem/fret-node/src/ops/{mod.rs,history.rs}`; UI integration records committed transactions and exposes undo/redo as widget-scoped commands (`node_graph.undo`/`node_graph.redo`) in `ecosystem/fret-node/src/ui/{commands.rs,canvas/widget.rs}`. No shared cross-domain editor history or generic `EditOp`/transaction manager is provided by `fret-ui`/`fret-app` yet (consistent with ADR scope being editor-app). |
 | [`0025-viewport-input-forwarding.md`](0025-viewport-input-forwarding.md) | Accepted | Aligned | Core event + mapping: `crates/fret-core/src/input.rs` (`ViewportInputEvent`), `crates/fret-core/src/viewport.rs` (`ViewportMapping`); UI emits `Effect::ViewportInput`: `ecosystem/fret-ui-docking/src/dock/space.rs`; runner drains into driver hook: `crates/fret-launch/src/runner/desktop/mod.rs`. |
 | [`0026-asset-database-and-import-pipeline.md`](0026-asset-database-and-import-pipeline.md) | Deferred | Not audited |  |
 | [`0027-framework-scope-and-responsibilities.md`](0027-framework-scope-and-responsibilities.md) | Accepted | Aligned | Layering matches: `fret-core` stays platform/render-agnostic while `wgpu` lives in `crates/fret-render`; policy-heavy surfaces live under `ecosystem/` (see `AGENTS.md`, `docs/dependency-policy.md`). |
