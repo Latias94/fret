@@ -15,7 +15,6 @@
 //! modal overlay request wiring, without forcing a visual skin.
 
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
     SizeStyle,
@@ -28,21 +27,10 @@ use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct DialogOptions {
     pub dismiss_on_overlay_press: bool,
     pub initial_focus: Option<GlobalElementId>,
-    pub on_dismiss_request: Option<OnDismissRequest>,
-}
-
-impl std::fmt::Debug for DialogOptions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DialogOptions")
-            .field("dismiss_on_overlay_press", &self.dismiss_on_overlay_press)
-            .field("initial_focus", &self.initial_focus)
-            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
-            .finish()
-    }
 }
 
 impl Default for DialogOptions {
@@ -50,7 +38,6 @@ impl Default for DialogOptions {
         Self {
             dismiss_on_overlay_press: true,
             initial_focus: None,
-            on_dismiss_request: None,
         }
     }
 }
@@ -63,16 +50,6 @@ impl DialogOptions {
 
     pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
         self.initial_focus = initial_focus;
-        self
-    }
-
-    /// Installs a DismissableLayer-style dismiss handler.
-    ///
-    /// When set, this overrides the default behavior that closes the dialog on dismiss (Escape).
-    /// Callers may update the `open` model themselves (or intentionally keep it open) to mirror
-    /// Radix `onEscapeKeyDown` `preventDefault` outcomes.
-    pub fn on_dismiss_request(mut self, handler: Option<OnDismissRequest>) -> Self {
-        self.on_dismiss_request = handler;
         self
     }
 }
@@ -137,13 +114,8 @@ impl DialogRoot {
         self
     }
 
-    pub fn on_dismiss_request(mut self, handler: Option<OnDismissRequest>) -> Self {
-        self.options = self.options.on_dismiss_request(handler);
-        self
-    }
-
     pub fn options(&self) -> DialogOptions {
-        self.options.clone()
+        self.options
     }
 
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -180,7 +152,7 @@ impl DialogRoot {
             trigger,
             self.open_model(cx),
             presence,
-            self.options.clone(),
+            self.options,
             children,
         )
     }
@@ -227,7 +199,6 @@ pub fn modal_dialog_request_with_options(
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
     request.initial_focus = options.initial_focus;
-    request.dismissible_on_dismiss_request = options.on_dismiss_request;
     request
 }
 
@@ -310,8 +281,6 @@ pub fn request_modal_dialog<H: UiHost>(cx: &mut ElementContext<'_, H>, request: 
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
-
     use fret_app::App;
     use fret_core::AppWindowId;
     use fret_core::Event;
@@ -320,7 +289,6 @@ mod tests {
     use fret_core::{Point, Px, Rect, Size};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_ui::UiTree;
-    use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use fret_ui::elements::GlobalElementId;
 
@@ -394,15 +362,12 @@ mod tests {
 
     #[test]
     fn dialog_root_options_builder_updates_options() {
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
         let root = DialogRoot::new()
             .dismiss_on_overlay_press(false)
-            .initial_focus(Some(GlobalElementId(0xbeef)))
-            .on_dismiss_request(Some(handler.clone()));
+            .initial_focus(Some(GlobalElementId(0xbeef)));
         let options = root.options();
         assert!(!options.dismiss_on_overlay_press);
         assert_eq!(options.initial_focus, Some(GlobalElementId(0xbeef)));
-        assert!(options.on_dismiss_request.is_some());
     }
 
     #[test]
