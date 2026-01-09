@@ -27,7 +27,5 @@ Key upstream concepts:
 - Pass: shadcn `HoverCard` composes hover intent + hover overlays to match Radix open/close outcomes.
 - Pass: Motion math is available in `declarative::overlay_motion`, and diamond arrow rendering is
   available via `primitives::popper_arrow`; recipes primarily wire tokens and layout.
-- Note: Radix `HoverCard.Root` also supports controlled/uncontrolled open state (`open` /
-  `defaultOpen`). Fret exposes the shared controllable-state helper as
-  `primitives::hover_card::hover_card_use_open_model(...)`, but the current shadcn recipe uses
-  hover intent as the source of truth and does not expose an external open model yet.
+- Pass: Controlled/uncontrolled open modeling is available via `primitives::hover_card::HoverCardRoot`
+  (`open` / `defaultOpen`) and is exposed by the shadcn recipe via `HoverCard::{open, default_open}`.

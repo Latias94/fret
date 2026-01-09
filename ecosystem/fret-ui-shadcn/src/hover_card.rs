@@ -1,12 +1,14 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, Size, Transform2D};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
     VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
 use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
@@ -61,8 +63,10 @@ struct HoverCardSharedState {
 /// - `HoverRegion` (hover tracking)
 /// - cross-frame geometry queries (`elements::bounds_for_element`)
 /// - placement solver (`overlay_placement`)
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HoverCard {
+    open: Option<Model<bool>>,
+    default_open: bool,
     trigger: AnyElement,
     content: AnyElement,
     align: HoverCardAlign,
@@ -77,9 +81,28 @@ pub struct HoverCard {
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
 
+impl std::fmt::Debug for HoverCard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HoverCard")
+            .field("open", &"<model>")
+            .field("default_open", &self.default_open)
+            .field("align", &self.align)
+            .field("side_offset", &self.side_offset)
+            .field("window_margin_override", &self.window_margin_override)
+            .field("arrow", &self.arrow)
+            .field("open_delay_frames", &self.open_delay_frames)
+            .field("close_delay_frames", &self.close_delay_frames)
+            .field("layout", &self.layout)
+            .field("anchor_override", &self.anchor_override)
+            .finish()
+    }
+}
+
 impl HoverCard {
     pub fn new(trigger: AnyElement, content: AnyElement) -> Self {
         Self {
+            open: None,
+            default_open: false,
             trigger,
             content,
             align: HoverCardAlign::default(),
@@ -93,6 +116,38 @@ impl HoverCard {
             layout: LayoutRefinement::default(),
             anchor_override: None,
         }
+    }
+
+    /// Creates a hover card with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        trigger: AnyElement,
+        content: AnyElement,
+    ) -> Self {
+        let open = radix_hover_card::HoverCardRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        Self::new(trigger, content).open(Some(open))
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    ///
+    /// Note: If a controlled `open` model is provided, this value is ignored.
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
     }
 
     pub fn align(mut self, align: HoverCardAlign) -> Self {
@@ -187,6 +242,9 @@ impl HoverCard {
         let arrow_bg = theme.color_required("popover");
         let arrow_border = theme.color_required("border");
 
+        let open_root = radix_hover_card::HoverCardRoot::new()
+            .open(self.open)
+            .default_open(self.default_open);
         let trigger = self.trigger;
         let content = self.content;
         let trigger_id = trigger.id;
@@ -194,6 +252,8 @@ impl HoverCard {
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hover_card_id = cx.root_id();
+            let open = open_root.open_model(cx);
+            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let overlay_hovered =
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -206,7 +266,68 @@ impl HoverCard {
                 radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused);
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
-            let update = hover_intent::drive(cx, hovered, cfg);
+
+            #[derive(Debug, Default, Clone, Copy)]
+            struct HoverCardIntentDriverState {
+                last_frame_tick: Option<u64>,
+                tick: u64,
+                intent: hover_intent::HoverIntentState,
+                saw_active_since_open: bool,
+            }
+
+            let frame_tick = cx.app.frame_id().0;
+            let update =
+                cx.with_state_for(hover_card_id, HoverCardIntentDriverState::default, |st| {
+                    match st.last_frame_tick {
+                        None => {
+                            st.last_frame_tick = Some(frame_tick);
+                            st.tick = frame_tick;
+                        }
+                        Some(prev) if prev != frame_tick => {
+                            st.last_frame_tick = Some(frame_tick);
+                            st.tick = frame_tick;
+                        }
+                        Some(_) => {
+                            // In some unit tests the runner-owned frame clock may not advance; fall back
+                            // to a per-call monotonic tick so delays can still elapse deterministically.
+                            st.tick = st.tick.saturating_add(1);
+                        }
+                    }
+
+                    if st.intent.is_open() != open_now {
+                        st.intent.set_open(open_now);
+                        st.saw_active_since_open = false;
+                    }
+
+                    let signal_active = hovered;
+                    let was_open = st.intent.is_open();
+                    if was_open && signal_active {
+                        st.saw_active_since_open = true;
+                    }
+
+                    // Radix HoverCard opens/closes based on enter/leave edges, not a pure level signal.
+                    // If the root is open but we've never observed an "active" signal since it opened
+                    // (e.g. `defaultOpen=true` on first mount), keep it open until we see at least one
+                    // active period and then a leave edge.
+                    let effective_hovered =
+                        signal_active || (was_open && !st.saw_active_since_open);
+
+                    let out = st.intent.update(effective_hovered, st.tick, cfg);
+                    if !was_open && out.open {
+                        st.saw_active_since_open = signal_active;
+                    } else if was_open && !out.open {
+                        st.saw_active_since_open = false;
+                    }
+
+                    out
+                });
+
+            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+
+            if update.open != open_now {
+                let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+            }
+
             let opening = update.open;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
@@ -757,6 +878,100 @@ mod tests {
 
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn hover_card_default_open_mounts_without_hover() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      frame: u64| {
+            let content_id_out = content_id.clone();
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, _id| {
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let content = cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+                    content_id_out.set(Some(content.id));
+
+                    vec![
+                        HoverCard::new(trigger, content)
+                            .default_open(true)
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        };
+
+        // Frame 1: establish trigger bounds (placement resolves from last-frame layout).
+        render(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Frame 2: default_open should mount the overlay.
+        render(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.id == content_node),
+            "expected hover card content to mount when default_open=true"
+        );
     }
 
     #[test]

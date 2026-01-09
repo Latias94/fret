@@ -36,6 +36,15 @@ impl HoverIntentState {
         self.open
     }
 
+    pub fn set_open(&mut self, open: bool) {
+        if self.open == open {
+            return;
+        }
+        self.open = open;
+        self.hover_start = None;
+        self.leave_start = None;
+    }
+
     pub fn update(&mut self, hovered: bool, now: u64, cfg: HoverIntentConfig) -> HoverIntentUpdate {
         if hovered {
             self.leave_start = None;
@@ -158,5 +167,32 @@ mod tests {
                 wants_continuous_ticks: false
             }
         );
+    }
+
+    #[test]
+    fn set_open_resets_pending_delays() {
+        let cfg = HoverIntentConfig::new(5, 5);
+        let mut st = HoverIntentState::default();
+
+        // Begin opening delay.
+        let out0 = st.update(true, 0, cfg);
+        assert!(!out0.open);
+        assert!(out0.wants_continuous_ticks);
+
+        // Force open, then ensure we don't keep "opening" due to stale timers.
+        st.set_open(true);
+        let out1 = st.update(true, 1, cfg);
+        assert!(out1.open);
+        assert!(!out1.wants_continuous_ticks);
+
+        // Begin closing delay, then force closed and ensure we stop delaying.
+        let out2 = st.update(false, 2, cfg);
+        assert!(out2.open);
+        assert!(out2.wants_continuous_ticks);
+
+        st.set_open(false);
+        let out3 = st.update(false, 3, cfg);
+        assert!(!out3.open);
+        assert!(!out3.wants_continuous_ticks);
     }
 }
