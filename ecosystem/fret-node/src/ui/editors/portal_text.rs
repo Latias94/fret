@@ -84,9 +84,12 @@ impl PortalTextEditor {
         let ui = PortalTextEditorUi::from_theme(ecx.theme().snapshot());
         let chrome = TextInputStyle::from_theme(ecx.theme().snapshot());
 
+        let desired_text = spec.initial_text(graph, node);
         let input_model = self.ensure_input_model(ecx.app, ecx.window, graph, node, spec);
         let error_model = self.ensure_error_model(ecx.app, ecx.window, node);
         let error_text = error_model.read_ref(ecx.app, |v| v.clone()).ok().flatten();
+
+        self.maybe_sync_from_graph(ecx.app, ecx.window, node, &input_model, desired_text);
 
         let max_w = (layout.node_window.size.width.0 - 2.0 * style.node_padding)
             .max(80.0)
@@ -162,6 +165,7 @@ impl PortalTextEditor {
         self.with_session_mut(app, window, |session, _app| {
             session.inputs.retain(|k, _| live.contains(k));
             session.errors.retain(|k, _| live.contains(k));
+            session.last_synced.retain(|k, _| live.contains(k));
         });
     }
 
@@ -174,11 +178,12 @@ impl PortalTextEditor {
         spec: &S,
     ) -> Model<String> {
         self.with_session_mut(app, window, |session, app| {
-            session
-                .inputs
-                .entry(node)
-                .or_insert_with(|| app.models_mut().insert(spec.initial_text(graph, node)))
-                .clone()
+            session.inputs.entry(node).or_insert_with(|| {
+                let text = spec.initial_text(graph, node);
+                session.last_synced.insert(node, text.clone());
+                app.models_mut().insert(text)
+            });
+            session.inputs.get(&node).expect("model exists").clone()
         })
     }
 
@@ -220,8 +225,12 @@ impl PortalTextEditor {
     ) {
         let model = self.ensure_input_model(app, window, graph, node, spec);
         let text = spec.initial_text(graph, node);
+        let synced = text.clone();
         let _ = model.update(app, |v, _cx| {
             *v = text;
+        });
+        self.with_session_mut(app, window, |session, _app| {
+            session.last_synced.insert(node, synced);
         });
     }
 
@@ -249,10 +258,54 @@ impl PortalTextEditor {
         let Some(normalized) = normalized else {
             return;
         };
+        let synced = normalized.clone();
         let model = self.ensure_input_model(app, window, graph, node, spec);
         let _ = model.update(app, |v, _cx| {
             *v = normalized;
         });
+        self.with_session_mut(app, window, |session, _app| {
+            session.last_synced.insert(node, synced);
+        });
+    }
+
+    fn maybe_sync_from_graph<H: UiHost>(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        input_model: &Model<String>,
+        desired_text: String,
+    ) {
+        let current = input_model
+            .read_ref(app, |v| v.clone())
+            .ok()
+            .unwrap_or_default();
+
+        let should_update = self.with_session_mut(app, window, |session, _app| {
+            let Some(last) = session.last_synced.get(&node).cloned() else {
+                session.last_synced.insert(node, current.clone());
+                return false;
+            };
+
+            // If the user edited the input (current != last_synced), do not clobber their work.
+            if current != last {
+                return false;
+            }
+
+            // If the graph-derived value hasn't changed, do nothing.
+            if desired_text == last {
+                return false;
+            }
+
+            session.last_synced.insert(node, desired_text.clone());
+            true
+        });
+
+        if should_update {
+            let _ = input_model.update(app, |v, _cx| {
+                *v = desired_text;
+            });
+        }
     }
 }
 
@@ -371,4 +424,5 @@ struct PortalTextEditorSessionKey {
 struct PortalTextEditorSession {
     inputs: HashMap<NodeId, Model<String>>,
     errors: HashMap<NodeId, Model<Option<Arc<str>>>>,
+    last_synced: HashMap<NodeId, String>,
 }
