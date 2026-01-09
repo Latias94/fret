@@ -598,6 +598,18 @@ impl ChartEngine {
         }
 
         self.ordinal_index_stage.begin_frame();
+        if self
+            .model
+            .axis_pointer
+            .is_some_and(|p| p.enabled && p.trigger == AxisPointerTrigger::Axis)
+        {
+            request_ordinal_indices_for_axis_pointer(
+                &mut self.ordinal_index_stage,
+                &self.model,
+                &self.datasets,
+                &self.view,
+            );
+        }
         self.ordinal_index_stage.prepare_requests(&self.datasets);
         let ordinal_indices_done = self.ordinal_index_stage.step(&self.datasets, &mut budget);
 
@@ -727,6 +739,7 @@ impl ChartEngine {
                                     &self.view,
                                     &self.data_view_stage,
                                     &self.stack_dims_stage,
+                                    &self.ordinal_index_stage,
                                     &self.output.axis_windows,
                                     viewport,
                                     hover_px,
@@ -840,6 +853,7 @@ fn compute_axis_axis_pointer_output(
     view: &ViewState,
     data_views: &DataViewStage,
     stack_dims: &StackDimsStage,
+    ordinal_indices: &OrdinalIndexStage,
     axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
     viewport: Rect,
     hover_px: Point,
@@ -884,6 +898,12 @@ fn compute_axis_axis_pointer_output(
         label: x_label,
         value: crate::engine::axis::format_value_for(model, x_axis, x_window, x_value),
     });
+
+    let category_len = model.axes.get(&x_axis).and_then(|a| match &a.scale {
+        crate::scale::AxisScale::Category(scale) => Some(scale.len()),
+        _ => None,
+    });
+    let category_ordinal = category_len.and_then(|len| ordinal_from_value(x_value, len));
 
     for series in model.series_in_order() {
         if !series.visible || series.x_axis != x_axis {
@@ -943,6 +963,7 @@ fn compute_axis_axis_pointer_output(
             ),
         };
 
+        let selection_for_index = base_selection.clone();
         let table_view = data_views.table_view_for(
             table,
             series.dataset,
@@ -954,33 +975,54 @@ fn compute_axis_axis_pointer_output(
 
         let model_rev = model.revs.marks;
         let table_rev = table.revision;
-        let Some(sample) = (if series.kind == crate::spec::SeriesKind::Scatter {
-            sample_scatter_at_x_view(
-                model,
-                datasets,
-                stack_dims,
-                model_rev,
-                table_rev,
-                series.id,
-                x_value,
-                x,
-                y0,
-                &table_view,
-            )
-        } else {
-            sample_series_at_x_view(
-                model,
-                datasets,
-                stack_dims,
-                model_rev,
-                table_rev,
-                series.id,
-                x_value,
-                x,
-                y0,
-                y1,
-                &table_view,
-            )
+
+        let mut sample: Option<SampledSeriesValue> = None;
+        if let (Some(category_len), Some(ordinal)) = (category_len, category_ordinal)
+            && !matches!(selection_for_index, RowSelection::Indices(_))
+        {
+            let key = crate::engine::stages::OrdinalIndexKey::new(
+                series.dataset,
+                x_col,
+                category_len,
+                selection_range,
+                filter,
+            );
+            if let Some(raw_index) = ordinal_indices.raw_index_of_ordinal(key, ordinal, table_rev) {
+                sample = sample_at_raw_index(
+                    model, datasets, stack_dims, model_rev, table_rev, series.id, raw_index, y0, y1,
+                );
+            }
+        }
+
+        let Some(sample) = sample.or_else(|| {
+            if series.kind == crate::spec::SeriesKind::Scatter {
+                sample_scatter_at_x_view(
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    x_value,
+                    x,
+                    y0,
+                    &table_view,
+                )
+            } else {
+                sample_series_at_x_view(
+                    model,
+                    datasets,
+                    stack_dims,
+                    model_rev,
+                    table_rev,
+                    series.id,
+                    x_value,
+                    x,
+                    y0,
+                    y1,
+                    &table_view,
+                )
+            }
         }) else {
             continue;
         };
@@ -1018,6 +1060,126 @@ fn compute_axis_axis_pointer_output(
 struct SampledSeriesValue {
     y0: f64,
     y1: Option<f64>,
+}
+
+fn ordinal_from_value(value: f64, len: usize) -> Option<u32> {
+    if !value.is_finite() || len == 0 {
+        return None;
+    }
+
+    let ord = value.round() as i64;
+    if ord < 0 || ord >= len as i64 {
+        return None;
+    }
+    Some(ord as u32)
+}
+
+fn sample_at_raw_index(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    stack_dims: &StackDimsStage,
+    model_rev: Revision,
+    table_rev: Revision,
+    series_id: crate::ids::SeriesId,
+    raw_index: usize,
+    y0: &[f64],
+    y1: Option<&[f64]>,
+) -> Option<SampledSeriesValue> {
+    let mut y = y0.get(raw_index).copied()?;
+    if !y.is_finite() {
+        return None;
+    }
+
+    if model
+        .series
+        .get(&series_id)
+        .is_some_and(|s| s.stack.is_some())
+    {
+        let stack = model.series.get(&series_id).and_then(|s| s.stack);
+        if let Some(stack) = stack {
+            if let Some(stacked) =
+                stack_dims.stacked_y(stack, series_id, raw_index, model_rev, table_rev)
+            {
+                y = stacked;
+            } else {
+                y += stack_base_cached(
+                    model, datasets, stack_dims, model_rev, table_rev, series_id, raw_index, y,
+                );
+            }
+        }
+    }
+
+    let y1_out = y1
+        .and_then(|s| s.get(raw_index).copied())
+        .filter(|v| v.is_finite());
+    Some(SampledSeriesValue { y0: y, y1: y1_out })
+}
+
+fn request_ordinal_indices_for_axis_pointer(
+    ordinal_indices: &mut OrdinalIndexStage,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+) {
+    for series in model.series_in_order() {
+        if !series.visible {
+            continue;
+        }
+
+        let category_len = model.axes.get(&series.x_axis).and_then(|a| match &a.scale {
+            crate::scale::AxisScale::Category(scale) => Some(scale.len()),
+            _ => None,
+        });
+        let Some(category_len) = category_len else {
+            continue;
+        };
+
+        let Some(table) = datasets.dataset(series.dataset) else {
+            continue;
+        };
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            continue;
+        };
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            continue;
+        };
+
+        let (selection_range, filter, selection) = match view.series_view(series.id) {
+            Some(series_view) => {
+                let selection_range = series_view.selection.as_range(table.row_count);
+                let selection_range = RowRange {
+                    start: selection_range.start,
+                    end: selection_range.end,
+                };
+                (
+                    selection_range,
+                    series_view.x_policy.filter,
+                    series_view.selection.clone(),
+                )
+            }
+            None => (
+                RowRange {
+                    start: 0,
+                    end: table.row_count,
+                },
+                crate::engine::window_policy::AxisFilter1D::default(),
+                RowSelection::default(),
+            ),
+        };
+
+        if matches!(selection, RowSelection::Indices(_)) {
+            continue;
+        }
+
+        let key = crate::engine::stages::OrdinalIndexKey::new(
+            series.dataset,
+            x_col,
+            category_len,
+            selection_range,
+            filter,
+        );
+        ordinal_indices.request(key);
+    }
 }
 
 const MAX_UNSORTED_AXIS_SCAN_POINTS: usize = 200_000;
