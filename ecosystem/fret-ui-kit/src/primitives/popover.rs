@@ -433,15 +433,67 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::Event;
+    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
-    use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, PressableProps};
+    use fret_ui::element::{
+        AnyElement, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
+        SizeStyle,
+    };
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
     }
 
     #[test]
@@ -624,5 +676,129 @@ mod tests {
                 popover_modal_layer_children::<App>(cx, open.clone(), Vec::new(), content);
             assert_eq!(children.len(), 2);
         });
+    }
+
+    #[test]
+    fn popover_modal_barrier_press_can_be_intercepted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        OverlayController::begin_frame(&mut app, window);
+        let trigger_cell = std::cell::Cell::new(None);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "base",
+            |cx| {
+                vec![cx.pressable_with_id(
+                    PressableProps {
+                        layout: LayoutStyle::default(),
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_cell.set(Some(id));
+                        Vec::new()
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+
+        let open = app.models_mut().insert(true);
+        let popover_id = GlobalElementId(0xabc);
+        let trigger = trigger_cell.get().expect("trigger id");
+
+        let reason_cell: std::sync::Arc<std::sync::Mutex<Option<DismissReason>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        });
+
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, b, "popover", |cx| {
+                // Place content away from the click point so barrier presses can be observed.
+                let content: AnyElement = cx.pressable(
+                    PressableProps {
+                        layout: LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(80.0)),
+                                left: Some(Px(160.0)),
+                                right: None,
+                                bottom: None,
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(20.0)),
+                                height: Length::Px(Px(20.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        enabled: true,
+                        focusable: false,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+                popover_modal_layer_children_with_dismiss_handler::<App>(
+                    cx,
+                    open.clone(),
+                    Some(handler.clone()),
+                    Vec::new(),
+                    content,
+                )
+            });
+
+        let req = popover_request(
+            popover_id,
+            trigger,
+            open.clone(),
+            OverlayPresence::instant(true),
+            PopoverOptions::default().modal(true),
+            overlay_children,
+        );
+        OverlayController::request_for_window(&mut app, window, req);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::OutsidePress)
+        );
     }
 }

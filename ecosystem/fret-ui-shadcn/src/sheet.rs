@@ -556,6 +556,7 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::Arc;
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
@@ -564,6 +565,7 @@ mod tests {
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_ui::UiTree;
+    use fret_ui::action::DismissReason;
     use fret_ui::element::PressableProps;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
@@ -652,6 +654,7 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
         overlay_closable: bool,
         side: SheetSide,
         content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
@@ -686,6 +689,7 @@ mod tests {
                     .side(side)
                     .overlay_closable(overlay_closable)
                     .size(Px(300.0))
+                    .on_dismiss_request(on_dismiss_request.clone())
                     .into_element(
                         cx,
                         |_cx| trigger,
@@ -747,6 +751,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -787,6 +792,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -870,6 +876,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             false,
             SheetSide::Right,
             content_id.clone(),
@@ -926,6 +933,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -944,6 +952,134 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_escape_can_be_intercepted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        });
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::Escape)
+        );
+    }
+
+    #[test]
+    fn sheet_overlay_click_can_be_intercepted() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        });
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Click the underlay area: this should hit the modal barrier behind the sheet content.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::OutsidePress)
+        );
     }
 
     #[test]
@@ -973,6 +1109,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -1013,6 +1150,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            None,
             true,
             SheetSide::Right,
             content_id.clone(),
@@ -1048,6 +1186,7 @@ mod tests {
                 window,
                 bounds,
                 open.clone(),
+                None,
                 true,
                 SheetSide::Right,
                 content_id.clone(),
