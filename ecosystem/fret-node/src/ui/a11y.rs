@@ -38,7 +38,7 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yActiveDescendant {
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::ListItem);
+        cx.set_role(SemanticsRole::Generic);
         cx.set_focusable(false);
         cx.set_invokable(false);
 
@@ -65,10 +65,6 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedPort {
         false
     }
 
-    fn semantics_present(&self) -> bool {
-        self.internals.a11y_snapshot().focused_port.is_some()
-    }
-
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::new(fret_core::Px(0.0), fret_core::Px(0.0))
     }
@@ -76,15 +72,15 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedPort {
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::ListItem);
+        cx.set_role(SemanticsRole::Generic);
         cx.set_focusable(false);
         cx.set_invokable(false);
 
         let a11y = self.internals.a11y_snapshot();
         if let Some(label) = a11y.focused_port_label {
             cx.set_label(label);
-        } else {
-            cx.set_label("Focused Port");
+        } else if let Some(port) = a11y.focused_port {
+            cx.set_label(format!("Focused port {:?}", port));
         }
     }
 }
@@ -104,10 +100,6 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedEdge {
         false
     }
 
-    fn semantics_present(&self) -> bool {
-        self.internals.a11y_snapshot().focused_edge.is_some()
-    }
-
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::new(fret_core::Px(0.0), fret_core::Px(0.0))
     }
@@ -115,15 +107,15 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedEdge {
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::ListItem);
+        cx.set_role(SemanticsRole::Generic);
         cx.set_focusable(false);
         cx.set_invokable(false);
 
         let a11y = self.internals.a11y_snapshot();
         if let Some(label) = a11y.focused_edge_label {
             cx.set_label(label);
-        } else {
-            cx.set_label("Focused Edge");
+        } else if let Some(edge) = a11y.focused_edge {
+            cx.set_label(format!("Focused edge {:?}", edge));
         }
     }
 }
@@ -143,10 +135,6 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedNode {
         false
     }
 
-    fn semantics_present(&self) -> bool {
-        self.internals.a11y_snapshot().focused_node.is_some()
-    }
-
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::new(fret_core::Px(0.0), fret_core::Px(0.0))
     }
@@ -154,15 +142,15 @@ impl<H: UiHost> Widget<H> for NodeGraphA11yFocusedNode {
     fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::ListItem);
+        cx.set_role(SemanticsRole::Generic);
         cx.set_focusable(false);
         cx.set_invokable(false);
 
         let a11y = self.internals.a11y_snapshot();
         if let Some(label) = a11y.focused_node_label {
             cx.set_label(label);
-        } else {
-            cx.set_label("Focused Node");
+        } else if let Some(node) = a11y.focused_node {
+            cx.set_label(format!("Focused node {:?}", node));
         }
     }
 }
