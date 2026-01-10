@@ -17,6 +17,7 @@ use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, Wgpu
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
+use fret_viewport_wgpu::{ViewportOverlay3d, ViewportOverlay3dContext, run_overlays};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use std::time::Instant;
@@ -2472,64 +2473,83 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 multiview_mask: None,
             });
 
-            pass.set_bind_group(0, &gpu.bind_group, &[]);
-
             if let Some(cube_vb) = &cube_vb {
+                pass.set_bind_group(0, &gpu.bind_group, &[]);
                 pass.set_pipeline(&gpu.tri_pipeline);
                 pass.set_vertex_buffer(0, cube_vb.slice(..));
                 pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
             }
 
-            if let Some(solid_vb_ghost) = &solid_vb_ghost {
-                pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_ghost.slice(..));
-                pass.draw(
-                    0..(solid_verts_ghost.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_ghost) = &line_vb_ghost {
-                pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                pass.set_vertex_buffer(0, line_vb_ghost.slice(..));
-                pass.draw(
-                    0..(line_verts_ghost.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
+            let ctx = ViewportOverlay3dContext {
+                view_proj,
+                viewport_px: size,
+            };
+            let mut overlays: Vec<ViewportOverlay3d<'_>> = Vec::new();
 
-            if let Some(solid_vb_test) = &solid_vb_test {
-                pass.set_pipeline(&gpu.gizmo_solid_depth_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_test.slice(..));
-                pass.draw(
-                    0..(solid_verts_test.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_test) = &line_vb_test {
-                pass.set_pipeline(&gpu.thick_line_depth_pipeline);
-                pass.set_vertex_buffer(0, line_vb_test.slice(..));
-                pass.draw(
-                    0..(line_verts_test.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
+            overlays.push(Box::new(|pass, _ctx| {
+                pass.set_bind_group(0, &gpu.bind_group, &[]);
 
-            if let Some(solid_vb_always) = &solid_vb_always {
-                pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_always.slice(..));
-                pass.draw(
-                    0..(solid_verts_always.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_always) = &line_vb_always {
-                pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                pass.set_vertex_buffer(0, line_vb_always.slice(..));
-                pass.draw(
-                    0..(line_verts_always.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
+                if let Some(solid_vb_ghost) = &solid_vb_ghost {
+                    pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
+                    pass.set_vertex_buffer(0, solid_vb_ghost.slice(..));
+                    pass.draw(
+                        0..(solid_verts_ghost.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+                if let Some(line_vb_ghost) = &line_vb_ghost {
+                    pass.set_pipeline(&gpu.thick_line_always_pipeline);
+                    pass.set_vertex_buffer(0, line_vb_ghost.slice(..));
+                    pass.draw(
+                        0..(line_verts_ghost.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+            }));
+
+            overlays.push(Box::new(|pass, _ctx| {
+                pass.set_bind_group(0, &gpu.bind_group, &[]);
+
+                if let Some(solid_vb_test) = &solid_vb_test {
+                    pass.set_pipeline(&gpu.gizmo_solid_depth_pipeline);
+                    pass.set_vertex_buffer(0, solid_vb_test.slice(..));
+                    pass.draw(
+                        0..(solid_verts_test.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+                if let Some(line_vb_test) = &line_vb_test {
+                    pass.set_pipeline(&gpu.thick_line_depth_pipeline);
+                    pass.set_vertex_buffer(0, line_vb_test.slice(..));
+                    pass.draw(
+                        0..(line_verts_test.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+            }));
+
+            overlays.push(Box::new(|pass, _ctx| {
+                pass.set_bind_group(0, &gpu.bind_group, &[]);
+
+                if let Some(solid_vb_always) = &solid_vb_always {
+                    pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
+                    pass.set_vertex_buffer(0, solid_vb_always.slice(..));
+                    pass.draw(
+                        0..(solid_verts_always.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+                if let Some(line_vb_always) = &line_vb_always {
+                    pass.set_pipeline(&gpu.thick_line_always_pipeline);
+                    pass.set_vertex_buffer(0, line_vb_always.slice(..));
+                    pass.draw(
+                        0..(line_verts_always.len().min(u32::MAX as usize) as u32),
+                        0..1,
+                    );
+                }
+            }));
+
+            run_overlays(&mut pass, &ctx, &mut overlays);
 
             let _ = _frame_id;
         }

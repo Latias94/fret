@@ -28,6 +28,7 @@ fret-plot = { path = "../../ecosystem/fret-plot" }
 fret-plot3d = { path = "../../ecosystem/fret-plot3d" }
 fret-chart = { path = "../../ecosystem/fret-chart" }
 fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
+fret-viewport-wgpu = { path = "../../ecosystem/fret-viewport-wgpu" }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }

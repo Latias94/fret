@@ -1249,6 +1249,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
+ "fret-viewport-wgpu",
  "glam",
  "image",
  "serde_json",
@@ -1585,6 +1586,14 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "slotmap",
+]
+
+[[package]]
+name = "fret-viewport-wgpu"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "wgpu",
 ]
 
 [[package]]
