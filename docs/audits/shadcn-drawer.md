@@ -12,7 +12,8 @@ registry implementation in `repo-ref/ui`.
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/drawer.rs`
-- Current mapping: Drawer is a thin facade over `Sheet` (default side: `Bottom`).
+- Current mapping: Drawer is implemented on top of `Sheet` for overlay/presence/dismissal, with
+  Drawer-specific content/header/footer layout to match shadcn/ui + Vaul styling intent.
 - Overlay policy/infra:
   - Modal overlay roots: `ecosystem/fret-ui-kit/src/window_overlays/*`
   - Radix-aligned dialog substrate: `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
@@ -41,8 +42,16 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: `DrawerTrigger` exists as a thin passthrough wrapper for taxonomy parity.
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
-- Pass: `DrawerContent`/`Header`/`Footer`/`Title`/`Description` are mapped to the shared `Sheet`
-  building blocks.
+- Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog
+  substrate building blocks (`Title`/`Description`).
+
+### Placement & sizing
+
+- Pass: Bottom/top drawers apply `mt-24`/`mb-24`-style edge gaps and cap height to `max-h-[80vh]`
+  when using auto-height content.
+- Pass: Left/right drawers use `w-3/4` with an `sm:max-w-sm`-style cap (75% viewport width, capped
+  at 384px).
+- Pass: Bottom drawers include the small "handle" affordance region above the content.
 
 ### Dismissal behavior
 
@@ -63,7 +72,8 @@ Upstream exports a thin wrapper around `vaul`:
 ## Known gaps / intentional differences
 
 - Vaul-specific snap-points are not modeled yet.
-- Vaul's `max-h-[80vh]` cap is not modeled yet (Fret currently clamps to the full viewport height).
+- Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet (Fret currently
+  uses a simple threshold-based close).
 - `DrawerPortal` / `DrawerOverlay` are not currently exposed as standalone building blocks in Fret
   because the overlay manager owns portal mounting and the barrier is authored by the recipe layer.
 

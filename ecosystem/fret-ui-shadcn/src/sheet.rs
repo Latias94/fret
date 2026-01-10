@@ -6,8 +6,9 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges,
+    OpacityProps, Overflow, PositionStyle, SemanticsProps, SizeStyle, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -83,6 +84,8 @@ pub struct Sheet {
     overlay_closable: bool,
     overlay_color: Option<Color>,
     on_dismiss_request: Option<OnDismissRequest>,
+    vertical_edge_gap_px: Option<Px>,
+    vertical_auto_max_height_fraction: Option<f32>,
 }
 
 impl std::fmt::Debug for Sheet {
@@ -94,6 +97,11 @@ impl std::fmt::Debug for Sheet {
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("vertical_edge_gap_px", &self.vertical_edge_gap_px)
+            .field(
+                "vertical_auto_max_height_fraction",
+                &self.vertical_auto_max_height_fraction,
+            )
             .finish()
     }
 }
@@ -107,6 +115,8 @@ impl Sheet {
             overlay_closable: true,
             overlay_color: None,
             on_dismiss_request: None,
+            vertical_edge_gap_px: None,
+            vertical_auto_max_height_fraction: None,
         }
     }
 
@@ -146,6 +156,24 @@ impl Sheet {
 
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
+        self
+    }
+
+    /// Installs an extra edge gap for vertical (`Top` / `Bottom`) sheets.
+    ///
+    /// This exists to support strict shadcn Drawer parity (`mt-24` / `mb-24`) while still using
+    /// the shared Sheet overlay scaffolding.
+    pub(crate) fn vertical_edge_gap_px(mut self, gap: Px) -> Self {
+        self.vertical_edge_gap_px = Some(gap);
+        self
+    }
+
+    /// Caps vertical (`Top` / `Bottom`) auto-sized sheets to a fraction of the viewport height.
+    ///
+    /// This exists to support strict shadcn Drawer parity (`max-h-[80vh]`) while still using the
+    /// shared Sheet overlay scaffolding.
+    pub(crate) fn vertical_auto_max_height_fraction(mut self, fraction: f32) -> Self {
+        self.vertical_auto_max_height_fraction = Some(fraction);
         self
     }
 
@@ -199,6 +227,9 @@ impl Sheet {
                     .initial_focus(None);
 
                 let size_override = self.size_override;
+                let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
+                let vertical_auto_max_height_fraction =
+                    self.vertical_auto_max_height_fraction.unwrap_or(1.0);
                 let default_size = theme
                     .metric_by_key("component.sheet.size")
                     .or_else(|| theme.metric_by_key("component.sheet.width"))
@@ -235,6 +266,14 @@ impl Sheet {
 
                     let sheet_w = Px(size.0.min(max_w.0).max(0.0));
                     let sheet_h = Px(size.0.min(max_h.0).max(0.0));
+
+                    let vertical_auto_max_h = if size_override.is_some() {
+                        None
+                    } else {
+                        let cap = Px((max_h.0 * vertical_auto_max_height_fraction).max(0.0));
+                        let by_gap = Px((max_h.0 - vertical_edge_gap_px.0).max(0.0));
+                        Some(Px(cap.0.min(by_gap.0)))
+                    };
 
                     let (inset, size, estimated_motion_distance) = match sheet_side {
                         SheetSide::Right => (
@@ -279,11 +318,7 @@ impl Sheet {
                                 } else {
                                     Length::Auto
                                 },
-                                max_height: if size_override.is_some() {
-                                    None
-                                } else {
-                                    Some(max_h)
-                                },
+                                max_height: vertical_auto_max_h,
                                 ..Default::default()
                             },
                             sheet_h,
@@ -302,11 +337,7 @@ impl Sheet {
                                 } else {
                                     Length::Auto
                                 },
-                                max_height: if size_override.is_some() {
-                                    None
-                                } else {
-                                    Some(max_h)
-                                },
+                                max_height: vertical_auto_max_h,
                                 ..Default::default()
                             },
                             sheet_h,
@@ -325,6 +356,19 @@ impl Sheet {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset,
+                                margin: match sheet_side {
+                                    SheetSide::Top if vertical_edge_gap_px.0 > 0.0 => MarginEdges {
+                                        bottom: MarginEdge::Px(vertical_edge_gap_px),
+                                        ..Default::default()
+                                    },
+                                    SheetSide::Bottom if vertical_edge_gap_px.0 > 0.0 => {
+                                        MarginEdges {
+                                            top: MarginEdge::Px(vertical_edge_gap_px),
+                                            ..Default::default()
+                                        }
+                                    }
+                                    _ => Default::default(),
+                                },
                                 size,
                                 overflow: Overflow::Visible,
                                 ..Default::default()
@@ -633,9 +677,9 @@ mod tests {
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
-    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::PressableProps;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]

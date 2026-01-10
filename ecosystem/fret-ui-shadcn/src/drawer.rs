@@ -4,28 +4,302 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, Transform2D};
+use fret_core::{Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
-    SizeStyle, VisualTransformProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
+    SemanticsProps, SizeStyle, VisualTransformProps,
 };
-use fret_ui::element::{MarginEdge, MarginEdges};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::Sheet;
 use crate::layout as shadcn_layout;
 pub use crate::sheet::{
-    SheetContent as DrawerContent, SheetDescription as DrawerDescription,
-    SheetFooter as DrawerFooter, SheetHeader as DrawerHeader, SheetSide as DrawerSide,
-    SheetTitle as DrawerTitle,
+    SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
-use crate::{ChromeRefinement, LayoutRefinement};
-use fret_ui_kit::Space;
+use crate::Sheet;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Space};
+
+const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
+const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
+const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
+const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
+
+#[derive(Debug, Default)]
+struct DrawerSideProviderState {
+    current: Option<DrawerSide>,
+}
+
+fn inherited_drawer_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<DrawerSide> {
+    cx.inherited_state_where::<DrawerSideProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current)
+}
+
+fn drawer_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> DrawerSide {
+    inherited_drawer_side(cx).unwrap_or(DrawerSide::Bottom)
+}
+
+#[track_caller]
+fn with_drawer_side_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    side: DrawerSide,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(DrawerSideProviderState::default, |st| {
+        let prev = st.current;
+        st.current = Some(side);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(DrawerSideProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
+fn drawer_vertical_max_height(viewport_height: Px) -> Px {
+    let cap = (viewport_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0);
+    let by_gap = (viewport_height.0 - DRAWER_EDGE_GAP_PX.0).max(0.0);
+    Px(cap.min(by_gap))
+}
+
+/// shadcn/ui `DrawerContent` (v4).
+#[derive(Debug, Clone)]
+pub struct DrawerContent {
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl DrawerContent {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let side = drawer_side_in_scope(cx);
+
+        let bg = theme.color_required("background");
+        let border = theme.color_required("border");
+        let muted = theme.color_required("muted");
+        let radius = theme.metric_required("metric.radius.lg");
+
+        let (borders, corners) = match side {
+            DrawerSide::Bottom => (
+                Edges {
+                    top: Px(1.0),
+                    ..Edges::all(Px(0.0))
+                },
+                Corners {
+                    top_left: radius,
+                    top_right: radius,
+                    bottom_right: Px(0.0),
+                    bottom_left: Px(0.0),
+                },
+            ),
+            DrawerSide::Top => (
+                Edges {
+                    bottom: Px(1.0),
+                    ..Edges::all(Px(0.0))
+                },
+                Corners {
+                    top_left: Px(0.0),
+                    top_right: Px(0.0),
+                    bottom_right: radius,
+                    bottom_left: radius,
+                },
+            ),
+            DrawerSide::Left => (
+                Edges {
+                    right: Px(1.0),
+                    ..Edges::all(Px(0.0))
+                },
+                Corners::all(Px(0.0)),
+            ),
+            DrawerSide::Right => (
+                Edges {
+                    left: Px(1.0),
+                    ..Edges::all(Px(0.0))
+                },
+                Corners::all(Px(0.0)),
+            ),
+        };
+
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .border_1()
+            .border_color(ColorRef::Color(border))
+            .merge(self.chrome);
+
+        let base_layout = match side {
+            DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .overflow_visible(),
+            DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
+                .w_full()
+                .max_h(MetricRef::Px(drawer_vertical_max_height(
+                    cx.bounds.size.height,
+                )))
+                .overflow_visible(),
+        };
+        let layout = base_layout.merge(self.layout);
+
+        let mut props = decl_style::container_props(&theme, chrome, layout);
+        props.padding = Edges::all(Px(0.0));
+        props.shadow = None;
+        props.border = borders;
+        props.corner_radii = corners;
+
+        let children = self.children;
+
+        let mut rows: Vec<AnyElement> = Vec::new();
+        if side == DrawerSide::Bottom {
+            let bar = cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Px(Px(100.0)),
+                            height: Length::Px(Px(8.0)),
+                            ..Default::default()
+                        },
+                        margin: MarginEdges {
+                            top: MarginEdge::Px(Px(16.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    padding: Edges::all(Px(0.0)),
+                    background: Some(muted),
+                    shadow: None,
+                    border: Edges::all(Px(0.0)),
+                    border_color: None,
+                    corner_radii: Corners::all(Px(4.0)),
+                },
+                |_cx| Vec::new(),
+            );
+            rows.push(shadcn_layout::container_hstack(
+                cx,
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Auto,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                stack::HStackProps::default()
+                    .gap(Space::N0)
+                    .justify_center()
+                    .items_center(),
+                vec![bar],
+            ));
+        }
+        rows.extend(children);
+
+        let stack_layout = match side {
+            DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default().w_full().h_full(),
+            DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default().w_full(),
+        };
+        let content = cx.container(props, move |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N0)
+                    .layout(stack_layout)
+                    .items_stretch(),
+                move |_cx| rows,
+            )]
+        });
+
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Dialog,
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        )
+    }
+}
+
+/// shadcn/ui `DrawerHeader` (v4).
+#[derive(Debug, Clone)]
+pub struct DrawerHeader {
+    children: Vec<AnyElement>,
+}
+
+impl DrawerHeader {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let side = drawer_side_in_scope(cx);
+        let items = match side {
+            DrawerSide::Top | DrawerSide::Bottom => Items::Center,
+            DrawerSide::Left | DrawerSide::Right => Items::Start,
+        };
+        let props = decl_style::container_props(
+            Theme::global(&*cx.app),
+            ChromeRefinement::default().p(Space::N4),
+            LayoutRefinement::default(),
+        );
+        let children = self.children;
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default()
+                .gap(Space::N1)
+                .layout(LayoutRefinement::default().w_full())
+                .items(items),
+            children,
+        )
+    }
+}
+
+/// shadcn/ui `DrawerFooter` (v4).
+#[derive(Debug, Clone)]
+pub struct DrawerFooter {
+    children: Vec<AnyElement>,
+}
+
+impl DrawerFooter {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let props = decl_style::container_props(
+            Theme::global(&*cx.app),
+            ChromeRefinement::default().p(Space::N4),
+            LayoutRefinement::default().mt_auto(),
+        );
+        let children = self.children;
+        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
+    }
+}
 
 #[derive(Clone)]
 pub struct Drawer {
@@ -50,7 +324,10 @@ impl Drawer {
         Self {
             open: open.clone(),
             side: DrawerSide::Bottom,
-            inner: Sheet::new(open).side(DrawerSide::Bottom),
+            inner: Sheet::new(open)
+                .side(DrawerSide::Bottom)
+                .vertical_edge_gap_px(DRAWER_EDGE_GAP_PX)
+                .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION),
             drag_to_dismiss: true,
         }
     }
@@ -122,17 +399,30 @@ impl Drawer {
         let side = self.side;
         let drag_to_dismiss = self.drag_to_dismiss;
 
-        self.inner.into_element(cx, trigger, move |cx| {
-            let content = content(cx);
+        let mut inner = self
+            .inner
+            .vertical_edge_gap_px(DRAWER_EDGE_GAP_PX)
+            .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
+        match side {
+            DrawerSide::Left | DrawerSide::Right => {
+                let viewport_w = cx.bounds.size.width;
+                let desired = Px((viewport_w.0 * DRAWER_SIDE_PANEL_WIDTH_FRACTION)
+                    .min(DRAWER_SIDE_PANEL_MAX_WIDTH_PX.0)
+                    .max(0.0));
+                inner = inner.size(desired);
+            }
+            DrawerSide::Top | DrawerSide::Bottom => {}
+        }
+
+        inner.into_element(cx, trigger, move |cx| {
+            let content = with_drawer_side_provider(cx, side, |cx| content(cx));
             if !drag_to_dismiss || side != DrawerSide::Bottom {
                 return content;
             }
 
-            let theme = Theme::global(&*cx.app).clone();
-            let muted = theme.color_required("muted");
-
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
             let (runtime, offset_model, was_open) = drawer_drag_models(cx);
+            let window_height = cx.bounds.size.height;
 
             if is_open && !was_open {
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = Px(0.0));
@@ -184,8 +474,7 @@ impl Drawer {
                 }
 
                 let dy = mv.position.y.0 - start.y.0;
-                let bounds = host.bounds();
-                let next = Px((start_offset.0 + dy).max(0.0).min(bounds.size.height.0));
+                let next = Px((start_offset.0 + dy).max(0.0).min(window_height.0));
                 let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
                 host.request_redraw(_cx.window);
                 true
@@ -227,7 +516,6 @@ impl Drawer {
                 true
             });
 
-            let handle_overlay = drawer_drag_handle_overlay(cx, muted);
             let content_root = cx.pointer_region(
                 PointerRegionProps {
                     layout: LayoutStyle::default(),
@@ -237,7 +525,7 @@ impl Drawer {
                     cx.pointer_region_on_pointer_down(on_down);
                     cx.pointer_region_on_pointer_move(on_move);
                     cx.pointer_region_on_pointer_up(on_up);
-                    vec![content, handle_overlay]
+                    vec![content]
                 },
             );
 
@@ -254,9 +542,6 @@ impl Drawer {
 
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
-const DRAWER_DRAG_HANDLE_BAR_WIDTH: Px = Px(100.0);
-const DRAWER_DRAG_HANDLE_BAR_HEIGHT: Px = Px(8.0);
-const DRAWER_DRAG_HANDLE_MARGIN_TOP: Px = Px(16.0);
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -316,70 +601,6 @@ fn drawer_drag_hit_test(bounds: fret_core::Rect, position: Point) -> bool {
     dx <= DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH
 }
 
-fn drawer_drag_handle_overlay<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    muted: Color,
-) -> AnyElement {
-    let overlay_layout = LayoutStyle {
-        position: PositionStyle::Absolute,
-        inset: InsetStyle {
-            top: Some(Px(0.0)),
-            right: Some(Px(0.0)),
-            left: Some(Px(0.0)),
-            bottom: None,
-        },
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Px(Px(40.0)),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let bar = cx.container(
-        ContainerProps {
-            layout: LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Px(DRAWER_DRAG_HANDLE_BAR_WIDTH),
-                    height: Length::Px(DRAWER_DRAG_HANDLE_BAR_HEIGHT),
-                    ..Default::default()
-                },
-                margin: MarginEdges {
-                    top: MarginEdge::Px(DRAWER_DRAG_HANDLE_MARGIN_TOP),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            padding: Edges::all(Px(0.0)),
-            background: Some(muted),
-            shadow: None,
-            border: Edges::all(Px(0.0)),
-            border_color: None,
-            corner_radii: Corners::all(Px(DRAWER_DRAG_HANDLE_BAR_HEIGHT.0 * 0.5)),
-        },
-        |_cx| Vec::new(),
-    );
-
-    shadcn_layout::container_hstack(
-        cx,
-        ContainerProps {
-            layout: overlay_layout,
-            padding: Edges::all(Px(0.0)),
-            background: None,
-            shadow: None,
-            border: Edges::all(Px(0.0)),
-            border_color: None,
-            corner_radii: Corners::all(Px(0.0)),
-        },
-        stack::HStackProps::default()
-            .gap(Space::N0)
-            .layout(LayoutRefinement::default().w_full().h_full())
-            .justify_center()
-            .items_start(),
-        vec![bar],
-    )
-}
-
 /// shadcn/ui `DrawerTrigger` (v4).
 #[derive(Debug, Clone)]
 pub struct DrawerTrigger {
@@ -417,7 +638,7 @@ impl DrawerClose {
             // DrawerClose should behave like a primitive close affordance (no forced positioning).
             // Delegate visuals to `DialogClose`, but override the default absolute positioning.
             inner: crate::DialogClose::new(open)
-                .refine_layout(LayoutRefinement::default().relative()),
+                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
         }
     }
 
@@ -459,12 +680,12 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
+    use fret_ui::UiTree;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
     use fret_ui_kit::MetricRef;
     use fret_ui_kit::OverlayController;
-    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -713,7 +934,7 @@ mod tests {
                     |_cx| trigger,
                     |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            cx.container(ContainerProps::default(), |_cx| Vec::new())
                         ])
                         .into_element(cx)
                     },
@@ -738,10 +959,7 @@ mod tests {
             Px(dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 * 0.5),
             Px(dialog.bounds.origin.y.0 + 10.0),
         );
-        let end = Point::new(
-            start.x,
-            Px(dialog.bounds.origin.y.0 + dialog.bounds.size.height.0 * 0.9),
-        );
+        let end = Point::new(start.x, Px(start.y.0 + 80.0));
 
         ui.dispatch_event(
             &mut app,
@@ -826,7 +1044,7 @@ mod tests {
                     |_cx| trigger,
                     |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            cx.container(ContainerProps::default(), |_cx| Vec::new())
                         ])
                         .into_element(cx)
                     },
