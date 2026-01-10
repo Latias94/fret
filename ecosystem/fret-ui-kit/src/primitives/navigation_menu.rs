@@ -15,7 +15,7 @@ use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, OpacityProps, SizeStyle, VisualTransformProps,
+    AnyElement, LayoutStyle, Length, OpacityProps, RenderTransformProps, SizeStyle,
 };
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
@@ -499,8 +499,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
                 opacity: out.opacity,
             },
             move |cx| {
-                let content = cx.visual_transform_props(
-                    VisualTransformProps {
+                let content = cx.render_transform_props(
+                    RenderTransformProps {
                         layout: overlay_layout_for_transform,
                         transform: out.transform,
                     },
