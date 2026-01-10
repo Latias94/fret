@@ -40,14 +40,15 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 /// tooltip content is mounted.
 pub fn apply_tooltip_trigger_a11y(
     mut trigger: AnyElement,
+    open: bool,
     tooltip_element: GlobalElementId,
 ) -> AnyElement {
     match &mut trigger.kind {
         ElementKind::Pressable(props) => {
-            props.a11y.described_by_element = Some(tooltip_element.0);
+            props.a11y.described_by_element = open.then_some(tooltip_element.0);
         }
         ElementKind::Semantics(props) => {
-            props.described_by_element = Some(tooltip_element.0);
+            props.described_by_element = open.then_some(tooltip_element.0);
         }
         _ => {}
     }
@@ -191,7 +192,7 @@ mod tests {
                 |_cx, _st| Vec::new(),
             );
             let tooltip = GlobalElementId(0xbeef);
-            let trigger = apply_tooltip_trigger_a11y(trigger, tooltip);
+            let trigger = apply_tooltip_trigger_a11y(trigger, true, tooltip);
             let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
                 panic!("expected pressable");
             };
@@ -206,11 +207,34 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
             let trigger = cx.semantics(SemanticsProps::default(), |_cx| Vec::new());
             let tooltip = GlobalElementId(0xbeef);
-            let trigger = apply_tooltip_trigger_a11y(trigger, tooltip);
+            let trigger = apply_tooltip_trigger_a11y(trigger, true, tooltip);
             let ElementKind::Semantics(props) = &trigger.kind else {
                 panic!("expected semantics");
             };
             assert_eq!(props.described_by_element, Some(tooltip.0));
+        });
+    }
+
+    #[test]
+    fn apply_tooltip_trigger_a11y_clears_described_by_when_closed() {
+        let window = Default::default();
+        let mut app = App::new();
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let tooltip = GlobalElementId(0xbeef);
+            let trigger = apply_tooltip_trigger_a11y(trigger, false, tooltip);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.described_by_element, None);
         });
     }
 }
