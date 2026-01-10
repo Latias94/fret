@@ -45,6 +45,10 @@ pub const CMD_NODE_GRAPH_FOCUS_NEXT_EDGE: &str = "node_graph.focus_next_edge";
 pub const CMD_NODE_GRAPH_FOCUS_PREV_EDGE: &str = "node_graph.focus_prev_edge";
 pub const CMD_NODE_GRAPH_FOCUS_NEXT_PORT: &str = "node_graph.focus_next_port";
 pub const CMD_NODE_GRAPH_FOCUS_PREV_PORT: &str = "node_graph.focus_prev_port";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_LEFT: &str = "node_graph.focus_port_left";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_RIGHT: &str = "node_graph.focus_port_right";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_UP: &str = "node_graph.focus_port_up";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_DOWN: &str = "node_graph.focus_port_down";
 pub const CMD_NODE_GRAPH_ACTIVATE: &str = "node_graph.activate";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
@@ -262,6 +266,61 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
                 KeyCode::BracketLeft,
                 Modifiers::default(),
             )])
+            .repeatable(),
+    );
+
+    let alt_arrow = |key: KeyCode| {
+        kb(
+            PlatformFilter::All,
+            key,
+            Modifiers {
+                alt: true,
+                ..Default::default()
+            },
+        )
+    };
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_LEFT),
+        CommandMeta::new("Focus Port Left")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowLeft)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_RIGHT),
+        CommandMeta::new("Focus Port Right")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowRight)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_UP),
+        CommandMeta::new("Focus Port Up")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "up"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowUp)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_DOWN),
+        CommandMeta::new("Focus Port Down")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "down"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowDown)])
             .repeatable(),
     );
 

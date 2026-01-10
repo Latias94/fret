@@ -187,6 +187,7 @@ High-level layering (ADR 0135):
     - `Tab` / `Shift+Tab` cycles node focus/selection.
     - `Ctrl/Cmd+Tab` cycles edge focus/selection.
     - `[` / `]` cycles port focus within the focused/selected node (filters to the opposite side during an active wire drag).
+    - `Alt+Arrow` moves port focus spatially across the graph (nearest port in direction).
     - `Enter` activates click-connect (start/commit) for the focused/hovered port.
     - Full semantics (per-element focus nodes, arrow-key navigation, screen reader roles) are still TBD.
 

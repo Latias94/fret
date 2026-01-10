@@ -30,13 +30,14 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_ALIGN_TOP, CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
     CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_DISTRIBUTE_Y,
     CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_EDGE,
-    CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_EDGE,
-    CMD_NODE_GRAPH_FOCUS_PREV_PORT, CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION,
-    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_NUDGE_DOWN,
-    CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT, CMD_NODE_GRAPH_NUDGE_LEFT_FAST,
-    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
-    CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_DOWN, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+    CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PORT_UP, CMD_NODE_GRAPH_FOCUS_PREV,
+    CMD_NODE_GRAPH_FOCUS_PREV_EDGE, CMD_NODE_GRAPH_FOCUS_PREV_PORT, CMD_NODE_GRAPH_FRAME_ALL,
+    CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
+    CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
+    CMD_NODE_GRAPH_NUDGE_DOWN, CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT,
+    CMD_NODE_GRAPH_NUDGE_LEFT_FAST, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
+    CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
     CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
@@ -102,6 +103,14 @@ enum AlignDistributeMode {
     AlignCenterY,
     DistributeX,
     DistributeY,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PortNavDir {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 /// Retained node-graph canvas widget (MVP).
@@ -1083,6 +1092,58 @@ impl NodeGraphCanvas {
         CanvasPoint {
             x: sx / zoom - pan.x,
             y: sy / zoom - pan.y,
+        }
+    }
+
+    fn ensure_canvas_point_visible<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        snapshot: &ViewSnapshot,
+        point: CanvasPoint,
+    ) {
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+        if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let margin_screen = 24.0f32;
+        let margin = margin_screen / zoom;
+        if !margin.is_finite() {
+            return;
+        }
+
+        let view_w = bounds.size.width.0 / zoom;
+        let view_h = bounds.size.height.0 / zoom;
+
+        let view_min_x = -snapshot.pan.x;
+        let view_min_y = -snapshot.pan.y;
+
+        let mut pan = snapshot.pan;
+
+        let min_x = view_min_x + margin;
+        let max_x = view_min_x + view_w - margin;
+        if point.x < min_x {
+            pan.x = margin - point.x;
+        } else if point.x > max_x {
+            pan.x = (view_w - margin) - point.x;
+        }
+
+        let min_y = view_min_y + margin;
+        let max_y = view_min_y + view_h - margin;
+        if point.y < min_y {
+            pan.y = margin - point.y;
+        } else if point.y > max_y {
+            pan.y = (view_h - margin) - point.y;
+        }
+
+        if pan != snapshot.pan {
+            self.update_view_state(host, |s| {
+                s.pan = pan;
+            });
         }
     }
 
@@ -4509,6 +4570,180 @@ impl NodeGraphCanvas {
         self.refresh_focused_port_hints(cx.app);
         true
     }
+
+    fn focus_port_direction<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        snapshot: &ViewSnapshot,
+        dir: PortNavDir,
+    ) -> bool {
+        if !snapshot.interaction.elements_selectable {
+            return false;
+        }
+
+        if self.interaction.focused_port.is_none() {
+            return self.focus_next_port(host, true);
+        }
+
+        let from_port = self.interaction.focused_port;
+        let Some(from_port) = from_port else {
+            return false;
+        };
+
+        let Some(from_center) = self
+            .port_center_window(host, snapshot, from_port)
+            .map(|p| CanvasPoint { x: p.x.0, y: p.y.0 })
+        else {
+            return false;
+        };
+
+        let required_dir = self.interaction.wire_drag.as_ref().and_then(|w| {
+            let from_port = match &w.kind {
+                WireDragKind::New { from, .. } => Some(*from),
+                WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
+                WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+            }?;
+            let dir = self
+                .graph
+                .read_ref(host, |g| g.ports.get(&from_port).map(|p| p.dir))
+                .ok()
+                .flatten()?;
+            Some(match dir {
+                PortDirection::In => PortDirection::Out,
+                PortDirection::Out => PortDirection::In,
+            })
+        });
+
+        let (geom, _) = self.canvas_derived(host, snapshot);
+        let required_dir = required_dir;
+
+        let best = self
+            .graph
+            .read_ref(host, |graph| {
+                #[derive(Clone, Copy)]
+                struct Rank {
+                    angle: f32,
+                    parallel: f32,
+                    dist2: f32,
+                    port: PortId,
+                }
+
+                let from = from_center;
+                let mut best: Option<Rank> = None;
+
+                for (&port, handle) in &geom.ports {
+                    if port == from_port {
+                        continue;
+                    }
+
+                    let Some(p) = graph.ports.get(&port) else {
+                        continue;
+                    };
+
+                    if let Some(required_dir) = required_dir {
+                        if p.dir != required_dir {
+                            continue;
+                        }
+                    }
+
+                    let dx = handle.center.x.0 - from.x;
+                    let dy = handle.center.y.0 - from.y;
+                    let (parallel, perp) = match dir {
+                        PortNavDir::Left => (-dx, dy.abs()),
+                        PortNavDir::Right => (dx, dy.abs()),
+                        PortNavDir::Up => (-dy, dx.abs()),
+                        PortNavDir::Down => (dy, dx.abs()),
+                    };
+                    if !parallel.is_finite() || !perp.is_finite() || parallel <= 1.0e-6 {
+                        continue;
+                    }
+
+                    let angle = (perp / parallel).abs();
+                    let dist2 = dx * dx + dy * dy;
+                    if !angle.is_finite() || !dist2.is_finite() {
+                        continue;
+                    }
+
+                    let cand = Rank {
+                        angle,
+                        parallel,
+                        dist2,
+                        port,
+                    };
+
+                    let better = match best {
+                        None => true,
+                        Some(best) => {
+                            let by_angle = angle.total_cmp(&best.angle);
+                            if by_angle != std::cmp::Ordering::Equal {
+                                by_angle == std::cmp::Ordering::Less
+                            } else {
+                                let by_parallel = parallel.total_cmp(&best.parallel);
+                                if by_parallel != std::cmp::Ordering::Equal {
+                                    by_parallel == std::cmp::Ordering::Less
+                                } else {
+                                    let by_dist = dist2.total_cmp(&best.dist2);
+                                    if by_dist != std::cmp::Ordering::Equal {
+                                        by_dist == std::cmp::Ordering::Less
+                                    } else {
+                                        port < best.port
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    if better {
+                        best = Some(cand);
+                    }
+                }
+
+                best.map(|r| r.port)
+            })
+            .ok()
+            .flatten();
+
+        let Some(next) = best else {
+            return false;
+        };
+
+        let owner = self
+            .graph
+            .read_ref(host, |g| g.ports.get(&next).map(|p| p.node))
+            .ok()
+            .flatten();
+
+        let Some(owner) = owner else {
+            return false;
+        };
+
+        self.interaction.focused_node = Some(owner);
+        self.interaction.focused_edge = None;
+        self.interaction.focused_port = Some(next);
+        self.refresh_focused_port_hints(host);
+        self.update_view_state(host, |s| {
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+            s.selected_nodes.clear();
+            s.selected_nodes.push(owner);
+            s.draw_order.retain(|id| *id != owner);
+            s.draw_order.push(owner);
+        });
+
+        let snapshot = self.sync_view_state(host);
+        if let Some(center) = self.port_center_window(host, &snapshot, next) {
+            self.ensure_canvas_point_visible(
+                host,
+                &snapshot,
+                CanvasPoint {
+                    x: center.x.0,
+                    y: center.y.0,
+                },
+            );
+        }
+
+        true
+    }
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
@@ -4881,6 +5116,38 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
             CMD_NODE_GRAPH_FOCUS_PREV_PORT => {
                 let did = self.focus_next_port(cx.app, false);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PORT_LEFT => {
+                let did = self.focus_port_direction(cx.app, &snapshot, PortNavDir::Left);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PORT_RIGHT => {
+                let did = self.focus_port_direction(cx.app, &snapshot, PortNavDir::Right);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PORT_UP => {
+                let did = self.focus_port_direction(cx.app, &snapshot, PortNavDir::Up);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PORT_DOWN => {
+                let did = self.focus_port_direction(cx.app, &snapshot, PortNavDir::Down);
                 if did {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -7158,7 +7425,8 @@ mod tests {
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
         CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT,
-        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
+        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+        CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
         CMD_NODE_GRAPH_NUDGE_RIGHT,
     };
 
@@ -7555,6 +7823,17 @@ mod tests {
             },
         );
 
+        (graph, a, a_in, a_out, b, b_in)
+    }
+
+    fn make_test_graph_two_nodes_with_ports_spaced_x(
+        dx: f32,
+    ) -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+        let (mut graph, a, a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
+        graph
+            .nodes
+            .entry(b)
+            .and_modify(|n| n.pos = CanvasPoint { x: dx, y: 0.0 });
         (graph, a, a_in, a_out, b, b_in)
     }
 
@@ -8165,5 +8444,50 @@ mod tests {
             .read_ref(&mut host, |g| g.edges.len())
             .unwrap_or(0);
         assert_eq!(edges_len, 1);
+    }
+
+    #[test]
+    fn focus_port_right_moves_to_neighbor_node() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _a_in, a_out, b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(500.0);
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        canvas.interaction.focused_port = Some(a_out);
+        canvas.interaction.focused_node = None;
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_RIGHT)));
+        assert_eq!(canvas.interaction.focused_node, Some(b));
+        assert_eq!(canvas.interaction.focused_port, Some(b_in));
+    }
+
+    #[test]
+    fn focus_port_left_moves_back() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, _a_in, a_out, _b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(500.0);
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        canvas.interaction.focused_port = Some(b_in);
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_LEFT)));
+        assert_eq!(canvas.interaction.focused_node, Some(a));
+        assert_eq!(canvas.interaction.focused_port, Some(a_out));
     }
 }

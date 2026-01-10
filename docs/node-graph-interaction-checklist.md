@@ -100,6 +100,9 @@ Recommended harness:
   - press `Enter` to start a connection preview,
   - focus/hover another handle and press `Enter` to attempt the connection,
   - the session ends regardless of validity.
+- (prototype) Keyboard port navigation:
+  - `[` / `]` cycles ports on the focused node.
+  - `Alt+Arrow` moves to the nearest port in the direction (may change focused node).
 - (prototype) Toggle connection mode (strict/loose) and verify targeting behavior changes.
 - (prototype) Release on empty space:
   - a menu/searcher appears,
