@@ -5456,6 +5456,92 @@ fn container_applies_padding_and_paints_background() {
 }
 
 #[test]
+fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-container-shrink-wraps",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.padding = fret_core::Edges::all(Px(2.0));
+
+            vec![cx.container(outer, |cx| {
+                let mut fixed = crate::element::ContainerProps::default();
+                fixed.layout.size.width = crate::element::Length::Px(Px(30.0));
+                fixed.layout.size.height = crate::element::Length::Px(Px(15.0));
+
+                vec![cx.container(fixed, |_| Vec::new()), cx.text("x")]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let outer = ui.children(root)[0];
+    let outer_bounds = ui.debug_node_bounds(outer).expect("outer bounds");
+    assert_eq!(outer_bounds.size.width, Px(34.0));
+    assert_eq!(outer_bounds.size.height, Px(19.0));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "container-nested-clean-solves",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.padding = fret_core::Edges::all(Px(2.0));
+
+            let mut inner = crate::element::ContainerProps::default();
+            inner.padding = fret_core::Edges::all(Px(1.0));
+
+            vec![cx.container(outer, |cx| {
+                vec![cx.container(inner, |cx| vec![cx.text("x")])]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_solves, 1);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(ui.debug_stats().layout_engine_solves, 0);
+}
+
+#[test]
 fn container_paints_shadow_before_background() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
