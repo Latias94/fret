@@ -185,6 +185,21 @@ impl Default for NodeGraphViewState {
     }
 }
 
+impl NodeGraphViewState {
+    /// Removes stale IDs (selection / draw order) that no longer exist in the target graph.
+    pub fn sanitize_for_graph(&mut self, graph: &Graph) {
+        self.selected_nodes
+            .retain(|id| graph.nodes.contains_key(id));
+        self.selected_edges
+            .retain(|id| graph.edges.contains_key(id));
+        self.selected_groups
+            .retain(|id| graph.groups.contains_key(id));
+        self.draw_order.retain(|id| graph.nodes.contains_key(id));
+        self.group_draw_order
+            .retain(|id| graph.groups.contains_key(id));
+    }
+}
+
 fn default_zoom() -> f32 {
     1.0
 }
@@ -754,5 +769,36 @@ mod tests {
         ));
 
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn view_state_sanitize_removes_stale_ids() {
+        let graph_id = GraphId::new();
+        let mut graph = Graph::new(graph_id);
+
+        let keep_node = NodeId::new();
+        graph.nodes.insert(
+            keep_node,
+            crate::core::Node {
+                kind: crate::core::NodeKindKey::new("test"),
+                kind_version: 1,
+                pos: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        let mut state = NodeGraphViewState {
+            selected_nodes: vec![keep_node, NodeId::new()],
+            draw_order: vec![NodeId::new(), keep_node],
+            ..NodeGraphViewState::default()
+        };
+
+        state.sanitize_for_graph(&graph);
+        assert_eq!(state.selected_nodes, vec![keep_node]);
+        assert_eq!(state.draw_order, vec![keep_node]);
     }
 }
