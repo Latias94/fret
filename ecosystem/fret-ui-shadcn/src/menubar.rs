@@ -1100,20 +1100,27 @@ impl MenubarMenuEntries {
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
                         let font_line_height = theme.metric_required("font.line_height");
                         let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
-                        desired.width.0 = desired.width.0.max(anchor.size.width.0);
+                        let popper_placement = popper::PopperContentPlacement::new(
+                            direction,
+                            Side::Bottom,
+                            Align::Start,
+                            side_offset,
+                        )
+                        .with_align_offset(Px(-4.0));
 
-                        let layout = popper::popper_content_layout_sized(
-                            outer,
-                            anchor,
-                            desired,
-                            popper::PopperContentPlacement::new(
-                                direction,
-                                Side::Bottom,
-                                Align::Start,
-                                side_offset,
-                            )
-                            .with_align_offset(Px(-4.0)),
-                        );
+                        let popper_vars =
+                            menu::menubar_popper_vars(outer, anchor, desired.width, popper_placement);
+                        let desired_w =
+                            menu::menubar_popper_desired_width(outer, anchor, desired.width);
+                        let max_h = theme
+                            .metric_by_key("component.menubar.max_height")
+                            .map(|h| Px(h.0.min(popper_vars.available_height.0)))
+                            .unwrap_or(popper_vars.available_height);
+                        desired.width = desired_w;
+                        desired.height = Px(desired.height.0.min(max_h.0));
+
+                        let layout =
+                            popper::popper_content_layout_sized(outer, anchor, desired, popper_placement);
                         let placed = layout.rect;
                         let origin = popper::popper_content_transform_origin(&layout, anchor, None);
                         let transform = overlay_motion::shadcn_popper_presence_transform(
