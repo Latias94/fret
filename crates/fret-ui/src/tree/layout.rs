@@ -5,7 +5,7 @@ use std::any::TypeId;
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 #[cfg(feature = "layout-engine-v2")]
-use crate::layout_engine::{ParentLayoutKind, build_flow_subtree};
+use crate::layout_engine::{ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree};
 use crate::layout_pass::LayoutPassKind;
 #[cfg(feature = "layout-engine-v2")]
 use taffy::Style as TaffyStyle;
@@ -65,19 +65,7 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         if pass_kind == LayoutPassKind::Final {
-            // Precompute flow islands for the top-level layer roots up front so nested flow
-            // containers can consume engine rects instead of solving their own islands.
-            for &root in &roots {
-                if self.nodes.get(root).is_some_and(|n| n.element.is_some()) {
-                    self.precompute_flow_root_island_if_needed(
-                        app,
-                        services,
-                        root,
-                        bounds,
-                        scale_factor,
-                    );
-                }
-            }
+            self.precompute_layer_root_flow_islands(app, services, &roots, bounds, scale_factor);
         }
 
         for root in roots {
@@ -172,15 +160,13 @@ impl<H: UiHost> UiTree<H> {
             self.viewport_roots.clear();
 
             let mut viewport_cursor: usize = 0;
-            if self.nodes.get(root).is_some_and(|n| n.element.is_some()) {
-                self.precompute_flow_root_island_if_needed(
-                    app,
-                    services,
-                    root,
-                    bounds,
-                    scale_factor,
-                );
-            }
+            self.precompute_single_layer_root_flow_island_if_needed(
+                app,
+                services,
+                root,
+                bounds,
+                scale_factor,
+            );
             let size = self.layout_in_with_pass_kind(
                 app,
                 services,
@@ -272,6 +258,118 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
     ) -> Size {
         self.measure_node(app, services, node, constraints, scale_factor)
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn precompute_layer_root_flow_islands(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        roots: &[NodeId],
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let sf = scale_factor;
+        let available = LayoutSize::new(
+            AvailableSpace::Definite(bounds.size.width),
+            AvailableSpace::Definite(bounds.size.height),
+        );
+
+        let mut engine = self.take_layout_engine();
+
+        for &root in roots {
+            let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
+                Some(node) => {
+                    let has_element = node.element.is_some();
+                    let needs_layout = node.invalidation.layout || node.bounds != bounds;
+                    let is_translation_only = !node.invalidation.layout
+                        && node.bounds.size == bounds.size
+                        && node.bounds.origin != bounds.origin
+                        && node.measured_size != Size::default();
+                    (has_element, needs_layout, is_translation_only)
+                }
+                None => continue,
+            };
+
+            if !has_element {
+                continue;
+            }
+
+            // Always build/request these nodes so the engine retains stable identity across frames.
+            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+
+            if !needs_layout {
+                continue;
+            }
+
+            if is_translation_only {
+                continue;
+            }
+
+            let _ =
+                engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
+                    self.measure_in(app, services, n, c, sf)
+                });
+        }
+
+        self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn precompute_single_layer_root_flow_island_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
+            Some(node) => {
+                let has_element = node.element.is_some();
+                let needs_layout = node.invalidation.layout || node.bounds != bounds;
+                let is_translation_only = !node.invalidation.layout
+                    && node.bounds.size == bounds.size
+                    && node.bounds.origin != bounds.origin
+                    && node.measured_size != Size::default();
+                (has_element, needs_layout, is_translation_only)
+            }
+            None => return,
+        };
+
+        if !has_element {
+            return;
+        }
+
+        let sf = scale_factor;
+        let available = LayoutSize::new(
+            AvailableSpace::Definite(bounds.size.width),
+            AvailableSpace::Definite(bounds.size.height),
+        );
+
+        let mut engine = self.take_layout_engine();
+        build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+
+        if needs_layout {
+            if !is_translation_only {
+                let _ = engine.compute_root_for_node_with_measure_if_needed(
+                    root,
+                    available,
+                    sf,
+                    |n, c| self.measure_in(app, services, n, c, sf),
+                );
+            }
+        }
+
+        self.put_layout_engine(engine);
     }
 
     #[cfg(feature = "layout-engine-v2")]
