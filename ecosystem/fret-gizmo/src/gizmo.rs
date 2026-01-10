@@ -1972,6 +1972,24 @@ impl Gizmo {
         )
         .unwrap_or(1.0);
 
+        // Picking priority ladder (editor UX):
+        // 1) Center / screen-plane handle (when within radius, always win)
+        // 2) Plane handles (when cursor is inside the plane quad)
+        // 3) Axis handles (distance to segment)
+        //
+        // This avoids a common frustration where the axis segment "steals" clicks near the origin.
+        if let Some(p0) = project_point(view_projection, viewport, origin, self.config.depth_range)
+        {
+            let d = (cursor - p0.screen).length();
+            let r = self.config.pick_radius_px.max(6.0);
+            if d.is_finite() && d <= r {
+                return Some(PickHit {
+                    handle: TranslateHandle::Screen.id(),
+                    score: d,
+                });
+            }
+        }
+
         let mut best: Option<PickHit> = None;
         let mut consider = |handle: HandleId, score: f32| {
             if !score.is_finite() {
@@ -1982,16 +2000,6 @@ impl Gizmo {
                 _ => best = Some(PickHit { handle, score }),
             }
         };
-
-        // Center / screen-plane handle (small circle around origin in screen-space).
-        if let Some(p0) = project_point(view_projection, viewport, origin, self.config.depth_range)
-        {
-            let d = (cursor - p0.screen).length();
-            let r = (self.config.pick_radius_px * 0.75).max(4.0);
-            if d <= r {
-                consider(TranslateHandle::Screen.id(), d + 0.5);
-            }
-        }
 
         // Axis handles (distance to projected segments).
         for &(axis_dir, handle) in &[
@@ -2033,7 +2041,7 @@ impl Gizmo {
             let edge_d = quad_edge_distance(cursor, p);
             if inside {
                 // Prefer plane drags when the cursor is actually inside the plane handle quad.
-                consider(handle, 0.35);
+                consider(handle, 0.20);
             } else if edge_d <= self.config.pick_radius_px {
                 consider(handle, edge_d + 0.9);
             }
@@ -2516,4 +2524,278 @@ fn plane_constraint(u: Vec3, v: Vec3) -> Option<TranslateConstraint> {
     }
     let n = u.cross(v).normalize_or_zero();
     (n.length_squared() > 0.0).then_some(TranslateConstraint::Plane { u, v, normal: n })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_view_projection(viewport_px: (f32, f32)) -> Mat4 {
+        let aspect = viewport_px.0.max(1.0) / viewport_px.1.max(1.0);
+        let eye = Vec3::new(3.0, 2.0, 4.0);
+        let target = Vec3::ZERO;
+        let view = Mat4::look_at_rh(eye, target, Vec3::Y);
+        let proj = Mat4::perspective_rh(60.0_f32.to_radians(), aspect, 0.05, 100.0);
+        proj * view
+    }
+
+    fn base_gizmo(mode: GizmoMode) -> Gizmo {
+        let mut config = GizmoConfig::default();
+        config.mode = mode;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        Gizmo::new(config)
+    }
+
+    #[test]
+    fn translate_center_handle_wins_near_origin() {
+        let gizmo = base_gizmo(GizmoMode::Translate);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let p0 = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let hit = gizmo
+            .pick_translate_handle(view_proj, vp, origin, p0.screen, axes)
+            .unwrap();
+        assert_eq!(hit.handle, TranslateHandle::Screen.id());
+    }
+
+    #[test]
+    fn translate_axis_drag_returns_to_zero_when_cursor_returns() {
+        let mut gizmo = base_gizmo(GizmoMode::Translate);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let a = origin;
+        let b = origin + axes[0].normalize_or_zero() * length_world;
+        let pa = project_point(view_proj, vp, a, gizmo.config.depth_range).unwrap();
+        let pb = project_point(view_proj, vp, b, gizmo.config.depth_range).unwrap();
+        let axis_dir_screen = (pb.screen - pa.screen).normalize_or_zero();
+        assert!(axis_dir_screen.length_squared() > 0.0);
+
+        let cursor_start = pa.screen.lerp(pb.screen, 0.5);
+        let cursor_moved = cursor_start + axis_dir_screen * 40.0;
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+
+        let moved_total = match moved.result {
+            GizmoResult::Translation { total, .. } => total,
+            _ => panic!("expected translation"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!(moved_total.x > 0.0);
+        assert!(moved_total.y.abs() < 1e-3);
+        assert!(moved_total.z.abs() < 1e-3);
+
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Translation { total, .. } => total,
+            _ => panic!("expected translation"),
+        };
+        assert!(back_total.length() < 1e-3, "total={back_total:?}");
+    }
+
+    #[test]
+    fn translate_plane_drag_returns_to_zero_when_cursor_returns() {
+        let mut gizmo = base_gizmo(GizmoMode::Translate);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_screen =
+            project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+        let cursor_start =
+            (quad_screen[0] + quad_screen[1] + quad_screen[2] + quad_screen[3]) * 0.25;
+        let cursor_moved = cursor_start + Vec2::new(25.0, -15.0);
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+
+        let moved_total = match moved.result {
+            GizmoResult::Translation { total, .. } => total,
+            _ => panic!("expected translation"),
+        };
+        assert!(moved_total.length() > 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Translation { total, .. } => total,
+            _ => panic!("expected translation"),
+        };
+        assert!(back_total.length() < 1e-3, "total={back_total:?}");
+    }
+
+    #[test]
+    fn rotate_axis_drag_returns_to_zero_when_cursor_returns() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        let (u, v) = plane_basis(axis_dir);
+        let p_start_world = origin + u * radius_world;
+        let p_move_world = origin + (u * 0.98 + v * 0.2).normalize_or_zero() * radius_world;
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(moved_total.is_finite());
+        assert!(moved_total.abs() > 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(back_total.abs() < 1e-3, "total={back_total}");
+    }
 }
