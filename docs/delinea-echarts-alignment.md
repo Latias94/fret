@@ -95,7 +95,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[x]` X dataZoom inside (wheel/drag zoom/pan) (ADR 0129).
 - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (axis-band pan, plot modifiers, and window writes).
 - Demo: `apps/fret-examples/src/chart_multi_axis_demo.rs` (multi-axis interaction conformance harness; desktop + wasm).
-- `[x]` X dataZoom slider (UI-only) in `fret-chart` (bottom X axis only).
+- `[x]` dataZoom sliders (UI-only) in `fret-chart`.
+  - X: bottom X axis only.
+  - Y: active Y axis (left/right) based on axis-band routing.
 - `[x]` Y inside zoom/pan (wheel on Y axis band; drag pan constrained via axis band or plot modifiers) (ADR 0136).
 - `[x]` 2D box zoom that writes `SetViewWindow2D` for the active axis pair (ADR 0136).
   - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (box zoom drag → `Action::SetViewWindow2D`).
