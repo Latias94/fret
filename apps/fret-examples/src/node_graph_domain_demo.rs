@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event};
+use fret_core::{AppWindowId, Color, Event};
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext, run_app,
@@ -23,12 +23,13 @@ use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, MeasuredGeometryStore,
-    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    NodeGraphPresenter, PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit,
-    PortalNumberEditor, register_node_graph_commands,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, EdgeTypeKey, InsertNodeCandidate,
+    MeasuredGeometryStore, NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode,
+    NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresenter,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::Theme;
@@ -664,11 +665,57 @@ impl NodeGraphDomainDemoDriver {
         let store = models.store.clone();
         let style = NodeGraphStyle::from_theme(Theme::global(app));
 
+        let edge_types = NodeGraphEdgeTypes::new()
+            .with_resolver(|graph, edge_id| {
+                let Some(edge) = graph.edges.get(&edge_id) else {
+                    return EdgeTypeKey::new("data");
+                };
+                if edge.kind == EdgeKind::Exec {
+                    return EdgeTypeKey::new("exec");
+                }
+
+                let from_ty = graph.ports.get(&edge.from).and_then(|p| p.ty.as_ref());
+                let to_ty = graph.ports.get(&edge.to).and_then(|p| p.ty.as_ref());
+                if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+                    if from_ty != to_ty {
+                        return EdgeTypeKey::new("incompatible");
+                    }
+                }
+
+                EdgeTypeKey::new("data")
+            })
+            .register(
+                EdgeTypeKey::new("incompatible"),
+                |_graph, _edge, _style, mut hint| {
+                    hint.color = Some(Color {
+                        r: 0.92,
+                        g: 0.25,
+                        b: 0.25,
+                        a: 1.0,
+                    });
+                    hint.label = Some(Arc::<str>::from("Type mismatch"));
+                    hint.width_mul = 1.25;
+                    hint.end_marker = Some(EdgeMarker::arrow(12.0));
+                    hint.route = EdgeRouteKind::Step;
+                    hint
+                },
+            )
+            .register(
+                EdgeTypeKey::new("exec"),
+                |_graph, _edge, _style, mut hint| {
+                    hint.width_mul = 1.1;
+                    hint.end_marker = Some(EdgeMarker::arrow(12.0));
+                    hint.route = EdgeRouteKind::Step;
+                    hint
+                },
+            );
+
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store)
             .with_presenter(presenter)
             .with_style(style.clone())
+            .with_edge_types(edge_types)
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals.clone())
