@@ -7300,6 +7300,7 @@ mod tests {
         Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
 
+    mod connect_conformance;
     mod interaction_conformance;
     mod perf_cache;
 

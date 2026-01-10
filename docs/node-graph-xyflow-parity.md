@@ -529,9 +529,10 @@ High-level layering (ADR 0135):
     - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
     - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
     - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction
-    - connect/reconnect determinism
+    - connect/reconnect determinism (hit-testing semantics in Strict vs Loose)
     - connection drag threshold does not regress (also gates edge reconnect drag)
     - portal does not steal canvas pointer events
