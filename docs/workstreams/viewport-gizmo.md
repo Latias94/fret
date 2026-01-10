@@ -39,7 +39,7 @@ Deliverables:
 
 - `ecosystem/fret-gizmo`:
   - translate mode: axis picking + drag update producing `Transform3d` deltas
-  - engine-facing draw output (initially lines) with explicit `DepthMode`
+  - engine-facing draw output (lines + triangles) with explicit `DepthMode` (`Test/Ghost/Always`)
   - stable interaction phases: begin/update/commit/cancel
 - `apps/fret-examples` demo:
   - engine pass renders:
@@ -133,4 +133,3 @@ Deliverables:
 - Full editor undo/redo integration (tracked by ADR 0136 direction).
 - GPU-agnostic “draw list” in Fret UI for 3D geometry.
 - Editor plugin API for third-party tools (future).
-

@@ -22,6 +22,9 @@ pub enum GizmoOrientation {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DepthMode {
     Test,
+    /// Draws regardless of depth but should be rendered *before* `Test` so visible parts can
+    /// overwrite the ghosted pass.
+    Ghost,
     Always,
 }
 
@@ -60,6 +63,21 @@ pub struct Line3d {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Triangle3d {
+    pub a: Vec3,
+    pub b: Vec3,
+    pub c: Vec3,
+    pub color: Color,
+    pub depth: DepthMode,
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct GizmoDrawList3d {
+    pub lines: Vec<Line3d>,
+    pub triangles: Vec<Triangle3d>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoConfig {
     pub mode: GizmoMode,
     pub orientation: GizmoOrientation,
@@ -67,6 +85,8 @@ pub struct GizmoConfig {
     pub depth_range: DepthRange,
     pub size_px: f32,
     pub pick_radius_px: f32,
+    pub line_thickness_px: f32,
+    pub drag_start_threshold_px: f32,
     pub translate_snap_step: Option<f32>,
     pub rotate_snap_step_radians: Option<f32>,
     pub scale_snap_step: Option<f32>,
@@ -91,6 +111,8 @@ impl Default for GizmoConfig {
             depth_range: DepthRange::default(),
             size_px: 96.0,
             pick_radius_px: 10.0,
+            line_thickness_px: 6.0,
+            drag_start_threshold_px: 3.0,
             translate_snap_step: None,
             rotate_snap_step_radians: Some(15.0_f32.to_radians()),
             scale_snap_step: Some(0.1),
@@ -178,6 +200,9 @@ pub struct GizmoState {
     pub active: Option<HandleId>,
     pub hovered_kind: Option<GizmoMode>,
     drag_mode: GizmoMode,
+    drag_snap: bool,
+    drag_has_started: bool,
+    drag_start_cursor_px: Vec2,
     drag_axis_dir: Vec3,
     drag_origin: Vec3,
     drag_origin_z01: f32,
@@ -192,6 +217,7 @@ pub struct GizmoState {
     drag_total_plane_applied: Vec2,
     drag_basis_u: Vec3,
     drag_basis_v: Vec3,
+    drag_start_angle: f32,
     drag_prev_angle: f32,
     drag_total_angle_raw: f32,
     drag_total_angle_applied: f32,
@@ -208,6 +234,9 @@ impl Default for GizmoState {
             active: None,
             hovered_kind: None,
             drag_mode: GizmoMode::Translate,
+            drag_snap: false,
+            drag_has_started: false,
+            drag_start_cursor_px: Vec2::ZERO,
             drag_axis_dir: Vec3::X,
             drag_origin: Vec3::ZERO,
             drag_origin_z01: 0.0,
@@ -222,6 +251,7 @@ impl Default for GizmoState {
             drag_total_plane_applied: Vec2::ZERO,
             drag_basis_u: Vec3::X,
             drag_basis_v: Vec3::Y,
+            drag_start_angle: 0.0,
             drag_prev_angle: 0.0,
             drag_total_angle_raw: 0.0,
             drag_total_angle_applied: 0.0,
@@ -337,7 +367,7 @@ impl Gizmo {
         if self.state.active.is_none() {
             if input.drag_started {
                 if let Some(h) = hovered {
-                    return match self.config.mode {
+                    let begin = match self.config.mode {
                         GizmoMode::Translate => self.begin_translate_drag(
                             view_projection,
                             viewport,
@@ -392,6 +422,13 @@ impl Gizmo {
                             _ => None,
                         },
                     };
+
+                    // If a drag threshold is configured, we arm the interaction on pointer down
+                    // but only emit the `Begin` phase once the pointer has actually moved.
+                    if self.config.drag_start_threshold_px > 0.0 {
+                        return None;
+                    }
+                    return begin;
                 }
             }
             return None;
@@ -423,6 +460,20 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -490,11 +541,20 @@ impl Gizmo {
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Translation { delta, total },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 // Pointer released: end the interaction. The host is responsible for undo/redo boundaries.
@@ -538,6 +598,20 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -590,7 +664,11 @@ impl Gizmo {
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Rotation {
                             axis: axis_dir,
@@ -599,6 +677,11 @@ impl Gizmo {
                         },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 let total = self.state.drag_total_angle_applied;
@@ -652,6 +735,20 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -718,11 +815,20 @@ impl Gizmo {
                         .collect::<Vec<_>>();
 
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Scale { delta, total },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 let total = total_vec(self.state.drag_total_scale_applied);
@@ -749,23 +855,66 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         target: Transform3d,
-    ) -> Vec<Line3d> {
+    ) -> GizmoDrawList3d {
         let origin = target.translation;
         let axes = self.axis_dirs(&target);
         match self.config.mode {
             GizmoMode::Translate => {
-                let mut out = self.draw_translate_axes(view_projection, viewport, origin, axes);
-                out.extend(self.draw_translate_planes(view_projection, viewport, origin, axes));
-                out.extend(self.draw_translate_screen(view_projection, viewport, origin));
+                let mut out = GizmoDrawList3d::default();
+                out.lines
+                    .extend(self.draw_translate_axes(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_translate_planes(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                ));
+                out.lines
+                    .extend(self.draw_translate_screen(view_projection, viewport, origin));
+                out.triangles.extend(self.draw_translate_solids(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                ));
                 out
             }
-            GizmoMode::Rotate => self.draw_rotate_rings(view_projection, viewport, origin, axes),
-            GizmoMode::Scale => self.draw_scale_handles(view_projection, viewport, origin, axes),
+            GizmoMode::Rotate => {
+                let mut out = GizmoDrawList3d::default();
+                out.lines
+                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                let feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                out.lines.extend(feedback.lines);
+                out.triangles.extend(feedback.triangles);
+                out
+            }
+            GizmoMode::Scale => GizmoDrawList3d {
+                lines: self.draw_scale_handles(view_projection, viewport, origin, axes),
+                triangles: self.draw_scale_solids(view_projection, viewport, origin, axes),
+            },
             GizmoMode::Universal => {
-                let mut out = self.draw_translate_axes(view_projection, viewport, origin, axes);
-                out.extend(self.draw_translate_planes(view_projection, viewport, origin, axes));
-                out.extend(self.draw_translate_screen(view_projection, viewport, origin));
-                out.extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                let mut out = GizmoDrawList3d::default();
+                out.lines
+                    .extend(self.draw_translate_axes(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_translate_planes(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                ));
+                out.lines
+                    .extend(self.draw_translate_screen(view_projection, viewport, origin));
+                out.lines
+                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                let rotate_feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                out.lines.extend(rotate_feedback.lines);
+                out.triangles.extend(self.draw_translate_solids(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                ));
+                out.triangles.extend(rotate_feedback.triangles);
                 out
             }
         }
@@ -785,7 +934,7 @@ impl Gizmo {
                     a,
                     b,
                     color: mix_alpha(color, self.config.occluded_alpha),
-                    depth: DepthMode::Always,
+                    depth: DepthMode::Ghost,
                 });
                 out.push(Line3d {
                     a,
@@ -798,6 +947,24 @@ impl Gizmo {
                 out.push(Line3d { a, b, color, depth });
             }
         }
+    }
+
+    fn push_tri(
+        &self,
+        out: &mut Vec<Triangle3d>,
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        color: Color,
+        depth: DepthMode,
+    ) {
+        out.push(Triangle3d {
+            a,
+            b,
+            c,
+            color,
+            depth,
+        });
     }
 
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
@@ -834,6 +1001,9 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Translate;
+        self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_total_axis_raw = 0.0;
@@ -914,6 +1084,9 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Rotate;
+        self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_axis_dir = axis_dir;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
@@ -937,6 +1110,7 @@ impl Gizmo {
             });
 
         let angle = angle_on_plane(origin, start_hit_world, axis_dir, u, v)?;
+        self.state.drag_start_angle = angle;
         self.state.drag_prev_angle = angle;
 
         Some(GizmoUpdate {
@@ -996,6 +1170,9 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Scale;
+        self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_plane_normal = plane_normal;
@@ -1044,6 +1221,8 @@ impl Gizmo {
             self.config.size_px,
         )
         .unwrap_or(1.0);
+        let head_len = length_world * 0.18;
+        let shaft_len = (length_world - head_len).max(length_world * 0.2);
         for &((axis_dir, color), handle) in &[
             ((axes[0], self.config.x_color), HandleId(1)),
             ((axes[1], self.config.y_color), HandleId(2)),
@@ -1057,7 +1236,7 @@ impl Gizmo {
             self.push_line(
                 &mut out,
                 origin,
-                origin + axis_dir * length_world,
+                origin + axis_dir * shaft_len,
                 c,
                 self.config.depth_mode,
             );
@@ -1167,6 +1346,139 @@ impl Gizmo {
         out
     }
 
+    fn draw_translate_solids(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        axes: [Vec3; 3],
+    ) -> Vec<Triangle3d> {
+        let length_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )
+        .unwrap_or(1.0);
+
+        let head_len = length_world * 0.18;
+        let head_radius = length_world * 0.07;
+
+        let mut out = Vec::new();
+
+        for &((axis_dir, color), handle) in &[
+            ((axes[0], self.config.x_color), HandleId(1)),
+            ((axes[1], self.config.y_color), HandleId(2)),
+            ((axes[2], self.config.z_color), HandleId(3)),
+        ] {
+            let axis_dir = axis_dir.normalize_or_zero();
+            if axis_dir.length_squared() == 0.0 {
+                continue;
+            }
+            let c = if self.is_handle_highlighted(GizmoMode::Translate, handle) {
+                self.config.hover_color
+            } else {
+                color
+            };
+
+            let tip = origin + axis_dir * length_world;
+            let base = tip - axis_dir * head_len;
+            let (u, v) = plane_basis(axis_dir);
+            let s = head_radius * 0.70710677;
+            let c0 = base + (u + v) * s;
+            let c1 = base + (-u + v) * s;
+            let c2 = base + (-u - v) * s;
+            let c3 = base + (u - v) * s;
+
+            self.push_tri(&mut out, tip, c0, c1, c, self.config.depth_mode);
+            self.push_tri(&mut out, tip, c1, c2, c, self.config.depth_mode);
+            self.push_tri(&mut out, tip, c2, c3, c, self.config.depth_mode);
+            self.push_tri(&mut out, tip, c3, c0, c, self.config.depth_mode);
+        }
+
+        // Plane handle fills.
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        for &(u, v, base_color, handle) in &[
+            (
+                axes[0],
+                axes[1],
+                mix_alpha(self.config.z_color, 0.55),
+                TranslateHandle::PlaneXY,
+            ), // XY
+            (
+                axes[0],
+                axes[2],
+                mix_alpha(self.config.y_color, 0.55),
+                TranslateHandle::PlaneXZ,
+            ), // XZ
+            (
+                axes[1],
+                axes[2],
+                mix_alpha(self.config.x_color, 0.55),
+                TranslateHandle::PlaneYZ,
+            ), // YZ
+        ] {
+            let handle_id = handle.id();
+            let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(self.config.hover_color, 0.85)
+            } else {
+                base_color
+            };
+            let fill = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(outline, 0.55)
+            } else {
+                mix_alpha(outline, 0.30)
+            };
+            let quad = translate_plane_quad_world(origin, u, v, off, size);
+            self.push_tri(
+                &mut out,
+                quad[0],
+                quad[1],
+                quad[2],
+                fill,
+                self.config.depth_mode,
+            );
+            self.push_tri(
+                &mut out,
+                quad[0],
+                quad[2],
+                quad[3],
+                fill,
+                self.config.depth_mode,
+            );
+        }
+
+        // Screen translate fill (center handle), always-on-top.
+        if let Some(view_dir) =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+        {
+            let (u, v) = plane_basis(view_dir);
+            let half = length_world * 0.08;
+            let handle_id = TranslateHandle::Screen.id();
+            let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(self.config.hover_color, 1.0)
+            } else {
+                mix_alpha(self.config.hover_color, 0.65)
+            };
+            let fill = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(outline, 0.65)
+            } else {
+                mix_alpha(outline, 0.35)
+            };
+
+            let p0 = origin + (-u - v) * half;
+            let p1 = origin + (u - v) * half;
+            let p2 = origin + (u + v) * half;
+            let p3 = origin + (-u + v) * half;
+            self.push_tri(&mut out, p0, p1, p2, fill, DepthMode::Always);
+            self.push_tri(&mut out, p0, p2, p3, fill, DepthMode::Always);
+        }
+
+        out
+    }
+
     fn draw_rotate_rings(
         &self,
         view_projection: Mat4,
@@ -1245,6 +1557,171 @@ impl Gizmo {
         out
     }
 
+    fn draw_rotate_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Rotate {
+            return GizmoDrawList3d::default();
+        }
+        let Some(active) = self.state.active else {
+            return GizmoDrawList3d::default();
+        };
+        if !self.state.drag_has_started {
+            return GizmoDrawList3d::default();
+        }
+
+        let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+        if axis_dir.length_squared() == 0.0 {
+            return GizmoDrawList3d::default();
+        }
+
+        let radius_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )
+        .unwrap_or(1.0)
+        .max(1e-6);
+
+        let thickness_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.line_thickness_px,
+        )
+        .unwrap_or(radius_world * 0.04);
+
+        let half = (thickness_world * 1.15)
+            .clamp(radius_world * 0.015, radius_world * 0.12)
+            .max(1e-6);
+        let inner_r = (radius_world - half).max(radius_world * 0.2);
+        let outer_r = radius_world + half;
+
+        let base = match active.0 {
+            1 => self.config.x_color,
+            2 => self.config.y_color,
+            3 => self.config.z_color,
+            8 => Color {
+                r: 0.9,
+                g: 0.9,
+                b: 0.9,
+                a: 0.8,
+            },
+            _ => self.config.hover_color,
+        };
+        let color = if self.state.active == Some(active) {
+            self.config.hover_color
+        } else {
+            base
+        };
+
+        let total = self.state.drag_total_angle_applied;
+        let start = self.state.drag_start_angle;
+        let end = start + total;
+
+        let u = self.state.drag_basis_u.normalize_or_zero();
+        let v = self.state.drag_basis_v.normalize_or_zero();
+        if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+            return GizmoDrawList3d::default();
+        }
+
+        let mut out = GizmoDrawList3d::default();
+
+        if total.abs() > 1e-6 {
+            let segs = ((total.abs() / std::f32::consts::TAU) * 96.0)
+                .ceil()
+                .clamp(12.0, 192.0) as usize;
+            let step = total / (segs as f32);
+
+            let fill_alpha = if self.state.drag_snap { 0.30 } else { 0.22 };
+            let fill = mix_alpha(color, fill_alpha);
+            let edge = mix_alpha(color, 0.95);
+
+            let point =
+                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
+
+            let mut prev_outer = point(start, outer_r);
+            for i in 0..segs {
+                let t0 = start + step * (i as f32);
+                let t1 = start + step * ((i + 1) as f32);
+                let o0 = point(t0, outer_r);
+                let i0 = point(t0, inner_r);
+                let o1 = point(t1, outer_r);
+                let i1 = point(t1, inner_r);
+
+                self.push_tri(&mut out.triangles, o0, i0, i1, fill, DepthMode::Always);
+                self.push_tri(&mut out.triangles, o0, i1, o1, fill, DepthMode::Always);
+
+                self.push_line(&mut out.lines, prev_outer, o1, edge, DepthMode::Always);
+                prev_outer = o1;
+            }
+
+            let start_dir = (u * start.cos() + v * start.sin()).normalize_or_zero();
+            let end_dir = (u * end.cos() + v * end.sin()).normalize_or_zero();
+            if start_dir.length_squared() > 0.0 {
+                self.push_line(
+                    &mut out.lines,
+                    origin,
+                    origin + start_dir * radius_world,
+                    mix_alpha(color, 0.35),
+                    DepthMode::Always,
+                );
+            }
+            if end_dir.length_squared() > 0.0 {
+                self.push_line(
+                    &mut out.lines,
+                    origin,
+                    origin + end_dir * radius_world,
+                    mix_alpha(color, 0.75),
+                    DepthMode::Always,
+                );
+                self.push_line(
+                    &mut out.lines,
+                    origin + end_dir * inner_r,
+                    origin + end_dir * (outer_r + half * 0.8),
+                    edge,
+                    DepthMode::Always,
+                );
+            }
+        }
+
+        if self.state.drag_snap {
+            if let Some(step) = self
+                .config
+                .rotate_snap_step_radians
+                .filter(|s| s.is_finite() && *s > 0.0)
+            {
+                let ticks = (std::f32::consts::TAU / step).round() as usize;
+                if (4..=128).contains(&ticks) {
+                    let tick_color = Color {
+                        r: 0.9,
+                        g: 0.9,
+                        b: 0.9,
+                        a: 0.35,
+                    };
+                    for k in 0..ticks {
+                        let t = (k as f32) * step;
+                        let dir = (u * t.cos() + v * t.sin()).normalize_or_zero();
+                        if dir.length_squared() == 0.0 {
+                            continue;
+                        }
+                        let a = origin + dir * (outer_r + half * 0.8);
+                        let b = origin + dir * (outer_r + half * 2.2);
+                        self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
+                    }
+                }
+            }
+        }
+
+        out
+    }
+
     fn draw_scale_handles(
         &self,
         view_projection: Mat4,
@@ -1308,6 +1785,79 @@ impl Gizmo {
         for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
             self.push_line(&mut out, a, b, c, DepthMode::Always);
         }
+
+        out
+    }
+
+    fn draw_scale_solids(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        axes: [Vec3; 3],
+    ) -> Vec<Triangle3d> {
+        let length_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )
+        .unwrap_or(1.0);
+
+        let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+            .map(plane_basis)
+            .unwrap_or((Vec3::X, Vec3::Y));
+
+        let mut out = Vec::new();
+
+        // Axis end boxes (screen-facing filled quads).
+        for &((axis_dir, color), handle) in &[
+            ((axes[0], self.config.x_color), HandleId(1)),
+            ((axes[1], self.config.y_color), HandleId(2)),
+            ((axes[2], self.config.z_color), HandleId(3)),
+        ] {
+            let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
+                self.config.hover_color
+            } else {
+                color
+            };
+            let fill = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
+                mix_alpha(outline, 0.70)
+            } else {
+                mix_alpha(outline, 0.45)
+            };
+
+            let end = origin + axis_dir * length_world;
+            let half = length_world * 0.06;
+            let p0 = end + (-u - v) * half;
+            let p1 = end + (u - v) * half;
+            let p2 = end + (u + v) * half;
+            let p3 = end + (-u + v) * half;
+            self.push_tri(&mut out, p0, p1, p2, fill, self.config.depth_mode);
+            self.push_tri(&mut out, p0, p2, p3, fill, self.config.depth_mode);
+        }
+
+        // Uniform scale at the origin (screen-facing filled quad), always-on-top.
+        let handle = HandleId(7);
+        let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
+            self.config.hover_color
+        } else {
+            mix_alpha(self.config.hover_color, 0.65)
+        };
+        let fill = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
+            mix_alpha(outline, 0.75)
+        } else {
+            mix_alpha(outline, 0.40)
+        };
+
+        let half = length_world * 0.08;
+        let p0 = origin + (-u - v) * half;
+        let p1 = origin + (u - v) * half;
+        let p2 = origin + (u + v) * half;
+        let p3 = origin + (-u + v) * half;
+        self.push_tri(&mut out, p0, p1, p2, fill, DepthMode::Always);
+        self.push_tri(&mut out, p0, p2, p3, fill, DepthMode::Always);
 
         out
     }
@@ -1479,7 +2029,16 @@ impl Gizmo {
             .map(|h| (h, GizmoMode::Rotate));
 
         match (translate, rotate) {
-            (Some(a), Some(b)) => Some(if a.0.score <= b.0.score { a } else { b }),
+            (Some(a), Some(b)) => {
+                // Universal mode overlays translate planes/center with rotation rings; bias toward
+                // rotate when both hits are plausible (closer to the UX of mature editors).
+                let translate_bias = match a.0.handle.0 {
+                    4 | 5 | 6 | 10 => self.config.pick_radius_px * 0.75,
+                    _ => 0.0,
+                };
+                let a_score = a.0.score + translate_bias;
+                Some(if a_score <= b.0.score { a } else { b })
+            }
             (Some(a), None) => Some(a),
             (None, Some(b)) => Some(b),
             (None, None) => None,
