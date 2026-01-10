@@ -1,6 +1,6 @@
 use crate::core::{
-    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node, NodeId, NodeKindKey, Port,
-    PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node,
+    NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
@@ -387,10 +387,29 @@ fn set_edge_endpoints_updates_edge_in_place() {
 #[test]
 fn fragment_paste_transaction_is_deterministic_for_seed() {
     let mut graph = Graph::default();
+    let group_id = GroupId::new();
+    graph.groups.insert(
+        group_id,
+        Group {
+            title: "G".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
     let a = NodeId::new();
     let b = NodeId::new();
-    graph.nodes.insert(a, make_node("core.a"));
-    graph.nodes.insert(b, make_node("core.b"));
+    let mut na = make_node("core.a");
+    na.parent = Some(group_id);
+    let mut nb = make_node("core.b");
+    nb.parent = Some(group_id);
+    graph.nodes.insert(a, na);
+    graph.nodes.insert(b, nb);
 
     let out = PortId::new();
     let inn = PortId::new();
@@ -413,7 +432,7 @@ fn fragment_paste_transaction_is_deterministic_for_seed() {
         },
     );
 
-    let fragment = GraphFragment::from_nodes(&graph, [a, b]);
+    let fragment = GraphFragment::from_selection(&graph, [a, b], [group_id]);
     let remapper = IdRemapper::new(IdRemapSeed(Uuid::nil()));
     let tuning = PasteTuning {
         offset: CanvasPoint { x: 10.0, y: 20.0 },
@@ -434,6 +453,7 @@ fn fragment_paste_transaction_is_deterministic_for_seed() {
     assert_eq!(dst.nodes.len(), 2);
     assert_eq!(dst.ports.len(), 2);
     assert_eq!(dst.edges.len(), 1);
+    assert_eq!(dst.groups.len(), 1);
 }
 
 #[test]

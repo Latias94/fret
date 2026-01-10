@@ -1101,10 +1101,7 @@ impl NodeGraphCanvas {
                     selected_nodes.to_vec(),
                     selected_groups.to_vec(),
                 );
-                match serde_json::to_string(&fragment) {
-                    Ok(json) => format!("fret-node.fragment.v1\n{json}"),
-                    Err(_) => String::new(),
-                }
+                fragment.to_clipboard_text().unwrap_or_default()
             })
             .ok()
             .unwrap_or_default();
@@ -1136,8 +1133,7 @@ impl NodeGraphCanvas {
         text: &str,
         at: CanvasPoint,
     ) {
-        let payload = text.strip_prefix("fret-node.fragment.v1\n").unwrap_or(text);
-        let fragment: GraphFragment = match serde_json::from_str(payload) {
+        let fragment: GraphFragment = match GraphFragment::from_clipboard_text(text) {
             Ok(v) => v,
             Err(_) => {
                 self.show_toast(
