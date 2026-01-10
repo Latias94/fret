@@ -65,6 +65,7 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         if pass_kind == LayoutPassKind::Final {
+            self.request_layer_root_flow_subtrees(app, &roots, bounds, scale_factor);
             self.precompute_layer_root_flow_islands(app, services, &roots, bounds, scale_factor);
         }
 
@@ -162,6 +163,7 @@ impl<H: UiHost> UiTree<H> {
             self.viewport_roots.clear();
 
             let mut viewport_cursor: usize = 0;
+            self.request_single_layer_root_flow_subtree(app, root, bounds, scale_factor);
             self.precompute_single_layer_root_flow_island_if_needed(
                 app,
                 services,
@@ -263,10 +265,9 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    fn precompute_layer_root_flow_islands(
+    fn request_layer_root_flow_subtrees(
         &mut self,
         app: &mut H,
-        services: &mut dyn UiServices,
         roots: &[NodeId],
         bounds: Rect,
         scale_factor: f32,
@@ -275,6 +276,57 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let sf = scale_factor;
+        let mut engine = self.take_layout_engine();
+        for &root in roots {
+            if !self
+                .nodes
+                .get(root)
+                .is_some_and(|node| node.element.is_some())
+            {
+                continue;
+            }
+
+            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+        }
+        self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn request_single_layer_root_flow_subtree(
+        &mut self,
+        app: &mut H,
+        root: NodeId,
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        if !self
+            .nodes
+            .get(root)
+            .is_some_and(|node| node.element.is_some())
+        {
+            return;
+        }
+
+        let sf = scale_factor;
+        let mut engine = self.take_layout_engine();
+        build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+        self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn precompute_layer_root_flow_islands(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        roots: &[NodeId],
+        bounds: Rect,
+        scale_factor: f32,
+    ) {
         let sf = scale_factor;
         let available = LayoutSize::new(
             AvailableSpace::Definite(bounds.size.width),
@@ -300,9 +352,6 @@ impl<H: UiHost> UiTree<H> {
             if !has_element {
                 continue;
             }
-
-            // Always build/request these nodes so the engine retains stable identity across frames.
-            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
 
             if !needs_layout {
                 continue;
@@ -330,10 +379,6 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) {
-        let Some(window) = self.window else {
-            return;
-        };
-
         let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
             Some(node) => {
                 let has_element = node.element.is_some();
@@ -358,7 +403,6 @@ impl<H: UiHost> UiTree<H> {
         );
 
         let mut engine = self.take_layout_engine();
-        build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
 
         if needs_layout {
             if !is_translation_only {

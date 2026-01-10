@@ -130,7 +130,7 @@ Acceptance:
 
 ## Known Gaps / Cautions
 
-- Layer-root precompute of flow islands is enabled for **declarative element roots** in v2 (so nested flow containers consume engine rects instead of solving their own islands). It is intentionally skipped for non-element/custom roots to avoid wasted solves, and viewport roots are still orchestrated via the post-root flush protocol.
+ - In v2 Final passes, **declarative element layer roots** run a request/build stage up front (stable identity + engine-backed wrapper rects), followed by a compute stage that is skipped when clean/translation-only. This is intentionally skipped for non-element/custom roots to avoid wasted work, and viewport roots are still orchestrated via the post-root flush protocol.
 - Wrapper overlay nodes use `1fr` tracks with `justify_items/align_items: start` so percent/fill sizing can resolve against definite wrapper boxes without stretching auto-sized children (e.g. spacers).
 
 ## Engineering Guardrails (v2 Runtime Policy)
