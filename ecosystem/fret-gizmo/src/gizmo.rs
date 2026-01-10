@@ -86,6 +86,7 @@ pub struct GizmoConfig {
     pub size_px: f32,
     pub pick_radius_px: f32,
     pub line_thickness_px: f32,
+    pub drag_start_threshold_px: f32,
     pub translate_snap_step: Option<f32>,
     pub rotate_snap_step_radians: Option<f32>,
     pub scale_snap_step: Option<f32>,
@@ -111,6 +112,7 @@ impl Default for GizmoConfig {
             size_px: 96.0,
             pick_radius_px: 10.0,
             line_thickness_px: 6.0,
+            drag_start_threshold_px: 3.0,
             translate_snap_step: None,
             rotate_snap_step_radians: Some(15.0_f32.to_radians()),
             scale_snap_step: Some(0.1),
@@ -199,6 +201,8 @@ pub struct GizmoState {
     pub hovered_kind: Option<GizmoMode>,
     drag_mode: GizmoMode,
     drag_snap: bool,
+    drag_has_started: bool,
+    drag_start_cursor_px: Vec2,
     drag_axis_dir: Vec3,
     drag_origin: Vec3,
     drag_origin_z01: f32,
@@ -231,6 +235,8 @@ impl Default for GizmoState {
             hovered_kind: None,
             drag_mode: GizmoMode::Translate,
             drag_snap: false,
+            drag_has_started: false,
+            drag_start_cursor_px: Vec2::ZERO,
             drag_axis_dir: Vec3::X,
             drag_origin: Vec3::ZERO,
             drag_origin_z01: 0.0,
@@ -361,7 +367,7 @@ impl Gizmo {
         if self.state.active.is_none() {
             if input.drag_started {
                 if let Some(h) = hovered {
-                    return match self.config.mode {
+                    let begin = match self.config.mode {
                         GizmoMode::Translate => self.begin_translate_drag(
                             view_projection,
                             viewport,
@@ -416,6 +422,13 @@ impl Gizmo {
                             _ => None,
                         },
                     };
+
+                    // If a drag threshold is configured, we arm the interaction on pointer down
+                    // but only emit the `Begin` phase once the pointer has actually moved.
+                    if self.config.drag_start_threshold_px > 0.0 {
+                        return None;
+                    }
+                    return begin;
                 }
             }
             return None;
@@ -448,6 +461,19 @@ impl Gizmo {
 
                 if input.dragging {
                     self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -515,11 +541,20 @@ impl Gizmo {
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Translation { delta, total },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 // Pointer released: end the interaction. The host is responsible for undo/redo boundaries.
@@ -564,6 +599,19 @@ impl Gizmo {
 
                 if input.dragging {
                     self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -616,7 +664,11 @@ impl Gizmo {
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Rotation {
                             axis: axis_dir,
@@ -625,6 +677,11 @@ impl Gizmo {
                         },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 let total = self.state.drag_total_angle_applied;
@@ -679,6 +736,19 @@ impl Gizmo {
 
                 if input.dragging {
                     self.state.drag_snap = input.snap;
+                    let started_this_call = if !self.state.drag_has_started {
+                        let threshold = self.config.drag_start_threshold_px.max(0.0);
+                        if threshold > 0.0
+                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                < threshold
+                        {
+                            return None;
+                        }
+                        self.state.drag_has_started = true;
+                        true
+                    } else {
+                        false
+                    };
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -745,11 +815,20 @@ impl Gizmo {
                         .collect::<Vec<_>>();
 
                     return Some(GizmoUpdate {
-                        phase: GizmoPhase::Update,
+                        phase: if started_this_call {
+                            GizmoPhase::Begin
+                        } else {
+                            GizmoPhase::Update
+                        },
                         active,
                         result: GizmoResult::Scale { delta, total },
                         updated_targets,
                     });
+                }
+
+                if !self.state.drag_has_started {
+                    self.state.active = None;
+                    return None;
                 }
 
                 let total = total_vec(self.state.drag_total_scale_applied);
@@ -923,6 +1002,8 @@ impl Gizmo {
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Translate;
         self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_total_axis_raw = 0.0;
@@ -1004,6 +1085,8 @@ impl Gizmo {
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Rotate;
         self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_axis_dir = axis_dir;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
@@ -1088,6 +1171,8 @@ impl Gizmo {
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Scale;
         self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_plane_normal = plane_normal;
@@ -1484,6 +1569,9 @@ impl Gizmo {
         let Some(active) = self.state.active else {
             return GizmoDrawList3d::default();
         };
+        if !self.state.drag_has_started {
+            return GizmoDrawList3d::default();
+        }
 
         let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
         if axis_dir.length_squared() == 0.0 {
@@ -1941,7 +2029,16 @@ impl Gizmo {
             .map(|h| (h, GizmoMode::Rotate));
 
         match (translate, rotate) {
-            (Some(a), Some(b)) => Some(if a.0.score <= b.0.score { a } else { b }),
+            (Some(a), Some(b)) => {
+                // Universal mode overlays translate planes/center with rotation rings; bias toward
+                // rotate when both hits are plausible (closer to the UX of mature editors).
+                let translate_bias = match a.0.handle.0 {
+                    4 | 5 | 6 | 10 => self.config.pick_radius_px * 0.75,
+                    _ => 0.0,
+                };
+                let a_score = a.0.score + translate_bias;
+                Some(if a_score <= b.0.score { a } else { b })
+            }
             (Some(a), None) => Some(a),
             (None, Some(b)) => Some(b),
             (None, None) => None,

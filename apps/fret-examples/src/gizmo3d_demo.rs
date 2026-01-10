@@ -918,6 +918,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 match update.phase {
                     GizmoPhase::Begin => {
                         m.drag_start_target = Some(m.target);
+                        m.target = update.updated_targets[0];
                     }
                     GizmoPhase::Update => {
                         m.target = update.updated_targets[0];
