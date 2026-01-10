@@ -7,9 +7,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
-    TextProps,
+    ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1391,8 +1391,6 @@ impl ContextMenu {
 
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
-                    let estimated = Size::new(Px(220.0), Px(200.0));
-
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
                         DropdownMenuAlign::Center => Align::Center,
@@ -1408,18 +1406,33 @@ impl ContextMenu {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
+                    let min_width = theme
+                        .metric_by_key("component.context_menu.min_width")
+                        .unwrap_or(Px(220.0));
+
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
+                    let popper_placement =
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_arrow(arrow_options, arrow_protrusion);
+                    let popper_vars = menu::context_menu_popper_vars(
+                        outer,
+                        anchor_rect,
+                        min_width,
+                        popper_placement,
+                    );
+                    let desired_w =
+                        menu::context_menu_popper_desired_width(outer, anchor_rect, min_width);
+                    let max_h = theme
+                        .metric_by_key("component.context_menu.max_height")
+                        .map(|h| Px(h.0.min(popper_vars.available_height.0)))
+                        .unwrap_or(popper_vars.available_height);
+                    let desired = Size::new(desired_w, max_h);
+
                     let layout = popper::popper_content_layout_sized(
                         outer,
                         anchor_rect,
-                        estimated,
-                        popper::PopperContentPlacement::new(
-                            direction,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        desired,
+                        popper_placement,
                     );
 
                     let placed = layout.rect;
@@ -1973,7 +1986,23 @@ impl ContextMenu {
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
-                                            vec![roving]
+                                            let scroll_layout = LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Fill,
+                                                    ..Default::default()
+                                                },
+                                                overflow: Overflow::Clip,
+                                                ..Default::default()
+                                            };
+                                            vec![cx.scroll(
+                                                ScrollProps {
+                                                    layout: scroll_layout,
+                                                    axis: ScrollAxis::Y,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![roving],
+                                            )]
                                         },
                                     );
 
