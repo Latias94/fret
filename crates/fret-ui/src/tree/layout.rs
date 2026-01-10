@@ -767,6 +767,15 @@ impl<H: UiHost> UiTree<H> {
             if cfg!(debug_assertions) {
                 panic!("measure_in re-entered for {node:?} under {constraints:?}");
             }
+            if let Some(suppressed) = self.measure_reentrancy_diagnostics.record(app.frame_id()) {
+                tracing::warn!(
+                    window = ?self.window,
+                    node = ?node,
+                    constraints = ?constraints,
+                    suppressed,
+                    "measure_in re-entered; returning Size::default()"
+                );
+            }
             return Size::default();
         }
         self.measure_stack.push(key);

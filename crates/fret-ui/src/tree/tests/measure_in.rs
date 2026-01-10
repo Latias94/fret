@@ -32,3 +32,13 @@ fn measure_in_reentrancy_panics_in_debug_builds() {
 
     let _ = ui.measure_in(&mut app, &mut services, node, constraints, 1.0);
 }
+
+#[test]
+fn measure_reentrancy_diagnostics_rate_limits_by_frame() {
+    let mut diagnostics = MeasureReentrancyDiagnostics::default();
+
+    assert_eq!(diagnostics.record(FrameId(0)), Some(0));
+    assert_eq!(diagnostics.record(FrameId(0)), None);
+    assert_eq!(diagnostics.record(FrameId(119)), None);
+    assert_eq!(diagnostics.record(FrameId(120)), Some(2));
+}

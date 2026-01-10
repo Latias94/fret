@@ -404,6 +404,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
+    measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
 
     #[cfg(feature = "layout-engine-v2")]
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
@@ -444,6 +445,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
+            measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             #[cfg(feature = "layout-engine-v2")]
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             #[cfg(feature = "layout-engine-v2")]
@@ -457,6 +459,33 @@ impl<H: UiHost> Default for UiTree<H> {
             semantics_requested: false,
             deferred_cleanup: Vec::new(),
         }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MeasureReentrancyDiagnostics {
+    /// Frame ID of the last emitted warning.
+    last_log_frame: Option<FrameId>,
+    /// Number of suppressed re-entrancy events since the last emitted warning.
+    suppressed_since_last_log: u64,
+}
+
+impl MeasureReentrancyDiagnostics {
+    const MIN_FRAMES_BETWEEN_LOGS: u64 = 120;
+
+    fn record(&mut self, frame_id: FrameId) -> Option<u64> {
+        let should_log = match self.last_log_frame {
+            None => true,
+            Some(last) => frame_id.0.saturating_sub(last.0) >= Self::MIN_FRAMES_BETWEEN_LOGS,
+        };
+
+        if !should_log {
+            self.suppressed_since_last_log = self.suppressed_since_last_log.saturating_add(1);
+            return None;
+        }
+
+        self.last_log_frame = Some(frame_id);
+        Some(std::mem::take(&mut self.suppressed_since_last_log))
     }
 }
 

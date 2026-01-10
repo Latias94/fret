@@ -4293,6 +4293,7 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
     let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected scroll content subtree nodes to remain registered in the layout engine"
@@ -4397,6 +4398,7 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
         0,
         "expected scroll translation to avoid triggering layout engine solves"
     );
+    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected translation-only scroll to keep engine nodes alive (stable identity)"
@@ -4405,6 +4407,7 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
     // Even when the tree is fully clean (no invalidation, no translation), the request/build phase
     // must keep barrier-mounted subtrees registered so identity remains stable across frames.
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected steady-state frames to keep scroll content nodes registered in the engine"
