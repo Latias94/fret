@@ -203,6 +203,7 @@ mod tests {
                         side: Side::Bottom,
                         offset: Px(1.0),
                         alignment_offset: Px(0.0),
+                        center_offset: Px(0.0),
                     }),
                 };
                 let el = diamond_arrow_element(

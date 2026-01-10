@@ -686,5 +686,6 @@ fn apply_arrow_layout(
         side: opposite_side(placement_side),
         offset: Px(offset),
         alignment_offset: Px(alignment_offset),
+        center_offset: Px(desired_offset - offset),
     }
 }

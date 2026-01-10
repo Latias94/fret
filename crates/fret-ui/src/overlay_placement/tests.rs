@@ -251,6 +251,7 @@ fn arrow_centers_when_possible() {
     assert_eq!(arrow.side, Side::Top);
     assert!((arrow.offset.0 - 94.0).abs() < 0.1);
     assert_eq!(arrow.alignment_offset, Px(0.0));
+    assert!(arrow.center_offset.0.abs() < 0.1);
 }
 
 #[test]
@@ -277,6 +278,7 @@ fn arrow_clamps_to_padding_near_edge() {
 
     let arrow = layout.arrow.expect("arrow layout");
     assert!(arrow.offset.0 >= 16.0 - 0.01);
+    assert!(arrow.center_offset.0.abs() > 0.1);
 }
 
 #[test]

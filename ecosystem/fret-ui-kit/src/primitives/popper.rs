@@ -316,6 +316,7 @@ mod tests {
                 side: Side::Top,
                 offset: Px(1.0),
                 alignment_offset: Px(0.0),
+                center_offset: Px(0.0),
             }),
         };
 
@@ -325,6 +326,7 @@ mod tests {
             side: Side::Left,
             offset: Px(1.0),
             alignment_offset: Px(0.0),
+            center_offset: Px(0.0),
         });
         assert_eq!(wrapper_insets_for_arrow(&layout, Px(7.0)).left, Px(7.0));
     }

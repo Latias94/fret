@@ -109,10 +109,9 @@ and transform origin:
   - Radix writes CSS variables for available width/height and anchor width/height; Fret currently
     returns the placed rect (and optional arrow layout), but does not expose those extra numbers as
     a structured output for recipes.
-- Partial: Arrow “cannot center” signal.
-  - Radix exposes `centerOffset` and uses it to drive `shouldHideArrow`. Fret computes arrow
-    clamping and optional `alignment_offset`, but does not explicitly return a `center_offset` /
-    `should_hide_arrow` boolean.
+- Pass: Arrow “cannot center” signal.
+  - Fret exposes `ArrowLayout.center_offset` (Floating `centerOffset`), which callers can use to
+    implement Radix `shouldHideArrow` (`center_offset != 0`).
 
 ## Follow-ups (recommended)
 
@@ -125,7 +124,8 @@ deterministic:
    - Fret currently models the default `limitShift()` behavior; it does not expose the optional
      limiter offset configuration.
 3. Add an optional `reference_hidden` / `should_hide` output bit (Radix `hideWhenDetached`).
-4. Extend `ArrowLayout` to expose `center_offset` (and derive a `should_hide_arrow` helper).
+4. Consider adding a small helper for `shouldHideArrow` and aligning transform-origin behavior
+   when the arrow is hidden (Radix treats arrow width/height as `0` for transform-origin math).
 5. Expose Radix-like “available” metrics as structured outputs for recipes (instead of CSS vars).
 
 ## Validation anchors
