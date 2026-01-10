@@ -72,6 +72,9 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
     corner_radius: Px,
     outset: Px,
 ) -> Option<AnyElement> {
+    if popper::should_hide_arrow(layout) {
+        return None;
+    }
     let arrow = layout.arrow?;
     let placed = layout.rect;
 
@@ -219,6 +222,43 @@ mod tests {
                     }),
                 );
                 assert!(el.is_some());
+            },
+        );
+    }
+
+    #[test]
+    fn diamond_arrow_element_hides_when_arrow_cannot_center() {
+        let mut app = App::new();
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            Default::default(),
+            Default::default(),
+            "test",
+            |cx| {
+                let layout = AnchoredPanelLayout {
+                    rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+                    side: Side::Bottom,
+                    align: Align::Center,
+                    arrow: Some(ArrowLayout {
+                        side: Side::Bottom,
+                        offset: Px(1.0),
+                        alignment_offset: Px(0.0),
+                        center_offset: Px(10.0),
+                    }),
+                };
+                let el = diamond_arrow_element(
+                    cx,
+                    &layout,
+                    Edges::all(Px(0.0)),
+                    Px(10.0),
+                    DiamondArrowStyle::new(fret_core::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
+                );
+                assert!(el.is_none());
             },
         );
     }

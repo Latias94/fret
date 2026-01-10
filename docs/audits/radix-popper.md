@@ -124,8 +124,7 @@ deterministic:
    - Fret currently models the default `limitShift()` behavior; it does not expose the optional
      limiter offset configuration.
 3. Add an optional `reference_hidden` / `should_hide` output bit (Radix `hideWhenDetached`).
-4. Consider adding a small helper for `shouldHideArrow` and aligning transform-origin behavior
-   when the arrow is hidden (Radix treats arrow width/height as `0` for transform-origin math).
+4. Consider aligning arrow element visibility with Radix `shouldHideArrow` across all recipes.
 5. Expose Radix-like “available” metrics as structured outputs for recipes (instead of CSS vars).
 
 ## Validation anchors

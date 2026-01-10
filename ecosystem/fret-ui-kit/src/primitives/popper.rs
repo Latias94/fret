@@ -200,6 +200,8 @@ pub fn popper_content_transform_origin(
         .map(|a| a.side)
         .unwrap_or_else(|| opposite_side(layout.side));
 
+    let arrow_hidden = should_hide_arrow(layout);
+
     let (mut x, mut y) = match face {
         Side::Top => (Px(rect.size.width.0 * 0.5), Px(0.0)),
         Side::Bottom => (Px(rect.size.width.0 * 0.5), rect.size.height),
@@ -208,11 +210,31 @@ pub fn popper_content_transform_origin(
     };
 
     if let (Some(arrow), Some(arrow_size)) = (layout.arrow, arrow_size) {
-        let cross_x = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.width.0));
-        let cross_y = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.height.0));
-        match face {
-            Side::Top | Side::Bottom => x = cross_x,
-            Side::Left | Side::Right => y = cross_y,
+        if !arrow_hidden {
+            let cross_x = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.width.0));
+            let cross_y = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.height.0));
+            match face {
+                Side::Top | Side::Bottom => x = cross_x,
+                Side::Left | Side::Right => y = cross_y,
+            }
+        } else {
+            // Radix hides the arrow when it can't be centered. When that happens, their
+            // transform-origin math uses the placed alignment (`0%/50%/100%`) instead of the arrow
+            // geometry.
+            let align_x = match layout.align {
+                Align::Start => Px(0.0),
+                Align::Center => Px(rect.size.width.0 * 0.5),
+                Align::End => rect.size.width,
+            };
+            let align_y = match layout.align {
+                Align::Start => Px(0.0),
+                Align::Center => Px(rect.size.height.0 * 0.5),
+                Align::End => rect.size.height,
+            };
+            match face {
+                Side::Top | Side::Bottom => x = align_x,
+                Side::Left | Side::Right => y = align_y,
+            }
         }
     } else {
         match face {
@@ -226,6 +248,12 @@ pub fn popper_content_transform_origin(
     }
 
     Point::new(Px(rect.origin.x.0 + x.0), Px(rect.origin.y.0 + y.0))
+}
+
+pub fn should_hide_arrow(layout: &AnchoredPanelLayout) -> bool {
+    layout
+        .arrow
+        .is_some_and(|arrow| arrow.center_offset.0.abs() > 0.01)
 }
 
 /// Default arrow protrusion used by shadcn/Radix-style diamonds.
@@ -262,6 +290,10 @@ pub fn diamond_arrow_options(
 /// This is useful when the overlay system uses the overlay root bounds for hit-testing
 /// (outside-press / hover regions), and the arrow visually protrudes outside the panel rect.
 pub fn wrapper_insets_for_arrow(layout: &AnchoredPanelLayout, protrusion: Px) -> Edges {
+    if should_hide_arrow(layout) {
+        return Edges::all(Px(0.0));
+    }
+
     let Some(arrow) = layout.arrow else {
         return Edges::all(Px(0.0));
     };
@@ -329,6 +361,26 @@ mod tests {
             center_offset: Px(0.0),
         });
         assert_eq!(wrapper_insets_for_arrow(&layout, Px(7.0)).left, Px(7.0));
+    }
+
+    #[test]
+    fn wrapper_insets_are_zero_when_arrow_is_hidden() {
+        let layout = AnchoredPanelLayout {
+            rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            side: Side::Bottom,
+            align: Align::Center,
+            arrow: Some(ArrowLayout {
+                side: Side::Top,
+                offset: Px(1.0),
+                alignment_offset: Px(0.0),
+                center_offset: Px(10.0),
+            }),
+        };
+
+        assert_eq!(
+            wrapper_insets_for_arrow(&layout, Px(7.0)),
+            Edges::all(Px(0.0))
+        );
     }
 
     #[test]
@@ -442,6 +494,28 @@ mod tests {
         let x_in_panel =
             (anchor_center_x - layout.rect.origin.x.0).clamp(0.0, layout.rect.size.width.0);
         assert_eq!(origin.x, Px(layout.rect.origin.x.0 + x_in_panel));
+    }
+
+    #[test]
+    fn transform_origin_uses_alignment_when_arrow_is_hidden() {
+        let layout = AnchoredPanelLayout {
+            rect: Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(100.0), Px(50.0)),
+            ),
+            side: Side::Bottom,
+            align: Align::End,
+            arrow: Some(ArrowLayout {
+                side: Side::Top,
+                offset: Px(1.0),
+                alignment_offset: Px(0.0),
+                center_offset: Px(10.0),
+            }),
+        };
+
+        let origin = popper_content_transform_origin(&layout, Rect::default(), Some(Px(12.0)));
+        assert_eq!(origin.y, Px(20.0));
+        assert_eq!(origin.x, Px(110.0));
     }
 
     #[test]
