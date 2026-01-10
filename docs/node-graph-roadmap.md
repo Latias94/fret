@@ -144,5 +144,6 @@ Legend:
 
 - [ ] Subgraph graph references + cycle-safe import.
 - [ ] Blackboard variables + typed symbol references (domain-ready).
-- [ ] Large-graph culling + incremental updates.
+- [~] Large-graph culling + incremental updates.
+  - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
 - [ ] Deterministic graph diff/patch set for collaboration.

@@ -480,11 +480,12 @@ High-level layering (ADR 0135):
 
 # 11) Performance and Large Graphs
 
-- [ ] **Culling and incremental rendering**
+- [~] **Culling and incremental rendering**
   - XyFlow: DOM-based; relies on React optimizations and virtualization patterns
-  - fret-node: renderer-native scene graph; should implement:
-    - spatial culling by viewport
-    - incremental scene op updates
+  - fret-node:
+    - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
+    - [ ] spatial culling by viewport for canvas paint (nodes/edges) to reduce scene ops
+    - [ ] incremental scene op updates
 
 - [ ] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched

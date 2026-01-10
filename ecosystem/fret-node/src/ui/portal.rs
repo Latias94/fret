@@ -30,6 +30,35 @@ pub const CMD_SUBMIT_TEXT_PREFIX: &str = "fret_node.portal.submit_text:";
 pub const CMD_CANCEL_TEXT_PREFIX: &str = "fret_node.portal.cancel_text:";
 pub const CMD_STEP_TEXT_PREFIX: &str = "fret_node.portal.step_text:";
 
+const DEFAULT_PORTAL_CULL_MARGIN_PX: f32 = 256.0;
+
+fn rects_intersect(a: Rect, b: Rect) -> bool {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = ax0 + a.size.width.0;
+    let ay1 = ay0 + a.size.height.0;
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = bx0 + b.size.width.0;
+    let by1 = by0 + b.size.height.0;
+
+    ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
+}
+
+fn inflate_rect(rect: Rect, margin: f32) -> Rect {
+    if !margin.is_finite() || margin <= 0.0 {
+        return rect;
+    }
+    Rect::new(
+        Point::new(Px(rect.origin.x.0 - margin), Px(rect.origin.y.0 - margin)),
+        Size::new(
+            Px(rect.size.width.0 + 2.0 * margin),
+            Px(rect.size.height.0 + 2.0 * margin),
+        ),
+    )
+}
+
 pub fn portal_submit_text_command(node: NodeId) -> CommandId {
     CommandId::new(format!("{CMD_SUBMIT_TEXT_PREFIX}{}", node.0))
 }
@@ -215,6 +244,7 @@ pub struct NodeGraphPortalHost<P, C = PortalNoopCommandHandler> {
     style: NodeGraphStyle,
     root_name: String,
     render: P,
+    cull_margin_px: f32,
 
     edits: Option<Model<NodeGraphEditQueue>>,
     focus_canvas: Option<fret_core::NodeId>,
@@ -239,6 +269,7 @@ impl<P> NodeGraphPortalHost<P, PortalNoopCommandHandler> {
             style,
             root_name: root_name.into(),
             render,
+            cull_margin_px: DEFAULT_PORTAL_CULL_MARGIN_PX,
             edits: None,
             focus_canvas: None,
             command_handler: PortalNoopCommandHandler,
@@ -258,6 +289,11 @@ impl<P, C> NodeGraphPortalHost<P, C> {
         self
     }
 
+    pub fn with_cull_margin_px(mut self, margin_px: f32) -> Self {
+        self.cull_margin_px = margin_px;
+        self
+    }
+
     pub fn with_command_handler<C2>(self, handler: C2) -> NodeGraphPortalHost<P, C2> {
         NodeGraphPortalHost {
             graph: self.graph,
@@ -266,6 +302,7 @@ impl<P, C> NodeGraphPortalHost<P, C> {
             style: self.style,
             root_name: self.root_name,
             render: self.render,
+            cull_margin_px: self.cull_margin_px,
             edits: self.edits,
             focus_canvas: self.focus_canvas,
             command_handler: handler,
@@ -381,6 +418,7 @@ where
 
         let order = node_order(&graph_snapshot, &draw_order);
         let bounds_origin = cx.bounds.origin;
+        let visible_bounds = inflate_rect(cx.bounds, self.cull_margin_px);
 
         let measured = self.measured.clone();
         let style = self.style.clone();
@@ -408,6 +446,9 @@ where
 
                         let node_window =
                             Self::window_node_rect(bounds_origin, pan, zoom, node.pos, size_px);
+                        if !rects_intersect(node_window, visible_bounds) {
+                            continue;
+                        }
 
                         let left = Px((node.pos.x + pan.x) * zoom);
                         let top = Px((node.pos.y + pan.y) * zoom);
@@ -483,11 +524,11 @@ where
         }
 
         let prev_published = self.last_published_nodes.clone();
-        let keep: BTreeSet<NodeId> = publish.iter().map(|(id, _)| *id).collect();
+        let graph_nodes: BTreeSet<NodeId> = graph_snapshot.nodes.keys().copied().collect();
         let remove_nodes: Vec<NodeId> = prev_published
             .iter()
             .copied()
-            .filter(|id| !keep.contains(id))
+            .filter(|id| !graph_nodes.contains(id))
             .collect();
 
         let published = self.measured.apply_batch_if_changed(
@@ -501,7 +542,14 @@ where
         );
 
         if published.is_some() {
-            self.last_published_nodes = publish.iter().map(|(id, _)| *id).collect();
+            let mut next = prev_published;
+            for (id, _) in &publish {
+                if !next.contains(id) {
+                    next.push(*id);
+                }
+            }
+            next.retain(|id| graph_nodes.contains(id));
+            self.last_published_nodes = next;
             cx.app.request_redraw(window);
         }
 

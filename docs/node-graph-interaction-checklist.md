@@ -258,7 +258,7 @@ Invariants:
 ### Manual script
 
 - (todo) A 5k–20k node graph remains usable (target frame time TBD).
-- (todo) Offscreen nodes do not mount portal subtrees (or mount is throttled) to avoid UI tree blowup.
+- (prototype) Offscreen nodes do not mount portal subtrees to avoid UI tree blowup (portal culling).
 
 ### Invariants
 
