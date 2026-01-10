@@ -248,7 +248,8 @@ To avoid regressions and make invalid compositions diagnosable:
   - debug/test builds: panic with diagnostics (treat as a bug),
   - release builds: return `Size::default()` and emit a rate-limited diagnostic counter.
 - Use stacksafe execution for the top-level layout solve and measure callbacks (GPUI reference).
-- Prefer rounding in the Taffy engine to reduce subpixel drift where applicable.
+- Prefer rounding in the Taffy engine to reduce subpixel drift where applicable (must remain
+  consistent with the snapping policy in ADR 0035 and be idempotent with renderer snapping).
 
 ### 10) Stable identity and incremental updates
 
