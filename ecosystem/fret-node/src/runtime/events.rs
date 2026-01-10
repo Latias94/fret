@@ -16,6 +16,14 @@ impl SubscriptionToken {
     }
 }
 
+/// Immutable snapshot of store state for selector subscriptions.
+#[derive(Debug, Clone, Copy)]
+pub struct NodeGraphStoreSnapshot<'a> {
+    pub graph: &'a crate::core::Graph,
+    pub view_state: &'a crate::io::NodeGraphViewState,
+    pub history: &'a crate::ops::GraphHistory,
+}
+
 /// View-state change events.
 ///
 /// These are the B-layer equivalent of XyFlow's selection/viewport updates (which are embedded in

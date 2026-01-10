@@ -96,7 +96,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - minimal headless store: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
     - state today is otherwise split across `Model<Graph>` + `Model<NodeGraphViewState>` + UI caches
   - Notes:
-    - `NodeGraphStore::subscribe` exists but is not selector-based yet (no memoized selectors / diff subscriptions).
+    - `NodeGraphStore::subscribe_selector` exists (dedup by `PartialEq`), but it is not memoized and has no diff payload.
     - `Graph` and `NodeGraphViewState` remain separate by design (hard serialization boundary).
 
 - [~] **Internals update pipeline ("node internals" as derived UI state)**

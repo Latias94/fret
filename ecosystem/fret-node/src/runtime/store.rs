@@ -11,7 +11,9 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
 use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
-use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
+use crate::runtime::events::{
+    NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
+};
 
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
@@ -40,10 +42,19 @@ pub struct NodeGraphStore {
     profile: Option<Box<dyn GraphProfile>>,
 
     next_subscription: u64,
-    subscriptions: Vec<(
+    event_subscriptions: Vec<(
         SubscriptionToken,
         Box<dyn for<'a> FnMut(NodeGraphStoreEvent<'a>)>,
     )>,
+    selector_subscriptions: Vec<SelectorSubscription>,
+}
+
+struct SelectorSubscription {
+    token: SubscriptionToken,
+    compute: Box<dyn for<'a> Fn(NodeGraphStoreSnapshot<'a>) -> Box<dyn std::any::Any>>,
+    equals: Box<dyn Fn(&dyn std::any::Any, &dyn std::any::Any) -> bool>,
+    callback: Box<dyn FnMut(&dyn std::any::Any)>,
+    last: Box<dyn std::any::Any>,
 }
 
 impl std::fmt::Debug for NodeGraphStore {
@@ -55,7 +66,11 @@ impl std::fmt::Debug for NodeGraphStore {
             .field("undo_len", &self.history.undo_len())
             .field("redo_len", &self.history.redo_len())
             .field("has_profile", &self.profile.is_some())
-            .field("subscription_count", &self.subscriptions.len())
+            .field("event_subscription_count", &self.event_subscriptions.len())
+            .field(
+                "selector_subscription_count",
+                &self.selector_subscriptions.len(),
+            )
             .finish()
     }
 }
@@ -70,7 +85,8 @@ impl NodeGraphStore {
             history: GraphHistory::default(),
             profile: None,
             next_subscription: 1,
-            subscriptions: Vec::new(),
+            event_subscriptions: Vec::new(),
+            selector_subscriptions: Vec::new(),
         }
     }
 
@@ -87,7 +103,8 @@ impl NodeGraphStore {
             history: GraphHistory::default(),
             profile: Some(profile),
             next_subscription: 1,
-            subscriptions: Vec::new(),
+            event_subscriptions: Vec::new(),
+            selector_subscriptions: Vec::new(),
         }
     }
 
@@ -100,15 +117,65 @@ impl NodeGraphStore {
     ) -> SubscriptionToken {
         let token = SubscriptionToken::new(self.next_subscription);
         self.next_subscription = self.next_subscription.saturating_add(1).max(1);
-        self.subscriptions.push((token, Box::new(f)));
+        self.event_subscriptions.push((token, Box::new(f)));
+        token
+    }
+
+    /// Subscribes to a derived projection of store state and only fires when the derived value
+    /// changes (by `PartialEq`).
+    ///
+    /// This is the B-layer "selector subscription" pattern used by XyFlow.
+    pub fn subscribe_selector<T>(
+        &mut self,
+        selector: impl for<'a> Fn(NodeGraphStoreSnapshot<'a>) -> T + 'static,
+        mut on_change: impl FnMut(&T) + 'static,
+    ) -> SubscriptionToken
+    where
+        T: Clone + PartialEq + 'static,
+    {
+        let token = SubscriptionToken::new(self.next_subscription);
+        self.next_subscription = self.next_subscription.saturating_add(1).max(1);
+
+        let snapshot = NodeGraphStoreSnapshot {
+            graph: &self.graph,
+            view_state: &self.view_state,
+            history: &self.history,
+        };
+        let initial = selector(snapshot);
+
+        self.selector_subscriptions.push(SelectorSubscription {
+            token,
+            compute: Box::new(move |snapshot| {
+                Box::new(selector(snapshot)) as Box<dyn std::any::Any>
+            }),
+            equals: Box::new(|a, b| {
+                let a = a.downcast_ref::<T>().expect("selector type mismatch");
+                let b = b.downcast_ref::<T>().expect("selector type mismatch");
+                a == b
+            }),
+            callback: Box::new(move |v| {
+                let v = v.downcast_ref::<T>().expect("selector type mismatch");
+                on_change(v);
+            }),
+            last: Box::new(initial),
+        });
+
         token
     }
 
     /// Removes a subscription.
     pub fn unsubscribe(&mut self, token: SubscriptionToken) -> bool {
-        let before = self.subscriptions.len();
-        self.subscriptions.retain(|(t, _)| *t != token);
-        before != self.subscriptions.len()
+        let mut removed = false;
+
+        let before = self.event_subscriptions.len();
+        self.event_subscriptions.retain(|(t, _)| *t != token);
+        removed |= before != self.event_subscriptions.len();
+
+        let before = self.selector_subscriptions.len();
+        self.selector_subscriptions.retain(|s| s.token != token);
+        removed |= before != self.selector_subscriptions.len();
+
+        removed
     }
 
     pub fn graph(&self) -> &Graph {
@@ -145,6 +212,7 @@ impl NodeGraphStore {
             after: &after,
             changes: &changes,
         });
+        self.notify_selectors();
     }
 
     /// Sets selection state and notifies subscribers.
@@ -179,6 +247,7 @@ impl NodeGraphStore {
             after: &after,
             changes: &changes,
         });
+        self.notify_selectors();
     }
 
     pub fn history(&self) -> &GraphHistory {
@@ -210,6 +279,7 @@ impl NodeGraphStore {
             committed: &committed,
             changes: &changes,
         });
+        self.notify_selectors();
         Ok(DispatchOutcome { committed, changes })
     }
 
@@ -247,6 +317,7 @@ impl NodeGraphStore {
             committed: &committed,
             changes: &changes,
         });
+        self.notify_selectors();
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -275,6 +346,7 @@ impl NodeGraphStore {
             committed: &committed,
             changes: &changes,
         });
+        self.notify_selectors();
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -295,8 +367,32 @@ impl NodeGraphStore {
     }
 
     fn emit(&mut self, event: NodeGraphStoreEvent<'_>) {
-        for (_, sub) in &mut self.subscriptions {
+        for (_, sub) in &mut self.event_subscriptions {
             sub(event);
+        }
+    }
+
+    fn notify_selectors(&mut self) {
+        if self.selector_subscriptions.is_empty() {
+            return;
+        }
+
+        let graph = &self.graph;
+        let view_state = &self.view_state;
+        let history = &self.history;
+        for sub in &mut self.selector_subscriptions {
+            let snapshot = NodeGraphStoreSnapshot {
+                graph,
+                view_state,
+                history,
+            };
+            let next = (sub.compute)(snapshot);
+            let changed = !(sub.equals)(&*sub.last, &*next);
+            if !changed {
+                continue;
+            }
+            (sub.callback)(&*next);
+            sub.last = next;
         }
     }
 }
