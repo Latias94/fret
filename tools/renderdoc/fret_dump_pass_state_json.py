@@ -94,6 +94,46 @@ def normalize(s: str, case_sensitive: bool) -> str:
         return str(s)
     return str(s).lower()
 
+def _action_name(action):
+    name = ""
+    try:
+        name = action.GetName(None)
+    except Exception:
+        try:
+            name = action.customName
+        except Exception:
+            name = ""
+    return str(name or "")
+
+
+def _infer_nearest_pass_ordinal(controller, event_id: int) -> int:
+    # RenderDoc's generic pipeline reflection isn't guaranteed to surface dynamic UBO offsets for
+    # Vulkan/WGSL pipelines. As a fallback, reuse our own marker-path matching logic and derive
+    # the ordinal of this drawcall among the "nearest" drawcalls within the frame.
+    try:
+        matches = []
+        iter_actions(
+            None,
+            controller.GetRootActions(),
+            [],
+            matches,
+            {
+                "marker_contains": "nearest",
+                "case_sensitive": False,
+                "only_drawcalls": True,
+                "max_results": 100000,
+            },
+        )
+        for i, m in enumerate(matches):
+            try:
+                if int(m.get("event_id", -1)) == int(event_id):
+                    return int(i)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return -1
+
 
 def iter_actions(structured_file, actions, marker_stack, out, req):
     marker_contains = normalize(req["marker_contains"], bool(req.get("case_sensitive", False)))
@@ -238,6 +278,73 @@ def decode_color_adjust_params(data: bytes):
         "brightness": f32(4),
         "contrast": f32(8),
     }
+
+def _first_attr(obj, names, default=None):
+    for n in names:
+        try:
+            if hasattr(obj, n):
+                v = getattr(obj, n)
+                if v is not None:
+                    return v
+        except Exception:
+            pass
+    return default
+
+
+def _iter_vulkan_descriptor_sets(vk_state):
+    sets = _first_attr(vk_state, ["descriptorSets", "descriptor_sets", "descSets", "desc_sets"], None)
+    if sets is None:
+        return []
+    try:
+        return list(sets)
+    except Exception:
+        return []
+
+
+def _iter_vulkan_dynamic_offsets(vk_state):
+    dyn = _first_attr(vk_state, ["dynamicOffsets", "dynamic_offsets"], None)
+    if dyn is None:
+        return []
+    try:
+        return list(dyn)
+    except Exception:
+        return []
+
+
+def _vulkan_dynamic_offset_for(vk_state, set_index: int, binding: int) -> int:
+    # RenderDoc tracks Vulkan dynamic offsets separately from descriptor set resources.
+    # The python API shape is not stable across versions, so probe a few field names.
+    for entry in _iter_vulkan_dynamic_offsets(vk_state):
+        try:
+            s = _first_attr(entry, ["descriptorSet", "set", "descSet", "descriptor_set"], None)
+            b = _first_attr(entry, ["binding", "bind", "binding_index"], None)
+            o = _first_attr(entry, ["offset", "byteOffset", "byte_offset"], 0)
+            if s is None or b is None:
+                continue
+            if int(s) == int(set_index) and int(b) == int(binding):
+                return int(o) if o is not None else 0
+        except Exception:
+            pass
+    return 0
+
+
+def _vulkan_buffer_binding_offset(binding_obj) -> int:
+    # Descriptor slots commonly expose buffer offsets as `offset`.
+    try:
+        off = _first_attr(binding_obj, ["offset", "byteOffset", "byte_offset"], 0)
+        return int(off) if off is not None else 0
+    except Exception:
+        return 0
+
+
+def _vulkan_binding_number(binding_obj, fallback: int) -> int:
+    try:
+        b = _first_attr(binding_obj, ["binding", "bind", "binding_index"], None)
+        if b is None:
+            return int(fallback)
+        return int(b)
+    except Exception:
+        return int(fallback)
 
 
 def decode_clip_rrect_entries(data: bytes, count: int):
@@ -681,18 +788,60 @@ def dump_event(controller, event_id: int, req):
 
             if scale_params_rid is not None and "nearest" in marker_contains:
                 scale_params_offset = 0
+                scale_params_offset_source = "fallback"
                 try:
+                    # Prefer API-specific Vulkan state if available, since WGSL reflection is not
+                    # guaranteed to map uniform buffers back to "constant buffer" slots.
+                    if hasattr(pipe, "GetVulkanPipelineState"):
+                        vk = pipe.GetVulkanPipelineState()
+                        for set_index, ds in enumerate(_iter_vulkan_descriptor_sets(vk)):
+                            # Descriptor set slots can be exposed under different field names.
+                            slots = _first_attr(
+                                ds,
+                                ["bindings", "resources", "descriptors", "slots", "Descriptors"],
+                                None,
+                            )
+                            if slots is None:
+                                continue
+                            try:
+                                slots_iter = list(slots)
+                            except Exception:
+                                continue
+
+                            for i, slot in enumerate(slots_iter):
+                                rid = extract_resource_id(slot)
+                                if rid is None or is_null_resource_id(rid):
+                                    continue
+                                if int(rid) != int(scale_params_rid):
+                                    continue
+
+                                binding_no = _vulkan_binding_number(slot, i)
+                                base = _vulkan_buffer_binding_offset(slot)
+                                dyn = _vulkan_dynamic_offset_for(vk, set_index, binding_no)
+                                scale_params_offset = int(base) + int(dyn)
+                                scale_params_offset_source = "vulkan"
+                                raise StopIteration()
+
+                    # Fallback: try to locate a constant-buffer style binding offset.
                     for stage_info in stage_dumps:
                         for cb in stage_info.get("constant_buffers", []):
                             if "fret scale params buffer" in str(
                                 cb.get("resource_name", "") or ""
                             ).lower():
                                 scale_params_offset = int(cb.get("byte_offset", 0))
+                                scale_params_offset_source = "constant_buffer"
                                 raise StopIteration()
                 except StopIteration:
                     pass
                 except Exception:
                     pass
+
+                if scale_params_offset_source == "fallback":
+                    inferred = _infer_nearest_pass_ordinal(controller, int(event_id))
+                    if inferred >= 0:
+                        stride = int(req.get("scale_params_stride", 256))
+                        scale_params_offset = int(stride) * int(inferred)
+                        scale_params_offset_source = "inferred_nearest_ordinal"
 
                 data = try_get_buffer_data(controller, scale_params_rid, scale_params_offset, 32)
                 if data is not None and len(data) >= 16:
@@ -702,6 +851,7 @@ def dump_event(controller, event_id: int, req):
                             "resource_id": int(scale_params_rid),
                             "resource_name": try_resource_name(controller, scale_params_rid),
                             "byte_offset": int(scale_params_offset),
+                            "offset_source": str(scale_params_offset_source),
                             "decoded": decode_scale_params(bytes(data)),
                         }
                     )
