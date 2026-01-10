@@ -52,6 +52,7 @@ Evidence:
   wrappers (to keep hit testing aligned with the visual transform):
   `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`,
   `ecosystem/fret-ui-shadcn/src/overlay_motion.rs`,
+  `ecosystem/fret-ui-shadcn/src/dialog.rs`,
   `ecosystem/fret-ui-shadcn/src/popover.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
   `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs`,
   `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
