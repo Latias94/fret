@@ -36,8 +36,8 @@ impl Renderer {
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                        has_dynamic_offset: true,
+                        min_binding_size: Some(std::num::NonZeroU64::new(32).unwrap()),
                     },
                     count: None,
                 },
@@ -63,8 +63,8 @@ impl Renderer {
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                            has_dynamic_offset: true,
+                            min_binding_size: Some(std::num::NonZeroU64::new(32).unwrap()),
                         },
                         count: None,
                     },

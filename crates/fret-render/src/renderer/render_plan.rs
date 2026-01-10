@@ -137,7 +137,16 @@ pub(super) struct ScaleNearestPass {
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
+    /// Source-space origin (top-left) of the region sampled by this pass.
+    pub(super) src_origin: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
+    /// Destination-space origin (top-left) of the region written by this pass.
+    ///
+    /// This is required because fullscreen passes use `@builtin(position)` in framebuffer
+    /// coordinates. When a pass is scissored to a sub-rect, `pos.xy` is still absolute, so the
+    /// shader must subtract the destination origin and add the corresponding source origin to
+    /// keep scaling grids anchored to the intended region (not the window origin).
+    pub(super) dst_origin: (u32, u32),
     pub(super) mask_uniform_index: Option<u32>,
     pub(super) mask: Option<MaskRef>,
     pub(super) mode: ScaleMode,
@@ -176,6 +185,7 @@ impl RenderPlan {
                 mode,
                 chain,
                 quality,
+                scissor,
                 ..
             } = m.kind
             else {
@@ -199,9 +209,13 @@ impl RenderPlan {
                 fret_core::EffectStep::ColorAdjust { .. } => {
                     color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
                 }
-                fret_core::EffectStep::Pixelate { scale } => {
-                    pixelate_enabled(viewport_size, format, intermediate_budget_bytes, scale)
-                }
+                fret_core::EffectStep::Pixelate { scale } => pixelate_enabled(
+                    viewport_size,
+                    Some(scissor),
+                    format,
+                    intermediate_budget_bytes,
+                    scale,
+                ),
                 fret_core::EffectStep::Dither { .. } => false,
             })
         });
@@ -538,6 +552,7 @@ impl RenderPlan {
                         fret_core::EffectStep::Pixelate { scale } => {
                             if !pixelate_enabled(
                                 viewport_size,
+                                Some(scissor),
                                 format,
                                 intermediate_budget_bytes,
                                 scale,
@@ -798,6 +813,7 @@ fn color_adjust_enabled(
 
 fn pixelate_enabled(
     viewport_size: (u32, u32),
+    scissor: Option<ScissorRect>,
     format: wgpu::TextureFormat,
     budget_bytes: u64,
     scale: u32,
@@ -811,7 +827,11 @@ fn pixelate_enabled(
     }
 
     let full = estimate_texture_bytes(viewport_size, format, 1);
-    let down = estimate_texture_bytes(downsampled_size(viewport_size, scale), format, 1);
+    let down_base = scissor
+        .filter(|s| s.w != 0 && s.h != 0)
+        .map(|s| (s.w, s.h))
+        .unwrap_or(viewport_size);
+    let down = estimate_texture_bytes(downsampled_size(down_base, scale), format, 1);
     full.saturating_add(down) <= budget_bytes
 }
 
@@ -920,7 +940,9 @@ fn append_scissored_blur_in_place_two_scratch(
         dst: scratch_a,
         src_size: full_size,
         dst_size: blur_size,
+        src_origin: (0, 0),
         dst_scissor: down_scissor,
+        dst_origin: (0, 0),
         mask_uniform_index: None,
         mask: None,
         mode: ScaleMode::Downsample,
@@ -958,7 +980,9 @@ fn append_scissored_blur_in_place_two_scratch(
         dst: srcdst,
         src_size: blur_size,
         dst_size: full_size,
+        src_origin: (0, 0),
         dst_scissor: final_scissor,
+        dst_origin: (0, 0),
         mask_uniform_index,
         mask,
         mode: ScaleMode::Upscale,
@@ -1098,18 +1122,21 @@ fn append_pixelate_in_place_single_scratch(
         return;
     }
 
-    let down_size = downsampled_size(full_size, scale);
+    let scissor = scissor.filter(|s| s.w != 0 && s.h != 0);
+    let effect_rect = scissor.unwrap_or(ScissorRect::full(full_size.0, full_size.1));
+    let down_size = downsampled_size((effect_rect.w, effect_rect.h), scale);
 
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
         src: srcdst,
         dst: scratch,
         src_size: full_size,
         dst_size: down_size,
-        // Pixelation blocks are aligned to the framebuffer origin. When the effect bounds start or
-        // end in the middle of a block, scissoring the downsample pass can omit texels that are
-        // still sampled during the upscale pass, producing clear-colored "holes". Downsample
-        // targets are small, so prefer correctness over this micro-optimization.
+        // Pixelation should be anchored to the effect region, not the window origin.
+        // We downsample into an effect-local target and then upscale back into the original
+        // target using `dst_origin` + scissor to map the effect-local pixel grid.
+        src_origin: (effect_rect.x, effect_rect.y),
         dst_scissor: None,
+        dst_origin: (0, 0),
         mask_uniform_index: None,
         mask: None,
         mode: ScaleMode::Downsample,
@@ -1122,7 +1149,9 @@ fn append_pixelate_in_place_single_scratch(
         dst: srcdst,
         src_size: down_size,
         dst_size: full_size,
+        src_origin: (0, 0),
         dst_scissor: scissor,
+        dst_origin: (effect_rect.x, effect_rect.y),
         mask_uniform_index: if scissor.is_some() {
             mask_uniform_index
         } else {
@@ -1355,7 +1384,9 @@ fn push_scale_nearest(
             dst,
             src_size,
             dst_size,
+            src_origin: (0, 0),
             dst_scissor,
+            dst_origin: (0, 0),
             mask_uniform_index: None,
             mask: None,
             mode,
