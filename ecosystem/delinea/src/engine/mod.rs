@@ -12,6 +12,7 @@ use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
+use crate::selection::BrushSelection2D;
 use crate::spec::AxisPointerTrigger;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
@@ -37,15 +38,6 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BrushSelection2D {
-    pub x_axis: crate::ids::AxisId,
-    pub y_axis: crate::ids::AxisId,
-    pub x: window::DataWindowX,
-    pub y: window::DataWindowY,
-}
 
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -131,6 +123,7 @@ pub struct ChartEngine {
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
     axis_pointer_cache: AxisPointerCache,
+    brush_link_cache: BrushLinkCache,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -139,6 +132,11 @@ struct AxisPointerCache {
     last_marks_rev: Revision,
     hit: Option<HoverHit>,
     output: Option<AxisPointerOutput>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BrushLinkCache {
+    last_brush: Option<BrushSelection2D>,
 }
 
 impl ChartEngine {
@@ -175,6 +173,7 @@ impl ChartEngine {
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
+            brush_link_cache: BrushLinkCache::default(),
         })
     }
 
@@ -813,6 +812,17 @@ impl ChartEngine {
             .sync_inputs(&self.model, &self.datasets, &self.state);
         if view_changed {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
+        }
+
+        if self.state.link.group.is_some()
+            && self.brush_link_cache.last_brush != self.state.brush_selection_2d
+        {
+            self.brush_link_cache.last_brush = self.state.brush_selection_2d;
+            self.output
+                .link_events
+                .push(LinkEvent::BrushSelectionChanged {
+                    selection: self.state.brush_selection_2d,
+                });
         }
 
         // Brush selection is an output-only interaction (ADR 0144). We compute the derived X-only

@@ -1173,6 +1173,77 @@ fn brush_x_row_range_is_derived_for_matching_series_axes() {
 }
 
 #[test]
+fn brush_selection_emits_link_event_when_link_group_is_set() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetLinkGroup {
+        group: Some(crate::ids::LinkGroupId::new(1)),
+    });
+
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis,
+        y_axis,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    assert!(engine.output().link_events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::BrushSelectionChanged { selection }
+                if *selection == engine.state().brush_selection_2d
+        )
+    }));
+
+    // Same selection again should not re-emit the event.
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(
+        !engine
+            .output()
+            .link_events
+            .iter()
+            .any(|e| matches!(e, crate::link::LinkEvent::BrushSelectionChanged { .. }))
+    );
+
+    // Clearing selection should emit exactly once.
+    engine.apply_action(Action::ClearBrushSelection);
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.output().link_events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::BrushSelectionChanged { selection: None }
+        )
+    }));
+}
+
+#[test]
 fn pan_lock_prevents_pan_window_update() {
     let x_axis = crate::ids::AxisId::new(1);
     let mut engine = ChartEngine::new(basic_spec()).unwrap();

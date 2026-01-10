@@ -32,6 +32,7 @@ Status symbols:
   - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
   - Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
   - Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
+  - Brush selection link events: `docs/adr/0146-delinea-link-events-for-brush-selection.md`
 
 ## Quick Manual Validation
 
