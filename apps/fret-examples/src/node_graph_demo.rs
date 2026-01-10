@@ -39,12 +39,12 @@ use fret_node::ui::presenter::{
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yActiveDescendant,
-    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
+    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 use fret_ui::element::AnyElement;
 
@@ -936,10 +936,13 @@ impl NodeGraphDemoDriver {
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let canvas_node = ui.create_node_retained(canvas);
 
-        let a11y_node = ui.create_node_retained(NodeGraphA11yActiveDescendant::new(
-            internals_overlay.clone(),
-        ));
-        ui.set_children(canvas_node, vec![a11y_node]);
+        let a11y_port =
+            ui.create_node_retained(NodeGraphA11yFocusedPort::new(internals_overlay.clone()));
+        let a11y_edge =
+            ui.create_node_retained(NodeGraphA11yFocusedEdge::new(internals_overlay.clone()));
+        let a11y_node =
+            ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals_overlay.clone()));
+        ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,

@@ -21,9 +21,10 @@ use fret_node::rules::{
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{
-    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphA11yActiveDescendant,
-    NodeGraphCanvas, NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter, register_node_graph_commands,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphA11yFocusedEdge,
+    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
+    NodeGraphPresenter, register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
@@ -576,8 +577,10 @@ impl NodeGraphDomainDemoDriver {
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
         let canvas_node = ui.create_node_retained(canvas);
 
-        let a11y_node = ui.create_node_retained(NodeGraphA11yActiveDescendant::new(internals));
-        ui.set_children(canvas_node, vec![a11y_node]);
+        let a11y_port = ui.create_node_retained(NodeGraphA11yFocusedPort::new(internals.clone()));
+        let a11y_edge = ui.create_node_retained(NodeGraphA11yFocusedEdge::new(internals.clone()));
+        let a11y_node = ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals));
+        ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,

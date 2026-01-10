@@ -67,6 +67,21 @@ pub struct NodeGraphInternalsSnapshot {
     ///
     /// This is an editor-derived surface and must not be serialized into graph assets.
     pub a11y_active_descendant_label: Option<String>,
+    pub a11y_focused_node_label: Option<String>,
+    pub a11y_focused_port_label: Option<String>,
+    pub a11y_focused_edge_label: Option<String>,
+    pub focused_node: Option<NodeId>,
+    pub focused_port: Option<PortId>,
+    pub focused_edge: Option<EdgeId>,
+    pub connecting: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NodeGraphA11ySnapshot {
+    pub active_descendant_label: Option<String>,
+    pub focused_node_label: Option<String>,
+    pub focused_port_label: Option<String>,
+    pub focused_edge_label: Option<String>,
     pub focused_node: Option<NodeId>,
     pub focused_port: Option<PortId>,
     pub focused_edge: Option<EdgeId>,
@@ -93,6 +108,22 @@ impl NodeGraphInternalsStore {
 
     pub fn snapshot(&self) -> NodeGraphInternalsSnapshot {
         self.snapshot.read().map(|s| s.clone()).unwrap_or_default()
+    }
+
+    pub fn a11y_snapshot(&self) -> NodeGraphA11ySnapshot {
+        self.snapshot
+            .read()
+            .map(|s| NodeGraphA11ySnapshot {
+                active_descendant_label: s.a11y_active_descendant_label.clone(),
+                focused_node_label: s.a11y_focused_node_label.clone(),
+                focused_port_label: s.a11y_focused_port_label.clone(),
+                focused_edge_label: s.a11y_focused_edge_label.clone(),
+                focused_node: s.focused_node,
+                focused_port: s.focused_port,
+                focused_edge: s.focused_edge,
+                connecting: s.connecting,
+            })
+            .unwrap_or_default()
     }
 
     pub fn update(&self, next: NodeGraphInternalsSnapshot) -> u64 {

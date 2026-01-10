@@ -756,34 +756,37 @@ impl NodeGraphCanvas {
         let focused_node = self.interaction.focused_node;
         let focused_port = self.interaction.focused_port;
         let focused_edge = self.interaction.focused_edge;
-        next.a11y_active_descendant_label = self
+        let labels = self
             .graph
             .read_ref(host, |graph| {
-                if let Some(port) = focused_port {
-                    if let Some(label) = self.presenter.a11y_port_label(graph, port) {
-                        return Some(format!("Port {}", label));
-                    }
-                    return Some(format!("Port {:?}", port));
-                }
+                let node_label = focused_node
+                    .and_then(|node| self.presenter.a11y_node_label(graph, node))
+                    .map(|label| format!("{}", label))
+                    .or_else(|| focused_node.map(|node| format!("{:?}", node)));
 
-                if let Some(edge) = focused_edge {
-                    if let Some(label) = self.presenter.a11y_edge_label(graph, edge, &style) {
-                        return Some(format!("Edge {}", label));
-                    }
-                    return Some(format!("Edge {:?}", edge));
-                }
+                let port_label = focused_port
+                    .and_then(|port| self.presenter.a11y_port_label(graph, port))
+                    .map(|label| format!("{}", label))
+                    .or_else(|| focused_port.map(|port| format!("{:?}", port)));
 
-                if let Some(node) = focused_node {
-                    if let Some(label) = self.presenter.a11y_node_label(graph, node) {
-                        return Some(format!("Node {}", label));
-                    }
-                    return Some(format!("Node {:?}", node));
-                }
+                let edge_label = focused_edge
+                    .and_then(|edge| self.presenter.a11y_edge_label(graph, edge, &style))
+                    .map(|label| format!("{}", label))
+                    .or_else(|| focused_edge.map(|edge| format!("{:?}", edge)));
 
-                None
+                (node_label, port_label, edge_label)
             })
             .ok()
-            .flatten();
+            .unwrap_or_default();
+
+        next.a11y_focused_node_label = labels.0.clone().map(|label| format!("Node {}", label));
+        next.a11y_focused_port_label = labels.1.clone().map(|label| format!("Port {}", label));
+        next.a11y_focused_edge_label = labels.2.clone().map(|label| format!("Edge {}", label));
+        next.a11y_active_descendant_label = next
+            .a11y_focused_port_label
+            .clone()
+            .or_else(|| next.a11y_focused_edge_label.clone())
+            .or_else(|| next.a11y_focused_node_label.clone());
 
         store.update(next);
     }
@@ -5500,16 +5503,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         cx.set_focusable(true);
         cx.set_label(self.presenter.a11y_canvas_label().as_ref());
 
-        if let Some(child) = cx.children.first().copied() {
-            let has_active = self
-                .internals
-                .as_ref()
-                .map(|s| s.snapshot().a11y_active_descendant_label.is_some())
-                .unwrap_or(false);
-            cx.set_active_descendant(has_active.then_some(child));
-        } else {
-            cx.set_active_descendant(None);
-        }
+        let active_descendant = match (
+            self.interaction.focused_port.is_some(),
+            self.interaction.focused_edge.is_some(),
+            self.interaction.focused_node.is_some(),
+        ) {
+            (true, _, _) => cx.children.get(0).copied(),
+            (false, true, _) => cx.children.get(1).copied(),
+            (false, false, true) => cx.children.get(2).copied(),
+            _ => None,
+        };
+        cx.set_active_descendant(active_descendant);
 
         let (focused_node, focused_port, focused_edge) = (
             self.interaction.focused_node,

@@ -189,8 +189,8 @@ Invariants:
   - focused node/port/edge (when present),
   - whether a connection drag is active.
 - (prototype) Optional active-descendant semantics:
-  - when `NodeGraphA11yActiveDescendant` is mounted as a child of the canvas, the canvas sets
-    `active_descendant` to that child and updates its label as focus changes.
+  - when the canvas mounts three semantics-only children (`NodeGraphA11yFocusedPort`, `NodeGraphA11yFocusedEdge`, `NodeGraphA11yFocusedNode`) in this order,
+    the canvas sets `active_descendant` to the corresponding child as focus changes.
 
 ## G) Clipboard (prototype)
 
