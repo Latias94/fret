@@ -29,6 +29,7 @@ pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
 pub mod chart_demo;
+pub mod chart_multi_axis_demo;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
