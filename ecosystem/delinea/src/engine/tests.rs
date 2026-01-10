@@ -7,8 +7,8 @@ use crate::engine::window::DataWindow;
 use crate::marks::MarkPayloadRef;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
-    AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DatasetSpec,
-    FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+    AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DataZoomYSpec,
+    DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::transform::RowRange;
@@ -1435,6 +1435,134 @@ fn max_value_span_clamps_slider_handle_updates_without_moving_the_opposite_edge(
         DataWindow {
             min: -2.0,
             max: 8.0
+        }
+    );
+}
+
+#[test]
+fn min_value_span_clamps_interactive_zoom_in_y() {
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(2.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: -10.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowYFromBase {
+        axis: y_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: 6.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert_eq!(window.span(), 2.0);
+}
+
+#[test]
+fn max_value_span_clamps_interactive_zoom_out_y() {
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: None,
+        max_value_span: Some(50.0),
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowYFromBase {
+        axis: y_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: -6.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert_eq!(window.span(), 50.0);
+}
+
+#[test]
+fn min_value_span_clamps_slider_handle_update_y() {
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(5.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    engine.apply_action(Action::SetDataWindowY {
+        axis: y_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::SetDataWindowYFromZoom {
+        axis: y_axis,
+        base,
+        window: DataWindow {
+            min: 19.0,
+            max: 20.0,
+        },
+        anchor: crate::engine::window::WindowSpanAnchor::LockMax,
+    });
+
+    let window = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert_eq!(
+        window,
+        DataWindow {
+            min: 15.0,
+            max: 20.0
         }
     );
 }

@@ -395,7 +395,7 @@ impl ChartEngine {
                 x_axis,
                 y_axis,
                 base_x,
-                base_y: _base_y,
+                base_y,
                 x,
                 y,
             } => {
@@ -446,8 +446,23 @@ impl ChartEngine {
 
                 if !self.axis_is_fixed(y_axis) && !self.axis_locks(y_axis).zoom_locked {
                     let y_range = self.axis_range(y_axis);
+                    let base_y = {
+                        let mut base_y = base_y;
+                        base_y.clamp_non_degenerate();
+                        base_y.apply_constraints(y_range.locked_min(), y_range.locked_max())
+                    };
+
+                    let (min_value_span, max_value_span) = self.axis_zoom_span_limits_y(y_axis);
+
                     let next = y.map(|mut w| {
                         w.clamp_non_degenerate();
+                        let mut w = w.apply_constraints(y_range.locked_min(), y_range.locked_max());
+                        w = w.apply_span_limits_from_base(
+                            base_y,
+                            min_value_span,
+                            max_value_span,
+                            window::WindowSpanAnchor::Center,
+                        );
                         w.apply_constraints(y_range.locked_min(), y_range.locked_max())
                     });
 
@@ -527,6 +542,15 @@ impl ChartEngine {
             .unwrap_or((None, None))
     }
 
+    fn axis_zoom_span_limits_y(&self, axis: crate::ids::AxisId) -> (Option<f64>, Option<f64>) {
+        self.model
+            .data_zoom_y_by_axis
+            .get(&axis)
+            .and_then(|id| self.model.data_zoom_y.get(id))
+            .map(|z| (z.min_value_span, z.max_value_span))
+            .unwrap_or((None, None))
+    }
+
     fn apply_pan_from_base(
         &mut self,
         axis: crate::ids::AxisId,
@@ -602,15 +626,27 @@ impl ChartEngine {
         let mut window = base.zoom_by_px(center_px, log2_scale, viewport_span_px);
         window = window.apply_constraints(range.locked_min(), range.locked_max());
 
-        if axis_model.kind == crate::spec::AxisKind::X {
-            let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
-            window = window.apply_span_limits_from_base(
-                base,
-                min_value_span,
-                max_value_span,
-                window::WindowSpanAnchor::Center,
-            );
-            window = window.apply_constraints(range.locked_min(), range.locked_max());
+        match axis_model.kind {
+            crate::spec::AxisKind::X => {
+                let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
+                window = window.apply_span_limits_from_base(
+                    base,
+                    min_value_span,
+                    max_value_span,
+                    window::WindowSpanAnchor::Center,
+                );
+                window = window.apply_constraints(range.locked_min(), range.locked_max());
+            }
+            crate::spec::AxisKind::Y => {
+                let (min_value_span, max_value_span) = self.axis_zoom_span_limits_y(axis);
+                window = window.apply_span_limits_from_base(
+                    base,
+                    min_value_span,
+                    max_value_span,
+                    window::WindowSpanAnchor::Center,
+                );
+                window = window.apply_constraints(range.locked_min(), range.locked_max());
+            }
         }
 
         match axis_model.kind {
@@ -665,11 +701,27 @@ impl ChartEngine {
         window.clamp_non_degenerate();
         window = window.apply_constraints(range.locked_min(), range.locked_max());
 
-        if axis_model.kind == crate::spec::AxisKind::X {
-            let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
-            window =
-                window.apply_span_limits_from_base(base, min_value_span, max_value_span, anchor);
-            window = window.apply_constraints(range.locked_min(), range.locked_max());
+        match axis_model.kind {
+            crate::spec::AxisKind::X => {
+                let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
+                window = window.apply_span_limits_from_base(
+                    base,
+                    min_value_span,
+                    max_value_span,
+                    anchor,
+                );
+                window = window.apply_constraints(range.locked_min(), range.locked_max());
+            }
+            crate::spec::AxisKind::Y => {
+                let (min_value_span, max_value_span) = self.axis_zoom_span_limits_y(axis);
+                window = window.apply_span_limits_from_base(
+                    base,
+                    min_value_span,
+                    max_value_span,
+                    anchor,
+                );
+                window = window.apply_constraints(range.locked_min(), range.locked_max());
+            }
         }
 
         match axis_model.kind {

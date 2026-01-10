@@ -122,7 +122,7 @@ reference demo for validating these scenarios on desktop + wasm.
 - Y slider:
   - Rendered for the active Y axis (left or right) based on axis-band routing.
   - Drag semantics match the X slider (pan + min/max handles + jump-to-click).
-  - Window writes use `Action::SetDataWindowYFromZoom` (and therefore respect zoom locks; span limits are X-only in v1).
+  - Window writes use `Action::SetDataWindowYFromZoom` (and therefore respect zoom locks and Y span limits, if configured).
 - Axis range locks (`AxisRange::LockMin` / `AxisRange::LockMax`) also gate slider interaction:
   - If either bound is locked, window panning via slider drag is disabled.
   - If `LockMin` is present, the min-handle drag is disabled.
