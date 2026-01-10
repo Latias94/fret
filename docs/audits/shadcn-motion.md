@@ -48,12 +48,15 @@ Evidence:
 
 - Render-time transform primitive: `crates/fret-ui/src/element.rs` (`RenderTransformProps`)
 - Hit-testing applies inverse render transform: `crates/fret-ui/src/tree/hit_test.rs`
-- shadcn overlay wiring uses `render_transform_props(...)` for motion wrappers:
+- shadcn overlay wiring uses the shared `wrap_opacity_and_render_transform(...)` helper for motion
+  wrappers (to keep hit testing aligned with the visual transform):
+  `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`,
+  `ecosystem/fret-ui-shadcn/src/overlay_motion.rs`,
   `ecosystem/fret-ui-shadcn/src/popover.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
   `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs`,
-  `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`,
-  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
-  `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`.
+  `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`,
+  `ecosystem/fret-ui-shadcn/src/select.rs`.
 
 ### Motion primitives (math)
 
