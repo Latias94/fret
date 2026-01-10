@@ -207,11 +207,25 @@ def decode_clip_mask_params(data: bytes):
 
 
 def decode_scale_params(data: bytes):
-    # WGSL: struct ScaleParams { scale: u32, _pad0: u32, _pad1: u32, _pad2: u32 };
+    # WGSL:
+    # struct ScaleParams {
+    #   scale: u32,
+    #   _pad0: u32,
+    #   src_origin: vec2<u32>,
+    #   dst_origin: vec2<u32>,
+    #   _pad1: u32,
+    #   _pad2: u32,
+    # };
     if data is None or len(data) < 16:
         return None
     u32 = lambda off: struct.unpack_from("<I", data, off)[0]
-    return {"scale": int(u32(0))}
+    if len(data) < 32:
+        return {"scale": int(u32(0))}
+    return {
+        "scale": int(u32(0)),
+        "src_origin": [int(u32(8)), int(u32(12))],
+        "dst_origin": [int(u32(16)), int(u32(20))],
+    }
 
 
 def decode_color_adjust_params(data: bytes):
@@ -666,13 +680,28 @@ def dump_event(controller, event_id: int, req):
                         pass
 
             if scale_params_rid is not None and "nearest" in marker_contains:
-                data = try_get_buffer_data(controller, scale_params_rid, 0, 16)
+                scale_params_offset = 0
+                try:
+                    for stage_info in stage_dumps:
+                        for cb in stage_info.get("constant_buffers", []):
+                            if "fret scale params buffer" in str(
+                                cb.get("resource_name", "") or ""
+                            ).lower():
+                                scale_params_offset = int(cb.get("byte_offset", 0))
+                                raise StopIteration()
+                except StopIteration:
+                    pass
+                except Exception:
+                    pass
+
+                data = try_get_buffer_data(controller, scale_params_rid, scale_params_offset, 32)
                 if data is not None and len(data) >= 16:
                     buffer_dump["named_buffers"].append(
                         {
                             "kind": "scale_params",
                             "resource_id": int(scale_params_rid),
                             "resource_name": try_resource_name(controller, scale_params_rid),
+                            "byte_offset": int(scale_params_offset),
                             "decoded": decode_scale_params(bytes(data)),
                         }
                     )
