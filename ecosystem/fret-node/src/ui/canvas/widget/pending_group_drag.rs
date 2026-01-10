@@ -3,6 +3,7 @@ use fret_ui::UiHost;
 
 use super::super::state::{GroupDrag, ViewSnapshot};
 use super::NodeGraphCanvas;
+use super::threshold::exceeds_drag_threshold;
 
 pub(super) fn handle_pending_group_drag_move<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
@@ -18,10 +19,8 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost>(
         return false;
     };
 
-    let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-    let dx = position.x.0 - pending.start_pos.x.0;
-    let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_screen > 0.0 && dx * dx + dy * dy < threshold_screen * threshold_screen {
+    let threshold_screen = snapshot.interaction.node_drag_threshold;
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
         return true;
     }
 

@@ -130,6 +130,7 @@ Drag threshold:
 - (prototype) A small movement threshold prevents accidental “start connection” on click.
 - (prototype) Connection drag threshold is screen-space:
   - Zoom to 0.5 and 2.0 and verify the connection-start threshold feels the same.
+- (prototype) Edge reconnect drag threshold is screen-space and uses the same threshold as connection start.
 
 ## E) Portal Editors (embedded node UI)
 

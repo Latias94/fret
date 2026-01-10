@@ -502,5 +502,5 @@ High-level layering (ADR 0135):
     - selection invariants
     - drag session -> single transaction
     - connect/reconnect determinism
-    - connection drag threshold does not regress
+    - connection drag threshold does not regress (also gates edge reconnect drag)
     - portal does not steal canvas pointer events

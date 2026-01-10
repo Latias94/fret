@@ -3,6 +3,7 @@ use fret_ui::UiHost;
 
 use super::super::state::{ViewSnapshot, WireDrag};
 use super::NodeGraphCanvas;
+use super::threshold::exceeds_drag_threshold;
 use super::wire_drag;
 
 pub(super) fn handle_pending_wire_drag_move<H: UiHost>(
@@ -21,9 +22,7 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost>(
     };
 
     let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    let dx = position.x.0 - pending.start_pos.x.0;
-    let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_screen > 0.0 && dx * dx + dy * dy < threshold_screen * threshold_screen {
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
         return true;
     }
 
