@@ -27,11 +27,15 @@ As a baseline, this workspace currently has:
 - `repo-ref/aria-practices`: `84b921a0`
 - `repo-ref/cmdk`: `dd2250e`
 - `repo-ref/dear-imgui-rs`: `5768e5a`
+- `repo-ref/echarts`: `09198192b`
+- `repo-ref/egui_plot`: `ed3d2c2`
 - `repo-ref/floating-ui`: `0681dbb6`
 - `repo-ref/fret-ui-precision`: `c52a90d`
 - `repo-ref/gpui-component`: `c78cec71`
 - `repo-ref/icons`: `112af91`
 - `repo-ref/imgui`: `396b33d0d`
+- `repo-ref/implot`: `81b8b19`
+- `repo-ref/implot3d`: `5981bc5`
 - `repo-ref/lucide`: `0c4ac91b`
 - Radix UI Primitives: <https://github.com/radix-ui/primitives> (`90751370`)
 - `repo-ref/tailwindcss`: `9720692e`
