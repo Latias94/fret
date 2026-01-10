@@ -42,7 +42,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 
 - Pass: Supports `side` (`Left`/`Right`/`Top`/`Bottom`) and a per-side `size` override (width or
   height), matching the upstream intent.
-- Pass: Default size is token-driven (e.g. `component.sheet.size` / `component.sheet.width`).
+- Pass: `Left`/`Right` default width is token-driven (e.g. `component.sheet.size` /
+  `component.sheet.width`).
+- Pass: `Top`/`Bottom` default to auto height (upstream uses `h-auto`), unless an explicit
+  `Sheet::size(...)` override is provided.
+- Pass: Default overlay color matches the upstream `bg-black/50` intent.
 
 ### Dismissal behavior
 
@@ -68,4 +72,3 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 ## Follow-ups (recommended)
 
 - None currently tracked.
-

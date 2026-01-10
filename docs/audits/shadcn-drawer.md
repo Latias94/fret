@@ -49,6 +49,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Escape dismiss is handled by the shared dismissible root (Radix-aligned outcome).
 - Pass: Overlay click-to-dismiss is implemented by rendering a full-window barrier behind the
   content (default on).
+- Pass: Default overlay color matches the upstream `bg-black/50` intent (via the shared `Sheet`
+  overlay defaults).
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `Drawer::on_dismiss_request(...)` (delegates to `Sheet`).
 - Pass: Bottom drawers support Vaul-style drag-to-dismiss from a small handle affordance region.
@@ -61,6 +63,7 @@ Upstream exports a thin wrapper around `vaul`:
 ## Known gaps / intentional differences
 
 - Vaul-specific snap-points are not modeled yet.
+- Vaul's `max-h-[80vh]` cap is not modeled yet (Fret currently clamps to the full viewport height).
 - `DrawerPortal` / `DrawerOverlay` are not currently exposed as standalone building blocks in Fret
   because the overlay manager owns portal mounting and the barrier is authored by the recipe layer.
 

@@ -227,19 +227,10 @@ impl Drawer {
                 true
             });
 
-            let layout_fill = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Fill,
-                    height: Length::Fill,
-                    ..Default::default()
-                },
-                ..Default::default()
-            };
-
             let handle_overlay = drawer_drag_handle_overlay(cx, muted);
             let content_root = cx.pointer_region(
                 PointerRegionProps {
-                    layout: layout_fill,
+                    layout: LayoutStyle::default(),
                     enabled: is_open,
                 },
                 move |cx| {
@@ -252,7 +243,7 @@ impl Drawer {
 
             cx.visual_transform_props(
                 VisualTransformProps {
-                    layout: layout_fill,
+                    layout: LayoutStyle::default(),
                     transform,
                 },
                 move |_cx| vec![content_root],
@@ -313,6 +304,9 @@ fn drawer_drag_set_was_open<H: UiHost>(cx: &mut ElementContext<'_, H>, was_open:
 
 fn drawer_drag_hit_test(bounds: fret_core::Rect, position: Point) -> bool {
     let local_y = position.y.0 - bounds.origin.y.0;
+    if local_y < 0.0 {
+        return false;
+    }
     if local_y > DRAWER_DRAG_HANDLE_HIT_HEIGHT {
         return false;
     }
@@ -460,7 +454,7 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
@@ -732,8 +726,22 @@ mod tests {
         OverlayController::render(&mut ui, &mut app, &mut services, window, b);
         ui.layout_all(&mut app, &mut services, b, 1.0);
 
-        let start = Point::new(Px(100.0), Px(10.0));
-        let end = Point::new(Px(100.0), Px(90.0));
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Dialog)
+            .expect("drawer dialog semantics");
+        let start = Point::new(
+            Px(dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 * 0.5),
+            Px(dialog.bounds.origin.y.0 + 10.0),
+        );
+        let end = Point::new(
+            start.x,
+            Px(dialog.bounds.origin.y.0 + dialog.bounds.size.height.0 * 0.9),
+        );
 
         ui.dispatch_event(
             &mut app,
@@ -831,8 +839,19 @@ mod tests {
         OverlayController::render(&mut ui, &mut app, &mut services, window, b);
         ui.layout_all(&mut app, &mut services, b, 1.0);
 
-        let start = Point::new(Px(100.0), Px(10.0));
-        let end = Point::new(Px(100.0), Px(30.0));
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Dialog)
+            .expect("drawer dialog semantics");
+        let start = Point::new(
+            Px(dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 * 0.5),
+            Px(dialog.bounds.origin.y.0 + 10.0),
+        );
+        let end = Point::new(start.x, Px(start.y.0 + 20.0));
 
         ui.dispatch_event(
             &mut app,
