@@ -4,8 +4,9 @@ use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
-    DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
-    GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d, ViewportRect,
+    DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
+    GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d,
+    ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -145,6 +146,19 @@ struct Gizmo3dDemoGpu {
     thick_line_always_pipeline: wgpu::RenderPipeline,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct PendingSelection {
+    start_cursor_px: Vec2,
+    additive: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MarqueeSelection {
+    start_cursor_px: Vec2,
+    cursor_px: Vec2,
+    additive: bool,
+}
+
 #[derive(Debug)]
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
@@ -154,6 +168,8 @@ struct Gizmo3dDemoModel {
     selection: Vec<GizmoTargetId>,
     active_target: GizmoTargetId,
     drag_start_targets: Option<Vec<GizmoTarget3d>>,
+    pending_selection: Option<PendingSelection>,
+    marquee: Option<MarqueeSelection>,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -196,6 +212,8 @@ impl Default for Gizmo3dDemoModel {
             selection: vec![GizmoTargetId(1)],
             active_target: GizmoTargetId(1),
             drag_start_targets: None,
+            pending_selection: None,
+            marquee: None,
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -917,6 +935,46 @@ fn pick_target_id(ray: fret_gizmo::Ray3d, targets: &[GizmoTarget3d]) -> Option<G
     best_id
 }
 
+fn marquee_rect(a: Vec2, b: Vec2) -> (Vec2, Vec2) {
+    let min = Vec2::new(a.x.min(b.x), a.y.min(b.y));
+    let max = Vec2::new(a.x.max(b.x), a.y.max(b.y));
+    (min, max)
+}
+
+fn ndc_z_to_z01(depth: DepthRange, ndc_z: f32) -> f32 {
+    match depth {
+        DepthRange::ZeroToOne => ndc_z,
+        DepthRange::NegOneToOne => (ndc_z + 1.0) * 0.5,
+    }
+    .clamp(0.0, 1.0)
+}
+
+fn marquee_hits(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    depth: DepthRange,
+    targets: &[GizmoTarget3d],
+    rect_min: Vec2,
+    rect_max: Vec2,
+) -> Vec<(GizmoTargetId, f32)> {
+    let mut hits: Vec<(GizmoTargetId, f32)> = Vec::new();
+    for t in targets {
+        let Some(p) =
+            fret_gizmo::project_point(view_projection, viewport, t.transform.translation, depth)
+        else {
+            continue;
+        };
+        if !p.inside_clip {
+            continue;
+        }
+        let s = p.screen;
+        if s.x >= rect_min.x && s.x <= rect_max.x && s.y >= rect_min.y && s.y <= rect_max.y {
+            hits.push((t.id, ndc_z_to_z01(depth, p.ndc_z)));
+        }
+    }
+    hits
+}
+
 fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     let (w, h) = size;
     let aspect = (w.max(1) as f32) / (h.max(1) as f32);
@@ -1235,7 +1293,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 event.uv.1 * m.viewport_px.1 as f32,
             );
 
-            let mut rec_to_record: Option<UndoRecord<ValueTx<Transform3d>>> = None;
+            let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
 
             match event.kind {
                 ViewportInputKind::PointerDown {
@@ -1358,73 +1416,171 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
             );
 
-            if let ViewportInputKind::PointerDown {
-                button: fret_core::MouseButton::Left,
-                modifiers,
-                ..
-            } = event.kind
-                && hovered
-            {
-                let selected: Vec<GizmoTarget3d> = m
-                    .targets
-                    .iter()
-                    .copied()
-                    .filter(|t| m.selection.contains(&t.id))
-                    .collect();
+            if hovered {
+                match event.kind {
+                    ViewportInputKind::PointerDown {
+                        button: fret_core::MouseButton::Left,
+                        modifiers,
+                        ..
+                    } => {
+                        let selected: Vec<GizmoTarget3d> = m
+                            .targets
+                            .iter()
+                            .copied()
+                            .filter(|t| m.selection.contains(&t.id))
+                            .collect();
 
-                let hover_input = GizmoInput {
-                    cursor_px,
-                    hovered: true,
-                    drag_started: false,
-                    dragging: false,
-                    snap: modifiers.shift,
-                    cancel: false,
-                };
-                let _ = m.gizmo.update(
-                    view_projection,
-                    viewport,
-                    hover_input,
-                    m.active_target,
-                    &selected,
-                );
+                        let hover_input = GizmoInput {
+                            cursor_px,
+                            hovered: true,
+                            drag_started: false,
+                            dragging: false,
+                            snap: modifiers.shift,
+                            cancel: false,
+                        };
+                        let _ = m.gizmo.update(
+                            view_projection,
+                            viewport,
+                            hover_input,
+                            m.active_target,
+                            &selected,
+                        );
 
-                let over_handle = m.gizmo.state.hovered.is_some();
-                if over_handle {
-                    drag_started = true;
-                    dragging = true;
-                } else if let Some(ray) = fret_gizmo::ray_from_screen(
-                    view_projection,
-                    viewport,
-                    cursor_px,
-                    m.gizmo.config.depth_range,
-                ) {
-                    let hit = pick_target_id(ray, &m.targets);
-                    match (hit, modifiers.shift) {
-                        (Some(id), true) => {
-                            if let Some(pos) = m.selection.iter().position(|v| *v == id) {
-                                if m.selection.len() > 1 {
-                                    m.selection.remove(pos);
-                                    if m.active_target == id {
-                                        m.active_target = m.selection[0];
-                                    }
-                                } else {
-                                    m.active_target = id;
+                        let over_handle = m.gizmo.state.hovered.is_some();
+                        if over_handle {
+                            m.pending_selection = None;
+                            m.marquee = None;
+                            drag_started = true;
+                            dragging = true;
+                        } else {
+                            m.pending_selection = Some(PendingSelection {
+                                start_cursor_px: cursor_px,
+                                additive: modifiers.shift,
+                            });
+                            m.marquee = None;
+                            drag_started = false;
+                            dragging = false;
+                        }
+                    }
+                    ViewportInputKind::PointerMove { buttons, .. } => {
+                        const MARQUEE_THRESHOLD_PX: f32 = 4.0;
+                        let threshold_sq = MARQUEE_THRESHOLD_PX * MARQUEE_THRESHOLD_PX;
+
+                        if buttons.left {
+                            if let Some(pending) = m.pending_selection {
+                                if (cursor_px - pending.start_cursor_px).length_squared()
+                                    >= threshold_sq
+                                {
+                                    m.pending_selection = None;
+                                    m.marquee = Some(MarqueeSelection {
+                                        start_cursor_px: pending.start_cursor_px,
+                                        cursor_px,
+                                        additive: pending.additive,
+                                    });
                                 }
-                            } else {
-                                m.selection.push(id);
-                                m.active_target = id;
+                            }
+
+                            if let Some(mut marquee) = m.marquee {
+                                marquee.cursor_px = cursor_px;
+                                m.marquee = Some(marquee);
+                            }
+
+                            if m.pending_selection.is_some() || m.marquee.is_some() {
+                                drag_started = false;
+                                dragging = false;
                             }
                         }
-                        (Some(id), false) => {
-                            m.selection.clear();
-                            m.selection.push(id);
-                            m.active_target = id;
-                        }
-                        (None, false) => {
-                            m.selection.clear();
-                        }
-                        (None, true) => {}
                     }
+                    ViewportInputKind::PointerUp {
+                        button: fret_core::MouseButton::Left,
+                        ..
+                    } => {
+                        let is_gizmo_dragging = m.gizmo.state.active.is_some() || m.input.dragging;
+                        if is_gizmo_dragging {
+                            m.pending_selection = None;
+                            m.marquee = None;
+                        } else {
+                            if let Some(marquee) = m.marquee.take() {
+                                let (rect_min, rect_max) =
+                                    marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+                                let hits = marquee_hits(
+                                    view_projection,
+                                    viewport,
+                                    m.gizmo.config.depth_range,
+                                    &m.targets,
+                                    rect_min,
+                                    rect_max,
+                                );
+
+                                if marquee.additive {
+                                    for (id, _z01) in &hits {
+                                        if !m.selection.contains(id) {
+                                            m.selection.push(*id);
+                                        }
+                                    }
+                                } else {
+                                    m.selection = hits.iter().map(|(id, _z01)| *id).collect();
+                                }
+
+                                if !m.selection.contains(&m.active_target) {
+                                    if let Some((id, _z01)) =
+                                        hits.into_iter().min_by(|a, b| a.1.total_cmp(&b.1))
+                                    {
+                                        m.active_target = id;
+                                    } else if let Some(id) = m.selection.first().copied() {
+                                        m.active_target = id;
+                                    }
+                                }
+
+                                m.pending_selection = None;
+                            } else if let Some(pending) = m.pending_selection.take() {
+                                if let Some(ray) = fret_gizmo::ray_from_screen(
+                                    view_projection,
+                                    viewport,
+                                    cursor_px,
+                                    m.gizmo.config.depth_range,
+                                ) {
+                                    let hit = pick_target_id(ray, &m.targets);
+                                    match (hit, pending.additive) {
+                                        (Some(id), true) => {
+                                            if let Some(pos) =
+                                                m.selection.iter().position(|v| *v == id)
+                                            {
+                                                if m.selection.len() > 1 {
+                                                    m.selection.remove(pos);
+                                                    if m.active_target == id {
+                                                        m.active_target = m.selection[0];
+                                                    }
+                                                } else {
+                                                    m.active_target = id;
+                                                }
+                                            } else {
+                                                m.selection.push(id);
+                                                m.active_target = id;
+                                            }
+                                        }
+                                        (Some(id), false) => {
+                                            m.selection.clear();
+                                            m.selection.push(id);
+                                            m.active_target = id;
+                                        }
+                                        (None, false) => {
+                                            m.selection.clear();
+                                        }
+                                        (None, true) => {}
+                                    }
+                                } else if !pending.additive {
+                                    m.selection.clear();
+                                }
+                            }
+
+                            m.pending_selection = None;
+                            m.marquee = None;
+                            drag_started = false;
+                            dragging = false;
+                        }
+                    }
+                    _ => {}
                 }
             }
 
@@ -1542,7 +1698,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
         let gpu = state.gpu.as_ref().expect("gpu ensured");
 
-        let (scene_targets, selection, active_target, draw, thickness_px, view_proj) = state
+        let (
+            scene_targets,
+            selection,
+            active_target,
+            draw,
+            thickness_px,
+            view_proj,
+            marquee,
+            depth,
+        ) = state
             .demo
             .read(app, |_app, m| {
                 let view_proj = camera_view_projection(size, m.camera);
@@ -1568,6 +1733,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     &gizmo_targets,
                 );
                 let thickness_px = m.gizmo.config.line_thickness_px;
+                let marquee = m.marquee;
+                let depth = m.gizmo.config.depth_range;
 
                 (
                     m.targets.clone(),
@@ -1576,6 +1743,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     draw,
                     thickness_px,
                     view_proj,
+                    marquee,
+                    depth,
                 )
             })
             .unwrap_or_else(|_| {
@@ -1586,6 +1755,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     GizmoDrawList3d::default(),
                     6.0,
                     Mat4::IDENTITY,
+                    None,
+                    DepthRange::ZeroToOne,
                 )
             });
 
@@ -1653,6 +1824,78 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 DepthMode::Test => push_thick_line_quad(&mut line_verts_test, a, b, color),
                 DepthMode::Ghost => push_thick_line_quad(&mut line_verts_ghost, a, b, color),
                 DepthMode::Always => push_thick_line_quad(&mut line_verts_always, a, b, color),
+            }
+        }
+
+        if let Some(marquee) = marquee {
+            let viewport = ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+            let (mut rect_min, mut rect_max) =
+                marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+            rect_min.x = rect_min.x.clamp(viewport.min.x, viewport.max().x);
+            rect_min.y = rect_min.y.clamp(viewport.min.y, viewport.max().y);
+            rect_max.x = rect_max.x.clamp(viewport.min.x, viewport.max().x);
+            rect_max.y = rect_max.y.clamp(viewport.min.y, viewport.max().y);
+
+            let corners = [
+                Vec2::new(rect_min.x, rect_min.y),
+                Vec2::new(rect_max.x, rect_min.y),
+                Vec2::new(rect_max.x, rect_max.y),
+                Vec2::new(rect_min.x, rect_max.y),
+            ];
+
+            let z01 = 0.001;
+            let mut w = [Vec3::ZERO; 4];
+            let mut ok = true;
+            for (i, s) in corners.iter().enumerate() {
+                if let Some(p) = fret_gizmo::unproject_point(view_proj, viewport, *s, depth, z01) {
+                    w[i] = p;
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if ok {
+                let (fill, border) = if marquee.additive {
+                    ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90])
+                } else {
+                    ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90])
+                };
+
+                solid_verts_always.push(Vertex {
+                    pos: w[0].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[1].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[2].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[0].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[2].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[3].to_array(),
+                    color: fill,
+                });
+
+                let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
+                for (a, b) in edges {
+                    push_thick_line_quad(
+                        &mut line_verts_always,
+                        w[a].to_array(),
+                        w[b].to_array(),
+                        border,
+                    );
+                }
             }
         }
 
