@@ -1,6 +1,6 @@
 # ADR 0136: `delinea` DataZoom Y + 2D Semantics (ECharts-Inspired)
 
-Status: Proposed (P0)
+Status: Accepted (P0)
 
 ## Context
 
@@ -128,15 +128,17 @@ v1 scope:
 
 ## Follow-ups
 
-P0 / near-term:
-
-- Implement `fret-chart` 2D box zoom that writes `SetViewWindow2DFromZoom` for the active axis pair.
-- Add a conformance demo for multi-axis + 2D zoom interactions (desktop + wasm).
-
 P1:
 
-- Add `DataZoomYSpec` (durable defaults and future slider UI) and decide whether Y needs its own `FilterMode`.
+- Decide whether Y needs its own `FilterMode`, and whether `DataZoomYSpec` should grow durable defaults (`rangeMode`, persisted windows).
 - Introduce `RowSelection` variants beyond `Range` (e.g. indices/bitmap) so future “filter by Y” and
   ECharts-like `weakFilter`/`empty` become feasible without ad-hoc allocations.
 - Add span constraints (`minSpan/maxSpan` or `minValueSpan/maxValueSpan`) as a durable policy key,
   and define how they compose with `AxisRange` and locks.
+
+## Evidence
+
+- Action surface: `ecosystem/delinea/src/action/mod.rs` (`ZoomDataWindowYFromBase`, `PanDataWindowYFromBase`, `SetViewWindow2DFromZoom`)
+- Engine semantics: `ecosystem/delinea/src/engine/mod.rs` (lock gating + window writes for Y and 2D actions)
+- UI adapter (multi-axis routing + 2D box zoom): `ecosystem/fret-chart/src/retained/canvas.rs`
+- Conformance harness (desktop + wasm): `apps/fret-examples/src/chart_multi_axis_demo.rs`

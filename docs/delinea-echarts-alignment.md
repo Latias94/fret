@@ -253,7 +253,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Audit 2D box zoom semantics (axis routing + lock gating) using `apps/fret-examples/src/chart_multi_axis_demo.rs` (desktop + wasm) (ADR 0134/0136).
-2. P0: Implement DataZoom Y “inside” semantics in `fret-chart` (axis band + plot modifiers), with lock gating (ADR 0135/0136).
-3. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity).
-4. P1: Introduce span constraints and a durable `DataZoomYSpec` only if slider UI or persisted defaults are required (ADR 0138).
+1. P0: Fix progressive render scheduling so charts finish rendering without pointer-driven redraws (validate on desktop + wasm).
+2. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity), then add conformance tests.
+3. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
+4. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.
