@@ -753,7 +753,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
-    menu::sub_content::submenu_panel_for_value_at(
+    menu::sub_content::submenu_panel_scroll_y_for_value_at(
         cx,
         open_value,
         placed,
@@ -2023,13 +2023,32 @@ impl ContextMenu {
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
-                    let desired = Size::new(Px(192.0), Px(1.0e9));
                     let submenu_open_value = cx
                         .app
                         .models_mut()
                         .read(&submenu_for_panel.open_value, |v| v.clone())
                         .ok()
                         .flatten();
+                    let desired = submenu_open_value
+                        .as_ref()
+                        .and_then(|open_value| {
+                            find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
+                        })
+                        .map(|submenu_entries| {
+                            let mut flat: Vec<ContextMenuEntry> = Vec::new();
+                            flatten_entries(&mut flat, submenu_entries);
+                            let submenu_max_h = theme
+                                .metric_by_key("component.context_menu.max_height")
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            menu::sub::estimated_desired_size_for_row_count(
+                                Px(192.0),
+                                Px(28.0),
+                                flat.len(),
+                                submenu_max_h,
+                            )
+                        })
+                        .unwrap_or(Size::new(Px(192.0), Px(1.0e9)));
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
@@ -2043,7 +2062,7 @@ impl ContextMenu {
                     let submenu_opacity = submenu_motion.opacity;
                     let submenu_scale = submenu_motion.scale;
 
-                    let open_submenu = menu::sub::with_open_submenu(
+                    let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
                         &submenu_for_panel,
                         outer,

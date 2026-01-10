@@ -1931,6 +1931,11 @@ impl MenubarMenuEntries {
                                 menu_panel_desired_size(&flat, font_line_height, pad_y)
                             })
                             .unwrap_or_else(|| menu_panel_desired_size(&[], font_line_height, pad_y));
+                        let submenu_max_h = theme
+                            .metric_by_key("component.menubar.max_height")
+                            .map(|h| Px(h.0.min(outer.size.height.0)))
+                            .unwrap_or(outer.size.height);
+                        let desired = Size::new(desired.width, Px(desired.height.0.min(submenu_max_h.0)));
                         let submenu_is_open = submenu_open_value.is_some();
                         let submenu_motion =
                             radix_presence::scale_fade_presence_with_durations_and_easing(
@@ -1944,7 +1949,7 @@ impl MenubarMenuEntries {
                             );
                         let submenu_opacity = submenu_motion.opacity;
                         let submenu_scale = submenu_motion.scale;
-                        let open_submenu = menu::sub::with_open_submenu(
+                        let open_submenu = menu::sub::with_open_submenu_synced(
                             cx,
                             &submenu_for_panel,
                             outer,
@@ -2070,7 +2075,7 @@ impl MenubarMenuEntries {
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
 
-                                    let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
+                                    let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
@@ -2560,24 +2565,7 @@ impl MenubarMenuEntries {
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
-
-                                            let scroll_layout = LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Fill,
-                                                    height: Length::Fill,
-                                                    ..Default::default()
-                                                },
-                                                overflow: fret_ui::element::Overflow::Clip,
-                                                ..Default::default()
-                                            };
-                                            vec![cx.scroll(
-                                                ScrollProps {
-                                                    layout: scroll_layout,
-                                                    axis: ScrollAxis::Y,
-                                                    ..Default::default()
-                                                },
-                                                move |_cx| vec![roving],
-                                            )]
+                                            vec![roving]
                                         },
                                     );
 

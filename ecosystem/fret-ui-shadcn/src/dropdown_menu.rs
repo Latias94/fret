@@ -1716,13 +1716,40 @@ impl DropdownMenu {
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
-                    let desired = Size::new(Px(192.0), Px(1.0e9));
                     let submenu_open_value = cx
                         .app
                         .models_mut()
                         .read(&submenu_for_panel.open_value, |v| v.clone())
                         .ok()
                         .flatten();
+                    let desired = submenu_open_value
+                        .as_deref()
+                        .and_then(|open_value| {
+                            entries_for_submenu.iter().find_map(|e| {
+                                let DropdownMenuEntry::Item(item) = e else {
+                                    return None;
+                                };
+                                let Some(sub) = item.submenu.clone() else {
+                                    return None;
+                                };
+                                (item.value.as_ref() == open_value).then_some(sub)
+                            })
+                        })
+                        .map(|submenu_entries| {
+                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                            flatten_entries(&mut flat, submenu_entries);
+                            let submenu_max_h = theme
+                                .metric_by_key("component.dropdown_menu.max_height")
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            menu::sub::estimated_desired_size_for_row_count(
+                                Px(192.0),
+                                Px(28.0),
+                                flat.len(),
+                                submenu_max_h,
+                            )
+                        })
+                        .unwrap_or(Size::new(Px(192.0), Px(1.0e9)));
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
@@ -1736,7 +1763,7 @@ impl DropdownMenu {
                     let submenu_opacity = submenu_motion.opacity;
                     let submenu_scale = submenu_motion.scale;
 
-                    let open_submenu = menu::sub::with_open_submenu(
+                    let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
                         &submenu_for_panel,
                         outer,
@@ -1875,43 +1902,10 @@ impl DropdownMenu {
                                             };
 
                                             let submenu_models_for_panel = submenu_for_panel.clone();
-                                            let submenu_max_h = theme
-                                                .metric_by_key("component.dropdown_menu.max_height")
-                                                .map(|h| Px(h.0.min(outer.size.height.0)))
-                                                .unwrap_or(outer.size.height);
-                                            let submenu_estimated_h = Px(
-                                                (Px(28.0).0 * submenu_entries.len().max(1) as f32)
-                                                    .min(submenu_max_h.0)
-                                                    .max(Px(28.0).0),
-                                            );
-                                            let submenu_desired =
-                                                Size::new(Px(192.0), submenu_estimated_h);
-                                            let submenu_trigger = cx
-                                                .app
-                                                .models_mut()
-                                                .read(&submenu_models_for_panel.trigger, |v| *v)
-                                                .ok()
-                                                .flatten();
-                                            if let Some(trigger) = submenu_trigger {
-                                                menu::sub::set_geometry_from_element_anchor_if_present(
-                                                    cx,
-                                                    trigger,
-                                                    &submenu_models_for_panel,
-                                                    outer,
-                                                    submenu_desired,
-                                                );
-                                            }
-                                            let submenu_geometry = menu::sub::resolve_open_geometry(
-                                                cx,
-                                                &submenu_models_for_panel,
-                                                outer,
-                                                submenu_desired,
-                                            )
-                                            .unwrap_or(geometry);
-                                            let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
+                                            let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                                 cx,
                                                 open_value.clone(),
-                                                submenu_geometry.floating,
+                                                geometry.floating,
                                                 move |layout| ContainerProps {
                                                     layout,
                                                     padding: Edges::all(Px(4.0)),
@@ -2384,34 +2378,18 @@ impl DropdownMenu {
                                                         typeahead_timeout_ticks,
                                                         move |_cx| rows.clone(),
                                                     );
-                                                    let scroll_layout = LayoutStyle {
-                                                        size: SizeStyle {
-                                                            width: Length::Fill,
-                                                            height: Length::Fill,
-                                                            ..Default::default()
-                                                        },
-                                                        overflow: Overflow::Clip,
-                                                        ..Default::default()
-                                                    };
-                                                    vec![cx.scroll(
-                                                        ScrollProps {
-                                                            layout: scroll_layout,
-                                                            axis: ScrollAxis::Y,
-                                                            ..Default::default()
-                                                        },
-                                                        move |_cx| vec![roving],
-                                                    )]
+                                                    vec![roving]
                                                 },
                                             );
 
                                         let side = overlay_motion::anchored_side(
-                                            submenu_geometry.reference,
-                                            submenu_geometry.floating,
+                                            geometry.reference,
+                                            geometry.floating,
                                         );
                                         let origin =
                                             overlay_motion::shadcn_transform_origin_for_anchored_rect(
-                                                submenu_geometry.reference,
-                                                submenu_geometry.floating,
+                                                geometry.reference,
+                                                geometry.floating,
                                                 side,
                                             );
                                         let transform = overlay_motion::shadcn_popper_presence_transform(
