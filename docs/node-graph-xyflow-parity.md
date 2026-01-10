@@ -532,6 +532,7 @@ High-level layering (ADR 0135):
     - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
     - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
     - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_conformance.rs`
+    - portal keyboard conformance (focused text input isolates shortcuts): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction
