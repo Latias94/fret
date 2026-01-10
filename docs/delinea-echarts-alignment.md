@@ -31,6 +31,33 @@ Status symbols:
   - DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
   - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
 
+## Quick Manual Validation
+
+The multi-axis harness (`apps/fret-examples/src/chart_multi_axis_demo.rs`) is the recommended
+baseline for validating interaction semantics and span limits on both native and wasm.
+
+### Native (desktop)
+
+- Run the demo:
+  - `cargo run -p fret-demo -- chart_multi_axis_demo`
+- What to validate (P0):
+  - X and Y axis band pan/zoom routing matches the active axis rules.
+  - X span limits (`minSpan/maxSpan`) clamp interaction-derived zoom updates (wheel/slider/box zoom).
+  - Y span limits clamp interaction-derived zoom updates (wheel/slider/box zoom) when `DataZoomYSpec` is configured.
+  - When the current/base span is already outside the configured limits, interactions do not force it back into range
+    (they only prevent moving further out of bounds).
+
+### Web (wasm)
+
+- Option A (recommended): use `fretboard` (wraps Trunk):
+  - `cargo run -p fretboard -- dev web --demo chart_multi_axis_demo`
+- Option B: run Trunk directly:
+  - `cd apps/fret-demo-web`
+  - `trunk serve`
+  - open `http://127.0.0.1:8080/?demo=chart_multi_axis_demo`
+
+See `apps/fret-demo-web/README.md` for prerequisites and the full list of demo names.
+
 ## Terminology Mapping (ECharts -> `delinea`)
 
 - `option` -> `ChartSpec` (serializable durable config)
