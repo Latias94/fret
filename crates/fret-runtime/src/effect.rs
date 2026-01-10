@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use crate::{ClipboardToken, ExternalDropToken, FileDialogToken, ImageUploadToken, TimerToken};
 use fret_core::{
-    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorSpace, Rect,
-    WindowAnchor,
+    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorSpace, ImageId,
+    Rect, RectPx, WindowAnchor,
 };
 
 use crate::CommandId;
@@ -80,6 +80,17 @@ pub enum Effect {
         token: ImageUploadToken,
         width: u32,
         height: u32,
+        bytes: Vec<u8>,
+        color_space: ImageColorSpace,
+    },
+    ImageUpdateRgba8 {
+        window: Option<AppWindowId>,
+        image: ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<RectPx>,
+        bytes_per_row: u32,
         bytes: Vec<u8>,
         color_space: ImageColorSpace,
     },

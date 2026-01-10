@@ -1,12 +1,13 @@
 //! Web launcher implementation (winit + wgpu via WebGPU).
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, Event, Point, Px, Rect, Scene, Size};
-use fret_render::{RenderSceneParams, Renderer, SurfaceState, WgpuContext};
+use fret_render::{RenderSceneParams, Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
 use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowRequest, apply_window_metrics_event,
 };
@@ -55,12 +56,19 @@ pub struct WinitRunner<D: WinitAppDriver> {
     tick_id: TickId,
     frame_id: FrameId,
 
+    uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
+
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
     web_services: WebPlatformServices,
     gpu_ready_called: bool,
     exiting: bool,
     exit_requested: Rc<Cell<bool>>,
+}
+
+struct UploadedImageEntry {
+    uploaded: UploadedRgba8Image,
+    stream_generation: u64,
 }
 
 #[derive(Clone)]
@@ -149,6 +157,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             pending_events: Vec::new(),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
+            uploaded_images: HashMap::new(),
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
@@ -391,13 +400,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     };
 
-                    let fret_render::UploadedRgba8Image {
-                        view,
-                        size,
-                        format,
-                        color_space,
-                        ..
-                    } = fret_render::upload_rgba8_image(
+                    let uploaded = fret_render::upload_rgba8_image(
                         &gfx.ctx.device,
                         &gfx.ctx.queue,
                         (width, height),
@@ -405,12 +408,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         color_space,
                     );
 
+                    let view = uploaded
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
                     let image = gfx.renderer.register_image(fret_render::ImageDescriptor {
                         view,
-                        size,
-                        format,
-                        color_space,
+                        size: uploaded.size,
+                        format: uploaded.format,
+                        color_space: uploaded.color_space,
                     });
+                    self.uploaded_images.insert(
+                        image,
+                        UploadedImageEntry {
+                            uploaded,
+                            stream_generation: 0,
+                        },
+                    );
 
                     self.pending_events.push(Event::ImageRegistered {
                         token,
@@ -420,7 +433,160 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     });
                     window.request_redraw();
                 }
+                Effect::ImageUpdateRgba8 {
+                    window: target_window,
+                    image,
+                    stream_generation,
+                    width,
+                    height,
+                    update_rect_px,
+                    bytes_per_row,
+                    bytes,
+                    color_space,
+                } => {
+                    if let Some(target_window) = target_window
+                        && target_window != self.app_window
+                    {
+                        continue;
+                    }
+
+                    if width == 0 || height == 0 {
+                        continue;
+                    }
+
+                    let Some(entry) = self.uploaded_images.get_mut(&image) else {
+                        continue;
+                    };
+
+                    if stream_generation < entry.stream_generation {
+                        continue;
+                    }
+                    entry.stream_generation = stream_generation;
+
+                    let rect =
+                        update_rect_px.unwrap_or_else(|| fret_core::RectPx::full(width, height));
+                    if rect.is_empty() {
+                        continue;
+                    }
+
+                    if rect.x > width
+                        || rect.y > height
+                        || rect.x.saturating_add(rect.w) > width
+                        || rect.y.saturating_add(rect.h) > height
+                    {
+                        tracing::warn!(
+                            image = ?image,
+                            width,
+                            height,
+                            rect = ?rect,
+                            "ignoring ImageUpdateRgba8 with out-of-bounds update rect"
+                        );
+                        continue;
+                    }
+
+                    let color_space = match color_space {
+                        fret_runtime::ImageColorSpace::Srgb => fret_render::ImageColorSpace::Srgb,
+                        fret_runtime::ImageColorSpace::Linear => {
+                            fret_render::ImageColorSpace::Linear
+                        }
+                    };
+
+                    let row_bytes = rect.w.saturating_mul(4);
+                    if bytes_per_row < row_bytes {
+                        tracing::warn!(
+                            image = ?image,
+                            bytes_per_row,
+                            row_bytes,
+                            "ignoring ImageUpdateRgba8 with undersized bytes_per_row"
+                        );
+                        continue;
+                    }
+
+                    let expected_len = (bytes_per_row as usize).saturating_mul(rect.h as usize);
+                    if bytes.len() != expected_len {
+                        tracing::warn!(
+                            image = ?image,
+                            got = bytes.len(),
+                            expected = expected_len,
+                            "ignoring ImageUpdateRgba8 with invalid byte length"
+                        );
+                        continue;
+                    }
+
+                    let needs_replace = entry.uploaded.size != (width, height)
+                        || entry.uploaded.color_space != color_space;
+                    if needs_replace {
+                        let is_full_update =
+                            rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
+                        if !is_full_update {
+                            tracing::warn!(
+                                image = ?image,
+                                old_size = ?entry.uploaded.size,
+                                new_size = ?(width, height),
+                                "ignoring partial ImageUpdateRgba8 while image storage needs replace"
+                            );
+                            continue;
+                        }
+
+                        let uploaded = if bytes_per_row == width.saturating_mul(4)
+                            && bytes.len()
+                                == (width as usize)
+                                    .saturating_mul(height as usize)
+                                    .saturating_mul(4)
+                        {
+                            fret_render::upload_rgba8_image(
+                                &gfx.ctx.device,
+                                &gfx.ctx.queue,
+                                (width, height),
+                                &bytes,
+                                color_space,
+                            )
+                        } else {
+                            let uploaded = fret_render::create_rgba8_image_storage(
+                                &gfx.ctx.device,
+                                (width, height),
+                                color_space,
+                            );
+                            uploaded.write_region(
+                                &gfx.ctx.queue,
+                                (0, 0),
+                                (width, height),
+                                bytes_per_row,
+                                &bytes,
+                            );
+                            uploaded
+                        };
+
+                        let view = uploaded
+                            .texture
+                            .create_view(&wgpu::TextureViewDescriptor::default());
+                        if !gfx.renderer.update_image(
+                            image,
+                            fret_render::ImageDescriptor {
+                                view,
+                                size: uploaded.size,
+                                format: uploaded.format,
+                                color_space: uploaded.color_space,
+                            },
+                        ) {
+                            self.uploaded_images.remove(&image);
+                            continue;
+                        }
+                        entry.uploaded = uploaded;
+                    } else {
+                        entry.uploaded.write_region(
+                            &gfx.ctx.queue,
+                            (rect.x, rect.y),
+                            (rect.w, rect.h),
+                            bytes_per_row,
+                            &bytes,
+                        );
+                    }
+
+                    window.request_redraw();
+                }
                 Effect::ImageUnregister { image } => {
+                    self.uploaded_images.remove(&image);
                     if gfx.renderer.unregister_image(image) {
                         window.request_redraw();
                     }

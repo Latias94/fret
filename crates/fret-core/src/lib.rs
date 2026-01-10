@@ -31,7 +31,7 @@ pub use dock_op::{DockOp, SplitFractionsUpdate};
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
 };
-pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
+pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
     ImageId, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,

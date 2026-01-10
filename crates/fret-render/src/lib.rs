@@ -10,7 +10,10 @@ pub mod viewport_overlay;
 
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
-pub use images::{ImageDescriptor, ImageRegistry, UploadedRgba8Image, upload_rgba8_image};
+pub use images::{
+    ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
+    upload_rgba8_image, write_rgba8_texture_region,
+};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use renderer::{IntermediatePerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
