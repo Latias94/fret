@@ -62,6 +62,8 @@ struct CachedPoint {
 struct PanDrag {
     x_axis: delinea::AxisId,
     y_axis: delinea::AxisId,
+    pan_x: bool,
+    pan_y: bool,
     start_pos: Point,
     start_x: DataWindow,
     start_y: DataWindow,
@@ -599,6 +601,14 @@ impl ChartCanvas {
             y_axis,
             x,
             y,
+        }
+    }
+
+    fn refresh_hover_if_in_plot(&mut self, layout: &ChartLayout, position: Point) {
+        let axis_pointer_enabled = self.engine.model().axis_pointer.is_some_and(|p| p.enabled);
+        if axis_pointer_enabled && layout.plot.contains(position) {
+            self.engine
+                .apply_action(Action::HoverAt { point: position });
         }
     }
 
@@ -1956,7 +1966,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let dx = position.x.0 - drag.start_pos.x.0;
                         let dy = position.y.0 - drag.start_pos.y.0;
 
-                        if self.axis_is_fixed(drag.x_axis).is_none() {
+                        let x_pan_locked = self
+                            .engine
+                            .state()
+                            .axis_locks
+                            .get(&drag.x_axis)
+                            .copied()
+                            .unwrap_or_default()
+                            .pan_locked;
+                        let y_pan_locked = self
+                            .engine
+                            .state()
+                            .axis_locks
+                            .get(&drag.y_axis)
+                            .copied()
+                            .unwrap_or_default()
+                            .pan_locked;
+
+                        if drag.pan_x && self.axis_is_fixed(drag.x_axis).is_none() && !x_pan_locked
+                        {
                             self.engine.apply_action(Action::PanDataWindowXFromBase {
                                 axis: drag.x_axis,
                                 base: drag.start_x,
@@ -1964,7 +1992,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 viewport_span_px: width,
                             });
                         }
-                        if self.axis_is_fixed(drag.y_axis).is_none() {
+                        if drag.pan_y && self.axis_is_fixed(drag.y_axis).is_none() && !y_pan_locked
+                        {
                             self.engine.apply_action(Action::PanDataWindowYFromBase {
                                 axis: drag.y_axis,
                                 base: drag.start_y,
@@ -1973,6 +2002,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             });
                         }
 
+                        self.refresh_hover_if_in_plot(&layout, *position);
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -2274,15 +2304,27 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 let layout = self.compute_layout(cx.bounds);
-                if !layout.plot.contains(*position) {
+                let region = Self::axis_region(&layout, *position);
+                let in_plot = layout.plot.contains(*position);
+                let in_axis = matches!(region, AxisRegion::XAxis(_) | AxisRegion::YAxis(_));
+                if !in_plot && !in_axis {
                     return;
                 }
 
                 let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
                     return;
                 };
-                if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some() {
-                    return;
+                let (x_axis, y_axis, mut pan_x, mut pan_y) = match region {
+                    AxisRegion::Plot => (x_axis, y_axis, !modifiers.ctrl, !modifiers.shift),
+                    AxisRegion::XAxis(axis) => (axis, y_axis, true, false),
+                    AxisRegion::YAxis(axis) => (x_axis, axis, false, true),
+                };
+
+                if pan_x && self.axis_is_fixed(x_axis).is_some() {
+                    pan_x = false;
+                }
+                if pan_y && self.axis_is_fixed(y_axis).is_some() {
+                    pan_y = false;
                 }
 
                 let x_pan_locked = self
@@ -2301,7 +2343,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .copied()
                     .unwrap_or_default()
                     .pan_locked;
-                if x_pan_locked && y_pan_locked {
+                if pan_x && x_pan_locked {
+                    pan_x = false;
+                }
+                if pan_y && y_pan_locked {
+                    pan_y = false;
+                }
+                if !pan_x && !pan_y {
                     return;
                 }
 
@@ -2311,6 +2359,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 self.pan_drag = Some(PanDrag {
                     x_axis,
                     y_axis,
+                    pan_x,
+                    pan_y,
                     start_pos: *position,
                     start_x,
                     start_y,
@@ -2354,6 +2404,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             x_window,
                             y_window,
                         ));
+                        self.refresh_hover_if_in_plot(&layout, *position);
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -2497,6 +2548,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     });
                 }
 
+                self.refresh_hover_if_in_plot(&layout, *position);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
