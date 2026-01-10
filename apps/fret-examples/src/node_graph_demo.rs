@@ -21,7 +21,7 @@ use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
 
 use crate::keymap_defaults::install_default_keybindings_into_keymap;
-use crate::node_graph_tuning_overlay::NodeGraphTuningOverlay;
+use crate::node_graph_tuning_overlay::{NodeGraphTuningCommands, NodeGraphTuningOverlay};
 
 use fret_node::Graph;
 use fret_node::GraphId;
@@ -67,6 +67,10 @@ const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
+const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
+const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
+const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
+const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Clone)]
@@ -766,6 +770,153 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     graph
 }
 
+fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
+    let mut graph = Graph::new(graph_id);
+
+    // Build a mostly-regular, large graph intended for performance/conformance stress testing.
+    //
+    // Shape:
+    // - A chain of `demo.add` nodes arranged in a grid.
+    // - Each add node gets its `b` input from a nearby `demo.float`.
+    // - The `a` input is chained from the previous add output, starting from a root float.
+    //
+    // This produces both many nodes and many short-ish edges without relying on dynamic ports.
+    let add_nodes = target_nodes.saturating_sub(1) / 2;
+    let float_nodes = add_nodes.saturating_add(1);
+
+    let cols: usize = 64;
+    let x_step = 360.0f32;
+    let y_step = 220.0f32;
+
+    let float_x_offset = -260.0f32;
+    let float_y_offset = 40.0f32;
+
+    let mut float_out_ports: Vec<PortId> = Vec::with_capacity(float_nodes);
+    for i in 0..float_nodes {
+        let node_id = NodeId::new();
+        let port_out = PortId::new();
+
+        let col = i % cols;
+        let row = i / cols;
+        let x = col as f32 * x_step + float_x_offset;
+        let y = row as f32 * y_step + float_y_offset;
+        let value = (i as f64) * 0.001;
+
+        graph.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("demo.float"),
+                kind_version: 1,
+                pos: CanvasPoint { x, y },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![port_out],
+                data: serde_json::json!({ "value": value }),
+            },
+        );
+        graph.ports.insert(
+            port_out,
+            Port {
+                node: node_id,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        float_out_ports.push(port_out);
+    }
+
+    let mut prev_out: Option<PortId> = None;
+    for i in 0..add_nodes {
+        let node_id = NodeId::new();
+        let port_a = PortId::new();
+        let port_b = PortId::new();
+        let port_out = PortId::new();
+
+        let col = i % cols;
+        let row = i / cols;
+        let x = col as f32 * x_step;
+        let y = row as f32 * y_step;
+
+        graph.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("demo.add"),
+                kind_version: 1,
+                pos: CanvasPoint { x, y },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![port_a, port_b, port_out],
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_a,
+            Port {
+                node: node_id,
+                key: PortKey::new("a"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_b,
+            Port {
+                node: node_id,
+                key: PortKey::new("b"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_out,
+            Port {
+                node: node_id,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        let a_source = prev_out.unwrap_or(float_out_ports[0]);
+        graph.edges.insert(
+            EdgeId::new(),
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_source,
+                to: port_a,
+            },
+        );
+        graph.edges.insert(
+            EdgeId::new(),
+            Edge {
+                kind: EdgeKind::Data,
+                from: float_out_ports[i + 1],
+                to: port_b,
+            },
+        );
+
+        prev_out = Some(port_out);
+    }
+
+    graph
+}
+
 struct NodeGraphDemoWindowState {
     ui: UiTree<App>,
     root: fret_core::NodeId,
@@ -989,6 +1140,7 @@ impl NodeGraphDemoDriver {
                 )
             },
         )
+        .with_cull_margin_px(style.render_cull_margin_px)
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
@@ -1001,7 +1153,13 @@ impl NodeGraphDemoDriver {
             NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone());
         let controls_node = ui.create_node_retained(controls);
 
-        let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone());
+        let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone())
+            .with_commands(NodeGraphTuningCommands {
+                reset_graph: CommandId::new(CMD_RESET_GRAPH),
+                spawn_stress_1k: CommandId::new(CMD_SPAWN_STRESS_1K),
+                spawn_stress_5k: CommandId::new(CMD_SPAWN_STRESS_5K),
+                spawn_stress_10k: CommandId::new(CMD_SPAWN_STRESS_10K),
+            });
         let tuning_node = ui.create_node_retained(tuning);
 
         let minimap = NodeGraphMiniMapOverlay::new(
@@ -1271,6 +1429,55 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let _ = models.edits.update(app, |q, _cx| q.push(tx));
             return;
         }
+
+        if matches!(
+            command.as_str(),
+            CMD_RESET_GRAPH | CMD_SPAWN_STRESS_1K | CMD_SPAWN_STRESS_5K | CMD_SPAWN_STRESS_10K
+        ) {
+            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+                return;
+            };
+            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+                return;
+            };
+            let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>().cloned() else {
+                return;
+            };
+
+            let graph_id = persist.graph_id;
+            let next_graph = match command.as_str() {
+                CMD_RESET_GRAPH => build_demo_graph(graph_id),
+                CMD_SPAWN_STRESS_1K => build_stress_graph(graph_id, 1_000),
+                CMD_SPAWN_STRESS_5K => build_stress_graph(graph_id, 5_000),
+                CMD_SPAWN_STRESS_10K => build_stress_graph(graph_id, 10_000),
+                _ => return,
+            };
+
+            measured.manual.update(|node_sizes, anchors| {
+                node_sizes.clear();
+                anchors.clear();
+            });
+            measured.derived.update(|node_sizes, anchors| {
+                node_sizes.clear();
+                anchors.clear();
+            });
+
+            let _ = models
+                .edits
+                .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
+            let _ = models
+                .overlays
+                .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
+
+            let mut next_view = NodeGraphViewState::default();
+            next_view.sanitize_for_graph(&next_graph);
+
+            let _ = models.graph.update(app, |g, _cx| *g = next_graph);
+            let _ = models.view.update(app, |v, _cx| *v = next_view);
+
+            app.request_redraw(window);
+            return;
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -1504,5 +1711,39 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 linux_ctrl(KeyCode::ArrowUp),
                 web_ctrl(KeyCode::ArrowUp),
             ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_RESET_GRAPH),
+        CommandMeta::new("Reset Demo Graph")
+            .with_category("Demo")
+            .with_keywords(["reset", "graph", "demo"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_1K),
+        CommandMeta::new("Spawn Stress Graph (1k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "1k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_5K),
+        CommandMeta::new("Spawn Stress Graph (5k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "5k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_10K),
+        CommandMeta::new("Spawn Stress Graph (10k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "10k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
     );
 }

@@ -25,7 +25,7 @@ Authoritative contracts:
 
 Recommended harness:
 
-- `apps/fret-examples/src/node_graph_demo.rs`
+- `apps/fret-examples/src/node_graph_demo.rs` (use the tuning overlay to spawn stress graphs)
 
 ## A) Pan/Zoom and View Ops
 

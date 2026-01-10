@@ -11,6 +11,14 @@ use fret_node::io::{
 };
 use fret_node::ui::style::NodeGraphStyle;
 
+#[derive(Debug, Clone)]
+pub struct NodeGraphTuningCommands {
+    pub reset_graph: CommandId,
+    pub spawn_stress_1k: CommandId,
+    pub spawn_stress_5k: CommandId,
+    pub spawn_stress_10k: CommandId,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TuningHit {
     ToggleMode,
@@ -41,6 +49,10 @@ enum TuningHit {
     AutoPanSpeedDec,
     AutoPanSpeedInc,
     ToggleEdgesReconnectable,
+    ResetGraph,
+    SpawnStress1k,
+    SpawnStress5k,
+    SpawnStress10k,
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +65,7 @@ pub struct NodeGraphTuningOverlay {
     canvas_node: fret_core::NodeId,
     view_state: Model<NodeGraphViewState>,
     style: NodeGraphStyle,
+    commands: Option<NodeGraphTuningCommands>,
 
     hovered: Option<TuningHit>,
     pressed: Option<TuningHit>,
@@ -69,10 +82,16 @@ impl NodeGraphTuningOverlay {
             canvas_node,
             view_state,
             style,
+            commands: None,
             hovered: None,
             pressed: None,
             text_blobs: Vec::new(),
         }
+    }
+
+    pub fn with_commands(mut self, commands: NodeGraphTuningCommands) -> Self {
+        self.commands = Some(commands);
+        self
     }
 
     fn compute_layout(&self, bounds: Rect) -> TuningLayout {
@@ -83,7 +102,10 @@ impl NodeGraphTuningOverlay {
         let btn = self.style.controls_button_size.max(22.0);
 
         let panel_w = 340.0;
-        let rows = 17.0;
+        let mut rows = 17.0;
+        if self.commands.is_some() {
+            rows += 4.0;
+        }
         let panel_h = 2.0 * pad + row_h * rows + gap * (rows - 1.0);
 
         let x = bounds.origin.x.0 + margin;
@@ -338,6 +360,36 @@ impl NodeGraphTuningOverlay {
             Size::new(Px(btn), Px(btn)),
         );
         hits.push((TuningHit::ToggleEdgesReconnectable, edges_reconnectable_btn));
+        cy += row_h + gap;
+
+        if self.commands.is_some() {
+            let reset_btn = Rect::new(
+                Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+                Size::new(Px(btn), Px(btn)),
+            );
+            hits.push((TuningHit::ResetGraph, reset_btn));
+            cy += row_h + gap;
+
+            let stress_1k_btn = Rect::new(
+                Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+                Size::new(Px(btn), Px(btn)),
+            );
+            hits.push((TuningHit::SpawnStress1k, stress_1k_btn));
+            cy += row_h + gap;
+
+            let stress_5k_btn = Rect::new(
+                Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+                Size::new(Px(btn), Px(btn)),
+            );
+            hits.push((TuningHit::SpawnStress5k, stress_5k_btn));
+            cy += row_h + gap;
+
+            let stress_10k_btn = Rect::new(
+                Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+                Size::new(Px(btn), Px(btn)),
+            );
+            hits.push((TuningHit::SpawnStress10k, stress_10k_btn));
+        }
 
         TuningLayout { panel, hits }
     }
@@ -556,7 +608,22 @@ impl NodeGraphTuningOverlay {
             TuningHit::ToggleEdgesReconnectable => {
                 s.interaction.edges_reconnectable = !s.interaction.edges_reconnectable;
             }
+            TuningHit::ResetGraph
+            | TuningHit::SpawnStress1k
+            | TuningHit::SpawnStress5k
+            | TuningHit::SpawnStress10k => {}
         });
+    }
+
+    fn command_for_hit(&self, hit: TuningHit) -> Option<CommandId> {
+        let cmds = self.commands.as_ref()?;
+        match hit {
+            TuningHit::ResetGraph => Some(cmds.reset_graph.clone()),
+            TuningHit::SpawnStress1k => Some(cmds.spawn_stress_1k.clone()),
+            TuningHit::SpawnStress5k => Some(cmds.spawn_stress_5k.clone()),
+            TuningHit::SpawnStress10k => Some(cmds.spawn_stress_10k.clone()),
+            _ => None,
+        }
     }
 
     fn draw_text(
@@ -647,7 +714,11 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 }
 
                 let step = Self::step_for(event);
-                self.apply_hit(cx.app, pressed, step);
+                if let Some(cmd) = self.command_for_hit(pressed) {
+                    cx.dispatch_command(cmd);
+                } else {
+                    self.apply_hit(cx.app, pressed, step);
+                }
                 cx.request_focus(self.canvas_node);
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
@@ -1329,6 +1400,155 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(edges_reconnectable_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             edges_reconnectable_text,
+            self.style.controls_text,
+        );
+
+        if self.commands.is_none() {
+            return;
+        }
+        cy += row_h + gap;
+
+        // Extra rows for demo harness commands.
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Graph", "reset"),
+            self.style.context_menu_text,
+        );
+        let reset_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let reset_bg = if self.hovered == Some(TuningHit::ResetGraph) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: reset_btn_rect,
+            background: reset_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(reset_btn_rect.origin.x.0 + 4.0),
+                Px(reset_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            "Go",
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Stress graph", "1k nodes"),
+            self.style.context_menu_text,
+        );
+        let stress_1k_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let stress_1k_bg = if self.hovered == Some(TuningHit::SpawnStress1k) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: stress_1k_btn_rect,
+            background: stress_1k_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(stress_1k_btn_rect.origin.x.0 + 4.0),
+                Px(stress_1k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            "Go",
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Stress graph", "5k nodes"),
+            self.style.context_menu_text,
+        );
+        let stress_5k_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let stress_5k_bg = if self.hovered == Some(TuningHit::SpawnStress5k) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: stress_5k_btn_rect,
+            background: stress_5k_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(stress_5k_btn_rect.origin.x.0 + 4.0),
+                Px(stress_5k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            "Go",
+            self.style.controls_text,
+        );
+        cy += row_h + gap;
+
+        self.draw_text(
+            cx,
+            22_010,
+            Point::new(Px(left), Px(cy)),
+            &row("Stress graph", "10k nodes"),
+            self.style.context_menu_text,
+        );
+        let stress_10k_btn_rect = Rect::new(
+            Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
+            Size::new(Px(btn), Px(btn)),
+        );
+        let stress_10k_bg = if self.hovered == Some(TuningHit::SpawnStress10k) {
+            self.style.controls_hover_background
+        } else {
+            Color::TRANSPARENT
+        };
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(22_020),
+            rect: stress_10k_btn_rect,
+            background: stress_10k_bg,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(corner.max(4.0))),
+        });
+        self.draw_text(
+            cx,
+            22_021,
+            Point::new(
+                Px(stress_10k_btn_rect.origin.x.0 + 4.0),
+                Px(stress_10k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
+            ),
+            "Go",
             self.style.controls_text,
         );
     }
