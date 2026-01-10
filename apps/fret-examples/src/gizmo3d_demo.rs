@@ -24,11 +24,11 @@ use wgpu::util::DeviceExt as _;
 
 #[derive(Debug, Clone, Copy)]
 struct FrameAnim {
-    start_target: Vec3,
-    start_distance: f32,
-    end_target: Vec3,
-    end_distance: f32,
-    t: f32,
+    target: Vec3,
+    distance: f32,
+    target_velocity: Vec3,
+    distance_velocity: f32,
+    smooth_time_s: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -335,6 +335,52 @@ fn targets_world_aabb(targets: &[GizmoTarget3d]) -> Option<(Vec3, Vec3)> {
     any.then_some((min, max))
 }
 
+fn smooth_damp_f32(
+    current: f32,
+    target: f32,
+    current_velocity: &mut f32,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> f32 {
+    let smooth_time_s = smooth_time_s.max(1e-4);
+    let omega = 2.0 / smooth_time_s;
+    let x = omega * dt_seconds;
+    let exp = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
+
+    let change = current - target;
+    let temp = (*current_velocity + omega * change) * dt_seconds;
+    *current_velocity = (*current_velocity - omega * temp) * exp;
+
+    let mut output = target + (change + temp) * exp;
+
+    // Prevent overshoot.
+    if (target - current > 0.0) == (output > target) {
+        output = target;
+        *current_velocity = 0.0;
+    }
+
+    output
+}
+
+fn smooth_damp_vec3(
+    current: Vec3,
+    target: Vec3,
+    current_velocity: &mut Vec3,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> Vec3 {
+    let mut vx = current_velocity.x;
+    let mut vy = current_velocity.y;
+    let mut vz = current_velocity.z;
+
+    let x = smooth_damp_f32(current.x, target.x, &mut vx, smooth_time_s, dt_seconds);
+    let y = smooth_damp_f32(current.y, target.y, &mut vy, smooth_time_s, dt_seconds);
+    let z = smooth_damp_f32(current.z, target.z, &mut vz, smooth_time_s, dt_seconds);
+
+    *current_velocity = Vec3::new(vx, vy, vz);
+    Vec3::new(x, y, z)
+}
+
 fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     if camera.orbiting || camera.panning {
         camera.frame_anim = None;
@@ -351,22 +397,30 @@ fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
         return true;
     }
 
-    let duration_s = 0.22;
-    anim.t = (anim.t + dt_seconds / duration_s).min(1.0);
-    let t = anim.t;
-    let eased = t * t * (3.0 - 2.0 * t); // smoothstep
+    camera.target = smooth_damp_vec3(
+        camera.target,
+        anim.target,
+        &mut anim.target_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    );
+    camera.distance = smooth_damp_f32(
+        camera.distance,
+        anim.distance,
+        &mut anim.distance_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(0.2, 25.0);
 
-    camera.target = anim.start_target.lerp(anim.end_target, eased);
-    camera.distance =
-        (anim.start_distance + (anim.end_distance - anim.start_distance) * eased).clamp(0.2, 25.0);
-
-    let done = (1.0 - anim.t) <= 1e-6
-        || ((camera.target - anim.end_target).length() <= 1e-3
-            && (camera.distance - anim.end_distance).abs() <= 1e-3);
+    let done = (camera.target - anim.target).length() <= 1e-3
+        && (camera.distance - anim.distance).abs() <= 1e-3
+        && anim.target_velocity.length() <= 1e-3
+        && anim.distance_velocity.abs() <= 1e-3;
 
     if done {
-        camera.target = anim.end_target;
-        camera.distance = anim.end_distance.clamp(0.2, 25.0);
+        camera.target = anim.target;
+        camera.distance = anim.distance.clamp(0.2, 25.0);
         camera.frame_anim = None;
         false
     } else {
@@ -375,7 +429,13 @@ fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     }
 }
 
-fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max: Vec3) {
+fn frame_aabb(
+    camera: &mut OrbitCamera,
+    viewport_px: (u32, u32),
+    min: Vec3,
+    max: Vec3,
+    smooth_time_s: f32,
+) {
     let center = (min + max) * 0.5;
     let radius = ((max - min).length() * 0.5).max(0.001);
 
@@ -390,11 +450,11 @@ fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max:
     let dist = (radius * margin) / (fov * 0.5).tan();
 
     camera.frame_anim = Some(FrameAnim {
-        start_target: camera.target,
-        start_distance: camera.distance,
-        end_target: center,
-        end_distance: dist.clamp(0.2, 25.0),
-        t: 0.0,
+        target: center,
+        distance: dist.clamp(0.2, 25.0),
+        target_velocity: Vec3::ZERO,
+        distance_velocity: 0.0,
+        smooth_time_s: smooth_time_s.max(1e-4),
     });
 }
 #[derive(Debug, Clone, Copy)]
@@ -1541,6 +1601,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
             } => {
                 let frame_all = modifiers.shift;
+                let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.input.dragging || m.gizmo.state.active.is_some() {
                         return;
@@ -1559,7 +1620,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     let Some((min, max)) = targets_world_aabb(&targets) else {
                         return;
                     };
-                    frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                    frame_aabb(&mut m.camera, m.viewport_px, min, max, smooth_time_s);
                 });
                 app.request_redraw(window);
             }
@@ -1951,7 +2012,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                             .filter(|t| m.selection.contains(&t.id))
                                             .collect();
                                         if let Some((min, max)) = targets_world_aabb(&targets) {
-                                            frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                                            frame_aabb(
+                                                &mut m.camera,
+                                                m.viewport_px,
+                                                min,
+                                                max,
+                                                0.18,
+                                            );
                                         }
                                     }
                                 } else if matches!(op, SelectionOp::Replace) {
