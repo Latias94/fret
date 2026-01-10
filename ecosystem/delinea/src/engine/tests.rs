@@ -1129,6 +1129,50 @@ fn brush_selection_updates_state_without_bumping_view_revision_and_is_exposed_in
 }
 
 #[test]
+fn brush_x_row_range_is_derived_for_matching_series_axes() {
+    let series_id = crate::ids::SeriesId::new(1);
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis,
+        y_axis,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let range = engine
+        .output()
+        .brush_x_row_ranges_by_series
+        .get(&series_id)
+        .copied()
+        .expect("expected row range for the brushed series");
+    assert_eq!(range, RowRange { start: 2, end: 6 });
+}
+
+#[test]
 fn pan_lock_prevents_pan_window_update() {
     let x_axis = crate::ids::AxisId::new(1);
     let mut engine = ChartEngine::new(basic_spec()).unwrap();

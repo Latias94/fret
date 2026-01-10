@@ -78,6 +78,7 @@ pub struct ChartOutput {
     pub hover: Option<HoverHit>,
     pub axis_pointer: Option<AxisPointerOutput>,
     pub brush_selection_2d: Option<BrushSelection2D>,
+    pub brush_x_row_ranges_by_series: BTreeMap<crate::ids::SeriesId, RowRange>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -805,12 +806,55 @@ impl ChartEngine {
 
         self.output.link_events.clear();
         self.output.brush_selection_2d = self.state.brush_selection_2d;
+        self.output.brush_x_row_ranges_by_series.clear();
 
         let view_changed = self
             .view
             .sync_inputs(&self.model, &self.datasets, &self.state);
         if view_changed {
             self.view.rebuild(&self.model, &self.datasets, &self.state);
+        }
+
+        // Brush selection is an output-only interaction (ADR 0144). We compute the derived X-only
+        // row range output after the view has been updated so the selection is scoped to the
+        // effective series view (base range + X dataZoom).
+        if let Some(brush) = self.state.brush_selection_2d {
+            for series_id in &self.model.series_order {
+                let Some(series) = self.model.series.get(series_id) else {
+                    continue;
+                };
+                if !series.visible {
+                    continue;
+                }
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let Some(series_view) = self.view.series_view(*series_id) else {
+                    continue;
+                };
+                let RowSelection::Range(base_range) = series_view.selection else {
+                    continue;
+                };
+
+                let Some(dataset_model) = self.model.datasets.get(&series.dataset) else {
+                    continue;
+                };
+                let Some(x_col) = dataset_model.fields.get(&series.encode.x).copied() else {
+                    continue;
+                };
+                let Some(table) = self.datasets.dataset(series.dataset) else {
+                    continue;
+                };
+                let Some(x_values) = table.column_f64(x_col) else {
+                    continue;
+                };
+
+                let range = crate::transform::row_range_for_x_window(x_values, base_range, brush.x);
+                self.output
+                    .brush_x_row_ranges_by_series
+                    .insert(*series_id, range);
+            }
         }
 
         self.ordinal_index_stage.begin_frame();

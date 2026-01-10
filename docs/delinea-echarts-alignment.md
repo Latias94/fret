@@ -31,6 +31,7 @@ Status symbols:
   - DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
   - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
   - Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
+  - Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
 
 ## Quick Manual Validation
 
@@ -231,6 +232,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[~]` 2D brush selection (rect selection output; does not write view windows).
   - Headless state/output: `delinea::ChartState.brush_selection_2d` / `delinea::ChartOutput.brush_selection_2d`
   - Action: `delinea::Action::SetBrushSelection2D` / `delinea::Action::ClearBrushSelection` (ADR 0144)
+  - Derived fast path: `delinea::ChartOutput.brush_x_row_ranges_by_series` (X-only contiguous selection; ADR 0145)
   - UI gesture (current default): `Alt + RMB drag` (ImPlot-style)
 - `[x]` `minSpan/maxSpan` policies for interaction-derived view window writes (ADR 0138).
   - Evidence: `ecosystem/delinea/src/engine/mod.rs` (span clamp in interaction actions) + `ecosystem/delinea/src/engine/window.rs` (span limiter).
