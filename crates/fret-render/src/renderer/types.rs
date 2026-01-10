@@ -30,6 +30,17 @@ pub(super) struct ViewportUniform {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
+pub(super) struct ScaleParamsUniform {
+    pub(super) scale: u32,
+    pub(super) _pad0: u32,
+    pub(super) src_origin: [u32; 2],
+    pub(super) dst_origin: [u32; 2],
+    pub(super) _pad1: u32,
+    pub(super) _pad2: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub(super) struct QuadInstance {
     pub(super) rect: [f32; 4],
     pub(super) transform0: [f32; 4],

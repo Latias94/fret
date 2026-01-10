@@ -417,6 +417,8 @@ pub(super) const DOWNSAMPLE_NEAREST_SHADER: &str = r#"
 struct ScaleParams {
   scale: u32,
   _pad0: u32,
+  src_origin: vec2<u32>,
+  dst_origin: vec2<u32>,
   _pad1: u32,
   _pad2: u32,
 };
@@ -445,8 +447,15 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let x = u32(floor(pos.x));
   let y = u32(floor(pos.y));
   let s = max(params.scale, 1u);
-  let sx = x * s;
-  let sy = y * s;
+  let local_x_i = i32(x) - i32(params.dst_origin.x);
+  let local_y_i = i32(y) - i32(params.dst_origin.y);
+  if (local_x_i < 0 || local_y_i < 0) {
+    return vec4<f32>(0.0);
+  }
+  let local_x = u32(local_x_i);
+  let local_y = u32(local_y_i);
+  let sx = params.src_origin.x + local_x * s;
+  let sy = params.src_origin.y + local_y * s;
   if (sx >= dims.x || sy >= dims.y) {
     return vec4<f32>(0.0);
   }
@@ -460,6 +469,8 @@ pub(super) const UPSCALE_NEAREST_SHADER: &str = r#"
 struct ScaleParams {
   scale: u32,
   _pad0: u32,
+  src_origin: vec2<u32>,
+  dst_origin: vec2<u32>,
   _pad1: u32,
   _pad2: u32,
 };
@@ -488,8 +499,15 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let x = u32(floor(pos.x));
   let y = u32(floor(pos.y));
   let s = max(params.scale, 1u);
-  let sx = x / s;
-  let sy = y / s;
+  let local_x_i = i32(x) - i32(params.dst_origin.x);
+  let local_y_i = i32(y) - i32(params.dst_origin.y);
+  if (local_x_i < 0 || local_y_i < 0) {
+    return vec4<f32>(0.0);
+  }
+  let local_x = u32(local_x_i);
+  let local_y = u32(local_y_i);
+  let sx = params.src_origin.x + local_x / s;
+  let sy = params.src_origin.y + local_y / s;
   if (sx >= dims.x || sy >= dims.y) {
     return vec4<f32>(0.0);
   }
@@ -527,6 +545,8 @@ struct ClipStack {
 struct ScaleParams {
   scale: u32,
   _pad0: u32,
+  src_origin: vec2<u32>,
+  dst_origin: vec2<u32>,
   _pad1: u32,
   _pad2: u32,
 };
@@ -579,8 +599,15 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let x = u32(floor(pos.x));
   let y = u32(floor(pos.y));
   let s = max(params.scale, 1u);
-  let sx = x / s;
-  let sy = y / s;
+  let local_x_i = i32(x) - i32(params.dst_origin.x);
+  let local_y_i = i32(y) - i32(params.dst_origin.y);
+  if (local_x_i < 0 || local_y_i < 0) {
+    return vec4<f32>(0.0);
+  }
+  let local_x = u32(local_x_i);
+  let local_y = u32(local_y_i);
+  let sx = params.src_origin.x + local_x / s;
+  let sy = params.src_origin.y + local_y / s;
   if (sx >= dims.x || sy >= dims.y) {
     return vec4<f32>(0.0);
   }
@@ -617,6 +644,8 @@ struct Viewport {
 struct ScaleParams {
   scale: u32,
   _pad0: u32,
+  src_origin: vec2<u32>,
+  dst_origin: vec2<u32>,
   _pad1: u32,
   _pad2: u32,
 };
@@ -645,8 +674,15 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let x = u32(floor(pos.x));
   let y = u32(floor(pos.y));
   let s = max(params.scale, 1u);
-  let sx = x / s;
-  let sy = y / s;
+  let local_x_i = i32(x) - i32(params.dst_origin.x);
+  let local_y_i = i32(y) - i32(params.dst_origin.y);
+  if (local_x_i < 0 || local_y_i < 0) {
+    return vec4<f32>(0.0);
+  }
+  let sample_x = u32(local_x_i);
+  let sample_y = u32(local_y_i);
+  let sx = params.src_origin.x + sample_x / s;
+  let sy = params.src_origin.y + sample_y / s;
   if (sx >= dims.x || sy >= dims.y) {
     return vec4<f32>(0.0);
   }

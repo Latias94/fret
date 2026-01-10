@@ -200,9 +200,12 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
+        let scale_param_stride = scale_param_size.div_ceil(256) * 256;
+        let scale_param_capacity = 64usize;
         let scale_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret scale params buffer"),
-            size: 256,
+            size: scale_param_stride * scale_param_capacity as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -276,6 +279,8 @@ impl Renderer {
             scale_bind_group_layout: None,
             scale_mask_bind_group_layout: None,
             scale_param_buffer,
+            scale_param_stride,
+            scale_param_capacity,
             color_adjust_pipeline_format: None,
             color_adjust_pipeline: None,
             color_adjust_masked_pipeline: None,

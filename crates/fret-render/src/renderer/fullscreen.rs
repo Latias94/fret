@@ -5,6 +5,7 @@ pub(super) fn run_fullscreen_triangle_pass(
     dst_view: &wgpu::TextureView,
     load: wgpu::LoadOp<wgpu::Color>,
     bind_group0: &wgpu::BindGroup,
+    bind_group0_offsets: &[u32],
     dst_scissor: Option<super::ScissorRect>,
 ) {
     let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -24,7 +25,7 @@ pub(super) fn run_fullscreen_triangle_pass(
         multiview_mask: None,
     });
     rp.set_pipeline(pipeline);
-    rp.set_bind_group(0, bind_group0, &[]);
+    rp.set_bind_group(0, bind_group0, bind_group0_offsets);
     if let Some(scissor) = dst_scissor {
         if scissor.w != 0 && scissor.h != 0 {
             rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);

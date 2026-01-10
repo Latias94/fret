@@ -187,6 +187,13 @@ impl Renderer {
                 .count() as u64;
         }
 
+        let scale_pass_count = plan
+            .passes
+            .iter()
+            .filter(|p| matches!(p, RenderPlanPass::ScaleNearest(_)))
+            .count();
+        self.ensure_scale_param_capacity(device, scale_pass_count);
+
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
         let mut uniform_bytes =
@@ -257,6 +264,8 @@ impl Renderer {
 
         let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
         let mut frame_targets = FrameTargets::default();
+        let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
+        let mut scale_param_cursor: u32 = 0;
 
         for planned_pass in &plan.passes {
             match planned_pass {
@@ -838,11 +847,30 @@ impl Renderer {
                 }
                 RenderPlanPass::ScaleNearest(pass) => {
                     let scale = pass.scale.max(1);
+                    let scale_param_offset =
+                        u64::from(scale_param_cursor) * self.scale_param_stride;
+                    let scale_param_offset_u32 = scale_param_offset as u32;
+                    scale_param_cursor = scale_param_cursor.saturating_add(1);
+                    let params = ScaleParamsUniform {
+                        scale,
+                        _pad0: 0,
+                        src_origin: [pass.src_origin.0, pass.src_origin.1],
+                        dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
+                        _pad1: 0,
+                        _pad2: 0,
+                    };
                     queue.write_buffer(
                         &self.scale_param_buffer,
-                        0,
-                        bytemuck::cast_slice(&[scale, 0, 0, 0]),
+                        scale_param_offset,
+                        bytemuck::bytes_of(&params),
                     );
+                    let scale_param_size_nz =
+                        std::num::NonZeroU64::new(scale_param_size).expect("scale params size");
+                    let scale_param_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.scale_param_buffer,
+                        offset: 0,
+                        size: Some(scale_param_size_nz),
+                    });
 
                     let src_view = match pass.src {
                         PlanTarget::Output
@@ -911,7 +939,7 @@ impl Renderer {
                                 },
                                 wgpu::BindGroupEntry {
                                     binding: 1,
-                                    resource: self.scale_param_buffer.as_entire_binding(),
+                                    resource: scale_param_binding,
                                 },
                                 wgpu::BindGroupEntry {
                                     binding: 2,
@@ -942,7 +970,7 @@ impl Renderer {
                         });
                         rp.set_pipeline(pipeline);
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                        rp.set_bind_group(1, &bind_group, &[]);
+                        rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
@@ -967,7 +995,7 @@ impl Renderer {
                             "fret scale-nearest bind group",
                             layout,
                             &src_view,
-                            self.scale_param_buffer.as_entire_binding(),
+                            scale_param_binding,
                         );
 
                         let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -988,7 +1016,7 @@ impl Renderer {
                         });
                         rp.set_pipeline(pipeline);
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                        rp.set_bind_group(1, &bind_group, &[]);
+                        rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
@@ -1005,7 +1033,7 @@ impl Renderer {
                             "fret scale-nearest bind group",
                             layout,
                             &src_view,
-                            self.scale_param_buffer.as_entire_binding(),
+                            scale_param_binding,
                         );
                         let (pipeline, label) = match pass.mode {
                             ScaleMode::Downsample => (
@@ -1028,6 +1056,7 @@ impl Renderer {
                             dst_view,
                             pass.load,
                             &bind_group,
+                            &[scale_param_offset_u32],
                             pass.dst_scissor,
                         );
                     }
@@ -1229,6 +1258,7 @@ impl Renderer {
                             dst_view,
                             pass.load,
                             &bind_group,
+                            &[],
                             pass.dst_scissor,
                         );
                     }
@@ -1294,6 +1324,7 @@ impl Renderer {
                         dst_view,
                         pass.load,
                         &blit_bind_group,
+                        &[],
                         pass.dst_scissor,
                     );
                 }
@@ -1481,6 +1512,7 @@ impl Renderer {
                             dst_view,
                             pass.load,
                             &bind_group,
+                            &[],
                             pass.dst_scissor,
                         );
                     }
