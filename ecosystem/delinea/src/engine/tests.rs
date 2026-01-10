@@ -1568,6 +1568,105 @@ fn min_value_span_clamps_slider_handle_update_y() {
 }
 
 #[test]
+fn min_value_span_is_applied_for_box_zoom_y_writes() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(5.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base_x = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    let base_y = DataWindow {
+        min: -10.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetViewWindow2D {
+        x_axis,
+        y_axis,
+        x: Some(base_x),
+        y: Some(base_y),
+    });
+
+    engine.apply_action(Action::SetViewWindow2DFromZoom {
+        x_axis,
+        y_axis,
+        base_x,
+        base_y,
+        x: Some(DataWindow {
+            min: 9.0,
+            max: 10.0,
+        }),
+        y: Some(DataWindow { min: 0.0, max: 1.0 }),
+    });
+
+    let y = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert_eq!(y.span(), 5.0);
+}
+
+#[test]
+fn min_value_span_does_not_expand_box_zoom_y_when_base_is_below_min() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(10.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base_x = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    let base_y = DataWindow { min: 0.0, max: 1.0 };
+    engine.apply_action(Action::SetViewWindow2D {
+        x_axis,
+        y_axis,
+        x: Some(base_x),
+        y: Some(base_y),
+    });
+
+    engine.apply_action(Action::SetViewWindow2DFromZoom {
+        x_axis,
+        y_axis,
+        base_x,
+        base_y,
+        x: Some(DataWindow {
+            min: 9.0,
+            max: 10.0,
+        }),
+        y: Some(DataWindow { min: 0.0, max: 0.5 }),
+    });
+
+    let y = engine
+        .state()
+        .data_window_y
+        .get(&y_axis)
+        .copied()
+        .expect("expected y window");
+    assert_eq!(y, base_y);
+}
+
+#[test]
 fn set_data_window_applies_axis_range_lock_min() {
     let mut spec = basic_spec();
     let x_axis = spec.axes[0].id;
