@@ -519,6 +519,12 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     },
                     depth_stencil: Some(wgpu::DepthStencilState {
                         depth_write_enabled: false,
+                        // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
+                        bias: wgpu::DepthBiasState {
+                            constant: -2,
+                            slope_scale: -1.0,
+                            clamp: 0.0,
+                        },
                         ..depth_state.clone()
                     }),
                     multisample: wgpu::MultisampleState::default(),

@@ -70,6 +70,12 @@ pub struct GizmoConfig {
     pub translate_snap_step: Option<f32>,
     pub rotate_snap_step_radians: Option<f32>,
     pub scale_snap_step: Option<f32>,
+    /// When `true`, draw a faint always-on-top pass so occluded segments remain visible.
+    pub show_occluded: bool,
+    /// Alpha multiplier for the occluded always-on-top pass.
+    pub occluded_alpha: f32,
+    /// When `true`, includes a view-axis rotation ring (camera-facing) in `Rotate`/`Universal`.
+    pub show_view_axis_ring: bool,
     pub x_color: Color,
     pub y_color: Color,
     pub z_color: Color,
@@ -88,6 +94,9 @@ impl Default for GizmoConfig {
             translate_snap_step: None,
             rotate_snap_step_radians: Some(15.0_f32.to_radians()),
             scale_snap_step: Some(0.1),
+            show_occluded: true,
+            occluded_alpha: 0.25,
+            show_view_axis_ring: true,
             x_color: Color {
                 r: 1.0,
                 g: 0.2,
@@ -146,7 +155,7 @@ impl TranslateHandle {
             TranslateHandle::PlaneXY => 4,
             TranslateHandle::PlaneXZ => 5,
             TranslateHandle::PlaneYZ => 6,
-            TranslateHandle::Screen => 7,
+            TranslateHandle::Screen => 10,
         })
     }
 }
@@ -769,6 +778,28 @@ impl Gizmo {
         self.state.hovered == Some(handle) && self.state.hovered_kind == Some(kind)
     }
 
+    fn push_line(&self, out: &mut Vec<Line3d>, a: Vec3, b: Vec3, color: Color, depth: DepthMode) {
+        match (depth, self.config.show_occluded) {
+            (DepthMode::Test, true) => {
+                out.push(Line3d {
+                    a,
+                    b,
+                    color: mix_alpha(color, self.config.occluded_alpha),
+                    depth: DepthMode::Always,
+                });
+                out.push(Line3d {
+                    a,
+                    b,
+                    color,
+                    depth: DepthMode::Test,
+                });
+            }
+            _ => {
+                out.push(Line3d { a, b, color, depth });
+            }
+        }
+    }
+
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
         match self.config.orientation {
             GizmoOrientation::World => [Vec3::X, Vec3::Y, Vec3::Z],
@@ -868,8 +899,13 @@ impl Gizmo {
         axes: [Vec3; 3],
     ) -> Option<GizmoUpdate> {
         let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
-        let (_, axis_index) = axis_for_handle(active);
-        let axis_dir = axes[axis_index].normalize_or_zero();
+        let axis_dir = if active.0 == 8 {
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?
+        } else {
+            let (_, axis_index) = axis_for_handle(active);
+            axes[axis_index]
+        }
+        .normalize_or_zero();
         if axis_dir.length_squared() == 0.0 {
             return None;
         }
@@ -1018,12 +1054,13 @@ impl Gizmo {
             } else {
                 color
             };
-            out.push(Line3d {
-                a: origin,
-                b: origin + axis_dir * length_world,
-                color: c,
-                depth: self.config.depth_mode,
-            });
+            self.push_line(
+                &mut out,
+                origin,
+                origin + axis_dir * length_world,
+                c,
+                self.config.depth_mode,
+            );
         }
         out
     }
@@ -1082,12 +1119,7 @@ impl Gizmo {
                 (quad[2], quad[3]),
                 (quad[3], quad[0]),
             ] {
-                out.push(Line3d {
-                    a,
-                    b,
-                    color,
-                    depth: self.config.depth_mode,
-                });
+                self.push_line(&mut out, a, b, color, self.config.depth_mode);
             }
         }
         out
@@ -1130,12 +1162,7 @@ impl Gizmo {
 
         let mut out = Vec::new();
         for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-            out.push(Line3d {
-                a,
-                b,
-                color,
-                depth: DepthMode::Always,
-            });
+            self.push_line(&mut out, a, b, color, DepthMode::Always);
         }
         out
     }
@@ -1179,13 +1206,39 @@ impl Gizmo {
             for i in 1..=segments {
                 let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
                 let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
-                out.push(Line3d {
-                    a: prev,
-                    b: p,
-                    color: c,
-                    depth: self.config.depth_mode,
-                });
+                self.push_line(&mut out, prev, p, c, self.config.depth_mode);
                 prev = p;
+            }
+        }
+
+        if self.config.show_view_axis_ring {
+            if let Some(view_dir) =
+                view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+            {
+                let axis_dir = view_dir.normalize_or_zero();
+                if axis_dir.length_squared() > 0.0 {
+                    let (u, v) = plane_basis(axis_dir);
+                    let handle = HandleId(8);
+                    let base = Color {
+                        r: 0.9,
+                        g: 0.9,
+                        b: 0.9,
+                        a: 0.8,
+                    };
+                    let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
+                        self.config.hover_color
+                    } else {
+                        base
+                    };
+
+                    let mut prev = origin + u * radius_world;
+                    for i in 1..=segments {
+                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                        let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
+                        self.push_line(&mut out, prev, p, c, DepthMode::Always);
+                        prev = p;
+                    }
+                }
             }
         }
 
@@ -1226,12 +1279,7 @@ impl Gizmo {
             };
 
             let end = origin + axis_dir * length_world;
-            out.push(Line3d {
-                a: origin,
-                b: end,
-                color: c,
-                depth: self.config.depth_mode,
-            });
+            self.push_line(&mut out, origin, end, c, self.config.depth_mode);
 
             // End box, screen-facing.
             let half = length_world * 0.06;
@@ -1240,12 +1288,7 @@ impl Gizmo {
             let p2 = end + (u + v) * half;
             let p3 = end + (-u + v) * half;
             for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-                out.push(Line3d {
-                    a,
-                    b,
-                    color: c,
-                    depth: self.config.depth_mode,
-                });
+                self.push_line(&mut out, a, b, c, self.config.depth_mode);
             }
         }
 
@@ -1263,12 +1306,7 @@ impl Gizmo {
         let p2 = origin + (u + v) * half;
         let p3 = origin + (-u + v) * half;
         for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-            out.push(Line3d {
-                a,
-                b,
-                color: c,
-                depth: DepthMode::Always,
-            });
+            self.push_line(&mut out, a, b, c, DepthMode::Always);
         }
 
         out
@@ -1350,9 +1388,11 @@ impl Gizmo {
 
             let inside = point_in_convex_quad(cursor, p);
             let edge_d = quad_edge_distance(cursor, p);
-            let d = if inside { 1.0 } else { edge_d };
-            if d <= self.config.pick_radius_px {
-                consider(handle, d + 1.0);
+            if inside {
+                // Prefer plane drags when the cursor is actually inside the plane handle quad.
+                consider(handle, 0.35);
+            } else if edge_d <= self.config.pick_radius_px {
+                consider(handle, edge_d + 0.9);
             }
         }
 
@@ -1509,6 +1549,52 @@ impl Gizmo {
 
                 prev = p;
                 prev_world = world;
+            }
+        }
+
+        if self.config.show_view_axis_ring {
+            if let Some(view_dir) =
+                view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+            {
+                let axis_dir = view_dir.normalize_or_zero();
+                if axis_dir.length_squared() > 0.0 {
+                    let (u, v) = plane_basis(axis_dir);
+                    let handle = HandleId(8);
+
+                    let mut prev = match project_point(
+                        view_projection,
+                        viewport,
+                        origin + u * radius_world,
+                        self.config.depth_range,
+                    ) {
+                        Some(p) => p,
+                        None => return best,
+                    };
+
+                    for i in 1..=segments {
+                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                        let world = origin + (u * t.cos() + v * t.sin()) * radius_world;
+                        let Some(p) = project_point(
+                            view_projection,
+                            viewport,
+                            world,
+                            self.config.depth_range,
+                        ) else {
+                            continue;
+                        };
+
+                        if prev.inside_clip && p.inside_clip {
+                            let d = distance_point_to_segment_px(cursor, prev.screen, p.screen);
+                            if d <= self.config.pick_radius_px {
+                                match best {
+                                    Some(best) if d >= best.score => {}
+                                    _ => best = Some(PickHit { handle, score: d }),
+                                }
+                            }
+                        }
+                        prev = p;
+                    }
+                }
             }
         }
 
@@ -1760,7 +1846,7 @@ fn translate_constraint_for_handle(
         4 => plane_constraint(axes[0], axes[1]),
         5 => plane_constraint(axes[0], axes[2]),
         6 => plane_constraint(axes[1], axes[2]),
-        7 => {
+        10 => {
             let view_dir = view_dir_at_origin(view_projection, viewport, origin, depth)?;
             let (u, v) = plane_basis(view_dir);
             let n = view_dir.normalize_or_zero();
