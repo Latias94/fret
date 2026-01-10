@@ -7302,6 +7302,7 @@ mod tests {
     mod hit_testing_conformance;
     mod interaction_conformance;
     mod perf_cache;
+    mod portal_conformance;
 
     #[test]
     fn inflate_rect_expands_by_margin() {

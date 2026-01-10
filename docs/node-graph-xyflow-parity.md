@@ -531,9 +531,10 @@ High-level layering (ADR 0135):
     - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
     - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
     - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+    - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_conformance.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction
     - connect/reconnect determinism (hit-testing semantics in Strict vs Loose)
     - connection drag threshold does not regress (also gates edge reconnect drag)
-    - portal does not steal canvas pointer events
+    - portal does not steal canvas pointer events (interactive subtrees opt-in)
