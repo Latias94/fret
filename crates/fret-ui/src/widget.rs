@@ -147,6 +147,20 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
         Theme::global(&*self.app)
     }
 
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    pub fn request_animation_frame(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
     }
@@ -226,6 +240,20 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
+    }
+
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    pub fn request_animation_frame(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
     }
 
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
