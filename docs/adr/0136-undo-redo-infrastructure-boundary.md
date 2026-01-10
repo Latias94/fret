@@ -180,6 +180,22 @@ The default undo infrastructure should live in portable app-runtime crates, not 
 - Portable “hook types” (transaction meta, coalesce key, handle IDs) may live in `fret-runtime` if
   needed for host-generic embedding (ADR 0052).
 
+#### Implementation status (2026-01-10)
+
+This ADR intentionally does not *require* a single canonical implementation. However, a reusable
+reference substrate now exists for editor apps:
+
+- Ecosystem crate: `ecosystem/fret-undo` (`UndoHistory`, `UndoService`, `UndoRecord`, `CoalesceKey`).
+- Value-based invertible transactions: `ValueTx<T>` implements `InvertibleTransaction`.
+- Example wiring: `apps/fret-examples/src/gizmo3d_demo.rs` routes gizmo commits through
+  `UndoService<ValueTx<Transform3d>>` and applies `edit.undo/edit.redo` at the window/document level.
+
+Known gaps (not yet implemented by the framework):
+
+- Focus-chain-based undo target resolution (ADR 0020) that prefers widget-local undo targets before
+  falling back to the window's active document history.
+- A standardized cross-model transaction composition story (multi-model edits, batching, grouping).
+
 ### 4) Targeting and scoping (multiple histories)
 
 Most editor apps require multiple undo targets:
