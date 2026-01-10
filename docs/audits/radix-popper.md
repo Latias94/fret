@@ -93,6 +93,22 @@ and transform origin:
   - Fret supports structured collision padding/boundary via `AnchoredPanelOptions.collision`.
   - `crates/fret-ui/src/overlay_placement/types.rs` (`CollisionOptions`)
   - `crates/fret-ui/src/overlay_placement/solver.rs` (applies `CollisionOptions` to `outer`)
+- Pass: `hideWhenDetached` / “referenceHidden” outcome.
+  - Fret exposes `PopperContentPlacement::with_hide_when_detached(true)` and
+    `PopperContentPlacement::reference_hidden(...)` for Radix-like `hide({ strategy:
+    'referenceHidden' })`.
+  - Recipes typically keep the content mounted, but gate opacity + interactivity when
+    `reference_hidden` is true (matching Radix `hideWhenDetached`).
+  - Implementation: `ecosystem/fret-ui-kit/src/primitives/popper.rs`
+  - Usage examples: `ecosystem/fret-ui-shadcn/src/popover.rs`,
+    `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+- Pass: Wiring “available height” into Select popper sizing.
+  - Radix Select recipes use `--radix-select-content-available-height`; shadcn v4 relies on it for
+    default max-height.
+  - Fret computes the same concept from `popper_available_metrics(...)` via
+    `select_popper_available_height(...)` and uses it to size `SelectPosition::Popper`.
+  - Implementation: `ecosystem/fret-ui-kit/src/primitives/select.rs`
+  - Usage example: `ecosystem/fret-ui-shadcn/src/select.rs`
 
 ## Gaps / intentional differences
 
@@ -103,8 +119,6 @@ and transform origin:
   - `StickyMode::Partial` emulates Floating `limitShift()` by allowing alignment-axis overflow to
     keep the panel attached to the anchor (prevent detachment).
   - `StickyMode::Always` keeps the current “fully clamp into boundary” behavior.
-- Missing: `hideWhenDetached` / “referenceHidden” outcome.
-  - Fret clamps/fits instead of hiding the overlay when the anchor is detached from the boundary.
 - Pass: Exposed “available width/height” metrics.
   - `popper_available_metrics(...)` returns structured `available_width/available_height` and
     `anchor_width/anchor_height` for recipes (Radix uses CSS vars).
@@ -117,18 +131,18 @@ and transform origin:
 If we want to move closer to 1:1 Radix/Floating outcomes while keeping the solver pure and
 deterministic:
 
-1. Add a collision options struct that can be applied to `outer` consistently (padding per side)
-   and optionally supports “boundary composition” (e.g. intersect multiple rects).
+1. Extend `collisionBoundary` modeling beyond a single rect (boundary lists + `altBoundary`
+   semantics), if we need full Radix parity for complex scrollers/portals.
 2. Consider exposing `limitShift({ offset })`-style tuning.
    - Fret currently models the default `limitShift()` behavior; it does not expose the optional
      limiter offset configuration.
-3. Add an optional `reference_hidden` / `should_hide` output bit (Radix `hideWhenDetached`).
-4. Consider aligning arrow element visibility with Radix `shouldHideArrow` across all recipes.
-5. Consider wiring `popper_available_metrics(...)` into size-limited recipes (Select viewport,
-   menu content max-height, etc.).
+3. Consider wiring `popper_available_metrics(...)` into more size-limited recipes (menus, combobox,
+   etc.) instead of relying on fixed theme caps.
 
 ## Validation anchors
 
 - Placement solver tests: `crates/fret-ui/src/overlay_placement/tests.rs`
 - Popper arrow/wrapper tests: `ecosystem/fret-ui-kit/src/primitives/popper.rs`,
   `ecosystem/fret-ui-kit/src/primitives/popper_content.rs`
+- Select sizing (available height): `ecosystem/fret-ui-kit/src/primitives/select.rs`,
+  `ecosystem/fret-ui-shadcn/src/select.rs`
