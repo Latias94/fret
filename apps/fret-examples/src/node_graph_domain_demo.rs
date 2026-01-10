@@ -740,7 +740,7 @@ pub fn run() -> anyhow::Result<()> {
     let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A2);
     let graph_value = build_demo_graph(graph_id);
     let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
-    let view_value =
+    let mut view_value =
         match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
         {
             Ok(Some(file)) => file.state,
@@ -750,6 +750,7 @@ pub fn run() -> anyhow::Result<()> {
                 NodeGraphViewState::default()
             }
         };
+    view_value.sanitize_for_graph(&graph_value);
 
     let graph = app.models_mut().insert(graph_value);
     let view = app.models_mut().insert(view_value);
