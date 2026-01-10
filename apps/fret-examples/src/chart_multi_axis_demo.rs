@@ -8,7 +8,7 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{PaintCachePolicy, UiTree};
 
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
@@ -53,8 +53,15 @@ impl ChartMultiAxisDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ChartMultiAxisDemoWindowState {
         let mut top_ui: UiTree<App> = UiTree::new();
         top_ui.set_window(window);
+        // This demo uses two `UiTree`s rendered into a shared `Scene`. The paint cache recording
+        // API currently assumes a 1:1 relationship between a `UiTree` and the scene it records
+        // (ranges are stored as absolute indices into the previous frame ops vector).
+        //
+        // Disable paint caching here to avoid cross-tree cache ingestion and invalid scene stacks.
+        top_ui.set_paint_cache_policy(PaintCachePolicy::Disabled);
         let mut bottom_ui: UiTree<App> = UiTree::new();
         bottom_ui.set_window(window);
+        bottom_ui.set_paint_cache_policy(PaintCachePolicy::Disabled);
 
         eprintln!(
             "[chart_multi_axis_demo] X minSpan/maxSpan are enforced for interaction-derived zoom writes only.\n\
