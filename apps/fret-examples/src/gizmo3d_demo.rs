@@ -14,47 +14,15 @@ use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewpo
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
+use fret_undo::{CoalesceKey, UndoHistory, UndoRecord};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct UndoEntry {
+struct TransformTx {
     before: Transform3d,
     after: Transform3d,
-}
-
-#[derive(Debug, Default)]
-struct UndoStack {
-    undo: Vec<UndoEntry>,
-    redo: Vec<UndoEntry>,
-    limit: usize,
-}
-
-impl UndoStack {
-    fn record(&mut self, entry: UndoEntry) {
-        if self.limit == 0 {
-            self.limit = 128;
-        }
-        self.undo.push(entry);
-        self.redo.clear();
-        if self.undo.len() > self.limit {
-            let excess = self.undo.len() - self.limit;
-            self.undo.drain(0..excess);
-        }
-    }
-
-    fn undo(&mut self) -> Option<UndoEntry> {
-        let entry = self.undo.pop()?;
-        self.redo.push(entry);
-        Some(entry)
-    }
-
-    fn redo(&mut self) -> Option<UndoEntry> {
-        let entry = self.redo.pop()?;
-        self.undo.push(entry);
-        Some(entry)
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -192,7 +160,7 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
-    undo: UndoStack,
+    history: UndoHistory<TransformTx>,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -211,11 +179,7 @@ impl Default for Gizmo3dDemoModel {
                 scale: Vec3::ONE,
             },
             drag_start_target: None,
-            undo: UndoStack {
-                undo: Vec::new(),
-                redo: Vec::new(),
-                limit: 128,
-            },
+            history: UndoHistory::with_limit(128),
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -792,12 +756,26 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 m.input.drag_started = false;
             }
 
-            let entry = if undo { m.undo.undo() } else { m.undo.redo() };
-            let Some(entry) = entry else {
-                return;
+            let applied = if undo {
+                m.history
+                    .undo(|rec| {
+                        m.target = rec.tx.before;
+                        Ok::<TransformTx, ()>(rec.tx)
+                    })
+                    .ok()
+                    .flatten()
+                    .is_some()
+            } else {
+                m.history
+                    .redo(|rec| {
+                        m.target = rec.tx.after;
+                        Ok::<TransformTx, ()>(rec.tx)
+                    })
+                    .ok()
+                    .flatten()
+                    .is_some()
             };
-            m.target = if undo { entry.before } else { entry.after };
-            did_apply = true;
+            did_apply |= applied;
         });
 
         if did_apply {
@@ -1169,7 +1147,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         if let Some(before) = m.drag_start_target.take() {
                             let after = m.target;
                             if before != after {
-                                m.undo.record(UndoEntry { before, after });
+                                let tool = match update.result {
+                                    fret_gizmo::GizmoResult::Translation { .. } => {
+                                        "gizmo.translate"
+                                    }
+                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                                };
+                                let rec = UndoRecord::new(TransformTx { before, after })
+                                    .label("Transform")
+                                    .coalesce_key(CoalesceKey::from(tool));
+                                m.history.record_or_coalesce(rec);
                             }
                         }
                     }
