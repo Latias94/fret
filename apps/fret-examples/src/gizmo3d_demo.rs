@@ -14,7 +14,7 @@ use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewpo
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_undo::{CoalesceKey, UndoHistory, UndoRecord, ValueTx};
+use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
@@ -154,7 +154,6 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
-    history: UndoHistory<ValueTx<Transform3d>>,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -173,7 +172,6 @@ impl Default for Gizmo3dDemoModel {
                 scale: Vec3::ONE,
             },
             drag_start_target: None,
-            history: UndoHistory::with_limit(128),
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -199,6 +197,7 @@ struct Gizmo3dDemoWindowState {
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
     target: Option<Gizmo3dDemoTarget>,
     gpu: Option<Gizmo3dDemoGpu>,
+    doc: DocumentId,
 }
 
 #[derive(Default)]
@@ -224,6 +223,14 @@ impl Gizmo3dDemoDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let doc: DocumentId = "gizmo3d_demo.scene".into();
+        app.with_global_mut(
+            || UndoService::<ValueTx<Transform3d>>::with_limit(256),
+            |undo, _app| {
+                undo.set_active_document(window, doc.clone());
+            },
+        );
+
         Gizmo3dDemoWindowState {
             ui,
             root: None,
@@ -231,6 +238,7 @@ impl Gizmo3dDemoDriver {
             demo,
             target: None,
             gpu: None,
+            doc,
         }
     }
 
@@ -720,6 +728,8 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         undo: bool,
     ) -> bool {
         let mut did_apply = false;
+
+        // Always cancel any in-progress gizmo interaction before applying undo/redo.
         let _ = state.demo.update(app, |m, _cx| {
             let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
             if is_dragging {
@@ -749,18 +759,36 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 m.input.dragging = false;
                 m.input.drag_started = false;
             }
-
-            let apply = |rec: &UndoRecord<ValueTx<Transform3d>>| -> Result<(), ()> {
-                m.target = rec.tx.after;
-                Ok(())
-            };
-            let applied = if undo {
-                m.history.undo_invertible(apply).unwrap_or(false)
-            } else {
-                m.history.redo_invertible(apply).unwrap_or(false)
-            };
-            did_apply |= applied;
         });
+
+        let _ = app.with_global_mut(
+            || UndoService::<ValueTx<Transform3d>>::with_limit(256),
+            |undo_svc, app| {
+                // Ensure the window routes edit.undo/edit.redo to this viewport document.
+                undo_svc.set_active_document(window, state.doc.clone());
+
+                let applied = if undo {
+                    undo_svc
+                        .undo_active_invertible(window, |rec| {
+                            let _ = state.demo.update(app, |m, _cx| {
+                                m.target = rec.tx.after;
+                            });
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false)
+                } else {
+                    undo_svc
+                        .redo_active_invertible(window, |rec| {
+                            let _ = state.demo.update(app, |m, _cx| {
+                                m.target = rec.tx.after;
+                            });
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false)
+                };
+                did_apply |= applied;
+            },
+        );
 
         if did_apply {
             app.request_redraw(window);
@@ -969,9 +997,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             return;
         };
 
-        let _ = model.update(app, |m, _cx| {
+        let rec_to_record = model.update(app, |m, _cx| {
             if m.viewport_target != event.target {
-                return;
+                return None;
             }
 
             // Use UV instead of integer target pixels to avoid cursor quantization.
@@ -979,6 +1007,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 event.uv.0 * m.viewport_px.0 as f32,
                 event.uv.1 * m.viewport_px.1 as f32,
             );
+
+            let mut rec_to_record: Option<UndoRecord<ValueTx<Transform3d>>> = None;
 
             match event.kind {
                 ViewportInputKind::PointerDown {
@@ -1141,7 +1171,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 let rec = UndoRecord::new(ValueTx::new(before, after))
                                     .label("Transform")
                                     .coalesce_key(CoalesceKey::from(tool));
-                                m.history.record_or_coalesce(rec);
+                                rec_to_record = Some(rec);
                             }
                         }
                     }
@@ -1152,7 +1182,18 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 }
             }
+
+            rec_to_record
         });
+
+        if let Ok(Some(rec)) = rec_to_record {
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<Transform3d>>::with_limit(256),
+                |undo_svc, _app| {
+                    undo_svc.record_or_coalesce_active(event.window, rec);
+                },
+            );
+        }
 
         app.request_redraw(event.window);
     }
