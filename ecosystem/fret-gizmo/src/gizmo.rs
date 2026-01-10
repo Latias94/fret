@@ -131,12 +131,20 @@ pub struct GizmoConfig {
     /// When `true` (default), axes may flip direction for better screen-space visibility
     /// (ImGuizmo `AllowAxisFlip` behavior).
     pub allow_axis_flip: bool,
-    /// Minimum projected axis length (in pixels) required for axis handles to be visible/pickable.
-    /// This primarily hides axes that are almost aligned with the view direction.
-    pub axis_hide_limit_px: f32,
-    /// Minimum projected plane quad area (in px^2) required for plane handles to be visible/pickable.
-    /// This primarily hides planes that are nearly edge-on in screen space.
-    pub plane_hide_limit_px2: f32,
+    /// Axis visibility fade window in pixels.
+    ///
+    /// - When the projected axis length is <= `axis_fade_px.0`, the axis is fully faded out.
+    /// - When the projected axis length is >= `axis_fade_px.1`, the axis is fully visible.
+    ///
+    /// This primarily fades axes that are almost aligned with the view direction.
+    pub axis_fade_px: (f32, f32),
+    /// Plane visibility fade window in px^2.
+    ///
+    /// - When the projected plane quad area is <= `plane_fade_px2.0`, the plane is fully faded out.
+    /// - When the projected plane quad area is >= `plane_fade_px2.1`, the plane is fully visible.
+    ///
+    /// This primarily fades planes that are nearly edge-on in screen space.
+    pub plane_fade_px2: (f32, f32),
     /// Axis mask (true -> hidden) for X/Y/Z (ImGuizmo `SetAxisMask`).
     ///
     /// Mask semantics for plane handles follows ImGuizmo: if exactly one axis is hidden, only the
@@ -169,8 +177,8 @@ impl Default for GizmoConfig {
             view_axis_ring_radius_scale: 1.2,
             universal_includes_scale: true,
             allow_axis_flip: true,
-            axis_hide_limit_px: 8.0,
-            plane_hide_limit_px2: 300.0,
+            axis_fade_px: (4.0, 18.0),
+            plane_fade_px2: (120.0, 520.0),
             axis_mask: [false; 3],
             x_color: Color {
                 r: 1.0,
@@ -486,6 +494,54 @@ impl Gizmo {
             };
         }
         out
+    }
+
+    fn axis_visibility_alpha(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        axis_dir: Vec3,
+        axis_len_world: f32,
+    ) -> f32 {
+        let (lo, hi) = self.config.axis_fade_px;
+        if !(lo.is_finite() && hi.is_finite()) {
+            return 1.0;
+        }
+        let lo = lo.min(hi);
+        let hi = hi.max(lo + 1e-3);
+        let len_px = axis_segment_len_px(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            axis_dir,
+            axis_len_world,
+        )
+        .unwrap_or(hi);
+        ((len_px - lo) / (hi - lo)).clamp(0.0, 1.0)
+    }
+
+    fn plane_visibility_alpha(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        quad_world: [Vec3; 4],
+    ) -> f32 {
+        let (lo, hi) = self.config.plane_fade_px2;
+        if !(lo.is_finite() && hi.is_finite()) {
+            return 1.0;
+        }
+        let lo = lo.min(hi);
+        let hi = hi.max(lo + 1e-3);
+        let p = project_quad(
+            view_projection,
+            viewport,
+            quad_world,
+            self.config.depth_range,
+        );
+        let area = p.map(quad_area_px2).unwrap_or(hi);
+        ((area - lo) / (hi - lo)).clamp(0.0, 1.0)
     }
 
     pub fn new(config: GizmoConfig) -> Self {
@@ -1671,17 +1727,15 @@ impl Gizmo {
             if self.axis_is_masked(axis_index) {
                 continue;
             }
-            if let Some(len_px) = axis_segment_len_px(
+            let alpha = self.axis_visibility_alpha(
                 view_projection,
                 viewport,
                 origin,
-                self.config.depth_range,
                 axis_dir,
                 axis_tip_len,
-            ) {
-                if len_px < self.config.axis_hide_limit_px {
-                    continue;
-                }
+            );
+            if alpha <= 0.01 {
+                continue;
             }
             let c = if self.is_handle_highlighted(GizmoMode::Translate, handle) {
                 self.config.hover_color
@@ -1692,7 +1746,7 @@ impl Gizmo {
                 &mut out,
                 origin,
                 origin + axis_dir * shaft_len,
-                c,
+                mix_alpha(c, alpha),
                 self.config.depth_mode,
             );
         }
@@ -1756,12 +1810,8 @@ impl Gizmo {
             };
 
             let quad = translate_plane_quad_world(origin, u, v, off, size);
-            if let Some(p) = project_quad(view_projection, viewport, quad, self.config.depth_range)
-            {
-                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
-                    continue;
-                }
-            } else {
+            let alpha = self.plane_visibility_alpha(view_projection, viewport, quad);
+            if alpha <= 0.01 {
                 continue;
             }
             for (a, b) in [
@@ -1770,7 +1820,13 @@ impl Gizmo {
                 (quad[2], quad[3]),
                 (quad[3], quad[0]),
             ] {
-                self.push_line(&mut out, a, b, color, self.config.depth_mode);
+                self.push_line(
+                    &mut out,
+                    a,
+                    b,
+                    mix_alpha(color, alpha),
+                    self.config.depth_mode,
+                );
             }
         }
         out
@@ -1848,18 +1904,6 @@ impl Gizmo {
             if self.axis_is_masked(axis_index) {
                 continue;
             }
-            if let Some(len_px) = axis_segment_len_px(
-                view_projection,
-                viewport,
-                origin,
-                self.config.depth_range,
-                axis_dir,
-                axis_tip_len,
-            ) {
-                if len_px < self.config.axis_hide_limit_px {
-                    continue;
-                }
-            }
             let axis_dir = axis_dir.normalize_or_zero();
             if axis_dir.length_squared() == 0.0 {
                 continue;
@@ -1869,6 +1913,16 @@ impl Gizmo {
             } else {
                 color
             };
+            let alpha = self.axis_visibility_alpha(
+                view_projection,
+                viewport,
+                origin,
+                axis_dir,
+                axis_tip_len,
+            );
+            if alpha <= 0.01 {
+                continue;
+            }
 
             let tip = origin + axis_dir * axis_tip_len;
             let base = tip - axis_dir * head_len;
@@ -1879,6 +1933,7 @@ impl Gizmo {
             let c2 = base + (-u - v) * s;
             let c3 = base + (u - v) * s;
 
+            let c = mix_alpha(c, alpha);
             self.push_tri(&mut out, tip, c0, c1, c, self.config.depth_mode);
             self.push_tri(&mut out, tip, c1, c2, c, self.config.depth_mode);
             self.push_tri(&mut out, tip, c2, c3, c, self.config.depth_mode);
@@ -1929,14 +1984,11 @@ impl Gizmo {
                 mix_alpha(outline, 0.30)
             };
             let quad = translate_plane_quad_world(origin, u, v, off, size);
-            if let Some(p) = project_quad(view_projection, viewport, quad, self.config.depth_range)
-            {
-                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
-                    continue;
-                }
-            } else {
+            let alpha = self.plane_visibility_alpha(view_projection, viewport, quad);
+            if alpha <= 0.01 {
                 continue;
             }
+            let fill = mix_alpha(fill, alpha);
             self.push_tri(
                 &mut out,
                 quad[0],
@@ -2277,23 +2329,22 @@ impl Gizmo {
             if self.axis_is_masked(axis_index) {
                 continue;
             }
-            if let Some(len_px) = axis_segment_len_px(
+            let alpha = self.axis_visibility_alpha(
                 view_projection,
                 viewport,
                 origin,
-                self.config.depth_range,
                 axis_dir,
                 length_world,
-            ) {
-                if len_px < self.config.axis_hide_limit_px {
-                    continue;
-                }
+            );
+            if alpha <= 0.01 {
+                continue;
             }
             let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
             } else {
                 color
             };
+            let c = mix_alpha(c, alpha);
 
             let end = origin + axis_dir * length_world;
             self.push_line(&mut out, origin, end, c, self.config.depth_mode);
@@ -2349,13 +2400,8 @@ impl Gizmo {
                 };
 
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
-                if let Some(p) =
-                    project_quad(view_projection, viewport, quad, self.config.depth_range)
-                {
-                    if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
-                        continue;
-                    }
-                } else {
+                let alpha = self.plane_visibility_alpha(view_projection, viewport, quad);
+                if alpha <= 0.01 {
                     continue;
                 }
                 for (a, b) in [
@@ -2364,7 +2410,13 @@ impl Gizmo {
                     (quad[2], quad[3]),
                     (quad[3], quad[0]),
                 ] {
-                    self.push_line(&mut out, a, b, color, self.config.depth_mode);
+                    self.push_line(
+                        &mut out,
+                        a,
+                        b,
+                        mix_alpha(color, alpha),
+                        self.config.depth_mode,
+                    );
                 }
             }
         }
@@ -2433,17 +2485,15 @@ impl Gizmo {
             if self.axis_is_masked(axis_index) {
                 continue;
             }
-            if let Some(len_px) = axis_segment_len_px(
+            let alpha = self.axis_visibility_alpha(
                 view_projection,
                 viewport,
                 origin,
-                self.config.depth_range,
                 axis_dir,
                 length_world,
-            ) {
-                if len_px < self.config.axis_hide_limit_px {
-                    continue;
-                }
+            );
+            if alpha <= 0.01 {
+                continue;
             }
             let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
@@ -2455,6 +2505,7 @@ impl Gizmo {
             } else {
                 mix_alpha(outline, 0.45)
             };
+            let fill = mix_alpha(fill, alpha);
 
             let end = origin + axis_dir * length_world;
             let half = length_world * 0.06;
@@ -2509,16 +2560,13 @@ impl Gizmo {
                 } else {
                     mix_alpha(outline, 0.22)
                 };
+
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
-                if let Some(p) =
-                    project_quad(view_projection, viewport, quad, self.config.depth_range)
-                {
-                    if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
-                        continue;
-                    }
-                } else {
+                let alpha = self.plane_visibility_alpha(view_projection, viewport, quad);
+                if alpha <= 0.01 {
                     continue;
                 }
+                let fill = mix_alpha(fill, alpha);
                 self.push_tri(
                     &mut out,
                     quad[0],
@@ -2630,12 +2678,21 @@ impl Gizmo {
             else {
                 continue;
             };
-            if (pb.screen - pa.screen).length() < self.config.axis_hide_limit_px {
+
+            let alpha = self.axis_visibility_alpha(
+                view_projection,
+                viewport,
+                origin,
+                axis_dir,
+                axis_tip_len,
+            );
+            if alpha <= 0.01 {
                 continue;
             }
             let d = distance_point_to_segment_px(cursor, pa.screen, pb.screen);
-            if d <= self.config.pick_radius_px {
-                consider(handle, d);
+            let r = self.config.pick_radius_px * alpha.sqrt();
+            if d <= r {
+                consider(handle, d / alpha.max(0.05));
             }
         }
 
@@ -2664,7 +2721,8 @@ impl Gizmo {
             else {
                 continue;
             };
-            if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+            let alpha = self.plane_visibility_alpha(view_projection, viewport, world);
+            if alpha <= 0.01 {
                 continue;
             }
 
@@ -2672,9 +2730,12 @@ impl Gizmo {
             let edge_d = quad_edge_distance(cursor, p);
             if inside {
                 // Prefer plane drags when the cursor is actually inside the plane handle quad.
-                consider(handle, 0.20);
-            } else if edge_d <= self.config.pick_radius_px {
-                consider(handle, edge_d + 0.9);
+                consider(handle, 0.20 / alpha.max(0.05));
+            } else {
+                let r = self.config.pick_radius_px * alpha.sqrt();
+                if edge_d <= r {
+                    consider(handle, (edge_d + 0.9) / alpha.max(0.05));
+                }
             }
         }
 
@@ -2742,17 +2803,15 @@ impl Gizmo {
             if self.axis_is_masked(axis_index) {
                 continue;
             }
-            if let Some(len_px) = axis_segment_len_px(
+            let alpha = self.axis_visibility_alpha(
                 view_projection,
                 viewport,
                 origin,
-                self.config.depth_range,
                 axis_dir,
                 length_world,
-            ) {
-                if len_px < self.config.axis_hide_limit_px {
-                    continue;
-                }
+            );
+            if alpha <= 0.01 {
+                continue;
             }
 
             let end = origin + axis_dir * length_world;
@@ -2775,8 +2834,11 @@ impl Gizmo {
             let edge_d = quad_edge_distance(cursor, p);
             if inside {
                 consider(handle, 0.0);
-            } else if edge_d <= self.config.pick_radius_px {
-                consider(handle, edge_d);
+            } else {
+                let r = self.config.pick_radius_px * alpha.sqrt();
+                if edge_d <= r {
+                    consider(handle, edge_d / alpha.max(0.05));
+                }
             }
         }
 
@@ -2806,16 +2868,20 @@ impl Gizmo {
                 else {
                     continue;
                 };
-                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                let alpha = self.plane_visibility_alpha(view_projection, viewport, world);
+                if alpha <= 0.01 {
                     continue;
                 }
 
                 let inside = point_in_convex_quad(cursor, p);
                 let edge_d = quad_edge_distance(cursor, p);
                 if inside {
-                    consider(handle, 0.20);
-                } else if edge_d <= self.config.pick_radius_px {
-                    consider(handle, edge_d + 0.9);
+                    consider(handle, 0.20 / alpha.max(0.05));
+                } else {
+                    let r = self.config.pick_radius_px * alpha.sqrt();
+                    if edge_d <= r {
+                        consider(handle, (edge_d + 0.9) / alpha.max(0.05));
+                    }
                 }
             }
         }
@@ -3384,8 +3450,8 @@ mod tests {
         // Keep tests deterministic: axis flip + visibility thresholds are UX heuristics that can
         // vary with camera orientation and viewport shape.
         config.allow_axis_flip = false;
-        config.axis_hide_limit_px = 0.0;
-        config.plane_hide_limit_px2 = 0.0;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
         config.axis_mask = [false; 3];
         Gizmo::new(config)
     }
@@ -3736,8 +3802,8 @@ mod tests {
         config.depth_range = DepthRange::ZeroToOne;
         config.drag_start_threshold_px = 0.0;
         config.allow_axis_flip = false;
-        config.axis_hide_limit_px = 0.0;
-        config.plane_hide_limit_px2 = 0.0;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
         config.axis_mask = [true, false, false]; // hide X
         let gizmo = Gizmo::new(config);
 
@@ -3778,8 +3844,8 @@ mod tests {
         config.depth_range = DepthRange::ZeroToOne;
         config.drag_start_threshold_px = 0.0;
         config.allow_axis_flip = false;
-        config.axis_hide_limit_px = 0.0;
-        config.plane_hide_limit_px2 = 0.0;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
         config.axis_mask = [true, false, false]; // hide X -> only YZ plane should remain
         let gizmo = Gizmo::new(config);
 
@@ -3835,8 +3901,8 @@ mod tests {
         config.depth_range = DepthRange::ZeroToOne;
         config.drag_start_threshold_px = 0.0;
         config.allow_axis_flip = true;
-        config.axis_hide_limit_px = 0.0;
-        config.plane_hide_limit_px2 = 0.0;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
         let gizmo = Gizmo::new(config);
 
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -3888,6 +3954,73 @@ mod tests {
         );
         assert!(chosen >= plus.min(minus) - 1e-3);
         assert!(chosen >= plus.max(minus) - 1e-2);
+    }
+
+    #[test]
+    fn fade_reduces_scale_axis_edge_pick_radius() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Scale;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_mask = [true, true, false]; // only Z
+
+        let mut no_fade = config;
+        no_fade.axis_fade_px = (f32::NAN, f32::NAN);
+        no_fade.plane_fade_px2 = (f32::NAN, f32::NAN);
+        let no_fade = Gizmo::new(no_fade);
+
+        let mut fade = config;
+        fade.axis_fade_px = (0.0, 1000.0);
+        fade.plane_fade_px2 = (f32::NAN, f32::NAN);
+        let fade = Gizmo::new(fade);
+
+        let axes = no_fade.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            no_fade.config.depth_range,
+            no_fade.config.size_px,
+        )
+        .unwrap();
+
+        let (u, v) = view_dir_at_origin(view_proj, vp, origin, no_fade.config.depth_range)
+            .map(plane_basis)
+            .unwrap();
+        let end = origin + axes[2] * length_world;
+        let half = length_world * 0.06;
+        let quad_world = [
+            end + (-u - v) * half,
+            end + (u - v) * half,
+            end + (u + v) * half,
+            end + (-u + v) * half,
+        ];
+        let p = project_quad(view_proj, vp, quad_world, no_fade.config.depth_range).unwrap();
+        let c = (p[0] + p[1] + p[2] + p[3]) * 0.25;
+        let diag_half = (p[0] - c).length();
+        let dir = (p[0] - c).normalize_or_zero();
+        assert!(dir.length_squared() > 0.0);
+
+        // Cursor is outside the end-box quad but within the default pick radius.
+        let cursor = c + dir * (diag_half + 6.0);
+        let edge_d = quad_edge_distance(cursor, p);
+        assert!(edge_d.is_finite() && edge_d > 0.1);
+        assert!(edge_d < no_fade.config.pick_radius_px);
+
+        let hit_no_fade =
+            no_fade.pick_scale_handle(view_proj, vp, origin, cursor, axes, false, false);
+        assert_eq!(hit_no_fade.unwrap().handle, ScaleHandle::AxisZ.id());
+
+        let hit_fade = fade.pick_scale_handle(view_proj, vp, origin, cursor, axes, false, false);
+        assert!(
+            hit_fade.is_none(),
+            "faded axis should be harder to edge-pick"
+        );
     }
 
     #[test]
