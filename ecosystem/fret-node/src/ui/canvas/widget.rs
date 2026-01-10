@@ -22,6 +22,7 @@ use crate::ops::{
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
+use crate::runtime::store::NodeGraphStore;
 
 use crate::ui::commands::{
     CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_BOTTOM, CMD_NODE_GRAPH_ALIGN_CENTER_X,
@@ -128,6 +129,8 @@ enum PortNavDir {
 pub struct NodeGraphCanvas {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
+    store: Option<Model<NodeGraphStore>>,
+    store_rev: Option<u64>,
     presenter: Box<dyn NodeGraphPresenter>,
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
@@ -361,6 +364,8 @@ impl NodeGraphCanvas {
         Self {
             graph,
             view_state,
+            store: None,
+            store_rev: None,
             presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(
                 DefaultNodeGraphPresenter::default(),
                 auto_measured.clone(),
@@ -442,6 +447,16 @@ impl NodeGraphCanvas {
         self
     }
 
+    /// Attaches a B-layer runtime store.
+    ///
+    /// When set, viewport and selection updates are written into the store and pulled back into
+    /// `view_state` on demand.
+    pub fn with_store(mut self, store: Model<NodeGraphStore>) -> Self {
+        self.store = Some(store);
+        self.store_rev = None;
+        self
+    }
+
     fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
         let margin = 12.0 / zoom;
         let w = 64.0 / zoom;
@@ -502,6 +517,8 @@ impl NodeGraphCanvas {
     }
 
     fn sync_view_state<H: UiHost>(&mut self, host: &mut H) -> ViewSnapshot {
+        self.sync_view_state_from_store_if_needed(host);
+
         let mut snapshot = ViewSnapshot {
             pan: self.cached_pan,
             zoom: self.cached_zoom,
@@ -535,6 +552,26 @@ impl NodeGraphCanvas {
         snapshot.pan = self.cached_pan;
 
         snapshot
+    }
+
+    fn sync_view_state_from_store_if_needed<H: UiHost>(&mut self, host: &mut H) {
+        let Some(store) = self.store.as_ref() else {
+            return;
+        };
+        let Some(rev) = store.revision(host) else {
+            return;
+        };
+        if self.store_rev == Some(rev) {
+            return;
+        }
+        self.store_rev = Some(rev);
+
+        let Ok(next) = store.read_ref(host, |s| s.view_state().clone()) else {
+            return;
+        };
+        let _ = self.view_state.update(host, |s, _cx| {
+            *s = next;
+        });
     }
 
     fn drain_edit_queue<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) {
@@ -858,20 +895,39 @@ impl NodeGraphCanvas {
     ) {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let style = self.style.clone();
-        let _ = self.view_state.update(host, |s, _cx| {
-            f(s);
+        if let Some(store) = self.store.as_ref() {
+            let _ = store.update(host, |store, _cx| {
+                store.update_view_state(|s| {
+                    f(s);
 
-            let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
-                s.zoom.clamp(style.min_zoom, style.max_zoom)
-            } else {
-                1.0
-            };
-            s.zoom = zoom;
+                    let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
+                        s.zoom.clamp(style.min_zoom, style.max_zoom)
+                    } else {
+                        1.0
+                    };
+                    s.zoom = zoom;
 
-            if let Some(extent) = s.interaction.translate_extent {
-                s.pan = Self::clamp_pan_to_translate_extent(s.pan, zoom, bounds, extent);
-            }
-        });
+                    if let Some(extent) = s.interaction.translate_extent {
+                        s.pan = Self::clamp_pan_to_translate_extent(s.pan, zoom, bounds, extent);
+                    }
+                });
+            });
+        } else {
+            let _ = self.view_state.update(host, |s, _cx| {
+                f(s);
+
+                let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
+                    s.zoom.clamp(style.min_zoom, style.max_zoom)
+                } else {
+                    1.0
+                };
+                s.zoom = zoom;
+
+                if let Some(extent) = s.interaction.translate_extent {
+                    s.pan = Self::clamp_pan_to_translate_extent(s.pan, zoom, bounds, extent);
+                }
+            });
+        }
         self.sync_view_state(host);
     }
 

@@ -19,6 +19,7 @@ use super::style::NodeGraphStyle;
 use crate::core::GroupId;
 use crate::io::{NodeGraphConnectionMode, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
@@ -492,6 +493,7 @@ pub struct NodeGraphMiniMapOverlay {
     canvas_node: fret_core::NodeId,
     graph: Model<crate::Graph>,
     view_state: Model<NodeGraphViewState>,
+    store: Option<Model<NodeGraphStore>>,
     internals: Arc<NodeGraphInternalsStore>,
     style: NodeGraphStyle,
 
@@ -510,10 +512,19 @@ impl NodeGraphMiniMapOverlay {
             canvas_node,
             graph,
             view_state,
+            store: None,
             internals,
             style,
             drag: None,
         }
+    }
+
+    /// Attaches a B-layer runtime store (optional).
+    ///
+    /// When set, minimap-driven panning also updates the store view-state.
+    pub fn with_store(mut self, store: Model<NodeGraphStore>) -> Self {
+        self.store = Some(store);
+        self
     }
 
     fn minimap_rect(&self, bounds: Rect) -> Rect {
@@ -668,6 +679,14 @@ impl NodeGraphMiniMapOverlay {
     fn update_pan<H: UiHost>(&self, host: &mut H, pan: crate::core::CanvasPoint) {
         let _ = self.view_state.update(host, |s, _cx| {
             s.pan = pan;
+        });
+
+        let Some(store) = self.store.as_ref() else {
+            return;
+        };
+        let _ = store.update(host, |store, _cx| {
+            let zoom = store.view_state().zoom;
+            store.set_viewport(pan, zoom);
         });
     }
 }

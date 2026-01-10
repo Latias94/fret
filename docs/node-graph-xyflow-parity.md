@@ -99,6 +99,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `NodeGraphStore::subscribe_selector` exists (dedup by `PartialEq`), and `subscribe_selector_diff` provides `(prev, next)`.
     - It is not memoized and does not provide structured diffs beyond `(prev, next)`.
     - `Graph` and `NodeGraphViewState` remain separate by design (hard serialization boundary).
+    - UI bridge (partial): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_store`) currently routes viewport/selection changes through the store.
 
 - [~] **Internals update pipeline ("node internals" as derived UI state)**
   - XyFlow: `updateNodeInternals(...)` in `repo-ref/xyflow/packages/react/src/store/index.ts`
