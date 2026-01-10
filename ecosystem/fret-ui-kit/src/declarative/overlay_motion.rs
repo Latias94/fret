@@ -54,7 +54,7 @@ pub fn wrap_opacity_and_render_transform<H: UiHost>(
     let layout = fullscreen_motion_layout();
     wrap_opacity_and_render_transform_with_layouts(
         cx,
-        layout.clone(),
+        layout,
         opacity,
         RenderTransformProps { layout, transform },
         children,
