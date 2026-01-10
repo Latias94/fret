@@ -16,6 +16,35 @@ pub const CMD_EDIT_UNDO: &str = "edit.undo";
 /// Recommended command id for document/window-level redo.
 pub const CMD_EDIT_REDO: &str = "edit.redo";
 
+/// A transaction that can be inverted without additional context.
+///
+/// This is common for "set value" edits (before/after), toggles, and other symmetric operations.
+pub trait InvertibleTransaction: Clone {
+    fn invert(&self) -> Self;
+}
+
+/// A simple "set value" transaction used by inspector edits and viewport tools.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ValueTx<T> {
+    pub before: T,
+    pub after: T,
+}
+
+impl<T> ValueTx<T> {
+    pub fn new(before: T, after: T) -> Self {
+        Self { before, after }
+    }
+}
+
+impl<T: Clone> InvertibleTransaction for ValueTx<T> {
+    fn invert(&self) -> Self {
+        Self {
+            before: self.after.clone(),
+            after: self.before.clone(),
+        }
+    }
+}
+
 /// Coalescing key for continuous edits (dragging, scrubbing).
 ///
 /// This is intentionally app-defined and data-first; it should use stable identities (ADR 0024).
@@ -159,6 +188,45 @@ impl<T> UndoHistory<T> {
         self.record(record);
     }
 
+    /// Undoes the latest transaction by applying its inverse.
+    ///
+    /// The transaction type must be invertible, and `apply` is expected to apply the provided
+    /// transaction (typically treating it as the "do" direction).
+    pub fn undo_invertible<E>(
+        &mut self,
+        mut apply: impl FnMut(&UndoRecord<T>) -> Result<(), E>,
+    ) -> Result<bool, E>
+    where
+        T: InvertibleTransaction,
+    {
+        let Some(record) = self.undo.pop() else {
+            return Ok(false);
+        };
+
+        let undo_record = UndoRecord {
+            label: record.label.clone(),
+            coalesce_key: record.coalesce_key.clone(),
+            tx: record.tx.invert(),
+        };
+        apply(&undo_record)?;
+        self.redo.push(record);
+        Ok(true)
+    }
+
+    /// Redoes the latest undone transaction.
+    pub fn redo_invertible<E>(
+        &mut self,
+        mut apply: impl FnMut(&UndoRecord<T>) -> Result<(), E>,
+    ) -> Result<bool, E> {
+        let Some(record) = self.redo.pop() else {
+            return Ok(false);
+        };
+        apply(&record)?;
+        self.undo.push(record);
+        self.truncate_to_limit();
+        Ok(true)
+    }
+
     /// Undoes the latest committed transaction.
     ///
     /// `apply_undo` must apply the inverse of `record.tx` and return a transaction that should be
@@ -235,5 +303,29 @@ mod tests {
         h.record_or_coalesce(UndoRecord::new(2).coalesce_key("k"));
         assert_eq!(h.undo.len(), 1);
         assert_eq!(h.peek_undo().unwrap().tx, 2);
+    }
+
+    #[test]
+    fn invertible_undo_redo_roundtrip() {
+        let mut h = UndoHistory::<ValueTx<u32>>::with_limit(8);
+        h.record(UndoRecord::new(ValueTx::new(1, 2)));
+
+        let mut value = 2u32;
+        assert!(
+            h.undo_invertible(|rec| {
+                value = rec.tx.after;
+                Ok::<(), ()>(())
+            })
+            .unwrap()
+        );
+        assert_eq!(value, 1);
+        assert!(
+            h.redo_invertible(|rec| {
+                value = rec.tx.after;
+                Ok::<(), ()>(())
+            })
+            .unwrap()
+        );
+        assert_eq!(value, 2);
     }
 }

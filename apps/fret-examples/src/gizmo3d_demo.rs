@@ -14,16 +14,10 @@ use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewpo
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_undo::{CoalesceKey, UndoHistory, UndoRecord};
+use fret_undo::{CoalesceKey, UndoHistory, UndoRecord, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct TransformTx {
-    before: Transform3d,
-    after: Transform3d,
-}
 
 #[derive(Debug, Clone, Copy)]
 struct OrbitCamera {
@@ -160,7 +154,7 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
-    history: UndoHistory<TransformTx>,
+    history: UndoHistory<ValueTx<Transform3d>>,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -756,24 +750,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 m.input.drag_started = false;
             }
 
+            let apply = |rec: &UndoRecord<ValueTx<Transform3d>>| -> Result<(), ()> {
+                m.target = rec.tx.after;
+                Ok(())
+            };
             let applied = if undo {
-                m.history
-                    .undo(|rec| {
-                        m.target = rec.tx.before;
-                        Ok::<TransformTx, ()>(rec.tx)
-                    })
-                    .ok()
-                    .flatten()
-                    .is_some()
+                m.history.undo_invertible(apply).unwrap_or(false)
             } else {
-                m.history
-                    .redo(|rec| {
-                        m.target = rec.tx.after;
-                        Ok::<TransformTx, ()>(rec.tx)
-                    })
-                    .ok()
-                    .flatten()
-                    .is_some()
+                m.history.redo_invertible(apply).unwrap_or(false)
             };
             did_apply |= applied;
         });
@@ -1154,7 +1138,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
                                     fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
                                 };
-                                let rec = UndoRecord::new(TransformTx { before, after })
+                                let rec = UndoRecord::new(ValueTx::new(before, after))
                                     .label("Transform")
                                     .coalesce_key(CoalesceKey::from(tool));
                                 m.history.record_or_coalesce(rec);
