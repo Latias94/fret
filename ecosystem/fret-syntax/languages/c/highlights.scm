@@ -52,8 +52,8 @@
 ">" @operator
 "||" @operator
 
-"." @delimiter
-";" @delimiter
+"." @punctuation.delimiter
+";" @punctuation.delimiter
 
 (string_literal) @string
 (system_lib_string) @string
