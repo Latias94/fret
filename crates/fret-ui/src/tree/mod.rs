@@ -566,9 +566,15 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    /// Ingests the previous frame's recorded ops from `scene`.
+    /// Ingest the previous frame's recorded ops from `scene` for paint-cache replay.
     ///
     /// Call this **before** clearing `scene` for the next frame.
+    ///
+    /// Important:
+    /// - `scene` must contain the previous frame ops that were produced by **this** `UiTree`.
+    /// - The paint cache records absolute op index ranges into the previous frame ops vector, so
+    ///   sharing a single `Scene` across multiple `UiTree`s is not compatible with paint-cache
+    ///   ingestion unless each tree records into an isolated scene.
     pub fn ingest_paint_cache_source(&mut self, scene: &mut Scene) {
         scene.swap_storage(
             &mut self.paint_cache.prev_ops,
