@@ -361,11 +361,12 @@ struct PickHit {
     score: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GizmoState {
     pub hovered: Option<HandleId>,
     pub active: Option<HandleId>,
     pub hovered_kind: Option<GizmoMode>,
+    drag_start_targets: Vec<GizmoTarget3d>,
     drag_mode: GizmoMode,
     drag_snap: bool,
     drag_has_started: bool,
@@ -421,6 +422,7 @@ impl Default for GizmoState {
             hovered: None,
             active: None,
             hovered_kind: None,
+            drag_start_targets: Vec::new(),
             drag_mode: GizmoMode::Translate,
             drag_snap: false,
             drag_has_started: false,
@@ -506,6 +508,11 @@ pub struct GizmoUpdate {
     pub phase: GizmoPhase,
     pub active: HandleId,
     pub result: GizmoResult,
+    /// Updated target transforms for the current interaction state.
+    ///
+    /// During drags (`Begin`/`Update`), this is computed from the snapshot captured at drag start
+    /// plus the current total delta, so hosts do not need to feed back intermediate transforms to
+    /// keep motion stable.
     pub updated_targets: Vec<GizmoTarget3d>,
 }
 
@@ -883,6 +890,7 @@ impl Gizmo {
                         self.state.drag_total_axis_applied * axis_dir
                     };
                     self.state.active = None;
+                    self.state.drag_start_targets.clear();
                     return Some(GizmoUpdate {
                         phase: GizmoPhase::Cancel,
                         active,
@@ -968,12 +976,14 @@ impl Gizmo {
                         self.state.drag_total_axis_applied = desired_total;
                         (delta_axis * axis_dir, desired_total * axis_dir)
                     };
-                    let updated_targets = targets
+                    let updated_targets = self
+                        .state
+                        .drag_start_targets
                         .iter()
                         .map(|t| GizmoTarget3d {
                             id: t.id,
                             transform: Transform3d {
-                                translation: t.transform.translation + delta,
+                                translation: t.transform.translation + total,
                                 ..t.transform
                             },
                             local_bounds: t.local_bounds,
@@ -993,6 +1003,7 @@ impl Gizmo {
 
                 if !self.state.drag_has_started {
                     self.state.active = None;
+                    self.state.drag_start_targets.clear();
                     return None;
                 }
 
@@ -1004,6 +1015,7 @@ impl Gizmo {
                     self.state.drag_total_axis_applied * axis_dir
                 };
                 self.state.active = None;
+                self.state.drag_start_targets.clear();
                 Some(GizmoUpdate {
                     phase: GizmoPhase::Commit,
                     active,
@@ -1020,6 +1032,7 @@ impl Gizmo {
                     if input.cancel {
                         self.state.active = None;
                         self.state.drag_rotate_is_arcball = false;
+                        self.state.drag_start_targets.clear();
                         return Some(GizmoUpdate {
                             phase: GizmoPhase::Cancel,
                             active,
@@ -1086,15 +1099,17 @@ impl Gizmo {
                         .normalize();
                         self.state.drag_total_arcball_applied = desired_total;
 
-                        let updated_targets = targets
+                        let updated_targets = self
+                            .state
+                            .drag_start_targets
                             .iter()
                             .map(|t| GizmoTarget3d {
                                 id: t.id,
                                 transform: Transform3d {
                                     translation: self.state.drag_origin
-                                        + delta_apply
+                                        + desired_total
                                             * (t.transform.translation - self.state.drag_origin),
-                                    rotation: (delta_apply * t.transform.rotation).normalize(),
+                                    rotation: (desired_total * t.transform.rotation).normalize(),
                                     ..t.transform
                                 },
                                 local_bounds: t.local_bounds,
@@ -1118,11 +1133,13 @@ impl Gizmo {
                     if !self.state.drag_has_started {
                         self.state.active = None;
                         self.state.drag_rotate_is_arcball = false;
+                        self.state.drag_start_targets.clear();
                         return None;
                     }
 
                     self.state.active = None;
                     self.state.drag_rotate_is_arcball = false;
+                    self.state.drag_start_targets.clear();
                     Some(GizmoUpdate {
                         phase: GizmoPhase::Commit,
                         active,
@@ -1136,12 +1153,14 @@ impl Gizmo {
                     let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
                     if axis_dir.length_squared() == 0.0 {
                         self.state.active = None;
+                        self.state.drag_start_targets.clear();
                         return None;
                     }
 
                     if input.cancel {
                         let total = self.state.drag_total_angle_applied;
                         self.state.active = None;
+                        self.state.drag_start_targets.clear();
                         return Some(GizmoUpdate {
                             phase: GizmoPhase::Cancel,
                             active,
@@ -1212,16 +1231,18 @@ impl Gizmo {
                         let delta_apply = desired_total - self.state.drag_total_angle_applied;
                         self.state.drag_total_angle_applied = desired_total;
 
-                        let delta_q = Quat::from_axis_angle(axis_dir, delta_apply);
-                        let updated_targets = targets
+                        let total_q = Quat::from_axis_angle(axis_dir, desired_total);
+                        let updated_targets = self
+                            .state
+                            .drag_start_targets
                             .iter()
                             .map(|t| GizmoTarget3d {
                                 id: t.id,
                                 transform: Transform3d {
                                     translation: self.state.drag_origin
-                                        + delta_q
+                                        + total_q
                                             * (t.transform.translation - self.state.drag_origin),
-                                    rotation: (delta_q * t.transform.rotation).normalize(),
+                                    rotation: (total_q * t.transform.rotation).normalize(),
                                     ..t.transform
                                 },
                                 local_bounds: t.local_bounds,
@@ -1245,11 +1266,13 @@ impl Gizmo {
 
                     if !self.state.drag_has_started {
                         self.state.active = None;
+                        self.state.drag_start_targets.clear();
                         return None;
                     }
 
                     let total = self.state.drag_total_angle_applied;
                     self.state.active = None;
+                    self.state.drag_start_targets.clear();
                     Some(GizmoUpdate {
                         phase: GizmoPhase::Commit,
                         active,
@@ -1304,6 +1327,7 @@ impl Gizmo {
                     };
                     self.state.active = None;
                     self.state.drag_scale_is_bounds = false;
+                    self.state.drag_start_targets.clear();
                     return Some(GizmoUpdate {
                         phase: GizmoPhase::Cancel,
                         active,
@@ -1404,7 +1428,9 @@ impl Gizmo {
                         );
                         self.state.drag_bounds_total_applied = desired;
 
-                        let updated_targets = targets
+                        let updated_targets = self
+                            .state
+                            .drag_start_targets
                             .iter()
                             .map(|t| {
                                 let origin = self.state.drag_origin;
@@ -1417,7 +1443,7 @@ impl Gizmo {
                                 let mut next = coords;
                                 for i in 0..3 {
                                     if self.state.drag_bounds_axes_mask[i] {
-                                        next[i] = anchor[i] + (coords[i] - anchor[i]) * delta[i];
+                                        next[i] = anchor[i] + (coords[i] - anchor[i]) * desired[i];
                                     }
                                 }
                                 let translation = origin
@@ -1428,7 +1454,7 @@ impl Gizmo {
                                 let mut scale = t.transform.scale;
                                 for i in 0..3 {
                                     if self.state.drag_bounds_axes_mask[i] {
-                                        scale[i] = (scale[i] * delta[i]).max(1e-4);
+                                        scale[i] = (scale[i] * desired[i]).max(1e-4);
                                     }
                                 }
 
@@ -1519,7 +1545,9 @@ impl Gizmo {
 
                         let total = total_plane_vec(desired);
 
-                        let updated_targets = targets
+                        let updated_targets = self
+                            .state
+                            .drag_start_targets
                             .iter()
                             .map(|t| {
                                 let origin = self.state.drag_origin;
@@ -1528,12 +1556,12 @@ impl Gizmo {
                                 let comp_v = v_dir * offset.dot(v_dir);
                                 let translation = origin
                                     + (offset
-                                        + comp_u * (delta_factors.x - 1.0)
-                                        + comp_v * (delta_factors.y - 1.0));
+                                        + comp_u * (desired.x - 1.0)
+                                        + comp_v * (desired.y - 1.0));
 
                                 let mut scale = t.transform.scale;
-                                scale[a] = (scale[a] * delta_factors.x).max(1e-4);
-                                scale[b] = (scale[b] * delta_factors.y).max(1e-4);
+                                scale[a] = (scale[a] * desired.x).max(1e-4);
+                                scale[b] = (scale[b] * desired.y).max(1e-4);
 
                                 GizmoTarget3d {
                                     id: t.id,
@@ -1591,26 +1619,28 @@ impl Gizmo {
                     };
                     let total = total_vec(desired_factor);
 
-                    let updated_targets = targets
+                    let updated_targets = self
+                        .state
+                        .drag_start_targets
                         .iter()
                         .map(|t| {
                             let origin = self.state.drag_origin;
                             let offset = t.transform.translation - origin;
                             let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
                             let translation = if self.state.drag_scale_is_uniform {
-                                origin + offset * delta_factor
+                                origin + offset * desired_factor
                             } else if axis_dir.length_squared() > 0.0 {
                                 let component = axis_dir * offset.dot(axis_dir);
-                                origin + (offset + component * (delta_factor - 1.0))
+                                origin + (offset + component * (desired_factor - 1.0))
                             } else {
                                 t.transform.translation
                             };
 
                             let mut scale = t.transform.scale;
                             if self.state.drag_scale_is_uniform {
-                                scale *= delta_factor;
+                                scale *= desired_factor;
                             } else if let Some(axis) = self.state.drag_scale_axis {
-                                scale[axis] = (scale[axis] * delta_factor).max(1e-4);
+                                scale[axis] = (scale[axis] * desired_factor).max(1e-4);
                             }
                             GizmoTarget3d {
                                 id: t.id,
@@ -1639,6 +1669,7 @@ impl Gizmo {
                 if !self.state.drag_has_started {
                     self.state.active = None;
                     self.state.drag_scale_is_bounds = false;
+                    self.state.drag_start_targets.clear();
                     return None;
                 }
 
@@ -1651,6 +1682,7 @@ impl Gizmo {
                 };
                 self.state.active = None;
                 self.state.drag_scale_is_bounds = false;
+                self.state.drag_start_targets.clear();
                 Some(GizmoUpdate {
                     phase: GizmoPhase::Commit,
                     active,
@@ -2157,6 +2189,8 @@ impl Gizmo {
         self.state.drag_total_plane_raw = Vec2::ZERO;
         self.state.drag_total_plane_applied = Vec2::ZERO;
 
+        self.state.drag_start_targets = targets.to_vec();
+
         match constraint {
             TranslateConstraint::Axis { axis_dir } => {
                 self.state.drag_translate_is_plane = false;
@@ -2255,6 +2289,7 @@ impl Gizmo {
         self.state.drag_rotate_is_arcball = false;
         self.state.drag_total_arcball_raw = Quat::IDENTITY;
         self.state.drag_total_arcball_applied = Quat::IDENTITY;
+        self.state.drag_start_targets = targets.to_vec();
 
         let start_hit_world = ray_plane_intersect(cursor_ray, origin, axis_dir)
             .filter(|p| p.is_finite())
@@ -2327,6 +2362,7 @@ impl Gizmo {
         self.state.drag_total_arcball_applied = Quat::IDENTITY;
         self.state.drag_total_angle_raw = 0.0;
         self.state.drag_total_angle_applied = 0.0;
+        self.state.drag_start_targets = targets.to_vec();
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
@@ -2472,6 +2508,7 @@ impl Gizmo {
         self.state.drag_total_scale_plane_applied = Vec2::ONE;
         self.state.drag_scale_is_uniform = axis.is_none() && plane_axes.is_none();
         self.state.drag_scale_is_bounds = false;
+        self.state.drag_start_targets = targets.to_vec();
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
@@ -2593,6 +2630,7 @@ impl Gizmo {
         self.state.drag_scale_axis = None;
         self.state.drag_scale_plane_axes = None;
         self.state.drag_scale_is_uniform = false;
+        self.state.drag_start_targets = targets.to_vec();
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
@@ -4810,6 +4848,15 @@ mod tests {
         assert!(moved_total.x > 0.0);
         assert!(moved_total.y.abs() < 1e-3);
         assert!(moved_total.z.abs() < 1e-3);
+        assert!(
+            moved.updated_targets[0]
+                .transform
+                .translation
+                .distance(moved_total)
+                < 1e-3,
+            "updated={:?} total={moved_total:?}",
+            moved.updated_targets[0].transform.translation
+        );
 
         let input_back = GizmoInput {
             cursor_px: cursor_start,
@@ -4828,6 +4875,11 @@ mod tests {
             _ => panic!("expected translation"),
         };
         assert!(back_total.length() < 1e-3, "total={back_total:?}");
+        assert!(
+            back.updated_targets[0].transform.translation.length() < 1e-3,
+            "updated={:?}",
+            back.updated_targets[0].transform.translation
+        );
     }
 
     #[test]
@@ -5362,6 +5414,15 @@ mod tests {
             _ => panic!("expected translation"),
         };
         assert!(moved_total.length() > 1e-6);
+        assert!(
+            moved.updated_targets[0]
+                .transform
+                .translation
+                .distance(moved_total)
+                < 1e-3,
+            "updated={:?} total={moved_total:?}",
+            moved.updated_targets[0].transform.translation
+        );
 
         let input_back = GizmoInput {
             cursor_px: cursor_start,
@@ -5380,6 +5441,11 @@ mod tests {
             _ => panic!("expected translation"),
         };
         assert!(back_total.length() < 1e-3, "total={back_total:?}");
+        assert!(
+            back.updated_targets[0].transform.translation.length() < 1e-3,
+            "updated={:?}",
+            back.updated_targets[0].transform.translation
+        );
     }
 
     #[test]
@@ -5507,6 +5573,16 @@ mod tests {
             GizmoResult::Arcball { total, .. } => total,
             _ => panic!("expected arcball"),
         };
+        assert!(
+            moved.updated_targets[0]
+                .transform
+                .rotation
+                .dot(moved_total)
+                .abs()
+                > 1.0 - 1e-3,
+            "updated={:?} total={moved_total:?}",
+            moved.updated_targets[0].transform.rotation
+        );
         let moved_angle = 2.0
             * moved_total
                 .dot(Quat::IDENTITY)
@@ -5597,6 +5673,15 @@ mod tests {
         };
         assert!(moved_total.x.is_finite());
         assert!(moved_total.x > 1.0 + 1e-6);
+        assert!(
+            moved.updated_targets[0]
+                .transform
+                .scale
+                .distance(moved_total)
+                < 1e-3,
+            "updated={:?} total={moved_total:?}",
+            moved.updated_targets[0].transform.scale
+        );
 
         let input_back = GizmoInput {
             cursor_px: p_start.screen,
@@ -5616,6 +5701,11 @@ mod tests {
         assert!(
             (back_total - Vec3::ONE).length() < 1e-3,
             "total={back_total:?}"
+        );
+        assert!(
+            (back.updated_targets[0].transform.scale - Vec3::ONE).length() < 1e-3,
+            "updated={:?}",
+            back.updated_targets[0].transform.scale
         );
     }
 
@@ -5679,6 +5769,15 @@ mod tests {
         assert!(moved_total.x.is_finite());
         assert!(moved_total.y.is_finite());
         assert!((moved_total.x - 1.0).abs() > 1e-6 || (moved_total.y - 1.0).abs() > 1e-6);
+        assert!(
+            moved.updated_targets[0]
+                .transform
+                .scale
+                .distance(moved_total)
+                < 1e-3,
+            "updated={:?} total={moved_total:?}",
+            moved.updated_targets[0].transform.scale
+        );
 
         let input_back = GizmoInput {
             cursor_px: cursor_start,
@@ -5698,6 +5797,11 @@ mod tests {
         assert!(
             (back_total - Vec3::ONE).length() < 1e-3,
             "total={back_total:?}"
+        );
+        assert!(
+            (back.updated_targets[0].transform.scale - Vec3::ONE).length() < 1e-3,
+            "updated={:?}",
+            back.updated_targets[0].transform.scale
         );
     }
 
