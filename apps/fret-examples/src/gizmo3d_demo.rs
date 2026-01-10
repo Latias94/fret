@@ -19,6 +19,7 @@ use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
+use std::time::Instant;
 use wgpu::util::DeviceExt as _;
 
 #[derive(Debug, Clone, Copy)]
@@ -334,7 +335,7 @@ fn targets_world_aabb(targets: &[GizmoTarget3d]) -> Option<(Vec3, Vec3)> {
     any.then_some((min, max))
 }
 
-fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
+fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     if camera.orbiting || camera.panning {
         camera.frame_anim = None;
         return false;
@@ -344,8 +345,14 @@ fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
         return false;
     };
 
-    let step = 0.18;
-    anim.t = (anim.t + step).min(1.0);
+    let dt_seconds = dt_seconds.clamp(0.0, 0.1);
+    if dt_seconds <= 0.0 {
+        camera.frame_anim = Some(anim);
+        return true;
+    }
+
+    let duration_s = 0.22;
+    anim.t = (anim.t + dt_seconds / duration_s).min(1.0);
     let t = anim.t;
     let eased = t * t * (3.0 - 2.0 * t); // smoothstep
 
@@ -419,6 +426,7 @@ struct Gizmo3dDemoModel {
     marquee: Option<MarqueeSelection>,
     input: GizmoInput,
     camera: OrbitCamera,
+    last_frame_instant: Option<Instant>,
 }
 
 impl Default for Gizmo3dDemoModel {
@@ -473,6 +481,7 @@ impl Default for Gizmo3dDemoModel {
                 cancel: false,
             },
             camera: OrbitCamera::default(),
+            last_frame_instant: None,
         }
     }
 }
@@ -2077,7 +2086,15 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
         let animating = state
             .demo
-            .update(app, |m, _cx| step_frame_anim(&mut m.camera))
+            .update(app, |m, _cx| {
+                let now = Instant::now();
+                let dt = m
+                    .last_frame_instant
+                    .and_then(|prev| now.checked_duration_since(prev))
+                    .unwrap_or_default();
+                m.last_frame_instant = Some(now);
+                step_frame_anim(&mut m.camera, dt.as_secs_f32())
+            })
             .unwrap_or(false);
         if animating {
             app.request_redraw(window);
