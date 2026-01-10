@@ -4442,9 +4442,14 @@ impl Gizmo {
         let ring_hit = match (best_axis, view_hit) {
             (Some(axis), Some(view)) => {
                 // View ring is an outer, always-on-top affordance. Make it slightly easier to hit
-                // without stealing clearly-intended axis ring drags.
-                let view_score = (view.score - 0.35).max(0.0);
-                if view_score <= axis.score {
+                // while preventing it from stealing clearly-intended axis ring drags.
+                //
+                // Rule of thumb:
+                // - If the cursor is close to an axis ring (strong intent), axis wins.
+                // - Otherwise the view ring can win only if it is meaningfully closer.
+                let axis_strong = axis.score <= self.config.pick_radius_px.max(1.0) * 0.35;
+                let view_score = (view.score - 0.15).max(0.0);
+                if !axis_strong && view_score + 0.75 < axis.score {
                     Some(PickHit {
                         handle: view.handle,
                         score: view_score,
@@ -5798,6 +5803,95 @@ mod tests {
             .pick_rotate_axis(view_proj, vp, origin, pz, axes)
             .unwrap();
         assert_eq!(hit.handle, HandleId(3));
+    }
+
+    #[test]
+    fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        // Use an axis-aligned camera so the view ring and the Z axis ring are coplanar.
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Rotate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.pick_radius_px = 18.0;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.show_arcball = false;
+        // Force the view ring to coincide with the most camera-facing axis ring so we can
+        // deterministically hit both at the same cursor point.
+        config.view_axis_ring_radius_scale = 1.0;
+        let gizmo = Gizmo::new(config);
+
+        let mut axis_only_cfg = config;
+        axis_only_cfg.show_view_axis_ring = false;
+        let axis_only = Gizmo::new(axis_only_cfg);
+
+        let mut view_only_cfg = config;
+        view_only_cfg.axis_mask = [true; 3];
+        let view_only = Gizmo::new(view_only_cfg);
+
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let view_dir_n = view_dir.normalize_or_zero();
+        assert!(view_dir_n.length_squared() > 0.0);
+
+        let best_axis_index = axes
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| {
+                view_dir_n
+                    .dot(a.normalize_or_zero())
+                    .abs()
+                    .partial_cmp(&view_dir_n.dot(b.normalize_or_zero()).abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(idx, _)| idx)
+            .unwrap();
+        let axis_handle = HandleId(1 + best_axis_index as u64);
+
+        let (u, _v) = plane_basis(view_dir_n);
+        let cursor = project_point(
+            view_proj,
+            vp,
+            origin + u * radius_world,
+            gizmo.config.depth_range,
+        )
+        .unwrap()
+        .screen;
+
+        let axis_hit = axis_only
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .unwrap();
+        assert_eq!(axis_hit.handle, axis_handle);
+        assert!(
+            axis_hit.score <= gizmo.config.pick_radius_px * 0.35,
+            "expected a strong axis-ring hit score={}, pick_radius={}",
+            axis_hit.score,
+            gizmo.config.pick_radius_px
+        );
+
+        let view_hit = view_only
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .unwrap();
+        assert_eq!(view_hit.handle, Gizmo::ROTATE_VIEW_HANDLE);
+
+        let hit = gizmo
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .unwrap();
+        assert_eq!(hit.handle, axis_handle);
     }
 
     #[test]
