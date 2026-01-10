@@ -436,9 +436,12 @@ High-level layering (ADR 0135):
   - XyFlow: instance API (`useReactFlow`) + store actions (zoomIn/zoomOut/fitView/panBy/setCenter)
   - fret-node: canonical commands in `ecosystem/fret-node/src/ui/commands.rs` and demo keymap bindings
 
-- [ ] **Selection and editing shortcuts (delete, duplicate, copy/paste)**
+- [~] **Selection and editing shortcuts (delete, duplicate, copy/paste, nudge)**
   - XyFlow: deleteKeyCode, selectionKeyCode, multiSelectionKeyCode, etc.
-  - fret-node: partial (some demo-only commands exist); needs standardized command IDs + ADR constraints
+  - fret-node:
+    - stable command IDs + registration: `ecosystem/fret-node/src/ui/commands.rs`
+    - canvas behavior: `ecosystem/fret-node/src/ui/canvas/widget.rs` (copy/cut/paste/duplicate/delete/select-all + arrow-key nudge)
+    - TODO: align/distribute and configurable nudge step
 
 - [ ] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`

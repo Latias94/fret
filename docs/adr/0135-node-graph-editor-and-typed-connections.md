@@ -865,9 +865,11 @@ Selection is editor-owned policy but must be exposed as data:
   - `node_graph.cut`
   - `node_graph.paste`
   - `node_graph.delete_selection`
-  - `node_graph.duplicate_selection`
+  - `node_graph.duplicate`
   - `node_graph.frame_selection`
   - `node_graph.select_all`
+  - `node_graph.nudge_left|right|up|down` (repeatable)
+  - `node_graph.nudge_left_fast|right_fast|up_fast|down_fast` (repeatable)
 
 ### 17) Clipboard and drag payloads have stable formats
 

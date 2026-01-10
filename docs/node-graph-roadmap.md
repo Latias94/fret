@@ -137,7 +137,8 @@ Legend:
 - [~] Edge label rendering + per-edge style overrides.
 - [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
 - [ ] Reroute node + edge split UX.
-- [ ] Selection align/distribute + keyboard nudge ops.
+- [x] Keyboard nudge ops.
+- [ ] Selection align/distribute ops.
 
 ### Long-term
 

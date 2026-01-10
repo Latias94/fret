@@ -61,7 +61,7 @@ Recommended harness:
 ### Invariants
 
 - (implemented) Selection changes are deterministic given the same pointer inputs.
-- (todo) Keyboard nudge and selection commands must not depend on frame timing.
+- (done) Keyboard nudge and selection commands must not depend on frame timing.
 
 ## C) Node Drag, Group Drag, Snaplines
 
@@ -220,7 +220,7 @@ Invariants:
 ### Manual script
 
 - (todo) `Frame all` frames all nodes with padding (same view op as “Fit view”).
-- (todo) Keyboard nudge moves selection by a fixed grid step (configurable).
+- (done) Keyboard nudge moves selection by a fixed screen-space step (Shift = fast) and optionally snaps to grid.
 - (todo) Align/distribute commands operate on selection deterministically.
 
 ### Invariants
