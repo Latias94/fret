@@ -625,9 +625,8 @@ impl NodeGraphCanvas {
             let title_w = if node.title.is_empty() {
                 0.0
             } else {
-                cx.services
-                    .text()
-                    .measure(node.title.as_ref(), &text_style, constraints)
+                self.paint_cache
+                    .text_metrics(cx.services, node.title.clone(), &text_style, constraints)
                     .size
                     .width
                     .0
@@ -637,9 +636,8 @@ impl NodeGraphCanvas {
                 .iter()
                 .filter(|s| !s.is_empty())
                 .map(|s| {
-                    cx.services
-                        .text()
-                        .measure(s.as_ref(), &text_style, constraints)
+                    self.paint_cache
+                        .text_metrics(cx.services, s.clone(), &text_style, constraints)
                         .size
                         .width
                         .0
@@ -650,9 +648,8 @@ impl NodeGraphCanvas {
                 .iter()
                 .filter(|s| !s.is_empty())
                 .map(|s| {
-                    cx.services
-                        .text()
-                        .measure(s.as_ref(), &text_style, constraints)
+                    self.paint_cache
+                        .text_metrics(cx.services, s.clone(), &text_style, constraints)
                         .size
                         .width
                         .0
