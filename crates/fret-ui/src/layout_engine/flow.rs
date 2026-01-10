@@ -16,6 +16,7 @@ pub(crate) enum ParentLayoutKind {
     Root,
     Flex { direction: fret_core::Axis },
     Grid,
+    PassthroughOverlay,
     Overlay,
 }
 
@@ -97,11 +98,20 @@ fn build_flow_subtree_impl<H: UiHost>(
             Display::Grid,
             root_override_size,
         );
+        // Wrapper nodes (semantics/hover/pressable/opacity/...) must be "pass-through": they
+        // provide a containing block for percent sizing, but should not impose sizing on their
+        // single child.
+        //
+        // Using `auto` tracks breaks percent sizing because the containing block is not definite,
+        // yielding "collapsed" layouts where descendants only occupy the left portion of a
+        // stretched wrapper.
         style.grid_template_columns =
-            vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+            vec![GridTemplateComponent::Single(taffy::style_helpers::fr(1.0))];
         style.grid_template_rows =
             vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
+        // Prevent wrappers from stretching intrinsic/auto-sized children (e.g. spacers).
         style.align_items = Some(AlignItems::FlexStart);
+        style.justify_items = Some(AlignItems::FlexStart);
         style.justify_content = Some(JustifyContent::FlexStart);
 
         let wrapper_style = layout_style_for_node(app, window, node);
@@ -141,7 +151,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             tree,
             window,
             sf,
-            ParentLayoutKind::Overlay,
+            ParentLayoutKind::PassthroughOverlay,
             child,
         );
         return;
@@ -394,6 +404,40 @@ fn build_flow_subtree_impl<H: UiHost>(
             }
 
             let children = tree.children(node).to_vec();
+
+            // If this wrapper sizes itself to content (`Auto`) but its *flow child* requests `Fill`,
+            // promote the wrapper to `Fill` as well.
+            //
+            // This avoids Taffy collapsing `%` sizing to zero when the containing block size is
+            // otherwise undetermined, and matches the Fret contract that `Fill` only resolves when
+            // an ancestor provides definite space.
+            //
+            // Practical impact: shadcn-like compositions commonly put `w_full()/h_full()` on inner
+            // stacks, expecting the outer wrapper (CardHeader/CardContent, etc) to fill the card.
+            let wrapper_style = layout_style_for_node(app, window, node);
+            let mut has_flow_child_fill_w = false;
+            let mut has_flow_child_fill_h = false;
+            for &child in &children {
+                let child_style = layout_style_for_node(app, window, child);
+                if child_style.position == crate::element::PositionStyle::Absolute {
+                    continue;
+                }
+                has_flow_child_fill_w |=
+                    matches!(child_style.size.width, crate::element::Length::Fill);
+                has_flow_child_fill_h |=
+                    matches!(child_style.size.height, crate::element::Length::Fill);
+            }
+            if matches!(wrapper_style.size.width, crate::element::Length::Auto)
+                && has_flow_child_fill_w
+            {
+                style.size.width = Dimension::percent(1.0);
+            }
+            if matches!(wrapper_style.size.height, crate::element::Length::Auto)
+                && has_flow_child_fill_h
+            {
+                style.size.height = Dimension::percent(1.0);
+            }
+
             engine.set_style(node, style);
             engine.set_children(node, &children);
             engine.set_measured(node, false);
@@ -558,11 +602,28 @@ fn style_for_item_in_parent<H: UiHost>(
             style.grid_column = taffy_grid_line(layout_style.grid.column);
             style.grid_row = taffy_grid_line(layout_style.grid.row);
         }
-        ParentLayoutKind::Overlay => {
+        ParentLayoutKind::PassthroughOverlay | ParentLayoutKind::Overlay => {
             style.grid_column = overlay_grid_line();
             style.grid_row = overlay_grid_line();
         }
         ParentLayoutKind::Root => {}
+    }
+
+    if matches!(parent_kind, ParentLayoutKind::PassthroughOverlay) {
+        // Passthrough wrappers should remain layout-transparent: their single child should inherit
+        // the wrapper's resolved box when possible, without forcing intrinsic leaves (e.g. Spacer)
+        // to stretch.
+        let instance = element_record_for_node(app, window, node).map(|r| r.instance);
+        match instance {
+            Some(ElementInstance::Spacer(_)) => {
+                style.align_self = Some(AlignSelf::FlexStart);
+                style.justify_self = Some(AlignSelf::FlexStart);
+            }
+            _ => {
+                style.align_self = Some(AlignSelf::Stretch);
+                style.justify_self = Some(AlignSelf::Stretch);
+            }
+        }
     }
 
     if let Some(size) = root_override_size {
@@ -613,7 +674,8 @@ fn passthrough_wrapper_child<H: UiHost>(
     let instance = element_record_for_node(app, window, node).map(|r| r.instance)?;
     match instance {
         ElementInstance::InteractivityGate(gate) if gate.present => Some(child),
-        ElementInstance::Anchored(_)
+        ElementInstance::Container(_)
+        | ElementInstance::Anchored(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)
         | ElementInstance::WheelRegion(_)

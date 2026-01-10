@@ -1,8 +1,10 @@
 use fret_core::time::Instant;
 use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
+use serde_json::json;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
@@ -468,6 +470,138 @@ impl TaffyLayoutEngine {
                 Px(((snapped_max_y_dp - snapped_min_y_dp) / sf).max(0.0)),
             ),
         )
+    }
+
+    pub fn debug_dump_subtree_json(
+        &self,
+        root: NodeId,
+        mut label_for_node: impl FnMut(NodeId) -> Option<String>,
+    ) -> serde_json::Value {
+        fn sanitize_for_filename(s: &str) -> String {
+            s.chars()
+                .map(|ch| match ch {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => ch,
+                    _ => '_',
+                })
+                .collect()
+        }
+
+        fn abs_rect_for_node(
+            engine: &TaffyLayoutEngine,
+            node: NodeId,
+            abs_cache: &mut HashMap<NodeId, Rect>,
+        ) -> Rect {
+            if let Some(rect) = abs_cache.get(&node).copied() {
+                return rect;
+            }
+
+            let local = engine
+                .layout_id_for_node(node)
+                .map(|id| engine.layout_rect(id))
+                .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
+            let abs = if let Some(parent) = engine.parent.get(&node).copied() {
+                let parent_abs = abs_rect_for_node(engine, parent, abs_cache);
+                Rect::new(
+                    Point::new(
+                        Px(parent_abs.origin.x.0 + local.origin.x.0),
+                        Px(parent_abs.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                )
+            } else {
+                local
+            };
+            abs_cache.insert(node, abs);
+            abs
+        }
+
+        let root_layout_id = self.layout_id_for_node(root);
+        let mut stack: Vec<NodeId> = vec![root];
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut abs_cache: HashMap<NodeId, Rect> = HashMap::new();
+        let mut nodes: Vec<serde_json::Value> = Vec::new();
+
+        while let Some(node) = stack.pop() {
+            if !visited.insert(node) {
+                continue;
+            }
+
+            let children = self.children.get(&node).cloned().unwrap_or_default();
+            for &child in children.iter().rev() {
+                stack.push(child);
+            }
+
+            let layout_id = self.layout_id_for_node(node);
+            let local = layout_id
+                .map(|id| self.layout_rect(id))
+                .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
+            let abs = abs_rect_for_node(self, node, &mut abs_cache);
+
+            let measured = layout_id
+                .and_then(|id| self.tree.get_node_context(id.0).copied())
+                .map(|ctx| ctx.measured)
+                .unwrap_or(false);
+
+            let style_dbg = self
+                .styles
+                .get(&node)
+                .map(|s| format!("{s:?}"))
+                .unwrap_or_else(|| "<missing>".to_string());
+
+            let label_dbg = label_for_node(node).unwrap_or_else(|| "<unknown>".to_string());
+
+            nodes.push(json!({
+                "node": format!("{node:?}"),
+                "label": label_dbg,
+                "measured": measured,
+                "parent": self.parent.get(&node).map(|p| format!("{p:?}")),
+                "children": children.iter().map(|c| format!("{c:?}")).collect::<Vec<_>>(),
+                "layout_id": layout_id.map(|id| format!("{:?}", id.0)).unwrap_or_else(|| "<missing>".to_string()),
+                "local_rect": {
+                    "x": local.origin.x.0,
+                    "y": local.origin.y.0,
+                    "w": local.size.width.0,
+                    "h": local.size.height.0,
+                },
+                "abs_rect": {
+                    "x": abs.origin.x.0,
+                    "y": abs.origin.y.0,
+                    "w": abs.size.width.0,
+                    "h": abs.size.height.0,
+                },
+                "style": style_dbg,
+            }));
+        }
+
+        let filename = sanitize_for_filename(&format!("{root:?}"));
+        json!({
+            "meta": {
+                "root": format!("{root:?}"),
+                "root_layout_id": root_layout_id.map(|id| format!("{:?}", id.0)),
+                "frame_id": self.frame_id.map(|id| id.0),
+                "solve_generation": self.solve_generation,
+                "solve_scale_factor": self.solve_scale_factor,
+                "last_solve_time_ms": self.last_solve_time.as_millis(),
+                "suggested_filename": format!("taffy_{filename}.json"),
+            },
+            "nodes": nodes,
+        })
+    }
+
+    pub fn debug_write_subtree_json(
+        &self,
+        root: NodeId,
+        dir: impl AsRef<Path>,
+        filename: impl AsRef<Path>,
+        label_for_node: impl FnMut(NodeId) -> Option<String>,
+    ) -> std::io::Result<PathBuf> {
+        let dir = dir.as_ref();
+        std::fs::create_dir_all(dir)?;
+        let path = dir.join(filename);
+        let dump = self.debug_dump_subtree_json(root, label_for_node);
+        let bytes = serde_json::to_vec_pretty(&dump).expect("serialize taffy debug json");
+        std::fs::write(&path, bytes)?;
+        Ok(path)
     }
 
     fn mark_solved_subtree(&mut self, root: NodeId) {

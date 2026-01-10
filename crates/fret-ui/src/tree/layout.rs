@@ -5,6 +5,8 @@ use std::any::TypeId;
 use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 #[cfg(feature = "layout-engine-v2")]
+use crate::layout_engine::TaffyLayoutEngine;
+#[cfg(feature = "layout-engine-v2")]
 use crate::layout_engine::{ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree};
 use crate::layout_pass::LayoutPassKind;
 #[cfg(feature = "layout-engine-v2")]
@@ -215,6 +217,99 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
+    fn maybe_dump_taffy_subtree(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        engine: &TaffyLayoutEngine,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        use std::sync::atomic::{AtomicU32, Ordering};
+
+        if std::env::var_os("FRET_TAFFY_DUMP").is_none() {
+            return;
+        }
+
+        static DUMP_COUNT: AtomicU32 = AtomicU32::new(0);
+        let dump_max: Option<u32> =
+            if std::env::var("FRET_TAFFY_DUMP_ONCE").ok().as_deref() == Some("1") {
+                Some(1)
+            } else {
+                std::env::var("FRET_TAFFY_DUMP_MAX")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+            };
+        if let Some(max) = dump_max {
+            let prev = DUMP_COUNT.fetch_add(1, Ordering::SeqCst);
+            if prev >= max {
+                return;
+            }
+        }
+
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT") {
+            if !format!("{root:?}").contains(&filter) {
+                return;
+            }
+        }
+
+        let out_dir = std::env::var("FRET_TAFFY_DUMP_DIR")
+            .ok()
+            .unwrap_or_else(|| ".fret/taffy-dumps".to_string());
+
+        let frame = app.frame_id().0;
+        let root_slug: String = format!("{root:?}")
+            .chars()
+            .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+            .collect();
+        let filename = format!("taffy_{frame}_{root_slug}.json");
+
+        let dump = engine.debug_dump_subtree_json(root, |node| {
+            crate::declarative::frame::element_record_for_node(app, window, node)
+                .map(|r| format!("{:?}", r.instance))
+        });
+
+        let wrapped = serde_json::json!({
+            "meta": {
+                "window": format!("{window:?}"),
+                "root_bounds": {
+                    "x": root_bounds.origin.x.0,
+                    "y": root_bounds.origin.y.0,
+                    "w": root_bounds.size.width.0,
+                    "h": root_bounds.size.height.0,
+                },
+                "scale_factor": scale_factor,
+            },
+            "taffy": dump,
+        });
+
+        let result = std::fs::create_dir_all(&out_dir)
+            .and_then(|_| {
+                serde_json::to_vec_pretty(&wrapped).map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
+                })
+            })
+            .and_then(|bytes| {
+                std::fs::write(std::path::Path::new(&out_dir).join(&filename), bytes)
+            });
+
+        match result {
+            Ok(()) => tracing::info!(
+                out_dir = %out_dir,
+                filename = %filename,
+                "wrote taffy debug dump"
+            ),
+            Err(err) => tracing::warn!(
+                error = %err,
+                out_dir = %out_dir,
+                filename = %filename,
+                "failed to write taffy debug dump"
+            ),
+        }
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
     fn request_build_window_roots_if_final(
         &mut self,
         app: &mut H,
@@ -276,6 +371,8 @@ impl<H: UiHost> UiTree<H> {
                 engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
                     self.measure_in(app, services, n, c, sf)
                 });
+
+            self.maybe_dump_taffy_subtree(app, window, &engine, root, bounds, sf);
         }
 
         self.put_layout_engine(engine);
@@ -372,6 +469,8 @@ impl<H: UiHost> UiTree<H> {
                         sf,
                         |n, c| self.measure_in(app, services, n, c, sf),
                     );
+
+                    self.maybe_dump_taffy_subtree(app, window, &engine, item.root, item.bounds, sf);
                 }
 
                 self.put_layout_engine(engine);
@@ -435,6 +534,7 @@ impl<H: UiHost> UiTree<H> {
             |node, constraints| self.measure_in(app, services, node, constraints, sf),
         );
 
+        self.maybe_dump_taffy_subtree(app, window, &engine, root, root_bounds, scale_factor);
         self.put_layout_engine(engine);
     }
 

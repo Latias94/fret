@@ -81,7 +81,32 @@ Practical workflow:
 3. Verify child bounds propagation (especially when using absolute positioning helpers).
 4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0083).
 
-### 2.1 Prefer a unit test when possible
+### 2.1 Dump Taffy layout trees (layout-engine-v2)
+
+When debugging layout-engine-v2, it is often faster to inspect the solved Taffy tree(s) than to
+guess which wrapper collapsed. Fret can emit JSON dumps under `.fret/`.
+
+```powershell
+# Enable dumps.
+$env:FRET_TAFFY_DUMP=1
+# Optional: write to a dedicated directory.
+$env:FRET_TAFFY_DUMP_DIR=".fret\\taffy-dumps"
+# Optional: cap output count to avoid spam.
+$env:FRET_TAFFY_DUMP_MAX=30
+# Optional: only dump roots whose NodeId string contains this substring.
+$env:FRET_TAFFY_DUMP_ROOT="NodeId(46"
+
+# Run a repro with layout-engine-v2 enabled (example):
+cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo
+```
+
+Notes:
+
+- Dumps include **window roots** and **viewport roots** (e.g. scroll content) as separate files.
+- Each node entry includes `node/parent/children`, `local_rect/abs_rect`, the computed Taffy `style`,
+  and a debug `label` derived from the element instance.
+
+### 2.2 Prefer a unit test when possible
 
 If the bug is deterministic (no timing/input dependency), it is usually faster to reproduce it as a test:
 
@@ -94,7 +119,7 @@ Typical pattern:
 2. Call `layout_all(...)` with a fixed window bounds + scale factor.
 3. Assert the computed bounds/visual bounds for the relevant node(s).
 
-### 2.2 Debug “visual bounds vs layout bounds”
+### 2.3 Debug “visual bounds vs layout bounds”
 
 For overlay anchoring and transformed widgets, always distinguish:
 

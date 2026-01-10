@@ -114,6 +114,7 @@ Acceptance:
 
 - Conformance test: no cross-viewport coupling for percent/flex distribution.
 - Docking demos behave consistently across DPI scales (bounds stable within rounding policy).
+- Dogfood demo (manual): `cargo run -p fret-demo --features layout-engine-v2 --bin todo_demo` matches the shadcn-style composition (Card + Input + Tabs + ScrollArea + hover-only actions) without re-entrant layout or stack growth.
 
 ## Open Decisions (Track Here)
 
@@ -133,7 +134,7 @@ Acceptance:
 - In v2 Final passes, **declarative element layer roots** run a request/build stage up front (stable identity + engine-backed wrapper rects), followed by a compute stage that is skipped when clean/translation-only. This is intentionally skipped for non-element/custom roots to avoid wasted work, and viewport roots are still orchestrated via the post-root flush protocol.
  - Viewport roots participate in the same request/build stage: when docking registers viewport roots, the flush loop first request/builds all newly-registered viewport roots, then computes/applies only the roots that require layout. This preserves stable identity even when a viewport root is skipped for compute/apply.
 - v2 request/build orchestration is centralized in `UiTree::request_build_window_roots_if_final(...)` and the viewport flush helper `UiTree::flush_viewport_roots_after_root(...)` (`crates/fret-ui/src/tree/layout.rs`). These helpers perform request/build and compute/apply using a single `take_layout_engine()` per wave to reduce engine handoff churn.
-- Wrapper overlay nodes use `1fr` tracks with `justify_items/align_items: start` so percent/fill sizing can resolve against definite wrapper boxes without stretching auto-sized children (e.g. spacers).
+- Wrapper overlay nodes use `1fr` tracks with `justify_items/align_items: stretch` so wrapper nodes remain layout-transparent: if an ancestor stretches the wrapper (e.g. `w-full` via flex cross-axis stretch), the single child receives the same definite box budget and does not collapse to content width.
 
 ## Engineering Guardrails (v2 Runtime Policy)
 
