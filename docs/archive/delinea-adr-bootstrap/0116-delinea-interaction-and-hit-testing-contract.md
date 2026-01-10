@@ -91,8 +91,8 @@ Headless actions:
 - `Action::PanDataWindowYFromBase { axis, base, delta_px, viewport_span_px }`
 - `Action::ZoomDataWindowXFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
 - `Action::ZoomDataWindowYFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
-- `Action::SetDataWindowXFromZoom { axis, window }`
-- `Action::SetDataWindowYFromZoom { axis, window }`
+- `Action::SetDataWindowXFromZoom { axis, base, window, anchor }`
+- `Action::SetDataWindowYFromZoom { axis, base, window, anchor }`
 
 Semantics:
 

@@ -70,6 +70,7 @@ consistently without sparse selections and per-series masking.
 2D zoom/brush is represented as a single action that writes two 1D windows:
 
 - `Action::SetViewWindow2D { x_axis, y_axis, x, y }`
+- `Action::SetViewWindow2DFromZoom { x_axis, y_axis, base_x, base_y, x, y }` (interaction-derived box zoom)
 
 Semantics:
 
@@ -99,7 +100,7 @@ We keep the existing precedence rules:
 
 - `AxisRange::Fixed` overrides view windows for that axis.
 - Partial locks (`LockMin` / `LockMax`) constrain the resulting window but do not fully override it.
-- Constraints apply on every write to view windows (including `SetViewWindow2D`).
+- Constraints apply on every write to view windows (including `SetViewWindow2D` and `SetViewWindow2DFromZoom`).
 
 ### 6) Represent “durable dataZoom configuration” separately from view state
 
@@ -114,7 +115,8 @@ In `delinea` we continue to separate:
 v1 scope:
 
 - X: `DataZoomXSpec` remains the durable home of X `filterMode` defaults.
-- Y: we may add `DataZoomYSpec` later for symmetry and slider UI, but v1 interactions can rely on
+- Y: `DataZoomYSpec` exists as a durable placeholder for future persisted defaults and slider UI, but v1
+  interactions can rely on
   `ChartState.data_window_y` without requiring a durable component.
 
 ## Consequences
@@ -128,7 +130,7 @@ v1 scope:
 
 P0 / near-term:
 
-- Implement `fret-chart` 2D box zoom that writes `SetViewWindow2D` for the active axis pair.
+- Implement `fret-chart` 2D box zoom that writes `SetViewWindow2DFromZoom` for the active axis pair.
 - Add a conformance demo for multi-axis + 2D zoom interactions (desktop + wasm).
 
 P1:
@@ -138,4 +140,3 @@ P1:
   ECharts-like `weakFilter`/`empty` become feasible without ad-hoc allocations.
 - Add span constraints (`minSpan/maxSpan` or `minValueSpan/maxValueSpan`) as a durable policy key,
   and define how they compose with `AxisRange` and locks.
-

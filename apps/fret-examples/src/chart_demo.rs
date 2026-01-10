@@ -104,6 +104,7 @@ impl ChartDemoDriver {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: Some(delinea::AxisPointerSpec {
                 enabled: true,
                 trigger: delinea::AxisPointerTrigger::Axis,

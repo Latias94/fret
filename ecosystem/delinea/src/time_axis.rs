@@ -54,10 +54,14 @@ pub fn ticks(window: DataWindow, target_count: usize) -> Vec<f64> {
 }
 
 pub fn format_tick(window: DataWindow, value: f64) -> String {
+    format_tick_with_target(window, value, 5)
+}
+
+pub fn format_tick_with_target(window: DataWindow, value: f64, target_count: usize) -> String {
     let mut window = window;
     window.clamp_non_degenerate();
 
-    let spec = tick_spec(window, 5);
+    let spec = tick_spec(window, target_count);
     let Some(ms) = ms_from_value(value) else {
         return value.to_string();
     };
@@ -303,6 +307,28 @@ fn add_months(dt: OffsetDateTime, months: i32) -> OffsetDateTime {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_tick_with_target_uses_coarse_units_for_large_spans() {
+        let day_ms = 86_400_000.0;
+        let window = DataWindow {
+            min: 0.0,
+            max: 400.0 * day_ms,
+        };
+
+        // For large spans, default labels should be date-like (year/month/day), not time-of-day.
+        let labels: Vec<String> = ticks(window, 3)
+            .into_iter()
+            .map(|v| format_tick_with_target(window, v, 3))
+            .collect();
+        assert!(!labels.is_empty());
+        for label in labels {
+            assert!(
+                !label.contains(':'),
+                "unexpected time-of-day label: {label}"
+            );
+        }
+    }
 
     #[test]
     fn ticks_include_endpoints() {

@@ -4,8 +4,8 @@ use fret_core::{Point, Px, Rect, Size};
 
 use super::*;
 use crate::spec::{
-    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-    SeriesSpec,
+    AxisKind, AxisSpec, ChartSpec, DataZoomYSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
+    SeriesKind, SeriesSpec,
 };
 
 fn basic_spec() -> ChartSpec {
@@ -52,6 +52,7 @@ fn basic_spec() -> ChartSpec {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
@@ -71,6 +72,59 @@ fn basic_spec() -> ChartSpec {
             area_baseline: None,
         }],
     }
+}
+
+#[test]
+fn data_zoom_y_rejects_non_y_axis_binding() {
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: crate::ids::AxisId::new(1),
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn data_zoom_y_rejects_multiple_specs_for_same_axis() {
+    let mut spec = basic_spec();
+    let y_axis = crate::ids::AxisId::new(2);
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn data_zoom_y_is_accepted_for_y_axes() {
+    let mut spec = basic_spec();
+    let y_axis = crate::ids::AxisId::new(2);
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(10.0),
+        max_value_span: Some(100.0),
+    });
+
+    let model = ChartModel::from_spec(spec).unwrap();
+    assert_eq!(
+        model.data_zoom_y_by_axis.get(&y_axis).copied(),
+        Some(crate::ids::DataZoomId::new(1))
+    );
 }
 
 #[test]

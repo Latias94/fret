@@ -68,6 +68,10 @@ Semantics:
   - line-family: nearest segment, with sampling at the snapped X.
   - scatter: nearest point (no interpolation).
 - When no hit exists, the pointer uses the raw cursor X for axis sampling (line-family interpolation allowed).
+- Axis-trigger tooltips are stable and complete by default:
+  - The first line is the trigger axis label/value.
+  - Then one line per visible series in `series_order`.
+  - If a series cannot be sampled at the current axis value (missing/NaN/out of range), its value is `-`.
 
 ### 3) Input -> action mapping is explicit and portable
 
@@ -110,8 +114,8 @@ Headless actions:
 - `Action::PanDataWindowYFromBase { axis, base, delta_px, viewport_span_px }`
 - `Action::ZoomDataWindowXFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
 - `Action::ZoomDataWindowYFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
-- `Action::SetDataWindowXFromZoom { axis, window }`
-- `Action::SetDataWindowYFromZoom { axis, window }`
+- `Action::SetDataWindowXFromZoom { axis, base, window, anchor }`
+- `Action::SetDataWindowYFromZoom { axis, base, window, anchor }`
 
 Semantics:
 

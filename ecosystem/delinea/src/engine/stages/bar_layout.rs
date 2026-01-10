@@ -415,6 +415,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {
@@ -557,6 +558,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {
@@ -681,6 +683,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {
@@ -805,6 +808,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {

@@ -11,9 +11,13 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
+use delinea::engine::window::DataWindow;
 use delinea::ids::{AxisId, FieldId};
+use delinea::{
+    Action, ChartSpec, DataZoomXSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode,
+    SeriesSpec,
+};
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
-use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
 use fret_chart::retained::ChartCanvas;
 
 struct ChartMultiAxisDemoWindowState {
@@ -28,6 +32,12 @@ impl ChartMultiAxisDemoDriver {
     fn build_ui(_app: &mut App, window: AppWindowId) -> ChartMultiAxisDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+
+        eprintln!(
+            "[chart_multi_axis_demo] X minSpan/maxSpan are enforced for interaction-derived zoom writes only.\n\
+             If the current span is already outside limits (e.g. programmatic set), interactions do not force it back.\n\
+             Config: X minSpan=50, maxSpan=2000; initial window [-200, 200]."
+        );
 
         ChartMultiAxisDemoWindowState { ui, root: None }
     }
@@ -84,7 +94,7 @@ impl ChartMultiAxisDemoDriver {
             axes: vec![
                 delinea::AxisSpec {
                     id: x_bottom,
-                    name: Some("X (bottom)".to_string()),
+                    name: Some("X (bottom) [minSpan=50 maxSpan=2000]".to_string()),
                     kind: AxisKind::X,
                     grid: grid_id,
                     position: Some(AxisPosition::Bottom),
@@ -93,7 +103,7 @@ impl ChartMultiAxisDemoDriver {
                 },
                 delinea::AxisSpec {
                     id: x_top,
-                    name: Some("X (top)".to_string()),
+                    name: Some("X (top) [minSpan=50 maxSpan=2000]".to_string()),
                     kind: AxisKind::X,
                     grid: grid_id,
                     position: Some(AxisPosition::Top),
@@ -119,7 +129,23 @@ impl ChartMultiAxisDemoDriver {
                     range: None,
                 },
             ],
-            data_zoom_x: vec![],
+            data_zoom_x: vec![
+                DataZoomXSpec {
+                    id: delinea::ids::DataZoomId::new(1),
+                    axis: x_bottom,
+                    filter_mode: FilterMode::Filter,
+                    min_value_span: Some(50.0),
+                    max_value_span: Some(2000.0),
+                },
+                DataZoomXSpec {
+                    id: delinea::ids::DataZoomId::new(2),
+                    axis: x_top,
+                    filter_mode: FilterMode::Filter,
+                    min_value_span: Some(50.0),
+                    max_value_span: Some(2000.0),
+                },
+            ],
+            data_zoom_y: vec![],
             axis_pointer: Some(delinea::AxisPointerSpec::default()),
             series: vec![
                 SeriesSpec {
@@ -227,6 +253,21 @@ impl ChartMultiAxisDemoDriver {
         table.push_column(Column::F64(y_right_b));
         canvas.engine_mut().datasets_mut().insert(dataset_id, table);
 
+        canvas.engine_mut().apply_action(Action::SetDataWindowX {
+            axis: x_bottom,
+            window: Some(DataWindow {
+                min: -200.0,
+                max: 200.0,
+            }),
+        });
+        canvas.engine_mut().apply_action(Action::SetDataWindowX {
+            axis: x_top,
+            window: Some(DataWindow {
+                min: -200.0,
+                max: 200.0,
+            }),
+        });
+
         canvas
     }
 }
@@ -315,7 +356,9 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo chart_multi_axis_demo (delinea + fret-chart)".to_string(),
+        main_window_title:
+            "fret-demo chart_multi_axis_demo (delinea + fret-chart, minSpan/maxSpan demo)"
+                .to_string(),
         ..Default::default()
     }
 }

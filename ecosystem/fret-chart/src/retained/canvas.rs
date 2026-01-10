@@ -6,7 +6,7 @@ use std::time::Duration;
 use delinea::FilterMode;
 use delinea::engine::EngineError;
 use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
-use delinea::engine::window::DataWindow;
+use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};
@@ -597,15 +597,19 @@ impl ChartCanvas {
             .apply_action(Action::SetDataWindowY { axis, window });
     }
 
-    fn view_window_2d_action(
+    fn view_window_2d_action_from_zoom(
         x_axis: delinea::AxisId,
         y_axis: delinea::AxisId,
+        base_x: DataWindow,
+        base_y: DataWindow,
         x: Option<DataWindow>,
         y: Option<DataWindow>,
     ) -> Action {
-        Action::SetViewWindow2D {
+        Action::SetViewWindow2DFromZoom {
             x_axis,
             y_axis,
+            base_x,
+            base_y,
             x,
             y,
         }
@@ -891,16 +895,7 @@ impl ChartCanvas {
             Size::new(plot.size.width, Px(h)),
         );
 
-        if band.rect.contains(track.origin)
-            && band.rect.contains(Point::new(
-                track.origin.x,
-                Px(track.origin.y.0 + track.size.height.0),
-            ))
-        {
-            Some(track)
-        } else {
-            Some(track)
-        }
+        Some(track)
     }
 
     fn current_window_x_for_slider(
@@ -931,6 +926,118 @@ impl ChartCanvas {
 
     fn slider_value_at(track: Rect, extent: DataWindow, px_x: f32) -> f64 {
         delinea::engine::axis::data_at_px(extent, px_x, track.origin.x.0, track.size.width.0)
+    }
+
+    fn slider_window_after_delta(
+        extent: DataWindow,
+        start_window: DataWindow,
+        delta_value: f64,
+        kind: SliderDragKind,
+    ) -> DataWindow {
+        let extent_span = extent.span();
+        if !extent_span.is_finite() || extent_span <= 0.0 {
+            return start_window;
+        }
+
+        let mut min = start_window.min;
+        let mut max = start_window.max;
+
+        if !delta_value.is_finite() || !min.is_finite() || !max.is_finite() {
+            return start_window;
+        }
+
+        match kind {
+            SliderDragKind::Pan => {
+                min += delta_value;
+                max += delta_value;
+            }
+            SliderDragKind::HandleMin => {
+                min += delta_value;
+            }
+            SliderDragKind::HandleMax => {
+                max += delta_value;
+            }
+        }
+
+        let eps = (extent_span.abs() * 1e-12).max(1e-9).max(f64::MIN_POSITIVE);
+
+        match kind {
+            SliderDragKind::Pan => {
+                let mut span = (max - min).abs();
+                if !span.is_finite() || span <= eps {
+                    span = start_window.span().abs();
+                }
+                if !span.is_finite() || span <= eps {
+                    span = eps;
+                }
+
+                if span >= extent_span {
+                    return extent;
+                }
+
+                if max <= min {
+                    max = min + span;
+                } else {
+                    span = max - min;
+                }
+
+                if min < extent.min {
+                    let d = extent.min - min;
+                    min += d;
+                    max += d;
+                }
+                if max > extent.max {
+                    let d = max - extent.max;
+                    min -= d;
+                    max -= d;
+                }
+
+                min = min.max(extent.min);
+                max = max.min(extent.max);
+
+                if max - min < eps {
+                    min = extent.min;
+                    max = (extent.min + span).min(extent.max);
+                    if max - min < eps {
+                        max = (min + eps).min(extent.max);
+                    }
+                }
+
+                if !(max > min) {
+                    return extent;
+                }
+
+                DataWindow { min, max }
+            }
+            SliderDragKind::HandleMin => {
+                let mut out_max = max.clamp(extent.min + eps, extent.max);
+                let mut out_min = min.clamp(extent.min, out_max - eps);
+                if !(out_max > out_min) {
+                    out_min = (out_max - eps).max(extent.min);
+                    if !(out_max > out_min) {
+                        out_max = (out_min + eps).min(extent.max);
+                    }
+                }
+                DataWindow {
+                    min: out_min,
+                    max: out_max,
+                }
+            }
+            SliderDragKind::HandleMax => {
+                let mut out_min = min.clamp(extent.min, extent.max - eps);
+                let mut out_max = max.clamp(out_min + eps, extent.max);
+                if !(out_max > out_min) {
+                    out_max = (out_min + eps).min(extent.max);
+                    if !(out_max > out_min) {
+                        out_min = (out_max - eps).max(extent.min);
+                    }
+                }
+                DataWindow {
+                    min: out_min,
+                    max: out_max,
+                }
+            }
+        }
     }
 
     fn y_slider_track_for_axis(&self, axis: delinea::AxisId) -> Option<Rect> {
@@ -1056,22 +1163,13 @@ impl ChartCanvas {
         (start, end)
     }
 
-    fn axis_ticks(
+    fn axis_ticks_with_labels(
         model: &delinea::engine::model::ChartModel,
         axis: delinea::AxisId,
         window: DataWindow,
         count: usize,
-    ) -> Vec<f64> {
-        delinea::engine::axis::axis_ticks_for(model, axis, window, count)
-    }
-
-    fn format_tick(
-        model: &delinea::engine::model::ChartModel,
-        axis: delinea::AxisId,
-        window: DataWindow,
-        value: f64,
-    ) -> String {
-        delinea::engine::axis::format_value_for(model, axis, window, value)
+    ) -> Vec<(f64, String)> {
+        delinea::engine::axis::axis_ticks_with_labels_for(model, axis, window, count)
     }
 
     fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
@@ -1347,7 +1445,9 @@ impl ChartCanvas {
             });
 
             let mut last_right = f32::NEG_INFINITY;
-            for value in Self::axis_ticks(model, band.axis, window, x_tick_count) {
+            for (value, label) in
+                Self::axis_ticks_with_labels(model, band.axis, window, x_tick_count)
+            {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let x_px = plot.origin.x.0 + t * plot.size.width.0;
 
@@ -1369,7 +1469,6 @@ impl ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
 
-                let label = Self::format_tick(model, band.axis, window, value);
                 let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
 
                 let label_x = x_px - metrics.size.width.0 * 0.5;
@@ -1416,7 +1515,9 @@ impl ChartCanvas {
             });
 
             let mut last_bottom = f32::NEG_INFINITY;
-            for value in Self::axis_ticks(model, band.axis, window, y_tick_count) {
+            for (value, label) in
+                Self::axis_ticks_with_labels(model, band.axis, window, y_tick_count)
+            {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let y_px = plot.origin.y.0 + (1.0 - t) * plot.size.height.0;
 
@@ -1438,7 +1539,6 @@ impl ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
 
-                let label = Self::format_tick(model, band.axis, window, value);
                 let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
 
                 let label_x = match band.position {
@@ -1946,29 +2046,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     let delta_px = x - start_x;
                                     let delta_value = (delta_px / track.size.width.0) as f64 * span;
 
-                                    let mut window = drag.start_window;
-                                    match drag.kind {
-                                        SliderDragKind::Pan => {
-                                            window.min += delta_value;
-                                            window.max += delta_value;
-                                        }
-                                        SliderDragKind::HandleMin => {
-                                            window.min += delta_value;
-                                        }
-                                        SliderDragKind::HandleMax => {
-                                            window.max += delta_value;
-                                        }
-                                    }
-                                    window.clamp_non_degenerate();
-                                    window.min = window.min.max(extent.min).min(extent.max);
-                                    window.max = window.max.max(extent.min).min(extent.max);
-                                    if window.max <= window.min {
-                                        window.max =
-                                            (window.min + f64::MIN_POSITIVE).max(window.min + 1e-9);
-                                    }
+                                    let window = Self::slider_window_after_delta(
+                                        extent,
+                                        drag.start_window,
+                                        delta_value,
+                                        drag.kind,
+                                    );
+                                    let anchor = match drag.kind {
+                                        SliderDragKind::HandleMin => WindowSpanAnchor::LockMax,
+                                        SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
+                                        SliderDragKind::Pan => WindowSpanAnchor::Center,
+                                    };
                                     self.engine.apply_action(Action::SetDataWindowXFromZoom {
                                         axis: drag.axis,
+                                        base: drag.start_window,
                                         window,
+                                        anchor,
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
@@ -1996,29 +2089,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     let delta_px = y_from_bottom - start_from_bottom;
                                     let delta_value = (delta_px / height) as f64 * span;
 
-                                    let mut window = drag.start_window;
-                                    match drag.kind {
-                                        SliderDragKind::Pan => {
-                                            window.min += delta_value;
-                                            window.max += delta_value;
-                                        }
-                                        SliderDragKind::HandleMin => {
-                                            window.min += delta_value;
-                                        }
-                                        SliderDragKind::HandleMax => {
-                                            window.max += delta_value;
-                                        }
-                                    }
-                                    window.clamp_non_degenerate();
-                                    window.min = window.min.max(extent.min).min(extent.max);
-                                    window.max = window.max.max(extent.min).min(extent.max);
-                                    if window.max <= window.min {
-                                        window.max =
-                                            (window.min + f64::MIN_POSITIVE).max(window.min + 1e-9);
-                                    }
+                                    let window = Self::slider_window_after_delta(
+                                        extent,
+                                        drag.start_window,
+                                        delta_value,
+                                        drag.kind,
+                                    );
+                                    let anchor = match drag.kind {
+                                        SliderDragKind::HandleMin => WindowSpanAnchor::LockMax,
+                                        SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
+                                        SliderDragKind::Pan => WindowSpanAnchor::Center,
+                                    };
                                     self.engine.apply_action(Action::SetDataWindowYFromZoom {
                                         axis: drag.axis,
+                                        base: drag.start_window,
                                         window,
+                                        anchor,
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
@@ -2277,6 +2363,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 return;
                             }
 
+                            let (locked_min, locked_max) = self.axis_constraints(axis);
+                            let can_pan = locked_min.is_none() && locked_max.is_none();
+                            let can_handle_min = locked_min.is_none();
+                            let can_handle_max = locked_max.is_none();
+
                             if let Some(track) = self.x_slider_track_for_axis(axis)
                                 && track.contains(*position)
                             {
@@ -2301,15 +2392,31 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     SliderDragKind::Pan
                                 };
 
+                                if matches!(kind, SliderDragKind::Pan) && !can_pan {
+                                    return;
+                                }
+                                if matches!(kind, SliderDragKind::HandleMin) && !can_handle_min {
+                                    return;
+                                }
+                                if matches!(kind, SliderDragKind::HandleMax) && !can_handle_max {
+                                    return;
+                                }
+
                                 let start_window = if matches!(kind, SliderDragKind::Pan)
                                     && !(x >= left && x <= right)
                                 {
                                     let click_value = Self::slider_value_at(track, extent, x);
                                     let half = 0.5 * window.span();
-                                    DataWindow {
+                                    let start_window = DataWindow {
                                         min: click_value - half,
                                         max: click_value + half,
-                                    }
+                                    };
+                                    Self::slider_window_after_delta(
+                                        extent,
+                                        start_window,
+                                        0.0,
+                                        SliderDragKind::Pan,
+                                    )
                                 } else {
                                     window
                                 };
@@ -2345,6 +2452,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 return;
                             }
 
+                            let (locked_min, locked_max) = self.axis_constraints(axis);
+                            let can_pan = locked_min.is_none() && locked_max.is_none();
+                            let can_handle_min = locked_min.is_none();
+                            let can_handle_max = locked_max.is_none();
+
                             if let Some(track) = self.y_slider_track_for_axis(axis)
                                 && track.contains(*position)
                             {
@@ -2375,16 +2487,32 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     SliderDragKind::Pan
                                 };
 
+                                if matches!(kind, SliderDragKind::Pan) && !can_pan {
+                                    return;
+                                }
+                                if matches!(kind, SliderDragKind::HandleMin) && !can_handle_min {
+                                    return;
+                                }
+                                if matches!(kind, SliderDragKind::HandleMax) && !can_handle_max {
+                                    return;
+                                }
+
                                 let start_window = if matches!(kind, SliderDragKind::Pan)
                                     && !(y_from_bottom >= min_handle && y_from_bottom <= max_handle)
                                 {
                                     let click_value =
                                         Self::slider_value_at_y(track, extent, position.y.0);
                                     let half = 0.5 * window.span();
-                                    DataWindow {
+                                    let start_window = DataWindow {
                                         min: click_value - half,
                                         max: click_value + half,
-                                    }
+                                    };
+                                    Self::slider_window_after_delta(
+                                        extent,
+                                        start_window,
+                                        0.0,
+                                        SliderDragKind::Pan,
+                                    )
                                 } else {
                                     window
                                 };
@@ -2425,6 +2553,26 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let Some((x_axis, y_axis)) = self.active_axes(&layout) else {
                         return;
                     };
+
+                    let x_zoom_locked = self
+                        .engine
+                        .state()
+                        .axis_locks
+                        .get(&x_axis)
+                        .copied()
+                        .unwrap_or_default()
+                        .zoom_locked;
+                    let y_zoom_locked = self
+                        .engine
+                        .state()
+                        .axis_locks
+                        .get(&y_axis)
+                        .copied()
+                        .unwrap_or_default()
+                        .zoom_locked;
+                    if x_zoom_locked || y_zoom_locked {
+                        return;
+                    }
 
                     if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some()
                     {
@@ -2593,12 +2741,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     ) {
                         let x_window = (self.axis_is_fixed(drag.x_axis).is_none()).then_some(x);
                         let y_window = (self.axis_is_fixed(drag.y_axis).is_none()).then_some(y);
-                        self.engine.apply_action(Self::view_window_2d_action(
-                            drag.x_axis,
-                            drag.y_axis,
-                            x_window,
-                            y_window,
-                        ));
+                        self.engine
+                            .apply_action(Self::view_window_2d_action_from_zoom(
+                                drag.x_axis,
+                                drag.y_axis,
+                                drag.start_x,
+                                drag.start_y,
+                                x_window,
+                                y_window,
+                            ));
                         self.refresh_hover_if_in_plot(&layout, *position);
                     }
 
@@ -3497,6 +3648,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {
@@ -3513,6 +3665,7 @@ mod tests {
                     y_axis: y_left,
                     stack: None,
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
                 SeriesSpec {
@@ -3529,6 +3682,7 @@ mod tests {
                     y_axis: y_right,
                     stack: None,
                     stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     area_baseline: None,
                 },
             ],
@@ -3586,7 +3740,12 @@ mod tests {
             max: 5.0,
         };
 
-        let action = ChartCanvas::view_window_2d_action(x_axis, y_axis, Some(x), Some(y));
+        let action = Action::SetViewWindow2D {
+            x_axis,
+            y_axis,
+            x: Some(x),
+            y: Some(y),
+        };
         match action {
             Action::SetViewWindow2D {
                 x_axis: ax,
@@ -3601,5 +3760,53 @@ mod tests {
             }
             _ => panic!("expected SetViewWindow2D"),
         }
+    }
+
+    #[test]
+    fn slider_window_after_delta_clamps_and_never_inverts() {
+        let extent = DataWindow {
+            min: 0.0,
+            max: 100.0,
+        };
+        let start = DataWindow {
+            min: 20.0,
+            max: 30.0,
+        };
+
+        let left =
+            ChartCanvas::slider_window_after_delta(extent, start, -999.0, SliderDragKind::Pan);
+        assert_eq!(
+            left,
+            DataWindow {
+                min: 0.0,
+                max: 10.0
+            }
+        );
+
+        let right =
+            ChartCanvas::slider_window_after_delta(extent, start, 999.0, SliderDragKind::Pan);
+        assert_eq!(
+            right,
+            DataWindow {
+                min: 90.0,
+                max: 100.0
+            }
+        );
+
+        let inverted_min =
+            ChartCanvas::slider_window_after_delta(extent, start, 999.0, SliderDragKind::HandleMin);
+        assert!(inverted_min.max > inverted_min.min);
+        assert_eq!(inverted_min.max, start.max);
+        assert!(inverted_min.min >= extent.min && inverted_min.max <= extent.max);
+
+        let inverted_max = ChartCanvas::slider_window_after_delta(
+            extent,
+            start,
+            -999.0,
+            SliderDragKind::HandleMax,
+        );
+        assert!(inverted_max.max > inverted_max.min);
+        assert_eq!(inverted_max.min, start.min);
+        assert!(inverted_max.min >= extent.min && inverted_max.max <= extent.max);
     }
 }

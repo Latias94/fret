@@ -1,6 +1,6 @@
 # ADR 0138: `delinea` DataZoom Component Composition + Span Policy (ECharts-Inspired)
 
-Status: Proposed (P0)
+Status: Accepted (P0)
 
 ## Context
 
@@ -8,6 +8,8 @@ We already have a working v1 zoom/pan surface:
 
 - Durable X dataZoom defaults (`DataZoomXSpec.filter_mode`) and X window state (`ChartState.data_zoom_x[axis]`).
 - Y view windows (`ChartState.data_window_y[axis]`) and 2D view updates (`Action::SetViewWindow2D`) (ADR 0136).
+- Interaction-derived 2D box zoom uses `Action::SetViewWindow2DFromZoom` so span limits can be applied
+  without changing programmatic writes (ADR 0136).
 - Interaction gating via locks (`AxisInteractionLocks`) (ADR 0135).
 - A transform/view pipeline that currently supports contiguous selection and X slicing (ADR 0129, ADR 0137).
 
@@ -22,6 +24,9 @@ Apache ECharts provides useful precedent:
 
 - `rangeMode` (`value` vs `percent`) affects how a dataZoom window behaves when the data extent changes.
 - `minSpan/maxSpan` and `minValueSpan/maxValueSpan` constrain interactive zoom ranges.
+  - In `delinea` v1, we expose this as value-space limits on `DataZoomXSpec`:
+    - `min_value_span: Option<f64>`
+    - `max_value_span: Option<f64>`
 - Multiple dataZoom models can target the same axis and share an axis proxy; the proxy applies composition.
 - `zoomLock` is treated as an interaction constraint rather than preventing API-driven range changes.
 
@@ -86,7 +91,8 @@ We define two categories of window updates:
 
 - `Action::PanDataWindow*FromBase`
 - `Action::ZoomDataWindow*FromBase`
-- `Action::SetDataWindow*FromZoom` (box zoom)
+- `Action::SetDataWindow*FromZoom` (slider / 1D zoom writes)
+- `Action::SetViewWindow2DFromZoom` (2D box zoom)
 
 **Programmatic updates** (do not apply span constraints automatically):
 
@@ -168,9 +174,5 @@ P0:
 
 P1:
 
-- Add durable span policies to the spec/model:
-  - `minSpan/maxSpan` and/or `minValueSpan/maxValueSpan` for `DataZoom*Spec`,
-  - define composition with `AxisRange` and locks.
 - Add multiple dataZoom components per axis with intersection composition.
 - Introduce `rangeMode` in spec once streaming/append data is designed (see ADR 0137 backlog).
-

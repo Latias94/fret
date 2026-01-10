@@ -1,6 +1,6 @@
 use fret_core::Point;
 
-use crate::engine::window::{DataWindowX, DataWindowY};
+use crate::engine::window::{DataWindowX, DataWindowY, WindowSpanAnchor};
 use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
 use crate::spec::FilterMode;
 use crate::transform::RowRange;
@@ -48,11 +48,15 @@ pub enum Action {
     },
     SetDataWindowXFromZoom {
         axis: AxisId,
+        base: DataWindowX,
         window: DataWindowX,
+        anchor: WindowSpanAnchor,
     },
     SetDataWindowYFromZoom {
         axis: AxisId,
+        base: DataWindowY,
         window: DataWindowY,
+        anchor: WindowSpanAnchor,
     },
     SetDataWindowX {
         axis: AxisId,
@@ -69,6 +73,14 @@ pub enum Action {
     SetViewWindow2D {
         x_axis: AxisId,
         y_axis: AxisId,
+        x: Option<DataWindowX>,
+        y: Option<DataWindowY>,
+    },
+    SetViewWindow2DFromZoom {
+        x_axis: AxisId,
+        y_axis: AxisId,
+        base_x: DataWindowX,
+        base_y: DataWindowY,
         x: Option<DataWindowX>,
         y: Option<DataWindowY>,
     },

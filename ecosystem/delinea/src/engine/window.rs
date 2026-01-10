@@ -1,6 +1,18 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum WindowSpanAnchor {
+    /// Keep the window centered.
+    #[default]
+    Center,
+    /// Keep `min` stable and adjust `max`.
+    LockMin,
+    /// Keep `max` stable and adjust `min`.
+    LockMax,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DataWindow {
@@ -22,6 +34,91 @@ impl DataWindow {
 
     pub fn span(&self) -> f64 {
         self.max - self.min
+    }
+
+    pub fn with_span(self, span: f64, anchor: WindowSpanAnchor) -> Self {
+        let span = if span.is_finite() && span > 0.0 {
+            span.max(f64::MIN_POSITIVE)
+        } else {
+            return self;
+        };
+
+        let mut out = self;
+        out.clamp_non_degenerate();
+
+        match anchor {
+            WindowSpanAnchor::Center => {
+                let center = 0.5 * (out.min + out.max);
+                out.min = center - 0.5 * span;
+                out.max = center + 0.5 * span;
+            }
+            WindowSpanAnchor::LockMin => {
+                out.max = out.min + span;
+            }
+            WindowSpanAnchor::LockMax => {
+                out.min = out.max - span;
+            }
+        }
+
+        out.clamp_non_degenerate();
+        out
+    }
+
+    /// Applies min/max span limits for interaction-derived zoom updates.
+    ///
+    /// The important invariant is that the limits do not *force* the view into range if the base
+    /// span was already outside of the limits (e.g. programmatic range writes). Instead, the limits
+    /// only prevent interactions from moving further out of bounds.
+    pub fn apply_span_limits_from_base(
+        self,
+        base: DataWindow,
+        min_value_span: Option<f64>,
+        max_value_span: Option<f64>,
+        anchor: WindowSpanAnchor,
+    ) -> Self {
+        let base = {
+            let mut base = base;
+            base.clamp_non_degenerate();
+            base
+        };
+        let mut out = self;
+        out.clamp_non_degenerate();
+
+        let base_span = base.span();
+        let next_span = out.span();
+        if !base_span.is_finite() || base_span <= 0.0 || !next_span.is_finite() || next_span <= 0.0
+        {
+            return out;
+        }
+
+        let min_value_span = min_value_span.filter(|v| v.is_finite() && *v > 0.0);
+        let max_value_span = max_value_span.filter(|v| v.is_finite() && *v > 0.0);
+        let (min_value_span, max_value_span) = match (min_value_span, max_value_span) {
+            (Some(min), Some(max)) if min > max => (Some(max), Some(max)),
+            other => other,
+        };
+
+        if next_span < base_span {
+            if let Some(min) = min_value_span {
+                if base_span >= min && next_span < min {
+                    return out.with_span(min, anchor);
+                }
+                if base_span < min && next_span < base_span {
+                    return base;
+                }
+            }
+        } else if next_span > base_span {
+            if let Some(max) = max_value_span {
+                if base_span <= max && next_span > max {
+                    return out.with_span(max, anchor);
+                }
+                if base_span > max && next_span > base_span {
+                    return base;
+                }
+            }
+        }
+
+        out
     }
 
     /// Returns a new window panned by a pixel delta.
@@ -126,7 +223,7 @@ pub type DataWindowY = DataWindow;
 
 #[cfg(test)]
 mod tests {
-    use super::DataWindow;
+    use super::{DataWindow, WindowSpanAnchor};
 
     #[test]
     fn pan_by_px_moves_window_opposite_direction() {
@@ -192,6 +289,40 @@ mod tests {
             DataWindow {
                 min: -110.0,
                 max: -100.0
+            }
+        );
+    }
+
+    #[test]
+    fn apply_span_limits_does_not_expand_when_base_is_below_min_span() {
+        let base = DataWindow { min: 0.0, max: 1.0 };
+        let requested = DataWindow { min: 0.0, max: 0.5 };
+
+        let limited =
+            requested.apply_span_limits_from_base(base, Some(10.0), None, WindowSpanAnchor::Center);
+
+        assert_eq!(limited, base);
+    }
+
+    #[test]
+    fn apply_span_limits_clamps_zoom_in_to_min_span() {
+        let base = DataWindow {
+            min: 0.0,
+            max: 20.0,
+        };
+        let requested = DataWindow {
+            min: 9.0,
+            max: 10.0,
+        };
+
+        let limited =
+            requested.apply_span_limits_from_base(base, Some(5.0), None, WindowSpanAnchor::LockMax);
+
+        assert_eq!(
+            limited,
+            DataWindow {
+                min: 5.0,
+                max: 10.0
             }
         );
     }

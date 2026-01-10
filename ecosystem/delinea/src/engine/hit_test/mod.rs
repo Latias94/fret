@@ -1,4 +1,5 @@
 use fret_core::Point;
+use std::collections::HashMap;
 
 use crate::data::DatasetStore;
 use crate::engine::HoverHit;
@@ -16,6 +17,12 @@ pub fn hover_hit_test(
     stack_dims: &StackDimsStage,
 ) -> Option<HoverHit> {
     let mut best: Option<HoverHit> = None;
+    let mut best_rank: Option<u32> = None;
+
+    let mut rank_by_series = HashMap::new();
+    for (i, series_id) in model.series_order.iter().enumerate() {
+        rank_by_series.insert(*series_id, i as u32);
+    }
 
     let hover_x = hover_px.x.0;
     let hover_y = hover_px.y.0;
@@ -155,8 +162,32 @@ pub fn hover_hit_test(
                         y_value,
                     };
 
-                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                    let rank = rank_by_series.get(&series_id).copied().unwrap_or(u32::MAX);
+                    if best.is_none() {
                         best = Some(hit);
+                        best_rank = Some(rank);
+                        continue;
+                    }
+
+                    let Some(current) = best else {
+                        continue;
+                    };
+                    let current_rank = best_rank.unwrap_or(u32::MAX);
+
+                    let eps = 1e-6_f32;
+                    if hit.dist2_px + eps < current.dist2_px {
+                        best = Some(hit);
+                        best_rank = Some(rank);
+                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
+                        // Deterministic tie-break: prefer earlier `series_order` so hover/tooltip
+                        // does not flicker across refactors that may reorder marks.
+                        if rank < current_rank {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        } else if rank == current_rank && hit.data_index < current.data_index {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        }
                     }
                 }
             }
@@ -207,8 +238,30 @@ pub fn hover_hit_test(
                         y_value,
                     };
 
-                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                    let rank = rank_by_series.get(&series_id).copied().unwrap_or(u32::MAX);
+                    if best.is_none() {
                         best = Some(hit);
+                        best_rank = Some(rank);
+                        continue;
+                    }
+
+                    let Some(current) = best else {
+                        continue;
+                    };
+                    let current_rank = best_rank.unwrap_or(u32::MAX);
+
+                    let eps = 1e-6_f32;
+                    if hit.dist2_px + eps < current.dist2_px {
+                        best = Some(hit);
+                        best_rank = Some(rank);
+                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
+                        if rank < current_rank {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        } else if rank == current_rank && hit.data_index < current.data_index {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        }
                     }
                 }
             }
@@ -273,8 +326,30 @@ pub fn hover_hit_test(
                         y_value,
                     };
 
-                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                    let rank = rank_by_series.get(&series_id).copied().unwrap_or(u32::MAX);
+                    if best.is_none() {
                         best = Some(hit);
+                        best_rank = Some(rank);
+                        continue;
+                    }
+
+                    let Some(current) = best else {
+                        continue;
+                    };
+                    let current_rank = best_rank.unwrap_or(u32::MAX);
+
+                    let eps = 1e-6_f32;
+                    if hit.dist2_px + eps < current.dist2_px {
+                        best = Some(hit);
+                        best_rank = Some(rank);
+                    } else if (hit.dist2_px - current.dist2_px).abs() <= eps {
+                        if rank < current_rank {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        } else if rank == current_rank && hit.data_index < current.data_index {
+                            best = Some(hit);
+                            best_rank = Some(rank);
+                        }
                     }
                 }
             }
@@ -351,7 +426,7 @@ mod tests {
     use crate::engine::model::ChartModel;
     use crate::ids::{AxisId, ChartId, DatasetId, GridId, LayerId, MarkId, SeriesId, StackId};
     use crate::marks::{
-        MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree,
+        MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPointsRef, MarkPolylineRef, MarkTree,
     };
     use crate::spec::{
         AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
@@ -425,6 +500,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![SeriesSpec {
                 id: series_id,
@@ -557,6 +633,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![
                 SeriesSpec {
@@ -700,6 +777,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            data_zoom_y: vec![],
             axis_pointer: None,
             series: vec![crate::spec::SeriesSpec {
                 id: series_id,
@@ -772,5 +850,150 @@ mod tests {
         assert!((hit.dist2_px - 0.0).abs() < 1e-6);
         assert!((hit.point_px.x.0 - 15.0).abs() < 1e-6);
         assert!((hit.point_px.y.0 - 25.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn hover_hit_ties_prefer_series_order_over_mark_order() {
+        let chart_id = ChartId::new(1);
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let series_a = SeriesId::new(1);
+        let series_b = SeriesId::new(2);
+        let x_field = crate::ids::FieldId::new(1);
+        let y_field = crate::ids::FieldId::new(2);
+
+        // `series_a` is earlier in `series_order`, but we will insert `series_b` marks first
+        // to ensure hit selection is deterministic and independent of mark iteration order.
+        let spec = ChartSpec {
+            id: chart_id,
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y_axis,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            axis_pointer: None,
+            series: vec![
+                SeriesSpec {
+                    id: series_a,
+                    name: Some("A".to_string()),
+                    kind: SeriesKind::Scatter,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: StackStrategy::SameSign,
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+                SeriesSpec {
+                    id: series_b,
+                    name: Some("B".to_string()),
+                    kind: SeriesKind::Scatter,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: StackStrategy::SameSign,
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                },
+            ],
+        };
+
+        let model = ChartModel::from_spec(spec).unwrap();
+
+        let mut store = DatasetStore::default();
+        store.insert(dataset_id, {
+            let mut t = DataTable::default();
+            t.push_column(Column::F64(vec![1.0]));
+            t.push_column(Column::F64(vec![2.0]));
+            t
+        });
+
+        let mut marks = MarkTree::default();
+
+        let point = Point {
+            x: fret_core::Px(10.0),
+            y: fret_core::Px(20.0),
+        };
+
+        let range_b = marks.arena.extend_points_with_indices([point], [0u32]);
+        marks.nodes.push(MarkNode {
+            id: MarkId::new(1),
+            parent: None,
+            layer: LayerId::new(1),
+            order: MarkOrderKey(0),
+            kind: MarkKind::Points,
+            source_series: Some(series_b),
+            payload: MarkPayloadRef::Points(MarkPointsRef {
+                points: range_b,
+                fill: None,
+                stroke: None,
+            }),
+        });
+
+        let range_a = marks.arena.extend_points_with_indices([point], [0u32]);
+        marks.nodes.push(MarkNode {
+            id: MarkId::new(2),
+            parent: None,
+            layer: LayerId::new(1),
+            order: MarkOrderKey(0),
+            kind: MarkKind::Points,
+            source_series: Some(series_a),
+            payload: MarkPayloadRef::Points(MarkPointsRef {
+                points: range_a,
+                fill: None,
+                stroke: None,
+            }),
+        });
+
+        let hit = hover_hit_test(&model, &store, &marks, point, &StackDimsStage::default())
+            .expect("expected a hit");
+        assert_eq!(hit.dist2_px, 0.0);
+        assert_eq!(hit.series, series_a);
     }
 }

@@ -71,6 +71,8 @@ pub struct ChartModel {
     pub axes: BTreeMap<AxisId, AxisModel>,
     pub data_zoom_x: BTreeMap<DataZoomId, DataZoomXModel>,
     pub data_zoom_x_by_axis: BTreeMap<AxisId, DataZoomId>,
+    pub data_zoom_y: BTreeMap<DataZoomId, DataZoomYModel>,
+    pub data_zoom_y_by_axis: BTreeMap<AxisId, DataZoomId>,
     pub axis_pointer: Option<AxisPointerModel>,
 
     pub series_order: Vec<SeriesId>,
@@ -89,6 +91,8 @@ impl ChartModel {
             axes: BTreeMap::default(),
             data_zoom_x: BTreeMap::default(),
             data_zoom_x_by_axis: BTreeMap::default(),
+            data_zoom_y: BTreeMap::default(),
+            data_zoom_y_by_axis: BTreeMap::default(),
             axis_pointer: None,
             series_order: Vec::default(),
             series: BTreeMap::default(),
@@ -185,12 +189,65 @@ impl ChartModel {
                     reason: "multiple data_zoom_x specs reference the same axis",
                 });
             }
+            let min_value_span = sanitize_value_span(zoom.min_value_span);
+            let max_value_span = sanitize_value_span(zoom.max_value_span);
+            let (min_value_span, max_value_span) = match (min_value_span, max_value_span) {
+                (Some(min), Some(max)) if min > max => (Some(max), Some(max)),
+                other => other,
+            };
             model.data_zoom_x.insert(
                 zoom.id,
                 DataZoomXModel {
                     id: zoom.id,
                     axis: zoom.axis,
                     filter_mode: zoom.filter_mode,
+                    min_value_span,
+                    max_value_span,
+                },
+            );
+        }
+
+        let mut zoom_ids: BTreeSet<DataZoomId> = BTreeSet::new();
+        for zoom in spec.data_zoom_y {
+            if !zoom_ids.insert(zoom.id) {
+                return Err(ModelError::DuplicateId {
+                    kind: "data_zoom_y",
+                });
+            }
+            let Some(axis) = model.axes.get(&zoom.axis) else {
+                return Err(ModelError::MissingReference {
+                    kind: "data_zoom_y.axis",
+                });
+            };
+            if axis.kind != AxisKind::Y {
+                return Err(ModelError::InvalidSpec {
+                    reason: "data_zoom_y.axis must reference a Y axis",
+                });
+            }
+            if model
+                .data_zoom_y_by_axis
+                .insert(zoom.axis, zoom.id)
+                .is_some()
+            {
+                return Err(ModelError::InvalidSpec {
+                    reason: "multiple data_zoom_y specs reference the same axis",
+                });
+            }
+
+            let min_value_span = sanitize_value_span(zoom.min_value_span);
+            let max_value_span = sanitize_value_span(zoom.max_value_span);
+            let (min_value_span, max_value_span) = match (min_value_span, max_value_span) {
+                (Some(min), Some(max)) if min > max => (Some(max), Some(max)),
+                other => other,
+            };
+
+            model.data_zoom_y.insert(
+                zoom.id,
+                DataZoomYModel {
+                    id: zoom.id,
+                    axis: zoom.axis,
+                    min_value_span,
+                    max_value_span,
                 },
             );
         }
@@ -398,6 +455,16 @@ pub struct DataZoomXModel {
     pub id: DataZoomId,
     pub axis: AxisId,
     pub filter_mode: FilterMode,
+    pub min_value_span: Option<f64>,
+    pub max_value_span: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DataZoomYModel {
+    pub id: DataZoomId,
+    pub axis: AxisId,
+    pub min_value_span: Option<f64>,
+    pub max_value_span: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -431,6 +498,10 @@ fn sanitize_px(v: f32, default: f32) -> f32 {
     } else {
         default
     }
+}
+
+fn sanitize_value_span(span: Option<f64>) -> Option<f64> {
+    span.filter(|v| v.is_finite() && *v > 0.0)
 }
 
 fn sanitize_name(name: Option<String>) -> Option<String> {

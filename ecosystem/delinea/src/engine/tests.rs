@@ -58,6 +58,7 @@ fn basic_spec() -> ChartSpec {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
@@ -132,6 +133,7 @@ fn bar_emits_rect_batch() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -229,6 +231,7 @@ fn horizontal_bar_emits_rect_batch() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -333,6 +336,7 @@ fn stacked_bar_uses_stack_base() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {
@@ -486,6 +490,7 @@ fn grouped_bars_have_distinct_x_offsets() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {
@@ -637,6 +642,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {
@@ -818,6 +824,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {
@@ -1122,6 +1129,317 @@ fn zoom_lock_prevents_zoom_window_update() {
 }
 
 #[test]
+fn min_value_span_clamps_interactive_zoom_in() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: Some(5.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: 4.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(window.span(), 5.0);
+}
+
+#[test]
+fn min_value_span_does_not_expand_when_base_is_already_below_min() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: Some(10.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow { min: 0.0, max: 1.0 };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: 1.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(window, base);
+}
+
+#[test]
+fn min_value_span_clamps_slider_handle_updates_without_moving_the_opposite_edge() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: Some(5.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::SetDataWindowXFromZoom {
+        axis: x_axis,
+        base,
+        window: DataWindow {
+            min: 19.0,
+            max: 20.0,
+        },
+        anchor: crate::engine::window::WindowSpanAnchor::LockMax,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(
+        window,
+        DataWindow {
+            min: 15.0,
+            max: 20.0
+        }
+    );
+}
+
+#[test]
+fn min_value_span_is_applied_for_box_zoom_writes() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: Some(5.0),
+        max_value_span: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base_x = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    let base_y = DataWindow {
+        min: -10.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetViewWindow2D {
+        x_axis,
+        y_axis,
+        x: Some(base_x),
+        y: Some(base_y),
+    });
+
+    engine.apply_action(Action::SetViewWindow2DFromZoom {
+        x_axis,
+        y_axis,
+        base_x,
+        base_y,
+        x: Some(DataWindow {
+            min: 9.0,
+            max: 10.0,
+        }),
+        y: Some(DataWindow {
+            min: -1.0,
+            max: 1.0,
+        }),
+    });
+
+    let x = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected x window");
+    assert_eq!(x.span(), 5.0);
+}
+
+#[test]
+fn max_value_span_clamps_interactive_zoom_out() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: Some(50.0),
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 20.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: -4.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(window.span(), 50.0);
+}
+
+#[test]
+fn max_value_span_does_not_shrink_when_base_is_already_above_max() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: Some(50.0),
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 100.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: -1.0,
+        viewport_span_px: 100.0,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(window, base);
+}
+
+#[test]
+fn max_value_span_clamps_slider_handle_updates_without_moving_the_opposite_edge() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.data_zoom_x.push(DataZoomXSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: x_axis,
+        filter_mode: FilterMode::Filter,
+        min_value_span: None,
+        max_value_span: Some(10.0),
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let base = DataWindow { min: 0.0, max: 8.0 };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::SetDataWindowXFromZoom {
+        axis: x_axis,
+        base,
+        window: DataWindow {
+            min: -20.0,
+            max: 8.0,
+        },
+        anchor: crate::engine::window::WindowSpanAnchor::LockMax,
+    });
+
+    let window = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .and_then(|s| s.window)
+        .expect("expected window");
+    assert_eq!(
+        window,
+        DataWindow {
+            min: -2.0,
+            max: 8.0
+        }
+    );
+}
+
+#[test]
 fn set_data_window_applies_axis_range_lock_min() {
     let mut spec = basic_spec();
     let x_axis = spec.axes[0].id;
@@ -1325,6 +1643,7 @@ fn band_emits_two_polylines() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -1441,6 +1760,7 @@ fn stacked_area_emits_two_polylines() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -1555,6 +1875,7 @@ fn row_range_limits_mark_indices() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -1660,6 +1981,7 @@ fn x_window_limits_mark_indices() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -1771,6 +2093,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -1879,6 +2202,7 @@ fn set_series_visible_hides_marks() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -2000,6 +2324,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -2124,6 +2449,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -2270,7 +2596,10 @@ fn data_window_filter_mode_resets_to_spec_default() {
             id: zoom_id,
             axis: x_axis,
             filter_mode: FilterMode::None,
+            min_value_span: None,
+            max_value_span: None,
         }],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -2381,7 +2710,10 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             id: zoom_id,
             axis: x_axis,
             filter_mode: FilterMode::None,
+            min_value_span: None,
+            max_value_span: None,
         }],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -2491,6 +2823,7 @@ fn hover_does_not_rebuild_marks() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec::default()),
         series: vec![SeriesSpec {
             id: series_id,
@@ -2586,6 +2919,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Item,
@@ -2700,6 +3034,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -2832,6 +3167,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -2908,6 +3244,140 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
 }
 
 #[test]
+fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_a_field = crate::ids::FieldId::new(2);
+    let y_b_field = crate::ids::FieldId::new(3);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_a_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y_b_field,
+                    column: 2,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: Some("Time".to_string()),
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: Some("Value".to_string()),
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            snap: false,
+            trigger_distance_px: 10_000.0,
+            throttle_px: 0.0,
+        }),
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: Some("A".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_a_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: Some("B".to_string()),
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_b_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    // Non-monotonic X: [0, 1, 0.5]. Hover at x=50px will prefer the nearest sample,
+    // which is the last row (x=0.5). Series A has a missing value there.
+    table.push_column(Column::F64(vec![0.0, 1.0, 0.5]));
+    table.push_column(Column::F64(vec![0.0, 1.0, f64::NAN]));
+    table.push_column(Column::F64(vec![0.0, 2.0, 20.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(50.0), Px(50.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    assert_eq!(axis_pointer.tooltip.lines[0].label, "x (Time)");
+    assert_eq!(axis_pointer.tooltip.lines[1].label, "A");
+    assert_eq!(axis_pointer.tooltip.lines[1].value, "-");
+    assert_eq!(axis_pointer.tooltip.lines[2].label, "B");
+    assert_eq!(axis_pointer.tooltip.lines[2].value, "20");
+}
+
+#[test]
 fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
@@ -2958,6 +3428,7 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec {
             enabled: true,
             trigger: crate::spec::AxisPointerTrigger::Axis,
@@ -3060,6 +3531,7 @@ fn scatter_emits_point_marks() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -3167,6 +3639,7 @@ fn scatter_large_mode_is_pixel_bounded() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
@@ -3324,6 +3797,7 @@ fn stacked_line_series_offsets_y() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {
@@ -3457,6 +3931,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![
             SeriesSpec {

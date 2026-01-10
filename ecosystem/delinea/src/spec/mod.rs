@@ -15,6 +15,7 @@ pub struct ChartSpec {
     pub grids: Vec<GridSpec>,
     pub axes: Vec<AxisSpec>,
     pub data_zoom_x: Vec<DataZoomXSpec>,
+    pub data_zoom_y: Vec<DataZoomYSpec>,
     pub axis_pointer: Option<AxisPointerSpec>,
     pub series: Vec<SeriesSpec>,
 }
@@ -160,12 +161,16 @@ pub struct AxisSpec {
     pub range: Option<AxisRange>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DataZoomXSpec {
     pub id: DataZoomId,
     pub axis: AxisId,
     pub filter_mode: FilterMode,
+    /// Minimum allowed span (in data value space) for interaction-derived zoom updates.
+    pub min_value_span: Option<f64>,
+    /// Maximum allowed span (in data value space) for interaction-derived zoom updates.
+    pub max_value_span: Option<f64>,
 }
 
 impl Default for DataZoomXSpec {
@@ -174,6 +179,30 @@ impl Default for DataZoomXSpec {
             id: DataZoomId::new(0),
             axis: AxisId::new(0),
             filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DataZoomYSpec {
+    pub id: DataZoomId,
+    pub axis: AxisId,
+    /// Minimum allowed span (in data value space) for interaction-derived zoom updates.
+    pub min_value_span: Option<f64>,
+    /// Maximum allowed span (in data value space) for interaction-derived zoom updates.
+    pub max_value_span: Option<f64>,
+}
+
+impl Default for DataZoomYSpec {
+    fn default() -> Self {
+        Self {
+            id: DataZoomId::new(0),
+            axis: AxisId::new(0),
+            min_value_span: None,
+            max_value_span: None,
         }
     }
 }

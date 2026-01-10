@@ -253,11 +253,21 @@ impl ChartEngine {
             } => {
                 self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
             }
-            Action::SetDataWindowXFromZoom { axis, window } => {
-                self.apply_zoom_set_window(axis, window);
+            Action::SetDataWindowXFromZoom {
+                axis,
+                base,
+                window,
+                anchor,
+            } => {
+                self.apply_zoom_set_window(axis, base, window, anchor);
             }
-            Action::SetDataWindowYFromZoom { axis, window } => {
-                self.apply_zoom_set_window(axis, window);
+            Action::SetDataWindowYFromZoom {
+                axis,
+                base,
+                window,
+                anchor,
+            } => {
+                self.apply_zoom_set_window(axis, base, window, anchor);
             }
             Action::SetDataWindowX { axis, window } => {
                 let range = self.axis_range(axis);
@@ -381,6 +391,86 @@ impl ChartEngine {
                     self.marks_stage.mark_dirty();
                 }
             }
+            Action::SetViewWindow2DFromZoom {
+                x_axis,
+                y_axis,
+                base_x,
+                base_y: _base_y,
+                x,
+                y,
+            } => {
+                let mut changed = false;
+
+                if !self.axis_is_fixed(x_axis) && !self.axis_locks(x_axis).zoom_locked {
+                    let x_range = self.axis_range(x_axis);
+                    let base_x = {
+                        let mut base_x = base_x;
+                        base_x.clamp_non_degenerate();
+                        base_x.apply_constraints(x_range.locked_min(), x_range.locked_max())
+                    };
+
+                    let (min_value_span, max_value_span) = self.axis_zoom_span_limits(x_axis);
+                    let default_mode = self
+                        .model
+                        .data_zoom_x_by_axis
+                        .get(&x_axis)
+                        .and_then(|id| self.model.data_zoom_x.get(id))
+                        .map(|z| z.filter_mode)
+                        .unwrap_or_default();
+
+                    let next = x.map(|mut w| {
+                        w.clamp_non_degenerate();
+                        let mut w = w.apply_constraints(x_range.locked_min(), x_range.locked_max());
+                        w = w.apply_span_limits_from_base(
+                            base_x,
+                            min_value_span,
+                            max_value_span,
+                            window::WindowSpanAnchor::Center,
+                        );
+                        w.apply_constraints(x_range.locked_min(), x_range.locked_max())
+                    });
+
+                    let entry = self
+                        .state
+                        .data_zoom_x
+                        .entry(x_axis)
+                        .or_insert(DataZoomXState {
+                            window: None,
+                            filter_mode: default_mode,
+                        });
+                    if entry.window != next {
+                        entry.window = next;
+                        changed = true;
+                    }
+                }
+
+                if !self.axis_is_fixed(y_axis) && !self.axis_locks(y_axis).zoom_locked {
+                    let y_range = self.axis_range(y_axis);
+                    let next = y.map(|mut w| {
+                        w.clamp_non_degenerate();
+                        w.apply_constraints(y_range.locked_min(), y_range.locked_max())
+                    });
+
+                    match next {
+                        Some(w) => {
+                            if self.state.data_window_y.get(&y_axis).copied() != Some(w) {
+                                self.state.data_window_y.insert(y_axis, w);
+                                changed = true;
+                            }
+                        }
+                        None => {
+                            if self.state.data_window_y.remove(&y_axis).is_some() {
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+
+                if changed {
+                    self.state.revision.bump();
+                    self.marks_stage.mark_dirty();
+                }
+            }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
                 self.state.revision.bump();
@@ -426,6 +516,15 @@ impl ChartEngine {
 
     fn axis_is_fixed(&self, axis: crate::ids::AxisId) -> bool {
         self.axis_range(axis).is_fixed()
+    }
+
+    fn axis_zoom_span_limits(&self, axis: crate::ids::AxisId) -> (Option<f64>, Option<f64>) {
+        self.model
+            .data_zoom_x_by_axis
+            .get(&axis)
+            .and_then(|id| self.model.data_zoom_x.get(id))
+            .map(|z| (z.min_value_span, z.max_value_span))
+            .unwrap_or((None, None))
     }
 
     fn apply_pan_from_base(
@@ -496,11 +595,23 @@ impl ChartEngine {
             return;
         }
 
-        base.clamp_non_degenerate();
-        let mut window = base.zoom_by_px(center_px, log2_scale, viewport_span_px);
-
         let range = self.axis_range(axis);
+        base.clamp_non_degenerate();
+        base = base.apply_constraints(range.locked_min(), range.locked_max());
+
+        let mut window = base.zoom_by_px(center_px, log2_scale, viewport_span_px);
         window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+        if axis_model.kind == crate::spec::AxisKind::X {
+            let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
+            window = window.apply_span_limits_from_base(
+                base,
+                min_value_span,
+                max_value_span,
+                window::WindowSpanAnchor::Center,
+            );
+            window = window.apply_constraints(range.locked_min(), range.locked_max());
+        }
 
         match axis_model.kind {
             crate::spec::AxisKind::X => {
@@ -529,7 +640,13 @@ impl ChartEngine {
         self.marks_stage.mark_dirty();
     }
 
-    fn apply_zoom_set_window(&mut self, axis: crate::ids::AxisId, mut window: window::DataWindow) {
+    fn apply_zoom_set_window(
+        &mut self,
+        axis: crate::ids::AxisId,
+        mut base: window::DataWindow,
+        mut window: window::DataWindow,
+        anchor: window::WindowSpanAnchor,
+    ) {
         let Some(axis_model) = self.model.axes.get(&axis) else {
             return;
         };
@@ -540,9 +657,20 @@ impl ChartEngine {
             return;
         }
 
-        window.clamp_non_degenerate();
         let range = self.axis_range(axis);
+
+        base.clamp_non_degenerate();
+        base = base.apply_constraints(range.locked_min(), range.locked_max());
+
+        window.clamp_non_degenerate();
         window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+        if axis_model.kind == crate::spec::AxisKind::X {
+            let (min_value_span, max_value_span) = self.axis_zoom_span_limits(axis);
+            window =
+                window.apply_span_limits_from_base(base, min_value_span, max_value_span, anchor);
+            window = window.apply_constraints(range.locked_min(), range.locked_max());
+        }
 
         match axis_model.kind {
             crate::spec::AxisKind::X => {
@@ -1085,7 +1213,7 @@ fn compute_axis_axis_pointer_output(
             }
         }
 
-        let Some(sample) = sample.or_else(|| {
+        let sample = sample.or_else(|| {
             if series.kind == crate::spec::SeriesKind::Bar {
                 return None;
             }
@@ -1109,9 +1237,7 @@ fn compute_axis_axis_pointer_output(
                     y0, y1, table_view,
                 )
             }
-        }) else {
-            continue;
-        };
+        });
 
         let label = series
             .name
@@ -1121,13 +1247,28 @@ fn compute_axis_axis_pointer_output(
 
         let value_axis = bar_mapping.map(|m| m.value_axis).unwrap_or(series.y_axis);
         let value_window = axis_windows.get(&value_axis).copied().unwrap_or_default();
-        let value = if let Some(y1) = sample.y1 {
-            let a =
-                crate::engine::axis::format_value_for(model, value_axis, value_window, sample.y0);
-            let b = crate::engine::axis::format_value_for(model, value_axis, value_window, y1);
-            format!("{a} .. {b}")
-        } else {
-            crate::engine::axis::format_value_for(model, value_axis, value_window, sample.y0)
+        let value = match sample {
+            Some(sample) => {
+                if let Some(y1) = sample.y1 {
+                    let a = crate::engine::axis::format_value_for(
+                        model,
+                        value_axis,
+                        value_window,
+                        sample.y0,
+                    );
+                    let b =
+                        crate::engine::axis::format_value_for(model, value_axis, value_window, y1);
+                    format!("{a} .. {b}")
+                } else {
+                    crate::engine::axis::format_value_for(
+                        model,
+                        value_axis,
+                        value_window,
+                        sample.y0,
+                    )
+                }
+            }
+            None => "-".to_string(),
         };
 
         tooltip.lines.push(TooltipLine { label, value });

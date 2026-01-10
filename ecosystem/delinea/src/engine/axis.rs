@@ -79,6 +79,29 @@ pub fn axis_ticks(axis: &AxisModel, window: DataWindow, target_count: usize) -> 
     }
 }
 
+pub fn axis_ticks_with_labels(
+    axis: &AxisModel,
+    window: DataWindow,
+    target_count: usize,
+) -> Vec<(f64, String)> {
+    let ticks = axis_ticks(axis, window, target_count);
+    match &axis.scale {
+        AxisScale::Time(_) => ticks
+            .into_iter()
+            .map(|value| {
+                (
+                    value,
+                    crate::time_axis::format_tick_with_target(window, value, target_count),
+                )
+            })
+            .collect(),
+        _ => ticks
+            .into_iter()
+            .map(|value| (value, format_axis_tick(axis, window, value)))
+            .collect(),
+    }
+}
+
 pub fn format_axis_tick(axis: &AxisModel, window: DataWindow, value: f64) -> String {
     match &axis.scale {
         AxisScale::Value(_) => crate::format::format_tick_value(window, value),
@@ -98,6 +121,24 @@ pub fn axis_ticks_for(
         .get(&axis_id)
         .map(|axis| axis_ticks(axis, window, count))
         .unwrap_or_else(|| crate::format::nice_ticks(window, count))
+}
+
+pub fn axis_ticks_with_labels_for(
+    model: &ChartModel,
+    axis_id: AxisId,
+    window: DataWindow,
+    count: usize,
+) -> Vec<(f64, String)> {
+    model
+        .axes
+        .get(&axis_id)
+        .map(|axis| axis_ticks_with_labels(axis, window, count))
+        .unwrap_or_else(|| {
+            crate::format::nice_ticks(window, count)
+                .into_iter()
+                .map(|value| (value, crate::format::format_tick_value(window, value)))
+                .collect()
+        })
 }
 
 pub fn format_value_for(
