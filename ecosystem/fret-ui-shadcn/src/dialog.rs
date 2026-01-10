@@ -10,7 +10,7 @@ use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -220,22 +220,29 @@ impl Dialog {
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let dialog = cx.visual_transform_props(
-                        VisualTransformProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(top),
-                                    left: Some(left),
-                                    right: None,
-                                    bottom: None,
-                                },
-                                overflow: Overflow::Visible,
-                                ..Default::default()
-                            },
-                            transform: zoom,
+                    let dialog_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(top),
+                            left: Some(left),
+                            right: None,
+                            bottom: None,
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
+                    };
+                    let dialog_positioned = cx.container(
+                        ContainerProps {
+                            layout: dialog_layout,
+                            ..Default::default()
                         },
                         move |_cx| vec![content],
+                    );
+                    let dialog = overlay_motion::wrap_opacity_and_render_transform(
+                        cx,
+                        opacity,
+                        zoom,
+                        vec![dialog_positioned],
                     );
 
                     let opacity_layout = LayoutStyle {
@@ -246,24 +253,22 @@ impl Dialog {
                         },
                         ..Default::default()
                     };
-                    let barrier_children = vec![barrier_fill];
-                    let open_for_children = self.open.clone();
-                    vec![cx.opacity_props(
+                    let barrier = cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout.clone(),
+                            layout: opacity_layout,
                             opacity,
                         },
-                        move |cx| {
-                            radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
-                                cx,
-                                open_for_children.clone(),
-                                dialog_options,
-                                on_dismiss_request_for_barrier.clone(),
-                                barrier_children,
-                                dialog,
-                            )
-                        },
-                    )]
+                        move |_cx| vec![barrier_fill],
+                    );
+                    let open_for_children = self.open.clone();
+                    radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
+                        cx,
+                        open_for_children.clone(),
+                        dialog_options,
+                        on_dismiss_request_for_barrier.clone(),
+                        vec![barrier],
+                        dialog,
+                    )
                 });
 
                 if let Some(content_element) = content_element_for_trigger.get() {

@@ -14,7 +14,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-09
+- Last updated: 2026-01-10
 - ADR count (numbered): 139
 
 - Aligned: 77
@@ -164,6 +164,6 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0133-delinea-interaction-and-hit-testing-contract.md`](0133-delinea-interaction-and-hit-testing-contract.md) | Proposed | Not audited |  |
 | [`0134-delinea-multi-axis-and-layout-contract.md`](0134-delinea-multi-axis-and-layout-contract.md) | Proposed | Not audited |  |
 | [`0135-window-styles-and-utility-windows.md`](0135-window-styles-and-utility-windows.md) | Proposed | Not implemented | ADR only; no portable window-style/utility-window surface wired yet. |
-| [`0136-undo-redo-infrastructure-boundary.md`](0136-undo-redo-infrastructure-boundary.md) | Proposed | Not implemented | ADR only; no shared undo/redo substrate committed yet. |
+| [`0136-undo-redo-infrastructure-boundary.md`](0136-undo-redo-infrastructure-boundary.md) | Proposed | Partially aligned | Reusable app-owned substrate in `ecosystem/fret-undo` (`UndoHistory`, `UndoService`, `ValueTx`); demo wiring in `apps/fret-examples/src/gizmo3d_demo.rs`. Gaps: focus-chain target resolution (ADR 0020) and broader command routing conventions not yet standardized in framework surfaces. |
 | [`0137-canvas-widgets-and-interactive-surfaces.md`](0137-canvas-widgets-and-interactive-surfaces.md) | Proposed | Not implemented | ADR only; `fret-canvas` ecosystem crate not created yet. |
 | [`0138-tooltip-scroll-dismissal.md`](0138-tooltip-scroll-dismissal.md) | Accepted | Aligned | Scroll dismissal: `UiTree::set_layer_scroll_dismiss_elements` (`crates/fret-ui/src/tree/layers.rs`) + dispatch in `crates/fret-ui/src/tree/dispatch.rs`; wiring in `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and `ecosystem/fret-ui-shadcn/src/tooltip.rs` (plus tests). |

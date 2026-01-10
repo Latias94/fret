@@ -20,6 +20,14 @@ pub enum GizmoOrientation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GizmoPivotMode {
+    /// The gizmo is positioned at the active target's pivot.
+    Active,
+    /// The gizmo is positioned at the selection center (average translation of targets).
+    Center,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DepthMode {
     Test,
     /// Draws regardless of depth but should be rendered *before* `Test` so visible parts can
@@ -30,6 +38,16 @@ pub enum DepthMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HandleId(pub u64);
+
+/// App-defined stable identity for targets controlled by a gizmo.
+///
+/// This is intentionally lightweight and does not imply an entity/component model. It allows
+/// applications to:
+/// - derive undo coalescing keys (ADR 0024),
+/// - maintain stable selection across frames,
+/// - map updated transforms back to domain objects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct GizmoTargetId(pub u64);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Transform3d {
@@ -52,6 +70,12 @@ impl Transform3d {
     pub fn to_mat4(self) -> Mat4 {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.translation)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GizmoTarget3d {
+    pub id: GizmoTargetId,
+    pub transform: Transform3d,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -81,6 +105,7 @@ pub struct GizmoDrawList3d {
 pub struct GizmoConfig {
     pub mode: GizmoMode,
     pub orientation: GizmoOrientation,
+    pub pivot_mode: GizmoPivotMode,
     pub depth_mode: DepthMode,
     pub depth_range: DepthRange,
     pub size_px: f32,
@@ -107,6 +132,7 @@ impl Default for GizmoConfig {
         Self {
             mode: GizmoMode::Translate,
             orientation: GizmoOrientation::World,
+            pivot_mode: GizmoPivotMode::Active,
             depth_mode: DepthMode::Test,
             depth_range: DepthRange::default(),
             size_px: 96.0,
@@ -293,7 +319,7 @@ pub struct GizmoUpdate {
     pub phase: GizmoPhase,
     pub active: HandleId,
     pub result: GizmoResult,
-    pub updated_targets: Vec<Transform3d>,
+    pub updated_targets: Vec<GizmoTarget3d>,
 }
 
 #[derive(Debug, Default)]
@@ -315,7 +341,8 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         input: GizmoInput,
-        targets: &[Transform3d],
+        active_target: GizmoTargetId,
+        targets: &[GizmoTarget3d],
     ) -> Option<GizmoUpdate> {
         if targets.is_empty() {
             self.state.hovered = None;
@@ -323,7 +350,24 @@ impl Gizmo {
             return None;
         }
 
-        let origin = targets[0].translation;
+        let active_index = targets
+            .iter()
+            .position(|t| t.id == active_target)
+            .unwrap_or(0);
+        let active_transform = targets
+            .get(active_index)
+            .map(|t| t.transform)
+            .unwrap_or_else(|| targets[0].transform);
+
+        let origin = match self.config.pivot_mode {
+            GizmoPivotMode::Active => active_transform.translation,
+            GizmoPivotMode::Center => {
+                let sum = targets
+                    .iter()
+                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
+                sum / (targets.len().max(1) as f32)
+            }
+        };
         let Some(cursor_ray) = ray_from_screen(
             view_projection,
             viewport,
@@ -333,7 +377,7 @@ impl Gizmo {
             return None;
         };
 
-        let axes = self.axis_dirs(&targets[0]);
+        let axes = self.axis_dirs(&active_transform);
         let mut hovered: Option<HandleId> = None;
         let mut hovered_kind: Option<GizmoMode> = None;
         if self.state.active.is_none() && input.hovered {
@@ -535,9 +579,12 @@ impl Gizmo {
                     };
                     let updated_targets = targets
                         .iter()
-                        .map(|t| Transform3d {
-                            translation: t.translation + delta,
-                            ..*t
+                        .map(|t| GizmoTarget3d {
+                            id: t.id,
+                            transform: Transform3d {
+                                translation: t.transform.translation + delta,
+                                ..t.transform
+                            },
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
@@ -658,9 +705,14 @@ impl Gizmo {
                     let delta_q = Quat::from_axis_angle(axis_dir, delta_apply);
                     let updated_targets = targets
                         .iter()
-                        .map(|t| Transform3d {
-                            rotation: (delta_q * t.rotation).normalize(),
-                            ..*t
+                        .map(|t| GizmoTarget3d {
+                            id: t.id,
+                            transform: Transform3d {
+                                translation: self.state.drag_origin
+                                    + delta_q * (t.transform.translation - self.state.drag_origin),
+                                rotation: (delta_q * t.transform.rotation).normalize(),
+                                ..t.transform
+                            },
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
@@ -804,13 +856,32 @@ impl Gizmo {
                     let updated_targets = targets
                         .iter()
                         .map(|t| {
-                            let mut scale = t.scale;
+                            let origin = self.state.drag_origin;
+                            let offset = t.transform.translation - origin;
+                            let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+                            let translation = if self.state.drag_scale_is_uniform {
+                                origin + offset * delta_factor
+                            } else if axis_dir.length_squared() > 0.0 {
+                                let component = axis_dir * offset.dot(axis_dir);
+                                origin + (offset + component * (delta_factor - 1.0))
+                            } else {
+                                t.transform.translation
+                            };
+
+                            let mut scale = t.transform.scale;
                             if self.state.drag_scale_is_uniform {
                                 scale *= delta_factor;
                             } else if let Some(axis) = self.state.drag_scale_axis {
                                 scale[axis] = (scale[axis] * delta_factor).max(1e-4);
                             }
-                            Transform3d { scale, ..*t }
+                            GizmoTarget3d {
+                                id: t.id,
+                                transform: Transform3d {
+                                    translation,
+                                    scale,
+                                    ..t.transform
+                                },
+                            }
                         })
                         .collect::<Vec<_>>();
 
@@ -854,10 +925,32 @@ impl Gizmo {
         &self,
         view_projection: Mat4,
         viewport: ViewportRect,
-        target: Transform3d,
+        active_target: GizmoTargetId,
+        targets: &[GizmoTarget3d],
     ) -> GizmoDrawList3d {
-        let origin = target.translation;
-        let axes = self.axis_dirs(&target);
+        if targets.is_empty() {
+            return GizmoDrawList3d::default();
+        }
+
+        let active_index = targets
+            .iter()
+            .position(|t| t.id == active_target)
+            .unwrap_or(0);
+        let active_transform = targets
+            .get(active_index)
+            .map(|t| t.transform)
+            .unwrap_or_else(|| targets[0].transform);
+
+        let origin = match self.config.pivot_mode {
+            GizmoPivotMode::Active => active_transform.translation,
+            GizmoPivotMode::Center => {
+                let sum = targets
+                    .iter()
+                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
+                sum / (targets.len().max(1) as f32)
+            }
+        };
+        let axes = self.axis_dirs(&active_transform);
         match self.config.mode {
             GizmoMode::Translate => {
                 let mut out = GizmoDrawList3d::default();
@@ -983,7 +1076,7 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         input: GizmoInput,
-        targets: &[Transform3d],
+        targets: &[GizmoTarget3d],
         cursor_ray: Ray3d,
         origin: Vec3,
         active: HandleId,
@@ -1062,7 +1155,7 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         input: GizmoInput,
-        targets: &[Transform3d],
+        targets: &[GizmoTarget3d],
         cursor_ray: Ray3d,
         origin: Vec3,
         active: HandleId,
@@ -1130,7 +1223,7 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         input: GizmoInput,
-        targets: &[Transform3d],
+        targets: &[GizmoTarget3d],
         cursor_ray: Ray3d,
         origin: Vec3,
         active: HandleId,

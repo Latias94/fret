@@ -1,28 +1,33 @@
 use anyhow::Context as _;
-use fret_app::{App, Effect, WindowRequest};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
-    DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
-    GizmoPhase, Transform3d, ViewportRect,
+    DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
+    GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d,
+    ViewportRect,
 };
 use fret_launch::{
-    EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_undo::{CoalesceKey, UndoHistory, UndoRecord};
+use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct TransformTx {
-    before: Transform3d,
-    after: Transform3d,
+#[derive(Debug, Clone, Copy)]
+struct FrameAnim {
+    start_target: Vec3,
+    start_distance: f32,
+    end_target: Vec3,
+    end_distance: f32,
+    t: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -34,6 +39,7 @@ struct OrbitCamera {
     orbiting: bool,
     panning: bool,
     last_cursor_px: Vec2,
+    frame_anim: Option<FrameAnim>,
 }
 
 impl Default for OrbitCamera {
@@ -47,6 +53,7 @@ impl Default for OrbitCamera {
             orbiting: false,
             panning: false,
             last_cursor_px: Vec2::ZERO,
+            frame_anim: None,
         }
     }
 }
@@ -148,9 +155,252 @@ struct Gizmo3dDemoGpu {
     gizmo_solid_always_pipeline: wgpu::RenderPipeline,
     thick_line_depth_pipeline: wgpu::RenderPipeline,
     thick_line_always_pipeline: wgpu::RenderPipeline,
-    cube_vb: wgpu::Buffer,
-    cube_ib: wgpu::Buffer,
-    cube_index_count: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SelectionOp {
+    Replace,
+    Add,
+    Subtract,
+    Toggle,
+}
+
+fn selection_op(modifiers: &fret_core::Modifiers) -> SelectionOp {
+    if modifiers.alt || modifiers.alt_gr {
+        SelectionOp::Subtract
+    } else if modifiers.ctrl || modifiers.meta {
+        SelectionOp::Toggle
+    } else if modifiers.shift {
+        SelectionOp::Add
+    } else {
+        SelectionOp::Replace
+    }
+}
+
+fn apply_click_selection_op(
+    selection: &mut Vec<GizmoTargetId>,
+    active_target: &mut GizmoTargetId,
+    hit: Option<GizmoTargetId>,
+    op: SelectionOp,
+) {
+    match op {
+        SelectionOp::Replace => match hit {
+            Some(id) => {
+                selection.clear();
+                selection.push(id);
+                *active_target = id;
+            }
+            None => {
+                selection.clear();
+            }
+        },
+        SelectionOp::Add => {
+            let Some(id) = hit else { return };
+            if !selection.contains(&id) {
+                selection.push(id);
+            }
+            *active_target = id;
+        }
+        SelectionOp::Subtract => {
+            let Some(id) = hit else { return };
+            if let Some(pos) = selection.iter().position(|v| *v == id) {
+                selection.remove(pos);
+                if *active_target == id {
+                    if let Some(next) = selection.first().copied() {
+                        *active_target = next;
+                    }
+                }
+            }
+        }
+        SelectionOp::Toggle => {
+            let Some(id) = hit else { return };
+            if let Some(pos) = selection.iter().position(|v| *v == id) {
+                selection.remove(pos);
+                if *active_target == id {
+                    if let Some(next) = selection.first().copied() {
+                        *active_target = next;
+                    }
+                }
+            } else {
+                selection.push(id);
+                *active_target = id;
+            }
+        }
+    }
+}
+
+fn apply_marquee_selection_op(
+    base: &[GizmoTargetId],
+    hits: &[(GizmoTargetId, f32)],
+    op: SelectionOp,
+) -> (Vec<GizmoTargetId>, Option<(GizmoTargetId, f32)>) {
+    match op {
+        SelectionOp::Replace => {
+            let result: Vec<GizmoTargetId> = hits.iter().map(|(id, _z01)| *id).collect();
+            let nearest = hits.iter().min_by(|a, b| a.1.total_cmp(&b.1)).copied();
+            (result, nearest)
+        }
+        SelectionOp::Add => {
+            let mut result = base.to_vec();
+            for (id, _z01) in hits {
+                if !result.contains(id) {
+                    result.push(*id);
+                }
+            }
+            let nearest = hits.iter().min_by(|a, b| a.1.total_cmp(&b.1)).copied();
+            (result, nearest)
+        }
+        SelectionOp::Subtract => {
+            let mut result: Vec<GizmoTargetId> = base.to_vec();
+            for (id, _z01) in hits {
+                if let Some(pos) = result.iter().position(|v| *v == *id) {
+                    result.remove(pos);
+                }
+            }
+            (result, None)
+        }
+        SelectionOp::Toggle => {
+            let mut result: Vec<GizmoTargetId> = base.to_vec();
+            let mut nearest_added: Option<(GizmoTargetId, f32)> = None;
+            for (id, z01) in hits {
+                if let Some(pos) = result.iter().position(|v| *v == *id) {
+                    result.remove(pos);
+                } else {
+                    result.push(*id);
+                    if nearest_added
+                        .as_ref()
+                        .is_none_or(|(_best_id, best_z01)| *z01 < *best_z01)
+                    {
+                        nearest_added = Some((*id, *z01));
+                    }
+                }
+            }
+            (result, nearest_added)
+        }
+    }
+}
+
+fn unit_cube_world_aabb(transform: Transform3d) -> Option<(Vec3, Vec3)> {
+    if !transform.translation.is_finite()
+        || !transform.rotation.is_finite()
+        || !transform.scale.is_finite()
+    {
+        return None;
+    }
+
+    let half = 0.4;
+    let corners = [
+        Vec3::new(-half, -half, -half),
+        Vec3::new(half, -half, -half),
+        Vec3::new(-half, half, -half),
+        Vec3::new(half, half, -half),
+        Vec3::new(-half, -half, half),
+        Vec3::new(half, -half, half),
+        Vec3::new(-half, half, half),
+        Vec3::new(half, half, half),
+    ];
+
+    let mut any = false;
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+
+    for local in corners {
+        let world = transform.rotation * (local * transform.scale) + transform.translation;
+        if !world.is_finite() {
+            continue;
+        }
+        any = true;
+        min = min.min(world);
+        max = max.max(world);
+    }
+
+    any.then_some((min, max))
+}
+
+fn targets_world_aabb(targets: &[GizmoTarget3d]) -> Option<(Vec3, Vec3)> {
+    let mut any = false;
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+
+    for t in targets {
+        let Some((tmin, tmax)) = unit_cube_world_aabb(t.transform) else {
+            continue;
+        };
+        any = true;
+        min = min.min(tmin);
+        max = max.max(tmax);
+    }
+
+    any.then_some((min, max))
+}
+
+fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
+    if camera.orbiting || camera.panning {
+        camera.frame_anim = None;
+        return false;
+    }
+
+    let Some(mut anim) = camera.frame_anim else {
+        return false;
+    };
+
+    let step = 0.18;
+    anim.t = (anim.t + step).min(1.0);
+    let t = anim.t;
+    let eased = t * t * (3.0 - 2.0 * t); // smoothstep
+
+    camera.target = anim.start_target.lerp(anim.end_target, eased);
+    camera.distance =
+        (anim.start_distance + (anim.end_distance - anim.start_distance) * eased).clamp(0.2, 25.0);
+
+    let done = (1.0 - anim.t) <= 1e-6
+        || ((camera.target - anim.end_target).length() <= 1e-3
+            && (camera.distance - anim.end_distance).abs() <= 1e-3);
+
+    if done {
+        camera.target = anim.end_target;
+        camera.distance = anim.end_distance.clamp(0.2, 25.0);
+        camera.frame_anim = None;
+        false
+    } else {
+        camera.frame_anim = Some(anim);
+        true
+    }
+}
+
+fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max: Vec3) {
+    let center = (min + max) * 0.5;
+    let radius = ((max - min).length() * 0.5).max(0.001);
+
+    let (w, h) = viewport_px;
+    let aspect = (w.max(1) as f32) / (h.max(1) as f32);
+
+    let fov_y = 55.0_f32.to_radians();
+    let fov_x = 2.0 * ((fov_y * 0.5).tan() * aspect).atan();
+    let fov = fov_y.min(fov_x).max(0.001);
+
+    let margin = 1.25;
+    let dist = (radius * margin) / (fov * 0.5).tan();
+
+    camera.frame_anim = Some(FrameAnim {
+        start_target: camera.target,
+        start_distance: camera.distance,
+        end_target: center,
+        end_distance: dist.clamp(0.2, 25.0),
+        t: 0.0,
+    });
+}
+#[derive(Debug, Clone, Copy)]
+struct PendingSelection {
+    start_cursor_px: Vec2,
+    click_count: u8,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MarqueeSelection {
+    start_cursor_px: Vec2,
+    cursor_px: Vec2,
+    op: SelectionOp,
 }
 
 #[derive(Debug)]
@@ -158,9 +408,15 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     gizmo: Gizmo,
-    target: Transform3d,
-    drag_start_target: Option<Transform3d>,
-    history: UndoHistory<TransformTx>,
+    targets: Vec<GizmoTarget3d>,
+    selection: Vec<GizmoTargetId>,
+    marquee_preview: Vec<GizmoTargetId>,
+    active_target: GizmoTargetId,
+    selection_before_select: Option<Vec<GizmoTargetId>>,
+    active_before_select: Option<GizmoTargetId>,
+    drag_start_targets: Option<Vec<GizmoTarget3d>>,
+    pending_selection: Option<PendingSelection>,
+    marquee: Option<MarqueeSelection>,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -169,17 +425,45 @@ impl Default for Gizmo3dDemoModel {
     fn default() -> Self {
         let mut gizmo_cfg = GizmoConfig::default();
         gizmo_cfg.translate_snap_step = Some(0.25);
+        let targets = vec![
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d {
+                    translation: Vec3::new(0.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.25, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(3),
+                transform: Transform3d {
+                    translation: Vec3::new(-1.0, 0.0, -0.75),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+            },
+        ];
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
-            target: Transform3d {
-                translation: Vec3::new(0.0, 0.0, 0.0),
-                rotation: Quat::IDENTITY,
-                scale: Vec3::ONE,
-            },
-            drag_start_target: None,
-            history: UndoHistory::with_limit(128),
+            targets,
+            selection: vec![GizmoTargetId(1)],
+            marquee_preview: Vec::new(),
+            active_target: GizmoTargetId(1),
+            selection_before_select: None,
+            active_before_select: None,
+            drag_start_targets: None,
+            pending_selection: None,
+            marquee: None,
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -205,6 +489,7 @@ struct Gizmo3dDemoWindowState {
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
     target: Option<Gizmo3dDemoTarget>,
     gpu: Option<Gizmo3dDemoGpu>,
+    doc: DocumentId,
 }
 
 #[derive(Default)]
@@ -230,6 +515,14 @@ impl Gizmo3dDemoDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let doc: DocumentId = "gizmo3d_demo.scene".into();
+        app.with_global_mut(
+            || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+            |undo, _app| {
+                undo.set_active_document(window, doc.clone());
+            },
+        );
+
         Gizmo3dDemoWindowState {
             ui,
             root: None,
@@ -237,6 +530,7 @@ impl Gizmo3dDemoDriver {
             demo,
             target: None,
             gpu: None,
+            doc,
         }
     }
 
@@ -687,23 +981,6 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     cache: None,
                 });
 
-        let (cube_vertices, cube_indices) = cube_mesh();
-
-        let cube_vb = context
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gizmo3d demo cube vb"),
-                contents: bytemuck::cast_slice(&cube_vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-        let cube_ib = context
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gizmo3d demo cube ib"),
-                contents: bytemuck::cast_slice(&cube_indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
-
         state.gpu = Some(Gizmo3dDemoGpu {
             uniform,
             bind_group,
@@ -712,9 +989,6 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             gizmo_solid_always_pipeline,
             thick_line_depth_pipeline,
             thick_line_always_pipeline,
-            cube_vb,
-            cube_ib,
-            cube_index_count: cube_indices.len().min(u32::MAX as usize) as u32,
         });
     }
 
@@ -726,6 +1000,8 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
         undo: bool,
     ) -> bool {
         let mut did_apply = false;
+
+        // Always cancel any in-progress gizmo interaction before applying undo/redo.
         let _ = state.demo.update(app, |m, _cx| {
             let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
             if is_dragging {
@@ -738,45 +1014,76 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 input.drag_started = false;
                 input.dragging = false;
                 input.cancel = true;
-                if let Some(update) = m.gizmo.update(
-                    view_projection,
-                    viewport,
-                    input,
-                    std::slice::from_ref(&m.target),
-                ) {
+
+                let selected: Vec<GizmoTarget3d> = m
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|t| m.selection.contains(&t.id))
+                    .collect();
+                if let Some(update) =
+                    m.gizmo
+                        .update(view_projection, viewport, input, m.active_target, &selected)
+                {
                     if update.phase == GizmoPhase::Cancel {
-                        if let Some(start) = m.drag_start_target.take() {
-                            m.target = start;
+                        if let Some(start) = m.drag_start_targets.take() {
+                            for updated in start {
+                                if let Some(target) =
+                                    m.targets.iter_mut().find(|t| t.id == updated.id)
+                                {
+                                    target.transform = updated.transform;
+                                }
+                            }
                         }
                     }
                 }
-                m.drag_start_target = None;
+                m.drag_start_targets = None;
                 m.input.cancel = false;
                 m.input.dragging = false;
                 m.input.drag_started = false;
             }
-
-            let applied = if undo {
-                m.history
-                    .undo(|rec| {
-                        m.target = rec.tx.before;
-                        Ok::<TransformTx, ()>(rec.tx)
-                    })
-                    .ok()
-                    .flatten()
-                    .is_some()
-            } else {
-                m.history
-                    .redo(|rec| {
-                        m.target = rec.tx.after;
-                        Ok::<TransformTx, ()>(rec.tx)
-                    })
-                    .ok()
-                    .flatten()
-                    .is_some()
-            };
-            did_apply |= applied;
         });
+
+        let _ = app.with_global_mut(
+            || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+            |undo_svc, app| {
+                // Ensure the window routes edit.undo/edit.redo to this viewport document.
+                undo_svc.set_active_document(window, state.doc.clone());
+
+                let applied = if undo {
+                    undo_svc
+                        .undo_active_invertible(window, |rec| {
+                            let _ = state.demo.update(app, |m, _cx| {
+                                for updated in &rec.tx.after {
+                                    if let Some(target) =
+                                        m.targets.iter_mut().find(|t| t.id == updated.id)
+                                    {
+                                        target.transform = updated.transform;
+                                    }
+                                }
+                            });
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false)
+                } else {
+                    undo_svc
+                        .redo_active_invertible(window, |rec| {
+                            let _ = state.demo.update(app, |m, _cx| {
+                                for updated in &rec.tx.after {
+                                    if let Some(target) =
+                                        m.targets.iter_mut().find(|t| t.id == updated.id)
+                                    {
+                                        target.transform = updated.transform;
+                                    }
+                                }
+                            });
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false)
+                };
+                did_apply |= applied;
+            },
+        );
 
         if did_apply {
             app.request_redraw(window);
@@ -785,25 +1092,19 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
     }
 }
 
-fn cube_mesh() -> (Vec<Vertex>, Vec<u16>) {
-    let c = [0.55, 0.58, 0.62, 1.0];
-    let v = |x: f32, y: f32, z: f32| Vertex {
-        pos: [x, y, z],
-        color: c,
-    };
-
-    let verts = vec![
-        v(-0.4, -0.4, 0.4),
-        v(0.4, -0.4, 0.4),
-        v(0.4, 0.4, 0.4),
-        v(-0.4, 0.4, 0.4),
-        v(-0.4, -0.4, -0.4),
-        v(0.4, -0.4, -0.4),
-        v(0.4, 0.4, -0.4),
-        v(-0.4, 0.4, -0.4),
+fn append_cube_triangles(out: &mut Vec<Vertex>, transform: Transform3d, color: [f32; 4]) {
+    let verts = [
+        Vec3::new(-0.4, -0.4, 0.4),
+        Vec3::new(0.4, -0.4, 0.4),
+        Vec3::new(0.4, 0.4, 0.4),
+        Vec3::new(-0.4, 0.4, 0.4),
+        Vec3::new(-0.4, -0.4, -0.4),
+        Vec3::new(0.4, -0.4, -0.4),
+        Vec3::new(0.4, 0.4, -0.4),
+        Vec3::new(-0.4, 0.4, -0.4),
     ];
 
-    let idx: Vec<u16> = vec![
+    let idx: [usize; 36] = [
         0, 1, 2, 0, 2, 3, // front
         1, 5, 6, 1, 6, 2, // right
         5, 4, 7, 5, 7, 6, // back
@@ -812,7 +1113,163 @@ fn cube_mesh() -> (Vec<Vertex>, Vec<u16>) {
         4, 5, 1, 4, 1, 0, // bottom
     ];
 
-    (verts, idx)
+    for &i in &idx {
+        let p = verts[i];
+        let p = transform.rotation * (p * transform.scale) + transform.translation;
+        out.push(Vertex {
+            pos: p.to_array(),
+            color,
+        });
+    }
+}
+
+fn pick_unit_cube_t(ray: fret_gizmo::Ray3d, transform: Transform3d) -> Option<f32> {
+    let inv_rot = transform.rotation.inverse();
+    let scale = transform.scale;
+    if !scale.is_finite() {
+        return None;
+    }
+    if scale.x.abs() < 1e-6 || scale.y.abs() < 1e-6 || scale.z.abs() < 1e-6 {
+        return None;
+    }
+
+    let origin_local = inv_rot * (ray.origin - transform.translation);
+    let dir_local = inv_rot * ray.dir;
+    let origin_local = origin_local / scale;
+    let dir_local = dir_local / scale;
+
+    let min = Vec3::splat(-0.4);
+    let max = Vec3::splat(0.4);
+
+    let mut t_min = f32::NEG_INFINITY;
+    let mut t_max = f32::INFINITY;
+
+    for axis in 0..3 {
+        let o = origin_local[axis];
+        let d = dir_local[axis];
+        if d.abs() < 1e-8 {
+            if o < min[axis] || o > max[axis] {
+                return None;
+            }
+            continue;
+        }
+
+        let mut t1 = (min[axis] - o) / d;
+        let mut t2 = (max[axis] - o) / d;
+        if t1 > t2 {
+            std::mem::swap(&mut t1, &mut t2);
+        }
+        t_min = t_min.max(t1);
+        t_max = t_max.min(t2);
+        if t_max < t_min {
+            return None;
+        }
+    }
+
+    let t = if t_min >= 0.0 { t_min } else { t_max };
+    (t.is_finite() && t >= 0.0).then_some(t)
+}
+
+fn pick_target_id(ray: fret_gizmo::Ray3d, targets: &[GizmoTarget3d]) -> Option<GizmoTargetId> {
+    let mut best_id: Option<GizmoTargetId> = None;
+    let mut best_t = f32::INFINITY;
+    for t in targets {
+        let Some(hit_t) = pick_unit_cube_t(ray, t.transform) else {
+            continue;
+        };
+        if hit_t < best_t {
+            best_t = hit_t;
+            best_id = Some(t.id);
+        }
+    }
+    best_id
+}
+
+fn marquee_rect(a: Vec2, b: Vec2) -> (Vec2, Vec2) {
+    let min = Vec2::new(a.x.min(b.x), a.y.min(b.y));
+    let max = Vec2::new(a.x.max(b.x), a.y.max(b.y));
+    (min, max)
+}
+
+fn ndc_z_to_z01(depth: DepthRange, ndc_z: f32) -> f32 {
+    match depth {
+        DepthRange::ZeroToOne => ndc_z,
+        DepthRange::NegOneToOne => (ndc_z + 1.0) * 0.5,
+    }
+    .clamp(0.0, 1.0)
+}
+
+fn project_target_screen_aabb(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    depth: DepthRange,
+    target: GizmoTarget3d,
+) -> Option<(Vec2, Vec2, f32)> {
+    let transform = target.transform;
+    if !transform.translation.is_finite()
+        || !transform.rotation.is_finite()
+        || !transform.scale.is_finite()
+    {
+        return None;
+    }
+
+    let half = 0.4;
+    let corners = [
+        Vec3::new(-half, -half, -half),
+        Vec3::new(half, -half, -half),
+        Vec3::new(-half, half, -half),
+        Vec3::new(half, half, -half),
+        Vec3::new(-half, -half, half),
+        Vec3::new(half, -half, half),
+        Vec3::new(-half, half, half),
+        Vec3::new(half, half, half),
+    ];
+
+    let mut any = false;
+    let mut min = Vec2::splat(f32::INFINITY);
+    let mut max = Vec2::splat(f32::NEG_INFINITY);
+    let mut best_z01 = f32::INFINITY;
+
+    for local in corners {
+        let world = transform.rotation * (local * transform.scale) + transform.translation;
+        let Some(p) = fret_gizmo::project_point(view_projection, viewport, world, depth) else {
+            continue;
+        };
+        if !p.screen.is_finite() || !p.w.is_finite() || p.w <= 0.0 {
+            continue;
+        }
+        any = true;
+        min = min.min(p.screen);
+        max = max.max(p.screen);
+        best_z01 = best_z01.min(ndc_z_to_z01(depth, p.ndc_z));
+    }
+
+    any.then_some((min, max, best_z01))
+}
+
+fn marquee_hits(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    depth: DepthRange,
+    targets: &[GizmoTarget3d],
+    rect_min: Vec2,
+    rect_max: Vec2,
+) -> Vec<(GizmoTargetId, f32)> {
+    let mut hits: Vec<(GizmoTargetId, f32)> = Vec::new();
+    for t in targets {
+        let Some((min, max, best_z01)) =
+            project_target_screen_aabb(view_projection, viewport, depth, *t)
+        else {
+            continue;
+        };
+
+        if max.x < rect_min.x || min.x > rect_max.x || max.y < rect_min.y || min.y > rect_max.y {
+            continue;
+        }
+
+        hits.push((t.id, best_z01));
+    }
+    hits
 }
 
 fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
@@ -843,6 +1300,35 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         state
     }
 
+    fn handle_command(
+        &mut self,
+        context: WinitCommandContext<'_, Self::WindowState>,
+        command: CommandId,
+    ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        // Prefer focused-surface command handling (e.g. local widget histories) before falling
+        // back to the window's active document undo stack (ADR 0136, ADR 0020).
+        if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+
+        match command.as_str() {
+            "edit.undo" => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, true);
+            }
+            "edit.redo" => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
+            }
+            _ => {}
+        }
+    }
+
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
         let WinitEventContext {
             app,
@@ -857,28 +1343,29 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
             Event::KeyDown {
-                key: fret_core::KeyCode::KeyZ,
-                modifiers,
-                repeat: false,
-            } if modifiers.ctrl || modifiers.meta => {
-                let redo = modifiers.shift;
-                let _ = self.handle_undo_redo_shortcut(app, window, state, !redo);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyY,
-                modifiers,
-                repeat: false,
-            } if modifiers.ctrl || modifiers.meta => {
-                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
-            }
-            Event::KeyDown {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
                 let mut did_cancel = false;
                 let _ = state.demo.update(app, |m, _cx| {
-                    let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
-                    if !is_dragging {
+                    let is_gizmo_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+                    let is_selecting = m.pending_selection.is_some() || m.marquee.is_some();
+
+                    if !is_gizmo_dragging && !is_selecting {
+                        return;
+                    }
+
+                    if is_selecting {
+                        m.pending_selection = None;
+                        m.marquee = None;
+                        m.marquee_preview.clear();
+                        if let Some(sel) = m.selection_before_select.take() {
+                            m.selection = sel;
+                        }
+                        if let Some(active) = m.active_before_select.take() {
+                            m.active_target = active;
+                        }
+                        did_cancel = true;
                         return;
                     }
 
@@ -893,15 +1380,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     input.dragging = false;
                     input.cancel = true;
 
-                    if let Some(update) = m.gizmo.update(
-                        view_projection,
-                        viewport,
-                        input,
-                        std::slice::from_ref(&m.target),
-                    ) {
+                    let selected: Vec<GizmoTarget3d> = m
+                        .targets
+                        .iter()
+                        .copied()
+                        .filter(|t| m.selection.contains(&t.id))
+                        .collect();
+
+                    if let Some(update) =
+                        m.gizmo
+                            .update(view_projection, viewport, input, m.active_target, &selected)
+                    {
                         if update.phase == GizmoPhase::Cancel {
-                            if let Some(start) = m.drag_start_target.take() {
-                                m.target = start;
+                            if let Some(start) = m.drag_start_targets.take() {
+                                for updated in start {
+                                    if let Some(target) =
+                                        m.targets.iter_mut().find(|t| t.id == updated.id)
+                                    {
+                                        target.transform = updated.transform;
+                                    }
+                                }
                             }
                             did_cancel = true;
                         }
@@ -910,6 +1408,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.input.cancel = false;
                     m.input.dragging = false;
                     m.input.drag_started = false;
+                    m.selection_before_select = None;
+                    m.active_before_select = None;
                 });
 
                 if did_cancel {
@@ -964,10 +1464,161 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                        return;
+                    }
                     m.gizmo.config.orientation = match m.gizmo.config.orientation {
                         GizmoOrientation::World => GizmoOrientation::Local,
                         GizmoOrientation::Local => GizmoOrientation::World,
                     };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyP,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                        return;
+                    }
+                    m.gizmo.config.pivot_mode = match m.gizmo.config.pivot_mode {
+                        GizmoPivotMode::Active => GizmoPivotMode::Center,
+                        GizmoPivotMode::Center => GizmoPivotMode::Active,
+                    };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyN,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() || m.selection.is_empty()
+                    {
+                        return;
+                    }
+                    let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
+                        m.active_target = m.selection[0];
+                        return;
+                    };
+                    m.active_target = m.selection[(i + 1) % m.selection.len()];
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyB,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() || m.selection.is_empty()
+                    {
+                        return;
+                    }
+                    let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
+                        m.active_target = m.selection[0];
+                        return;
+                    };
+                    m.active_target = m.selection[(i + m.selection.len() - 1) % m.selection.len()];
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyF,
+                modifiers,
+                repeat: false,
+            } => {
+                let frame_all = modifiers.shift;
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                        return;
+                    }
+
+                    let targets: Vec<GizmoTarget3d> = if frame_all || m.selection.is_empty() {
+                        m.targets.clone()
+                    } else {
+                        m.targets
+                            .iter()
+                            .copied()
+                            .filter(|t| m.selection.contains(&t.id))
+                            .collect()
+                    };
+
+                    let Some((min, max)) = targets_world_aabb(&targets) else {
+                        return;
+                    };
+                    frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyA,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let clear = modifiers.shift;
+                let _ = state.demo.update(app, |m, _cx| {
+                    let is_busy = m.input.dragging
+                        || m.gizmo.state.active.is_some()
+                        || m.pending_selection.is_some()
+                        || m.marquee.is_some();
+                    if is_busy {
+                        return;
+                    }
+
+                    if clear {
+                        m.selection.clear();
+                        m.marquee_preview.clear();
+                    } else {
+                        m.selection = m.targets.iter().map(|t| t.id).collect();
+                        if !m.selection.contains(&m.active_target) {
+                            if let Some(id) = m.selection.first().copied() {
+                                m.active_target = id;
+                            }
+                        }
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Digit1,
+                modifiers,
+                repeat: false,
+            }
+            | Event::KeyDown {
+                key: fret_core::KeyCode::Digit2,
+                modifiers,
+                repeat: false,
+            }
+            | Event::KeyDown {
+                key: fret_core::KeyCode::Digit3,
+                modifiers,
+                repeat: false,
+            } => {
+                let id = match event {
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::Digit1,
+                        ..
+                    } => GizmoTargetId(1),
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::Digit2,
+                        ..
+                    } => GizmoTargetId(2),
+                    Event::KeyDown {
+                        key: fret_core::KeyCode::Digit3,
+                        ..
+                    } => GizmoTargetId(3),
+                    _ => return,
+                };
+                let op = selection_op(modifiers);
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                        return;
+                    }
+                    apply_click_selection_op(&mut m.selection, &mut m.active_target, Some(id), op);
                 });
                 app.request_redraw(window);
             }
@@ -985,9 +1636,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             return;
         };
 
-        let _ = model.update(app, |m, _cx| {
+        let rec_to_record = model.update(app, |m, _cx| {
             if m.viewport_target != event.target {
-                return;
+                return None;
             }
 
             // Use UV instead of integer target pixels to avoid cursor quantization.
@@ -996,11 +1647,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 event.uv.1 * m.viewport_px.1 as f32,
             );
 
+            let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
+
             match event.kind {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Right,
                     ..
                 } => {
+                    m.camera.frame_anim = None;
                     m.camera.orbiting = true;
                     m.camera.panning = false;
                     m.camera.last_cursor_px = cursor_px;
@@ -1009,6 +1663,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     button: fret_core::MouseButton::Middle,
                     ..
                 } => {
+                    m.camera.frame_anim = None;
                     m.camera.panning = true;
                     m.camera.orbiting = false;
                     m.camera.last_cursor_px = cursor_px;
@@ -1073,6 +1728,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 }
                 ViewportInputKind::Wheel { delta, .. } => {
+                    m.camera.frame_anim = None;
                     // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
                     let zoom_sensitivity = 0.0015;
                     let scroll = delta.y.0;
@@ -1086,12 +1742,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Left,
                     ..
-                } => (true, true),
-                ViewportInputKind::PointerMove { buttons, .. } => {
-                    // Some platforms can produce inconsistent "buttons" state for move events.
-                    // Prefer to keep dragging latched until an explicit PointerUp arrives.
-                    (false, m.input.dragging || buttons.left)
-                }
+                } => (false, false),
+                ViewportInputKind::PointerMove { .. } => (false, m.input.dragging),
                 ViewportInputKind::PointerUp {
                     button: fret_core::MouseButton::Left,
                     ..
@@ -1109,11 +1761,207 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
 
-            let (drag_started, dragging) = if is_navigating {
+            let (mut drag_started, mut dragging) = if is_navigating {
                 (false, false)
             } else {
                 (drag_started, dragging)
             };
+
+            let view_projection = camera_view_projection(m.viewport_px, m.camera);
+            let viewport = ViewportRect::new(
+                Vec2::ZERO,
+                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
+            );
+
+            if hovered {
+                match event.kind {
+                    ViewportInputKind::PointerDown {
+                        button: fret_core::MouseButton::Left,
+                        modifiers,
+                        click_count,
+                        ..
+                    } => {
+                        let selected: Vec<GizmoTarget3d> = m
+                            .targets
+                            .iter()
+                            .copied()
+                            .filter(|t| m.selection.contains(&t.id))
+                            .collect();
+
+                        let hover_input = GizmoInput {
+                            cursor_px,
+                            hovered: true,
+                            drag_started: false,
+                            dragging: false,
+                            snap: modifiers.shift,
+                            cancel: false,
+                        };
+                        let _ = m.gizmo.update(
+                            view_projection,
+                            viewport,
+                            hover_input,
+                            m.active_target,
+                            &selected,
+                        );
+
+                        let over_handle = m.gizmo.state.hovered.is_some();
+                        if over_handle {
+                            m.pending_selection = None;
+                            m.marquee = None;
+                            m.marquee_preview.clear();
+                            m.selection_before_select = None;
+                            m.active_before_select = None;
+                            drag_started = true;
+                            dragging = true;
+                        } else {
+                            m.selection_before_select = Some(m.selection.clone());
+                            m.active_before_select = Some(m.active_target);
+                            m.pending_selection = Some(PendingSelection {
+                                start_cursor_px: cursor_px,
+                                click_count,
+                            });
+                            m.marquee = None;
+                            m.marquee_preview.clear();
+                            drag_started = false;
+                            dragging = false;
+                        }
+                    }
+                    ViewportInputKind::PointerMove { buttons, modifiers } => {
+                        const MARQUEE_THRESHOLD_PX: f32 = 4.0;
+                        let threshold_sq = MARQUEE_THRESHOLD_PX * MARQUEE_THRESHOLD_PX;
+
+                        if buttons.left {
+                            if let Some(pending) = m.pending_selection {
+                                if (cursor_px - pending.start_cursor_px).length_squared()
+                                    >= threshold_sq
+                                {
+                                    m.pending_selection = None;
+                                    m.marquee = Some(MarqueeSelection {
+                                        start_cursor_px: pending.start_cursor_px,
+                                        cursor_px,
+                                        op: selection_op(&modifiers),
+                                    });
+                                }
+                            }
+
+                            if let Some(mut marquee) = m.marquee {
+                                marquee.cursor_px = cursor_px;
+                                marquee.op = selection_op(&modifiers);
+                                m.marquee = Some(marquee);
+                            }
+
+                            if let Some(marquee) = m.marquee {
+                                let (rect_min, rect_max) =
+                                    marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+                                let hits = marquee_hits(
+                                    view_projection,
+                                    viewport,
+                                    m.gizmo.config.depth_range,
+                                    &m.targets,
+                                    rect_min,
+                                    rect_max,
+                                );
+
+                                let (preview, _nearest) =
+                                    apply_marquee_selection_op(&m.selection, &hits, marquee.op);
+                                m.marquee_preview = preview;
+                            } else {
+                                m.marquee_preview.clear();
+                            }
+
+                            if m.pending_selection.is_some() || m.marquee.is_some() {
+                                drag_started = false;
+                                dragging = false;
+                            }
+                        }
+                    }
+                    ViewportInputKind::PointerUp {
+                        button: fret_core::MouseButton::Left,
+                        modifiers,
+                        click_count: _click_count,
+                        ..
+                    } => {
+                        let is_gizmo_dragging = m.gizmo.state.active.is_some() || m.input.dragging;
+                        if is_gizmo_dragging {
+                            m.pending_selection = None;
+                            m.marquee = None;
+                            m.marquee_preview.clear();
+                            m.selection_before_select = None;
+                            m.active_before_select = None;
+                        } else {
+                            if let Some(marquee) = m.marquee.take() {
+                                let op = selection_op(&modifiers);
+                                let (rect_min, rect_max) =
+                                    marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+                                let hits = marquee_hits(
+                                    view_projection,
+                                    viewport,
+                                    m.gizmo.config.depth_range,
+                                    &m.targets,
+                                    rect_min,
+                                    rect_max,
+                                );
+
+                                let (selection, nearest) =
+                                    apply_marquee_selection_op(&m.selection, &hits, op);
+                                m.selection = selection;
+
+                                if !m.selection.contains(&m.active_target) {
+                                    if let Some((id, _z01)) = nearest {
+                                        m.active_target = id;
+                                    } else if let Some(id) = m.selection.first().copied() {
+                                        m.active_target = id;
+                                    }
+                                }
+
+                                m.pending_selection = None;
+                                m.marquee_preview.clear();
+                                m.selection_before_select = None;
+                                m.active_before_select = None;
+                            } else if let Some(pending) = m.pending_selection.take() {
+                                let op = selection_op(&modifiers);
+                                if let Some(ray) = fret_gizmo::ray_from_screen(
+                                    view_projection,
+                                    viewport,
+                                    cursor_px,
+                                    m.gizmo.config.depth_range,
+                                ) {
+                                    let hit = pick_target_id(ray, &m.targets);
+                                    apply_click_selection_op(
+                                        &mut m.selection,
+                                        &mut m.active_target,
+                                        hit,
+                                        op,
+                                    );
+
+                                    if pending.click_count >= 2 && !m.selection.is_empty() {
+                                        let targets: Vec<GizmoTarget3d> = m
+                                            .targets
+                                            .iter()
+                                            .copied()
+                                            .filter(|t| m.selection.contains(&t.id))
+                                            .collect();
+                                        if let Some((min, max)) = targets_world_aabb(&targets) {
+                                            frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                                        }
+                                    }
+                                } else if matches!(op, SelectionOp::Replace) {
+                                    m.selection.clear();
+                                }
+                                m.marquee_preview.clear();
+                                m.selection_before_select = None;
+                                m.active_before_select = None;
+                            }
+
+                            m.pending_selection = None;
+                            m.marquee = None;
+                            drag_started = false;
+                            dragging = false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
 
             m.input = GizmoInput {
                 cursor_px,
@@ -1124,51 +1972,90 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 cancel: false,
             };
 
-            let view_projection = camera_view_projection(m.viewport_px, m.camera);
-            let viewport = ViewportRect::new(
-                Vec2::ZERO,
-                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-            );
+            let selected: Vec<GizmoTarget3d> = m
+                .targets
+                .iter()
+                .copied()
+                .filter(|t| m.selection.contains(&t.id))
+                .collect();
+
+            let apply_updated_targets =
+                |targets: &mut Vec<GizmoTarget3d>, updated: &[GizmoTarget3d]| {
+                    for u in updated {
+                        if let Some(t) = targets.iter_mut().find(|t| t.id == u.id) {
+                            t.transform = u.transform;
+                        }
+                    }
+                };
+
             if let Some(update) = m.gizmo.update(
                 view_projection,
                 viewport,
                 m.input,
-                std::slice::from_ref(&m.target),
+                m.active_target,
+                &selected,
             ) {
                 match update.phase {
                     GizmoPhase::Begin => {
-                        m.drag_start_target = Some(m.target);
-                        m.target = update.updated_targets[0];
+                        m.drag_start_targets = Some(selected.clone());
+                        apply_updated_targets(&mut m.targets, &update.updated_targets);
                     }
                     GizmoPhase::Update => {
-                        m.target = update.updated_targets[0];
+                        apply_updated_targets(&mut m.targets, &update.updated_targets);
                     }
                     GizmoPhase::Commit => {
-                        if let Some(before) = m.drag_start_target.take() {
-                            let after = m.target;
-                            if before != after {
-                                let tool = match update.result {
-                                    fret_gizmo::GizmoResult::Translation { .. } => {
-                                        "gizmo.translate"
-                                    }
-                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
-                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
-                                };
-                                let rec = UndoRecord::new(TransformTx { before, after })
-                                    .label("Transform")
-                                    .coalesce_key(CoalesceKey::from(tool));
-                                m.history.record_or_coalesce(rec);
+                        let Some(before) = m.drag_start_targets.take() else {
+                            return rec_to_record;
+                        };
+                        let mut after: Vec<GizmoTarget3d> = Vec::with_capacity(before.len());
+                        for t in &before {
+                            if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
+                                after.push(*now);
                             }
+                        }
+
+                        if before != after {
+                            let tool = match update.result {
+                                fret_gizmo::GizmoResult::Translation { .. } => "gizmo.translate",
+                                fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                            };
+
+                            let mut sel = m.selection.clone();
+                            sel.sort_by_key(|id| id.0);
+                            let sel_key = sel
+                                .iter()
+                                .map(|id| id.0.to_string())
+                                .collect::<Vec<_>>()
+                                .join(",");
+                            let coalesce_key =
+                                format!("{tool}:active={}:sel={sel_key}", m.active_target.0);
+
+                            let rec = UndoRecord::new(ValueTx::new(before, after))
+                                .label("Transform")
+                                .coalesce_key(CoalesceKey::from(coalesce_key));
+                            rec_to_record = Some(rec);
                         }
                     }
                     GizmoPhase::Cancel => {
-                        if let Some(start) = m.drag_start_target.take() {
-                            m.target = start;
+                        if let Some(start) = m.drag_start_targets.take() {
+                            apply_updated_targets(&mut m.targets, &start);
                         }
                     }
                 }
             }
+
+            rec_to_record
         });
+
+        if let Ok(Some(rec)) = rec_to_record {
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+                |undo_svc, _app| {
+                    undo_svc.record_or_coalesce_active(event.window, rec);
+                },
+            );
+        }
 
         app.request_redraw(event.window);
     }
@@ -1182,29 +2069,90 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         renderer: &mut Renderer,
         _scale_factor: f32,
         _tick_id: fret_runtime::TickId,
-        frame_id: fret_runtime::FrameId,
+        _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
         let (_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
         Self::ensure_gpu(state, context);
 
+        let animating = state
+            .demo
+            .update(app, |m, _cx| step_frame_anim(&mut m.camera))
+            .unwrap_or(false);
+        if animating {
+            app.request_redraw(window);
+        }
+
         let gpu = state.gpu.as_ref().expect("gpu ensured");
 
-        let (draw, thickness_px, view_proj) = state
+        let (
+            scene_targets,
+            selection,
+            active_target,
+            draw,
+            thickness_px,
+            view_proj,
+            marquee,
+            depth,
+        ) = state
             .demo
             .read(app, |_app, m| {
                 let view_proj = camera_view_projection(size, m.camera);
-                (
+
+                let marquee = m.marquee;
+                let selection = if marquee.is_some() {
+                    m.marquee_preview.clone()
+                } else {
+                    m.selection.clone()
+                };
+                let active_target = if selection.contains(&m.active_target) {
+                    m.active_target
+                } else {
+                    selection.first().copied().unwrap_or(m.active_target)
+                };
+
+                let draw = if marquee.is_some() {
+                    GizmoDrawList3d::default()
+                } else {
+                    let gizmo_targets: Vec<GizmoTarget3d> = m
+                        .targets
+                        .iter()
+                        .copied()
+                        .filter(|t| selection.contains(&t.id))
+                        .collect();
                     m.gizmo.draw(
                         view_proj,
                         ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                        m.target,
-                    ),
-                    m.gizmo.config.line_thickness_px,
+                        active_target,
+                        &gizmo_targets,
+                    )
+                };
+                let thickness_px = m.gizmo.config.line_thickness_px;
+                let depth = m.gizmo.config.depth_range;
+
+                (
+                    m.targets.clone(),
+                    selection,
+                    active_target,
+                    draw,
+                    thickness_px,
                     view_proj,
+                    marquee,
+                    depth,
                 )
             })
-            .unwrap_or_else(|_| (GizmoDrawList3d::default(), 6.0, Mat4::IDENTITY));
+            .unwrap_or_else(|_| {
+                (
+                    Vec::new(),
+                    Vec::new(),
+                    GizmoTargetId(0),
+                    GizmoDrawList3d::default(),
+                    6.0,
+                    Mat4::IDENTITY,
+                    None,
+                    DepthRange::ZeroToOne,
+                )
+            });
 
         let uniforms = Uniforms {
             view_proj: view_proj.to_cols_array_2d(),
@@ -1213,6 +2161,29 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         context
             .queue
             .write_buffer(&gpu.uniform, 0, bytemuck::bytes_of(&uniforms));
+
+        let mut cube_verts: Vec<Vertex> = Vec::new();
+        for t in &scene_targets {
+            let is_selected = selection.contains(&t.id);
+            let color = if t.id == active_target {
+                [1.0, 0.85, 0.2, 1.0]
+            } else if is_selected {
+                [0.25, 0.85, 0.35, 1.0]
+            } else {
+                [0.55, 0.58, 0.62, 1.0]
+            };
+            append_cube_triangles(&mut cube_verts, t.transform, color);
+        }
+
+        let cube_vb = (!cube_verts.is_empty()).then(|| {
+            context
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("gizmo3d demo cubes vb"),
+                    contents: bytemuck::cast_slice(&cube_verts),
+                    usage: wgpu::BufferUsages::VERTEX,
+                })
+        });
 
         let mut solid_verts_test: Vec<Vertex> = Vec::new();
         let mut solid_verts_ghost: Vec<Vertex> = Vec::new();
@@ -1247,6 +2218,79 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 DepthMode::Test => push_thick_line_quad(&mut line_verts_test, a, b, color),
                 DepthMode::Ghost => push_thick_line_quad(&mut line_verts_ghost, a, b, color),
                 DepthMode::Always => push_thick_line_quad(&mut line_verts_always, a, b, color),
+            }
+        }
+
+        if let Some(marquee) = marquee {
+            let viewport = ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+            let (mut rect_min, mut rect_max) =
+                marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+            rect_min.x = rect_min.x.clamp(viewport.min.x, viewport.max().x);
+            rect_min.y = rect_min.y.clamp(viewport.min.y, viewport.max().y);
+            rect_max.x = rect_max.x.clamp(viewport.min.x, viewport.max().x);
+            rect_max.y = rect_max.y.clamp(viewport.min.y, viewport.max().y);
+
+            let corners = [
+                Vec2::new(rect_min.x, rect_min.y),
+                Vec2::new(rect_max.x, rect_min.y),
+                Vec2::new(rect_max.x, rect_max.y),
+                Vec2::new(rect_min.x, rect_max.y),
+            ];
+
+            let z01 = 0.001;
+            let mut w = [Vec3::ZERO; 4];
+            let mut ok = true;
+            for (i, s) in corners.iter().enumerate() {
+                if let Some(p) = fret_gizmo::unproject_point(view_proj, viewport, *s, depth, z01) {
+                    w[i] = p;
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if ok {
+                let (fill, border) = match marquee.op {
+                    SelectionOp::Replace => ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90]),
+                    SelectionOp::Add => ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90]),
+                    SelectionOp::Subtract => ([1.00, 0.25, 0.25, 0.10], [1.00, 0.25, 0.25, 0.90]),
+                    SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
+                };
+
+                solid_verts_always.push(Vertex {
+                    pos: w[0].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[1].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[2].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[0].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[2].to_array(),
+                    color: fill,
+                });
+                solid_verts_always.push(Vertex {
+                    pos: w[3].to_array(),
+                    color: fill,
+                });
+
+                let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
+                for (a, b) in edges {
+                    push_thick_line_quad(
+                        &mut line_verts_always,
+                        w[a].to_array(),
+                        w[b].to_array(),
+                        border,
+                    );
+                }
             }
         }
 
@@ -1346,10 +2390,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
             pass.set_bind_group(0, &gpu.bind_group, &[]);
 
-            pass.set_pipeline(&gpu.tri_pipeline);
-            pass.set_vertex_buffer(0, gpu.cube_vb.slice(..));
-            pass.set_index_buffer(gpu.cube_ib.slice(..), wgpu::IndexFormat::Uint16);
-            pass.draw_indexed(0..gpu.cube_index_count, 0, 0..1);
+            if let Some(cube_vb) = &cube_vb {
+                pass.set_pipeline(&gpu.tri_pipeline);
+                pass.set_vertex_buffer(0, cube_vb.slice(..));
+                pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
+            }
 
             if let Some(solid_vb_ghost) = &solid_vb_ghost {
                 pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
@@ -1402,7 +2447,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 );
             }
 
-            let _ = frame_id;
+            let _ = _frame_id;
         }
 
         EngineFrameUpdate {

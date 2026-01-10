@@ -1580,6 +1580,10 @@ dependencies = [
 [[package]]
 name = "fret-undo"
 version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "slotmap",
+]
 
 [[package]]
 name = "fretboard"

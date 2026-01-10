@@ -1407,8 +1407,8 @@ pub fn render<H: UiHost>(
                                         opacity,
                                     },
                                     move |cx| {
-                                        vec![cx.visual_transform_props(
-                                            fret_ui::element::VisualTransformProps {
+                                        vec![cx.render_transform_props(
+                                            fret_ui::element::RenderTransformProps {
                                                 layout: fret_ui::element::LayoutStyle::default(),
                                                 transform: slide,
                                             },

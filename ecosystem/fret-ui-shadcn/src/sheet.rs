@@ -6,9 +6,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges,
-    OpacityProps, Overflow, PositionStyle, SemanticsProps, SizeStyle, TextProps,
-    VisualTransformProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -394,38 +393,21 @@ impl Sheet {
                         opacity,
                     );
 
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    vec![cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout.clone(),
-                            opacity,
-                        },
-                        move |cx| {
-                            let content = cx.visual_transform_props(
-                                VisualTransformProps {
-                                    layout: opacity_layout,
-                                    transform: slide,
-                                },
-                                move |_cx| vec![wrapper],
-                            );
+                    let content = overlay_motion::wrap_opacity_and_render_transform(
+                        cx,
+                        opacity,
+                        slide,
+                        vec![wrapper],
+                    );
 
-                            radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
-                                cx,
-                                open_for_children.clone(),
-                                dialog_options,
-                                on_dismiss_request_for_barrier.clone(),
-                                vec![barrier_fill],
-                                content,
-                            )
-                        },
-                    )]
+                    radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
+                        cx,
+                        open_for_children.clone(),
+                        dialog_options,
+                        on_dismiss_request_for_barrier.clone(),
+                        vec![barrier_fill],
+                        content,
+                    )
                 });
 
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(

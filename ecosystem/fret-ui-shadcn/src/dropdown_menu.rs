@@ -9,9 +9,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    OpacityProps, Overflow, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1700,29 +1700,8 @@ impl DropdownMenu {
                         },
                     );
 
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let content = cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout.clone(),
-                            opacity,
-                        },
-                        move |cx| {
-                            vec![cx.visual_transform_props(
-                                VisualTransformProps {
-                                    layout: opacity_layout,
-                                    transform,
-                                },
-                                move |_cx| vec![content],
-                            )]
-                        },
-                    );
+                    let content =
+                        overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                     let dismissible_on_pointer_move =
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
@@ -2384,33 +2363,16 @@ impl DropdownMenu {
                                             true,
                                         );
 
-                                        let opacity_layout = LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        };
                                         let opacity = submenu_opacity;
                                         let submenu_panel = cx.interactivity_gate(
                                             submenu_motion.present,
                                             submenu_is_open,
                                             move |cx| {
-                                                vec![cx.opacity_props(
-                                                    OpacityProps {
-                                                        layout: opacity_layout.clone(),
-                                                        opacity,
-                                                    },
-                                                    move |cx| {
-                                                        vec![cx.visual_transform_props(
-                                                            VisualTransformProps {
-                                                                layout: opacity_layout,
-                                                                transform,
-                                                            },
-                                                            move |_cx| vec![submenu_panel],
-                                                        )]
-                                                    },
+                                                vec![overlay_motion::wrap_opacity_and_render_transform(
+                                                    cx,
+                                                    opacity,
+                                                    transform,
+                                                    vec![submenu_panel],
                                                 )]
                                             },
                                         );
@@ -4310,10 +4272,42 @@ mod tests {
 
         // Choose a point near the "Other" item's right edge, so the pointer direction is towards
         // the right-side submenu panel and Radix-style pointer grace intent should apply.
-        let safe_point = Point::new(
-            Px(other.bounds.origin.x.0 + other.bounds.size.width.0 - 2.0),
-            Px(other.bounds.origin.y.0 + other.bounds.size.height.0 * 0.75),
-        );
+        //
+        // Note: the menu content may be wrapped in a render transform (motion). The semantics
+        // snapshot bounds are not guaranteed to map 1:1 to interactive hit testing, so locate a
+        // real hit-testable point for the menu item.
+        let mut safe_point: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(4) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(4) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                let Some(hit) = ui.debug_hit_test(pos).hit else {
+                    continue;
+                };
+                if ui.debug_node_path(hit).contains(&other.id) {
+                    safe_point = match safe_point {
+                        None => Some(pos),
+                        Some(prev) => {
+                            if pos.x.0 > prev.x.0 {
+                                Some(pos)
+                            } else {
+                                Some(prev)
+                            }
+                        }
+                    };
+                }
+            }
+        }
+        let safe_point = safe_point.unwrap_or_else(|| {
+            panic!(
+                "failed to find hit-testable point for menu item; other={:?} other_bounds={:?} hit@center={:?}",
+                other.id,
+                other.bounds,
+                ui.debug_hit_test(Point::new(
+                    Px(other.bounds.origin.x.0 + other.bounds.size.width.0 * 0.5),
+                    Px(other.bounds.origin.y.0 + other.bounds.size.height.0 * 0.5),
+                )),
+            );
+        });
 
         // Sanity: chosen point must actually hover the "Other" item.
         let hit = ui.debug_hit_test(safe_point);

@@ -14,9 +14,7 @@ use std::time::Duration;
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
-use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, OpacityProps, SizeStyle, VisualTransformProps,
-};
+use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
@@ -486,28 +484,11 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
 
         let out = render(cx, layout);
 
-        let mut overlay_layout = LayoutStyle::default();
-        overlay_layout.size = SizeStyle {
-            width: Length::Fill,
-            height: Length::Fill,
-            ..Default::default()
-        };
-        let overlay_layout_for_transform = overlay_layout.clone();
-        let overlay_content = cx.opacity_props(
-            OpacityProps {
-                layout: overlay_layout,
-                opacity: out.opacity,
-            },
-            move |cx| {
-                let content = cx.visual_transform_props(
-                    VisualTransformProps {
-                        layout: overlay_layout_for_transform,
-                        transform: out.transform,
-                    },
-                    move |_cx| out.children,
-                );
-                vec![content]
-            },
+        let overlay_content = crate::declarative::overlay_motion::wrap_opacity_and_render_transform(
+            cx,
+            out.opacity,
+            out.transform,
+            out.children,
         );
 
         vec![overlay_content]

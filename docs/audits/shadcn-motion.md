@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Overlay Motion Taxonomy
+# shadcn/ui v4 Audit: Overlay Motion Taxonomy
 
 This audit documents how Fret models the shadcn/ui v4 motion taxonomy used across overlay-ish
 components (Popover/Tooltip/HoverCard/Sheet/etc.) and highlights remaining gaps.
@@ -33,6 +33,31 @@ Fret does not have CSS animation events. Motion is composed from:
 - Easing presets (including shadcn cubic-bezier): `ecosystem/fret-ui-kit/src/headless/easing.rs`
 - Transform math helpers: `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`
 - Per-component wiring in `ecosystem/fret-ui-shadcn/src/*`.
+
+### Input semantics (hit testing)
+
+In DOM/CSS, animated transforms affect pointer targeting (clicks land where the content appears).
+Fret models this explicitly:
+
+- Use `RenderTransform` for interactive overlay motion so hit-testing and pointer event coordinates
+  are mapped through the inverse transform.
+- Reserve `VisualTransform` for paint-only transforms (decorations, spinners, arrows) that do not
+  need to participate in hit testing.
+
+Evidence:
+
+- Render-time transform primitive: `crates/fret-ui/src/element.rs` (`RenderTransformProps`)
+- Hit-testing applies inverse render transform: `crates/fret-ui/src/tree/hit_test.rs`
+- shadcn overlay wiring uses the shared `wrap_opacity_and_render_transform(...)` helper for motion
+  wrappers (to keep hit testing aligned with the visual transform):
+  `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`,
+  `ecosystem/fret-ui-shadcn/src/overlay_motion.rs`,
+  `ecosystem/fret-ui-shadcn/src/dialog.rs`,
+  `ecosystem/fret-ui-shadcn/src/popover.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
+  `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs`,
+  `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`,
+  `ecosystem/fret-ui-shadcn/src/select.rs`.
 
 ### Motion primitives (math)
 

@@ -10,4 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
+fret-core = { path = "../../crates/fret-core" }
 
+[dev-dependencies]
+slotmap = { workspace = true }

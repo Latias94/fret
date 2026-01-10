@@ -8,8 +8,8 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
-    RovingFocusProps, SizeStyle, TextProps, VisualTransformProps,
+    PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1987,29 +1987,8 @@ impl ContextMenu {
                         },
                     );
 
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let content = cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout.clone(),
-                            opacity,
-                        },
-                        move |cx| {
-                            vec![cx.visual_transform_props(
-                                VisualTransformProps {
-                                    layout: opacity_layout,
-                                    transform,
-                                },
-                                move |_cx| vec![content],
-                            )]
-                        },
-                    );
+                    let content =
+                        overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                     let dismissible_on_pointer_move =
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
@@ -2099,33 +2078,16 @@ impl ContextMenu {
                                 true,
                             );
 
-                            let opacity_layout = LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            };
                             let opacity = submenu_opacity;
                             let submenu_panel = cx.interactivity_gate(
                                 submenu_motion.present,
                                 submenu_is_open,
                                 move |cx| {
-                                    vec![cx.opacity_props(
-                                        OpacityProps {
-                                            layout: opacity_layout.clone(),
-                                            opacity,
-                                        },
-                                        move |cx| {
-                                            vec![cx.visual_transform_props(
-                                                VisualTransformProps {
-                                                    layout: opacity_layout,
-                                                    transform,
-                                                },
-                                                move |_cx| vec![submenu_panel],
-                                            )]
-                                        },
+                                    vec![overlay_motion::wrap_opacity_and_render_transform(
+                                        cx,
+                                        opacity,
+                                        transform,
+                                        vec![submenu_panel],
                                     )]
                                 },
                             );

@@ -8,8 +8,8 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
-    ScrollProps, SizeStyle, StackProps, TextProps, VisualTransformProps,
+    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollProps,
+    SizeStyle, StackProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1738,29 +1738,8 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        let opacity_layout = LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-                        let animated = cx.opacity_props(
-                            OpacityProps {
-                                layout: opacity_layout.clone(),
-                                opacity,
-                            },
-                            move |cx| {
-                                vec![cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout: opacity_layout,
-                                        transform,
-                                    },
-                                    move |_cx| vec![content],
-                                )]
-                            },
-                        );
+                        let animated =
+                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                         {
                             let mut state = trigger_state_for_overlay
