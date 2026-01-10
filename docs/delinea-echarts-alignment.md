@@ -235,6 +235,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 ### Performance & large data
 
 - `[x]` Explicit progressive stepping budget (ADR 0132).
+- `[x]` Progressive stepping does not rely on pointer-driven invalidation.
+  - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (requests animation frames while unfinished) +
+    `crates/fret-ui/src/tree/paint.rs` (clears stale paint cache entries when caching is disabled for a node).
 - `[x]` No per-frame allocations in core stages (target; enforce via tests/benchmarks over time).
 - `[~]` Series-specific LOD / downsampling strategies (scatter vs line vs bar) (needs a conformance harness).
 - `[ ]` Append/update semantics (ECharts `appendData`) (deferred; likely needs dataset storage contract work).
@@ -253,7 +256,6 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Fix progressive render scheduling so charts finish rendering without pointer-driven redraws (validate on desktop + wasm).
-2. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity), then add conformance tests.
-3. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
-4. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.
+1. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity), then add conformance tests.
+2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
+3. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.

@@ -13,8 +13,9 @@ use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
-    Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
+    Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
+use fret_runtime::Effect;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -140,6 +141,7 @@ pub struct ChartCanvas {
     style: ChartStyle,
     style_source: ChartStyleSource,
     last_theme_revision: u64,
+    force_uncached_paint: bool,
     input_map: ChartInputMap,
     last_bounds: Rect,
     last_layout: ChartLayout,
@@ -188,6 +190,7 @@ impl ChartCanvas {
             style: ChartStyle::default(),
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
+            force_uncached_paint: true,
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
             last_layout: ChartLayout::default(),
@@ -1840,6 +1843,10 @@ impl ChartCanvas {
 }
 
 impl<H: UiHost> Widget<H> for ChartCanvas {
+    fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+        self.force_uncached_paint.then_some(Transform2D::IDENTITY)
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
             Event::KeyDown { key, modifiers, .. } => {
@@ -2926,8 +2933,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             steps_ran = steps_ran.saturating_add(1);
         }
 
+        self.force_uncached_paint = unfinished;
+
         if unfinished && let Some(window) = cx.window {
-            cx.app.request_redraw(window);
+            cx.app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
         self.rebuild_paths_if_needed(cx);

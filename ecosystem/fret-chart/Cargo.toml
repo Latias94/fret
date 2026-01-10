@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-runtime = { path = "../../crates/fret-runtime" }
 delinea = { path = "../delinea" }
 
 [dev-dependencies]

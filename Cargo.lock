@@ -1165,6 +1165,7 @@ dependencies = [
  "delinea",
  "fret-app",
  "fret-core",
+ "fret-runtime",
  "fret-ui",
 ]
 
