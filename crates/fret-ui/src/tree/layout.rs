@@ -78,29 +78,50 @@ impl<H: UiHost> UiTree<H> {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
 
-                let Some(prev_bounds) = self.nodes.get(viewport_root).map(|n| n.bounds) else {
+                let Some((prev_bounds, invalidated, measured, has_element)) =
+                    self.nodes.get(viewport_root).map(|n| {
+                        (
+                            n.bounds,
+                            n.invalidation.layout,
+                            n.measured_size,
+                            n.element.is_some(),
+                        )
+                    })
+                else {
                     continue;
                 };
 
+                if pass_kind == LayoutPassKind::Final && has_element {
+                    self.request_single_layer_root_flow_subtree(
+                        app,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
+
                 // Only flush viewport roots when required. This prevents barriers that register
                 // many viewport roots (e.g. docking) from forcing unnecessary layout work for
-                // roots that did not change.
-                let needs_layout = self
-                    .nodes
-                    .get(viewport_root)
-                    .is_some_and(|n| n.invalidation.layout)
-                    || prev_bounds != viewport_bounds;
+                // roots that did not change, while still allowing the request/build phase to keep
+                // stable identity across frames.
+                let needs_layout = invalidated || prev_bounds != viewport_bounds;
                 if !needs_layout {
                     continue;
                 }
 
-                self.precompute_flow_root_island_if_needed(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == viewport_bounds.size
+                    && prev_bounds.origin != viewport_bounds.origin
+                    && measured != Size::default();
+                if !is_translation_only {
+                    self.compute_flow_root_island_if_requested(
+                        app,
+                        services,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
 
                 let _ = self.layout_in_with_pass_kind(
                     app,
@@ -183,25 +204,46 @@ impl<H: UiHost> UiTree<H> {
                 let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
                 viewport_cursor += 1;
 
-                let Some(prev_bounds) = self.nodes.get(viewport_root).map(|n| n.bounds) else {
+                let Some((prev_bounds, invalidated, measured, has_element)) =
+                    self.nodes.get(viewport_root).map(|n| {
+                        (
+                            n.bounds,
+                            n.invalidation.layout,
+                            n.measured_size,
+                            n.element.is_some(),
+                        )
+                    })
+                else {
                     continue;
                 };
-                let needs_layout = self
-                    .nodes
-                    .get(viewport_root)
-                    .is_some_and(|n| n.invalidation.layout)
-                    || prev_bounds != viewport_bounds;
+
+                if has_element {
+                    self.request_single_layer_root_flow_subtree(
+                        app,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
+
+                let needs_layout = invalidated || prev_bounds != viewport_bounds;
                 if !needs_layout {
                     continue;
                 }
 
-                self.precompute_flow_root_island_if_needed(
-                    app,
-                    services,
-                    viewport_root,
-                    viewport_bounds,
-                    scale_factor,
-                );
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == viewport_bounds.size
+                    && prev_bounds.origin != viewport_bounds.origin
+                    && measured != Size::default();
+                if !is_translation_only {
+                    self.compute_flow_root_island_if_requested(
+                        app,
+                        services,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
 
                 let _ = self.layout_in_with_pass_kind(
                     app,
@@ -315,6 +357,28 @@ impl<H: UiHost> UiTree<H> {
         let sf = scale_factor;
         let mut engine = self.take_layout_engine();
         build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+        self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn compute_flow_root_island_if_requested(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let available = LayoutSize::new(
+            AvailableSpace::Definite(root_bounds.size.width),
+            AvailableSpace::Definite(root_bounds.size.height),
+        );
+
+        let sf = scale_factor;
+        let mut engine = self.take_layout_engine();
+        let _ = engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
+            self.measure_in(app, services, n, c, sf)
+        });
         self.put_layout_engine(engine);
     }
 

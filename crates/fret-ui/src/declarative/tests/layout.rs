@@ -732,6 +732,72 @@ fn viewport_root_flush_only_lays_out_invalidated_roots() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_viewport(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.container(Default::default(), |cx| vec![cx.text("hello")])]
+    }
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-keeps-engine-nodes-a",
+        build_viewport,
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-keeps-engine-nodes-b",
+        build_viewport,
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let b_container = ui.children(root_b)[0];
+    let b_text = ui.children(b_container)[0];
+    assert!(
+        ui.layout_engine_has_node(b_text),
+        "expected viewport subtree nodes to be registered in the engine after layout"
+    );
+
+    // Only invalidate the left viewport; the right root should be skipped by the flush loop, but
+    // still kept alive via the request/build phase.
+    ui.invalidate(root_a, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.layout_engine_has_node(b_text),
+        "expected skipped viewport roots to remain registered in the engine (stable identity)"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
     struct PrecomputesSameRootTwice {
         a: NodeId,
