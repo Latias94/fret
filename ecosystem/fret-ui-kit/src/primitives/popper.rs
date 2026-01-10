@@ -12,6 +12,14 @@ pub use fret_ui::overlay_placement::{
     Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side, StickyMode,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PopperAvailableMetrics {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub anchor_width: Px,
+    pub anchor_height: Px,
+}
+
 /// Build `AnchoredPanelOptions` for popper-like floating content.
 ///
 /// Radix `PopperContent` effectively adds an extra main-axis offset when an arrow is present
@@ -153,6 +161,124 @@ pub fn popper_content_layout_sized(
         placement.align,
         placement.options(),
     )
+}
+
+/// Compute Radix-like "available metrics" exposed by Floating UI's `size()` middleware.
+///
+/// Radix writes these to CSS variables:
+/// - `--radix-popper-available-width`
+/// - `--radix-popper-available-height`
+/// - `--radix-popper-anchor-width`
+/// - `--radix-popper-anchor-height`
+///
+/// Fret exposes the same concepts as a structured return value.
+pub fn popper_available_metrics(
+    outer: Rect,
+    anchor: Rect,
+    layout: &AnchoredPanelLayout,
+    direction: LayoutDirection,
+) -> PopperAvailableMetrics {
+    let rect = layout.rect;
+    let width = rect.size.width.0.max(0.0);
+    let height = rect.size.height.0.max(0.0);
+
+    let outer_left = outer.origin.x.0;
+    let outer_top = outer.origin.y.0;
+    let outer_right = outer_left + outer.size.width.0.max(0.0);
+    let outer_bottom = outer_top + outer.size.height.0.max(0.0);
+
+    let rect_left = rect.origin.x.0;
+    let rect_top = rect.origin.y.0;
+    let rect_right = rect_left + rect.size.width.0.max(0.0);
+    let rect_bottom = rect_top + rect.size.height.0.max(0.0);
+
+    // Signed overflow values:
+    // - positive: overflows the boundary
+    // - negative: remaining space within the boundary
+    let overflow_left = outer_left - rect_left;
+    let overflow_top = outer_top - rect_top;
+    let overflow_right = rect_right - outer_right;
+    let overflow_bottom = rect_bottom - outer_bottom;
+
+    let maximum_clipping_width = (width - overflow_left - overflow_right).max(0.0);
+    let maximum_clipping_height = (height - overflow_top - overflow_bottom).max(0.0);
+
+    let alignment = match layout.align {
+        Align::Center => None,
+        other => Some(other),
+    };
+
+    let side = layout.side;
+
+    let (height_side, width_side) = match side {
+        Side::Top | Side::Bottom => {
+            let height_side = side;
+            let width_side = match alignment {
+                Some(Align::Start) => {
+                    if direction == LayoutDirection::Rtl {
+                        Side::Right
+                    } else {
+                        Side::Left
+                    }
+                }
+                Some(Align::End) => {
+                    if direction == LayoutDirection::Rtl {
+                        Side::Left
+                    } else {
+                        Side::Right
+                    }
+                }
+                _ => Side::Right,
+            };
+            (height_side, width_side)
+        }
+        Side::Left | Side::Right => {
+            let width_side = side;
+            let height_side = match alignment {
+                Some(Align::End) => Side::Top,
+                _ => Side::Bottom,
+            };
+            (height_side, width_side)
+        }
+    };
+
+    let overflow_for_side = |side: Side| match side {
+        Side::Top => overflow_top,
+        Side::Bottom => overflow_bottom,
+        Side::Left => overflow_left,
+        Side::Right => overflow_right,
+    };
+
+    let overflow_available_height = (height - overflow_for_side(height_side))
+        .min(maximum_clipping_height)
+        .max(0.0);
+    let overflow_available_width = (width - overflow_for_side(width_side))
+        .min(maximum_clipping_width)
+        .max(0.0);
+
+    // Radix shift config:
+    // - `mainAxis: true`
+    // - `crossAxis: false`
+    // For Top/Bottom, this enables shifting along X. For Left/Right, along Y.
+    let shift_enabled_x = matches!(side, Side::Top | Side::Bottom);
+    let shift_enabled_y = matches!(side, Side::Left | Side::Right);
+
+    let mut available_height = overflow_available_height;
+    let mut available_width = overflow_available_width;
+
+    if shift_enabled_x {
+        available_width = maximum_clipping_width;
+    }
+    if shift_enabled_y {
+        available_height = maximum_clipping_height;
+    }
+
+    PopperAvailableMetrics {
+        available_width: Px(available_width),
+        available_height: Px(available_height),
+        anchor_width: anchor.size.width,
+        anchor_height: anchor.size.height,
+    }
 }
 
 /// Computes an anchored popper layout (rect + optional arrow) with deterministic flip/clamp rules.
@@ -575,5 +701,32 @@ mod tests {
                 .with_hide_when_detached(true);
 
         assert!(placement.reference_hidden(outer, anchor_outside));
+    }
+
+    #[test]
+    fn available_metrics_track_anchor_and_available_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        );
+        let layout = AnchoredPanelLayout {
+            rect: Rect::new(
+                Point::new(Px(40.0), Px(40.0)),
+                Size::new(Px(20.0), Px(10.0)),
+            ),
+            side: Side::Bottom,
+            align: Align::Center,
+            arrow: None,
+        };
+
+        let m = popper_available_metrics(outer, anchor, &layout, LayoutDirection::Ltr);
+        assert_eq!(m.anchor_width, Px(30.0));
+        assert_eq!(m.anchor_height, Px(40.0));
+        assert_eq!(m.available_width, Px(100.0));
+        assert_eq!(m.available_height, Px(60.0));
     }
 }

@@ -105,10 +105,9 @@ and transform origin:
   - `StickyMode::Always` keeps the current “fully clamp into boundary” behavior.
 - Missing: `hideWhenDetached` / “referenceHidden” outcome.
   - Fret clamps/fits instead of hiding the overlay when the anchor is detached from the boundary.
-- Missing: Exposed “available width/height” metrics.
-  - Radix writes CSS variables for available width/height and anchor width/height; Fret currently
-    returns the placed rect (and optional arrow layout), but does not expose those extra numbers as
-    a structured output for recipes.
+- Pass: Exposed “available width/height” metrics.
+  - `popper_available_metrics(...)` returns structured `available_width/available_height` and
+    `anchor_width/anchor_height` for recipes (Radix uses CSS vars).
 - Pass: Arrow “cannot center” signal.
   - Fret exposes `ArrowLayout.center_offset` (Floating `centerOffset`), which callers can use to
     implement Radix `shouldHideArrow` (`center_offset != 0`).
@@ -125,7 +124,8 @@ deterministic:
      limiter offset configuration.
 3. Add an optional `reference_hidden` / `should_hide` output bit (Radix `hideWhenDetached`).
 4. Consider aligning arrow element visibility with Radix `shouldHideArrow` across all recipes.
-5. Expose Radix-like “available” metrics as structured outputs for recipes (instead of CSS vars).
+5. Consider wiring `popper_available_metrics(...)` into size-limited recipes (Select viewport,
+   menu content max-height, etc.).
 
 ## Validation anchors
 
