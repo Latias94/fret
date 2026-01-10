@@ -5,6 +5,7 @@
 pub mod a11y;
 pub mod canvas;
 pub mod commands;
+pub mod edge_types;
 pub mod edit_queue;
 pub mod editor;
 pub mod editors;
@@ -21,6 +22,7 @@ pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11y
 pub use canvas::NodeGraphCanvas;
 pub use canvas::NodeResizeHandle;
 pub use commands::register_node_graph_commands;
+pub use edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
 pub use editors::{

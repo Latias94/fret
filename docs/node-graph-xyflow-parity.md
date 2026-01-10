@@ -142,8 +142,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - portal mechanism: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost`)
     - `nodeTypes` registry (portal-based): `ecosystem/fret-node/src/ui/registry.rs` (`NodeGraphNodeTypes`)
+    - `edgeTypes` registry (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` (`NodeGraphEdgeTypes`)
   - Notes:
-    - `edgeTypes` is still presenter-driven today (`NodeGraphPresenter::edge_render_hint`) and lacks a first-class registry surface.
+    - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes` overrides are applied in `NodeGraphCanvas`.
+    - Custom edge painters/path builders are deferred (Stage 2).
 
 - [ ] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -624,9 +626,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: node types (`nodeTypes`) and node wrapper contract
   - fret-node: presenter + portal escape hatch; needs clearer “custom chrome” contract
 
-- [ ] **Custom edge types**
+- [~] **Custom edge types**
   - XyFlow: edge types (`edgeTypes`) + label renderer
-  - fret-node: not implemented
+  - fret-node:
+    - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` + `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - Stage 2 (custom painters/path builders): TODO
 
 - [ ] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes

@@ -51,7 +51,7 @@ use crate::ui::presenter::{
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphEditQueue, NodeGraphInternalsSnapshot,
+    NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphInternalsSnapshot,
     NodeGraphInternalsStore, NodeGraphOverlayState,
 };
 
@@ -132,6 +132,7 @@ pub struct NodeGraphCanvas {
     store: Option<Model<NodeGraphStore>>,
     store_rev: Option<u64>,
     presenter: Box<dyn NodeGraphPresenter>,
+    edge_types: Option<NodeGraphEdgeTypes>,
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
 
@@ -196,6 +197,15 @@ impl NodeGraphCanvas {
             severity,
             message: message.into(),
         });
+    }
+
+    fn edge_render_hint(&self, graph: &Graph, edge_id: EdgeId) -> EdgeRenderHint {
+        let base = self.presenter.edge_render_hint(graph, edge_id, &self.style);
+        if let Some(edge_types) = self.edge_types.as_ref() {
+            edge_types.apply(graph, edge_id, &self.style, base)
+        } else {
+            base
+        }
     }
 
     fn toast_from_diagnostics(diags: &[Diagnostic]) -> Option<(DiagnosticSeverity, Arc<str>)> {
@@ -370,6 +380,7 @@ impl NodeGraphCanvas {
                 DefaultNodeGraphPresenter::default(),
                 auto_measured.clone(),
             )),
+            edge_types: None,
             style: NodeGraphStyle::default(),
             close_command: None,
             auto_measured,
@@ -396,6 +407,12 @@ impl NodeGraphCanvas {
             presenter,
             self.auto_measured.clone(),
         ));
+        self
+    }
+
+    /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
+    pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
+        self.edge_types = Some(edge_types);
         self
     }
 
@@ -2605,10 +2622,7 @@ impl NodeGraphCanvas {
                 continue;
             };
 
-            let route = self
-                .presenter
-                .edge_render_hint(graph, edge_id, &self.style)
-                .route;
+            let route = self.edge_render_hint(graph, edge_id).route;
             let d2 = match route {
                 EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom),
                 EdgeRouteKind::Straight => dist2_point_to_segment(pos, from, to),
@@ -2660,10 +2674,7 @@ impl NodeGraphCanvas {
                 continue;
             };
 
-            let route = self
-                .presenter
-                .edge_render_hint(graph, edge_id, &self.style)
-                .route;
+            let route = self.edge_render_hint(graph, edge_id).route;
             let (a0, a1) = Self::edge_focus_anchor_centers(route, from, to, zoom);
             let r0 = Self::edge_focus_anchor_rect(a0, zoom);
             let r1 = Self::edge_focus_anchor_rect(a1, zoom);
@@ -6491,9 +6502,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let Some(to) = out.port_centers.get(&edge.to).copied() else {
                             continue;
                         };
-                        let hint = presenter
-                            .edge_render_hint(graph, edge_id, &this.style)
-                            .normalized();
+                        let hint = this.edge_render_hint(graph, edge_id).normalized();
                         if let Some(c) = cull {
                             let pad = (snapshot
                                 .interaction
