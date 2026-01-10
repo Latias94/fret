@@ -9,6 +9,7 @@ contracts early to avoid large rewrites later.
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
+- Debugging playbook: `docs/debugging-playbook.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`
