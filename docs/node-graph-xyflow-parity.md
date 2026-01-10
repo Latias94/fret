@@ -72,6 +72,7 @@ High-level layering (ADR 0135):
 - **Graph model (serializable)**: `ecosystem/fret-node/src/core/*`
 - **Headless policies (optional)**: `ecosystem/fret-node/src/rules/*`, `ecosystem/fret-node/src/profile/*`
 - **Edit ops / undo**: `ecosystem/fret-node/src/ops/*`
+- **Runtime change model (headless-safe)**: `ecosystem/fret-node/src/runtime/*`
 - **UI substrate (optional, default)**: `ecosystem/fret-node/src/ui/*`
   - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
   - derived internals: `ecosystem/fret-node/src/ui/internals.rs`, `MeasuredGeometryStore`
@@ -105,9 +106,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.2 Change pipeline (callbacks + diffs + apply)
 
-- [ ] **NodeChange / EdgeChange model + apply helpers**
+- [~] **NodeChange / EdgeChange model + apply helpers**
   - XyFlow: `repo-ref/xyflow/packages/react/src/utils/changes.ts` (`applyNodeChanges`, `applyEdgeChanges`)
-  - fret-node: edits are `GraphOp`/`GraphTransaction` (reversible) + history; we still need a B-layer "diff event" surface
+  - fret-node:
+    - reversible edit source-of-truth: `ecosystem/fret-node/src/ops/mod.rs` (`GraphOp`, `GraphTransaction`)
+    - change events + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+  - Notes: still missing a store-facing `apply_*_changes` convenience API for app-owned state and view-state change coverage.
 
 - [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
