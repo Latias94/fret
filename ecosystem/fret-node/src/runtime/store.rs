@@ -195,12 +195,114 @@ impl NodeGraphStore {
         &self.graph
     }
 
+    /// Replaces the entire graph document.
+    ///
+    /// This is a controlled-mode helper: callers that own graph state can swap the document
+    /// without going through transactions (e.g. loading a file, switching tabs).
+    ///
+    /// Note: this does not emit `NodeGraphChanges` today. Consumers should treat this as a full
+    /// reset and re-render. Selection is sanitized against the new graph.
+    pub fn replace_graph(&mut self, graph: Graph) {
+        self.graph = graph;
+        self.view_state.sanitize_for_graph(&self.graph);
+        self.notify_selectors();
+    }
+
     pub fn view_state(&self) -> &NodeGraphViewState {
         &self.view_state
     }
 
     pub fn view_state_mut(&mut self) -> &mut NodeGraphViewState {
         &mut self.view_state
+    }
+
+    /// Replaces the view-state (pan/zoom/selection/draw order).
+    ///
+    /// This is the controlled-mode counterpart of `set_viewport`/`set_selection`.
+    pub fn replace_view_state(&mut self, mut view_state: NodeGraphViewState) {
+        view_state.sanitize_for_graph(&self.graph);
+        let before = self.view_state.clone();
+        if before.pan == view_state.pan
+            && before.zoom == view_state.zoom
+            && before.selected_nodes == view_state.selected_nodes
+            && before.selected_edges == view_state.selected_edges
+            && before.selected_groups == view_state.selected_groups
+        {
+            self.view_state = view_state;
+            return;
+        }
+
+        self.view_state = view_state;
+        let after = self.view_state.clone();
+
+        let mut changes: Vec<ViewChange> = Vec::new();
+        if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
+            changes.push(ViewChange::Viewport {
+                pan: after.pan,
+                zoom: after.zoom,
+            });
+        }
+        if before.selected_nodes != after.selected_nodes
+            || before.selected_edges != after.selected_edges
+            || before.selected_groups != after.selected_groups
+        {
+            changes.push(ViewChange::Selection {
+                nodes: after.selected_nodes.clone(),
+                edges: after.selected_edges.clone(),
+                groups: after.selected_groups.clone(),
+            });
+        }
+
+        if !changes.is_empty() {
+            self.emit(NodeGraphStoreEvent::ViewChanged {
+                before: &before,
+                after: &after,
+                changes: &changes,
+            });
+        }
+        self.notify_selectors();
+    }
+
+    /// Mutates view-state in place and emits derived `ViewChange` events.
+    pub fn update_view_state(&mut self, f: impl FnOnce(&mut NodeGraphViewState)) {
+        let before = self.view_state.clone();
+        f(&mut self.view_state);
+        self.view_state.sanitize_for_graph(&self.graph);
+        let after = self.view_state.clone();
+
+        if before.pan == after.pan
+            && before.zoom == after.zoom
+            && before.selected_nodes == after.selected_nodes
+            && before.selected_edges == after.selected_edges
+            && before.selected_groups == after.selected_groups
+        {
+            return;
+        }
+
+        let mut changes: Vec<ViewChange> = Vec::new();
+        if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
+            changes.push(ViewChange::Viewport {
+                pan: after.pan,
+                zoom: after.zoom,
+            });
+        }
+        if before.selected_nodes != after.selected_nodes
+            || before.selected_edges != after.selected_edges
+            || before.selected_groups != after.selected_groups
+        {
+            changes.push(ViewChange::Selection {
+                nodes: after.selected_nodes.clone(),
+                edges: after.selected_edges.clone(),
+                groups: after.selected_groups.clone(),
+            });
+        }
+
+        self.emit(NodeGraphStoreEvent::ViewChanged {
+            before: &before,
+            after: &after,
+            changes: &changes,
+        });
+        self.notify_selectors();
     }
 
     /// Sets the viewport (pan/zoom) and notifies subscribers.
@@ -296,6 +398,27 @@ impl NodeGraphStore {
         Ok(DispatchOutcome { committed, changes })
     }
 
+    /// Dispatches a transaction using an externally-owned profile pipeline.
+    ///
+    /// This is intended for UI integration where the profile is owned by the presenter layer.
+    pub fn dispatch_transaction_with_profile(
+        &mut self,
+        tx: &GraphTransaction,
+        profile: &mut dyn GraphProfile,
+    ) -> Result<DispatchOutcome, ApplyPipelineError> {
+        let mut scratch = self.graph.clone();
+        let committed = apply_transaction_with_profile(&mut scratch, profile, tx)?;
+        self.graph = scratch;
+        self.history.record(committed.clone());
+        let changes = NodeGraphChanges::from_transaction(&committed);
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
+        self.notify_selectors();
+        Ok(DispatchOutcome { committed, changes })
+    }
+
     /// Applies XyFlow-style changes by converting them to a reversible transaction.
     pub fn dispatch_changes(
         &mut self,
@@ -334,6 +457,37 @@ impl NodeGraphStore {
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
+    /// Undoes the last committed transaction using an externally-owned profile pipeline.
+    pub fn undo_with_profile(
+        &mut self,
+        profile: &mut dyn GraphProfile,
+    ) -> Result<Option<DispatchOutcome>, ApplyPipelineError> {
+        let mut scratch = self.graph.clone();
+        let mut committed: Option<GraphTransaction> = None;
+
+        let mut history = std::mem::take(&mut self.history);
+        let did = history.undo(|tx| -> Result<GraphTransaction, ApplyPipelineError> {
+            let committed_tx = apply_transaction_with_profile(&mut scratch, profile, tx)?;
+            committed = Some(committed_tx.clone());
+            Ok(committed_tx)
+        });
+        self.history = history;
+        let did = did?;
+        if !did {
+            return Ok(None);
+        }
+
+        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let changes = NodeGraphChanges::from_transaction(&committed);
+        self.graph = scratch;
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
+        self.notify_selectors();
+        Ok(Some(DispatchOutcome { committed, changes }))
+    }
+
     /// Redoes the last undone transaction.
     pub fn redo(&mut self) -> Result<Option<DispatchOutcome>, DispatchError> {
         let mut scratch = self.graph.clone();
@@ -348,6 +502,37 @@ impl NodeGraphStore {
         self.history = history;
         let did = did?;
 
+        if !did {
+            return Ok(None);
+        }
+
+        let committed = committed.unwrap_or_else(GraphTransaction::new);
+        let changes = NodeGraphChanges::from_transaction(&committed);
+        self.graph = scratch;
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
+        self.notify_selectors();
+        Ok(Some(DispatchOutcome { committed, changes }))
+    }
+
+    /// Redoes the last undone transaction using an externally-owned profile pipeline.
+    pub fn redo_with_profile(
+        &mut self,
+        profile: &mut dyn GraphProfile,
+    ) -> Result<Option<DispatchOutcome>, ApplyPipelineError> {
+        let mut scratch = self.graph.clone();
+        let mut committed: Option<GraphTransaction> = None;
+
+        let mut history = std::mem::take(&mut self.history);
+        let did = history.redo(|tx| -> Result<GraphTransaction, ApplyPipelineError> {
+            let committed_tx = apply_transaction_with_profile(&mut scratch, profile, tx)?;
+            committed = Some(committed_tx.clone());
+            Ok(committed_tx)
+        });
+        self.history = history;
+        let did = did?;
         if !did {
             return Ok(None);
         }

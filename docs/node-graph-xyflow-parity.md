@@ -116,6 +116,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - reversible edit source-of-truth: `ecosystem/fret-node/src/ops/mod.rs` (`GraphOp`, `GraphTransaction`)
     - change events + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
     - store dispatch emits changes: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::dispatch_*`)
+    - controlled helpers: `ecosystem/fret-node/src/runtime/store.rs` (`replace_graph`, `replace_view_state`, `update_view_state`)
   - Notes:
     - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
     - still missing a store-facing `apply_*_changes` convenience API for app-owned state and selector-based subscriptions.

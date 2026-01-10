@@ -362,3 +362,26 @@ fn store_selector_diff_provides_prev_and_next() {
 
     assert_eq!(deltas.borrow().as_slice(), &[(0, 1), (1, 0)]);
 }
+
+#[test]
+fn store_replace_view_state_emits_view_changed_event() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, _a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+    store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+    });
+
+    let mut vs = NodeGraphViewState::default();
+    vs.pan = crate::core::CanvasPoint { x: 10.0, y: 20.0 };
+    vs.zoom = 1.5;
+    store.replace_view_state(vs);
+
+    assert_eq!(events.borrow().as_slice(), &["view"]);
+}
