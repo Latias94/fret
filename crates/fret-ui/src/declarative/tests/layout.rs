@@ -4289,6 +4289,14 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
         ui.layout_engine_has_node(column_node),
         "expected translation-only scroll to keep engine nodes alive (stable identity)"
     );
+
+    // Even when the tree is fully clean (no invalidation, no translation), the request/build phase
+    // must keep barrier-mounted subtrees registered so identity remains stable across frames.
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected steady-state frames to keep scroll content nodes registered in the engine"
+    );
 }
 
 #[test]

@@ -356,6 +356,32 @@ fn build_flow_subtree_impl<H: UiHost>(
                 );
             }
         }
+        Some(
+            ElementInstance::Scroll(_)
+            | ElementInstance::VirtualList(_)
+            | ElementInstance::ResizablePanelGroup(_),
+        ) => {
+            let style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, true);
+
+            // Barriers are explicit layout systems and must not couple their children into the
+            // parent's flow solve, but we still want the engine to retain stable identity for the
+            // mounted subtree across frames (GPUI-aligned request/build phase).
+            let children = tree.children(node).to_vec();
+            for child in children {
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
+            }
+        }
         _ => {
             let style = style_for_item_in_parent(
                 app,
