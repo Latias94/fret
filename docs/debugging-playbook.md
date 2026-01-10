@@ -3,6 +3,9 @@
 This document is a living, practical checklist for debugging Fret. It focuses on **repeatable** workflows
 over ad-hoc guessing.
 
+All debug artifacts (captures, dumps, temporary outputs) should live under `.fret/` to avoid accidental
+commits.
+
 ## 1) GPU / renderer: debug specific passes
 
 ### 1.1 Capture a frame (RenderDoc)
@@ -44,6 +47,25 @@ Common invariants we validate from captures:
 - For viewport-scoped masks: `mask_viewport_origin/size` matches the effect viewport rect (not the full window).
 - For scale/pixelate chains: scissored fullscreen passes must be **origin-aware** (avoid anchoring to `(0,0)`).
 
+### 1.4 Debugging transforms / “matrix” issues
+
+In Fret, the most common “matrix looks wrong” bugs are not about layout, but about **render transforms**
+(paint + hit testing + pointer coordinates).
+
+Contracts:
+
+- RenderTransform semantics: `docs/adr/0083-render-transform-hit-testing.md`
+- Scene transform + clip composition: `docs/adr/0078-scene-transform-and-clip-composition.md`
+
+Practical checklist:
+
+1. Confirm whether the issue is **layout** (bounds wrong) or **visual** (bounds right, but rendered output shifted/rotated).
+2. For visual issues, verify the transform stack in the `SceneOp` stream (Push/Pop pairs).
+3. If the bug crosses effect boundaries, validate in RenderDoc:
+   - scissor/viewport state for the pass,
+   - clip stack head/count and mask viewport origin/size (for masked writebacks),
+   - output target(s) at each step (export PNGs).
+
 ## 2) Layout debugging
 
 Layout issues are often “correct math, wrong contract”. Prefer to debug at contract boundaries:
@@ -59,6 +81,28 @@ Practical workflow:
 3. Verify child bounds propagation (especially when using absolute positioning helpers).
 4. If the issue is about what the user “sees”, validate visual bounds vs layout bounds (ADR 0083).
 
+### 2.1 Prefer a unit test when possible
+
+If the bug is deterministic (no timing/input dependency), it is usually faster to reproduce it as a test:
+
+- Declarative geometry tests live under: `crates/fret-ui/src/declarative/tests/`
+- Text layout tests live under: `crates/fret-ui/src/text_area/tests.rs`
+
+Typical pattern:
+
+1. Build a small UI tree.
+2. Call `layout_all(...)` with a fixed window bounds + scale factor.
+3. Assert the computed bounds/visual bounds for the relevant node(s).
+
+### 2.2 Debug “visual bounds vs layout bounds”
+
+For overlay anchoring and transformed widgets, always distinguish:
+
+- layout bounds: `bounds_for_element(...)`
+- visual bounds (post-transform AABB): `visual_bounds_for_element(...)`
+
+Reference tests (anchored overlays): `crates/fret-ui/src/declarative/tests/anchored.rs`.
+
 ## 3) Screenshots / readback (deterministic pixels)
 
 For deterministic pixel validation, prefer existing GPU conformance tests (readback-based):
@@ -70,6 +114,63 @@ These tests are designed to catch:
 - ordering leaks across effect boundaries,
 - scissor/clip regressions,
 - mask mapping errors.
+
+### 3.1 Where readback code lives
+
+Renderer readback helpers are implemented inside the conformance tests:
+
+- `crates/fret-render/tests/*_conformance.rs` (look for `render_and_readback(...)`)
+
+If you need a new regression test, prefer adding a minimal scene + asserting pixel properties over adding
+new ad-hoc debug output.
+
+### 3.2 Optional: write readback bytes to a PNG (debug-only)
+
+Sometimes it is useful to inspect the readback pixels directly in an image viewer. This should remain a
+**local debugging workflow**:
+
+- write outputs under `.fret/debug/` (ignored by git),
+- avoid writing files in CI (gate behind a local env var),
+- do not treat disk output as a stable contract (tests should assert on pixels, not rely on files).
+
+Most readback buffers are padded to a 256-byte row alignment (`bytes_per_row`), so you usually need to
+repack the rows before saving.
+
+Example helper (requires a local dev-dependency on `image`):
+
+```rust
+fn write_rgba8_png(
+    path: &std::path::Path,
+    width: u32,
+    height: u32,
+    bytes_per_row: usize,
+    data: &[u8],
+) -> anyhow::Result<()> {
+    use anyhow::Context as _;
+
+    let tight_bpr = width as usize * 4;
+    anyhow::ensure!(bytes_per_row >= tight_bpr, "bytes_per_row < width*4");
+    anyhow::ensure!(data.len() >= bytes_per_row * height as usize, "buffer too small");
+
+    let mut tight = vec![0u8; tight_bpr * height as usize];
+    for y in 0..height as usize {
+        let src = &data[y * bytes_per_row..y * bytes_per_row + tight_bpr];
+        let dst = &mut tight[y * tight_bpr..y * tight_bpr + tight_bpr];
+        dst.copy_from_slice(src);
+    }
+
+    let img = image::RgbaImage::from_raw(width, height, tight)
+        .context("construct RgbaImage")?;
+    img.save(path).context("save png")?;
+    Ok(())
+}
+```
+
+Notes:
+
+- If the capture target is `*Srgb`, the bytes are already in sRGB space; save them as-is.
+- If you read back from a linear target, you may need to apply a transfer function before saving for
+  visual inspection.
 
 For app-facing screenshots/recording, the contract is defined by:
 
@@ -89,4 +190,3 @@ Recommended approach:
 
 1. Turn on tracing for the smallest set of crates relevant to the bug.
 2. Correlate the frame reason (input/timer/animation) with renderer passes (RenderDoc markers).
-
