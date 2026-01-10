@@ -907,7 +907,7 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
@@ -915,7 +915,7 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
-    use fret_ui::elements::{GlobalElementId, bounds_for_element};
+    use fret_ui::elements::{GlobalElementId, visual_bounds_for_element};
     use fret_ui_kit::MetricRef;
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -1088,6 +1088,8 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(&mut ui, &mut app, &mut services, window, b);
         ui.layout_all(&mut app, &mut services, b, 1.0);
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
 
         // Click the underlay area. The modal barrier should catch the click and route it through
         // the dismiss handler without closing.
@@ -1132,6 +1134,7 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(true);
+        let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
         let mut services = FakeServices::default();
         let b = Rect::new(
@@ -1139,59 +1142,66 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            b,
-            "test",
-            |cx| {
-                let trigger = cx.pressable(
-                    PressableProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(120.0));
-                            layout.size.height = Length::Px(Px(40.0));
-                            layout
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+
+            OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                "test",
+                |cx| {
+                    let drawer_content_id = drawer_content_id.clone();
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
                         },
-                        enabled: true,
-                        focusable: true,
-                        ..Default::default()
-                    },
-                    |_cx, _st| Vec::new(),
-                );
+                        |_cx, _st| Vec::new(),
+                    );
 
-                let drawer = Drawer::new(open.clone()).into_element(
-                    cx,
-                    |_cx| trigger,
-                    |cx| {
-                        DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
-                        ])
-                        .into_element(cx)
-                    },
-                );
+                    let drawer = Drawer::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            let content = DrawerContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx);
+                            drawer_content_id.set(Some(content.id));
+                            content
+                        },
+                    );
 
-                vec![drawer]
-            },
-        );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
-        ui.layout_all(&mut app, &mut services, b, 1.0);
+                    vec![drawer]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+            ui.layout_all(&mut app, &mut services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+        }
 
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, b, 1.0);
-        let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let dialog = snap
-            .nodes
-            .iter()
-            .find(|n| n.role == SemanticsRole::Dialog)
-            .expect("drawer dialog semantics");
+        let dialog_element = drawer_content_id.get().expect("drawer content element id");
+        let dialog =
+            visual_bounds_for_element(&mut app, window, dialog_element).expect("drawer visual");
         let start = Point::new(
-            Px(dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 * 0.5),
-            Px(dialog.bounds.origin.y.0 + 10.0),
+            Px(dialog.origin.x.0 + dialog.size.width.0 * 0.5),
+            Px(dialog.origin.y.0 + 10.0),
         );
         let end = Point::new(start.x, Px(start.y.0 + 80.0));
 
@@ -1242,6 +1252,7 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(true);
+        let drawer_content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
         let mut services = FakeServices::default();
         let b = Rect::new(
@@ -1249,59 +1260,66 @@ mod tests {
             Size::new(Px(200.0), Px(120.0)),
         );
 
-        OverlayController::begin_frame(&mut app, window);
-        let root = fret_ui::declarative::render_root(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            b,
-            "test",
-            |cx| {
-                let trigger = cx.pressable(
-                    PressableProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(120.0));
-                            layout.size.height = Length::Px(Px(40.0));
-                            layout
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
+        let mut frame = FrameId(1);
+        for _ in 0..settle_frames {
+            app.set_frame_id(frame);
+            frame = FrameId(frame.0.saturating_add(1));
+
+            OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                b,
+                "test",
+                |cx| {
+                    let drawer_content_id = drawer_content_id.clone();
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
                         },
-                        enabled: true,
-                        focusable: true,
-                        ..Default::default()
-                    },
-                    |_cx, _st| Vec::new(),
-                );
+                        |_cx, _st| Vec::new(),
+                    );
 
-                let drawer = Drawer::new(open.clone()).into_element(
-                    cx,
-                    |_cx| trigger,
-                    |cx| {
-                        DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
-                        ])
-                        .into_element(cx)
-                    },
-                );
+                    let drawer = Drawer::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            let content = DrawerContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx);
+                            drawer_content_id.set(Some(content.id));
+                            content
+                        },
+                    );
 
-                vec![drawer]
-            },
-        );
-        ui.set_root(root);
-        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
-        ui.layout_all(&mut app, &mut services, b, 1.0);
+                    vec![drawer]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+            ui.layout_all(&mut app, &mut services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+        }
 
-        ui.request_semantics_snapshot();
-        ui.layout_all(&mut app, &mut services, b, 1.0);
-        let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let dialog = snap
-            .nodes
-            .iter()
-            .find(|n| n.role == SemanticsRole::Dialog)
-            .expect("drawer dialog semantics");
+        let dialog_element = drawer_content_id.get().expect("drawer content element id");
+        let dialog =
+            visual_bounds_for_element(&mut app, window, dialog_element).expect("drawer visual");
         let start = Point::new(
-            Px(dialog.bounds.origin.x.0 + dialog.bounds.size.width.0 * 0.5),
-            Px(dialog.bounds.origin.y.0 + 10.0),
+            Px(dialog.origin.x.0 + dialog.size.width.0 * 0.5),
+            Px(dialog.origin.y.0 + 10.0),
         );
         let end = Point::new(start.x, Px(start.y.0 + 20.0));
 
@@ -1423,10 +1441,13 @@ mod tests {
             ui.set_root(root);
             OverlayController::render(ui, app, services, window, b);
             ui.layout_all(app, services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(app, services, b, &mut scene, 1.0);
         };
 
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
         let mut frame = FrameId(1);
-        for _ in 0..3 {
+        for _ in 0..settle_frames {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
             render_frame(&mut ui, &mut app, &mut services);
@@ -1443,10 +1464,10 @@ mod tests {
             .expect("offset model captured");
         let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
         let dialog =
-            bounds_for_element(&mut app, window, drawer_content_id).expect("drawer layout bounds");
+            visual_bounds_for_element(&mut app, window, drawer_content_id).expect("drawer visual");
         let start = Point::new(
             Px(dialog.origin.x.0 + dialog.size.width.0 * 0.5),
-            Px(dialog.origin.y.0 + offset.0 + 10.0),
+            Px(dialog.origin.y.0 + 10.0),
         );
         let end = Point::new(start.x, Px(start.y.0 + 220.0));
 
@@ -1526,8 +1547,9 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 4;
         let mut frame = FrameId(1);
-        for _ in 0..2 {
+        for _ in 0..settle_frames {
             app.set_frame_id(frame);
             frame = FrameId(frame.0.saturating_add(1));
 
@@ -1586,12 +1608,15 @@ mod tests {
             ui.set_root(root);
             OverlayController::render(&mut ui, &mut app, &mut services, window, b);
             ui.layout_all(&mut app, &mut services, b, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
         }
 
         let close_element = close_id.get().expect("close element id");
         let close_node = fret_ui::elements::node_for_element(&mut app, window, close_element)
             .expect("close node");
-        let close_bounds = ui.debug_node_bounds(close_node).expect("close bounds");
+        let close_bounds = visual_bounds_for_element(&mut app, window, close_element)
+            .expect("close visual bounds");
         let point = Point::new(
             Px(close_bounds.origin.x.0 + 2.0),
             Px(close_bounds.origin.y.0 + 2.0),
