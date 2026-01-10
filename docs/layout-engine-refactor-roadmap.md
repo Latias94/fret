@@ -130,7 +130,8 @@ Acceptance:
 
 ## Known Gaps / Cautions
 
-- Root-level precompute of flow islands (solving a full layer root in one shot) is intentionally **not** enabled yet. A naive "solve the entire root upfront" changes shrink/percent interactions in overlay wrappers (e.g. `Stack` + `Semantics` + `PointerRegion`), which can break hit testing and interaction conformance. Current direction: keep precompute at points where child bounds are already definite (viewport roots, split panels, positioned wrappers, and now `Container`).
+- Layer-root precompute of flow islands is enabled for **declarative element roots** in v2 (so nested flow containers consume engine rects instead of solving their own islands). It is intentionally skipped for non-element/custom roots to avoid wasted solves, and viewport roots are still orchestrated via the post-root flush protocol.
+- Wrapper overlay nodes use `1fr` tracks with `justify_items/align_items: start` so percent/fill sizing can resolve against definite wrapper boxes without stretching auto-sized children (e.g. spacers).
 
 ## Engineering Guardrails (v2 Runtime Policy)
 
