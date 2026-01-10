@@ -10,6 +10,11 @@ use crate::CommandId;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
+    /// Request a window redraw (one-shot).
+    ///
+    /// This is the lowest-level redraw primitive. Higher-level UI code typically calls
+    /// `App::request_redraw` or `Cx::request_redraw`, which eventually results in this effect being
+    /// handled by the runner/backend.
     Redraw(AppWindowId),
     Window(WindowRequest),
     Command {
@@ -86,6 +91,13 @@ pub enum Effect {
     ImageUnregister {
         image: fret_core::ImageId,
     },
+    /// Request the next animation frame for a window.
+    ///
+    /// Use this for frame-driven updates (animations, progressive rendering) where the UI must
+    /// keep repainting even if there are no new input events.
+    ///
+    /// Runners/backends should schedule a redraw and keep advancing the frame counter while these
+    /// requests are being issued.
     RequestAnimationFrame(AppWindowId),
     SetTimer {
         window: Option<AppWindowId>,

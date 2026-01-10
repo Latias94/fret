@@ -237,6 +237,10 @@ impl App {
         self.drag = None;
     }
 
+    /// Request a window redraw (one-shot).
+    ///
+    /// This records a pending redraw request which the runner will translate into an actual
+    /// platform `request_redraw` call at a deterministic point in the event loop.
     pub fn request_redraw(&mut self, window: AppWindowId) {
         self.redraw_requests.insert(window);
     }
