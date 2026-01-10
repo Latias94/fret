@@ -5,6 +5,7 @@
 //! a specific rendering or widget layer.
 
 pub mod changes;
+pub mod events;
 pub mod store;
 
 #[cfg(test)]

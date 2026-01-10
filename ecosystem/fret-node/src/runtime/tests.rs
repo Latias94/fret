@@ -2,6 +2,7 @@ use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, Node
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
+use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::store::NodeGraphStore;
 
 fn make_graph() -> (
@@ -242,4 +243,48 @@ fn store_does_not_commit_rejected_profile_edits() {
         g0.nodes.get(&a).unwrap().pos
     );
     assert!(!store.can_undo());
+}
+
+#[test]
+fn store_subscription_receives_graph_and_view_events_and_can_unsubscribe() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+
+    let token = store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+        NodeGraphStoreEvent::ViewChanged { changes, .. } => {
+            assert!(!changes.is_empty());
+            events2.borrow_mut().push("view");
+        }
+    });
+
+    store.set_viewport(crate::core::CanvasPoint { x: 1.0, y: 2.0 }, 1.25);
+    store.set_selection(vec![a], Vec::new(), Vec::new());
+
+    let changes = NodeGraphChanges {
+        nodes: vec![NodeChange::Position {
+            id: a,
+            position: CanvasPoint { x: 5.0, y: 6.0 },
+        }],
+        edges: Vec::new(),
+    };
+    store.dispatch_changes(&changes).expect("dispatch");
+
+    let got = events.borrow().clone();
+    assert!(got.contains(&"view"));
+    assert!(got.contains(&"graph"));
+
+    assert!(store.unsubscribe(token));
+    assert!(!store.unsubscribe(token));
+
+    let before_len = events.borrow().len();
+    store.set_viewport(crate::core::CanvasPoint { x: 3.0, y: 4.0 }, 2.0);
+    store.dispatch_changes(&changes).expect("dispatch");
+    assert_eq!(events.borrow().len(), before_len);
 }

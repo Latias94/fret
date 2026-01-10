@@ -11,6 +11,7 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
 use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
 use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
+use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
 
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
@@ -37,6 +38,12 @@ pub struct NodeGraphStore {
     view_state: NodeGraphViewState,
     history: GraphHistory,
     profile: Option<Box<dyn GraphProfile>>,
+
+    next_subscription: u64,
+    subscriptions: Vec<(
+        SubscriptionToken,
+        Box<dyn for<'a> FnMut(NodeGraphStoreEvent<'a>)>,
+    )>,
 }
 
 impl std::fmt::Debug for NodeGraphStore {
@@ -48,6 +55,7 @@ impl std::fmt::Debug for NodeGraphStore {
             .field("undo_len", &self.history.undo_len())
             .field("redo_len", &self.history.redo_len())
             .field("has_profile", &self.profile.is_some())
+            .field("subscription_count", &self.subscriptions.len())
             .finish()
     }
 }
@@ -61,6 +69,8 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: None,
+            next_subscription: 1,
+            subscriptions: Vec::new(),
         }
     }
 
@@ -76,7 +86,29 @@ impl NodeGraphStore {
             view_state,
             history: GraphHistory::default(),
             profile: Some(profile),
+            next_subscription: 1,
+            subscriptions: Vec::new(),
         }
+    }
+
+    /// Subscribes to store events (graph commits + view-state changes).
+    ///
+    /// This is the minimal B-layer equivalent of XyFlow's store subscriptions.
+    pub fn subscribe(
+        &mut self,
+        f: impl for<'a> FnMut(NodeGraphStoreEvent<'a>) + 'static,
+    ) -> SubscriptionToken {
+        let token = SubscriptionToken::new(self.next_subscription);
+        self.next_subscription = self.next_subscription.saturating_add(1).max(1);
+        self.subscriptions.push((token, Box::new(f)));
+        token
+    }
+
+    /// Removes a subscription.
+    pub fn unsubscribe(&mut self, token: SubscriptionToken) -> bool {
+        let before = self.subscriptions.len();
+        self.subscriptions.retain(|(t, _)| *t != token);
+        before != self.subscriptions.len()
     }
 
     pub fn graph(&self) -> &Graph {
@@ -89,6 +121,64 @@ impl NodeGraphStore {
 
     pub fn view_state_mut(&mut self) -> &mut NodeGraphViewState {
         &mut self.view_state
+    }
+
+    /// Sets the viewport (pan/zoom) and notifies subscribers.
+    pub fn set_viewport(&mut self, pan: crate::core::CanvasPoint, zoom: f32) {
+        let z = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        let before = self.view_state.clone();
+        if self.view_state.pan == pan && self.view_state.zoom == z {
+            return;
+        }
+
+        self.view_state.pan = pan;
+        self.view_state.zoom = z;
+        let after = self.view_state.clone();
+
+        let changes = [ViewChange::Viewport { pan, zoom: z }];
+        self.emit(NodeGraphStoreEvent::ViewChanged {
+            before: &before,
+            after: &after,
+            changes: &changes,
+        });
+    }
+
+    /// Sets selection state and notifies subscribers.
+    pub fn set_selection(
+        &mut self,
+        nodes: Vec<crate::core::NodeId>,
+        edges: Vec<crate::core::EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) {
+        let before = self.view_state.clone();
+
+        self.view_state.selected_nodes = nodes;
+        self.view_state.selected_edges = edges;
+        self.view_state.selected_groups = groups;
+        self.view_state.sanitize_for_graph(&self.graph);
+        let after = self.view_state.clone();
+
+        if before.selected_nodes == after.selected_nodes
+            && before.selected_edges == after.selected_edges
+            && before.selected_groups == after.selected_groups
+        {
+            return;
+        }
+
+        let changes = [ViewChange::Selection {
+            nodes: after.selected_nodes.clone(),
+            edges: after.selected_edges.clone(),
+            groups: after.selected_groups.clone(),
+        }];
+        self.emit(NodeGraphStoreEvent::ViewChanged {
+            before: &before,
+            after: &after,
+            changes: &changes,
+        });
     }
 
     pub fn history(&self) -> &GraphHistory {
@@ -116,6 +206,10 @@ impl NodeGraphStore {
         self.graph = scratch;
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
         Ok(DispatchOutcome { committed, changes })
     }
 
@@ -149,6 +243,10 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -173,6 +271,10 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            committed: &committed,
+            changes: &changes,
+        });
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -189,6 +291,12 @@ impl NodeGraphStore {
                 label: tx.label.clone(),
                 ops: tx.ops.clone(),
             })
+        }
+    }
+
+    fn emit(&mut self, event: NodeGraphStoreEvent<'_>) {
+        for (_, sub) in &mut self.subscriptions {
+            sub(event);
         }
     }
 }
