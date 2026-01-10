@@ -1624,6 +1624,43 @@ impl MenubarMenuEntries {
                                                                  text_style_for_content.clone();
                                                               let has_submenu =
                                                                    matches!(entry, MenubarEntry::Submenu(_));
+                                                              let submenu_desired_for_hint =
+                                                                  if let MenubarEntry::Submenu(submenu) = entry {
+                                                                      let mut flat: Vec<MenubarEntry> =
+                                                                          Vec::new();
+                                                                      flatten_entries(
+                                                                          &mut flat,
+                                                                          submenu
+                                                                              .entries
+                                                                              .iter()
+                                                                              .cloned()
+                                                                              .collect(),
+                                                                      );
+                                                                      let submenu_max_h = theme
+                                                                          .metric_by_key(
+                                                                              "component.menubar.max_height",
+                                                                          )
+                                                                          .map(|h| {
+                                                                              Px(h.0.min(
+                                                                                  outer.size.height.0,
+                                                                              ))
+                                                                          })
+                                                                          .unwrap_or(outer.size.height);
+                                                                      let desired = menu_panel_desired_size(
+                                                                          &flat,
+                                                                          font_line_height,
+                                                                          pad_y,
+                                                                      );
+                                                                      Some(Size::new(
+                                                                          desired.width,
+                                                                          Px(desired
+                                                                              .height
+                                                                              .0
+                                                                              .min(submenu_max_h.0)),
+                                                                      ))
+                                                                  } else {
+                                                                      None
+                                                                  };
 
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
@@ -1637,15 +1674,12 @@ impl MenubarMenuEntries {
                                                                   overlay_root_name_for_controls.clone();
                                                               out.push(cx.keyed(value.clone(), move |cx| {
                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let geometry_hint = has_submenu.then_some(
+                                                                    let geometry_hint = submenu_desired_for_hint.map(|desired| {
                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                             outer,
-                                                                            desired: fret_core::Size::new(
-                                                                                Px(240.0),
-                                                                                Px(1.0e9),
-                                                                            ),
-                                                                        },
-                                                                    );
+                                                                            desired,
+                                                                        }
+                                                                    });
                                                                     let expanded = menu::sub_trigger::wire(
                                                                         cx,
                                                                         st,

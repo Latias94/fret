@@ -1504,6 +1504,13 @@ impl DropdownMenu {
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
+                                                        let submenu_row_count_for_hint =
+                                                            item.submenu.clone().map(|entries| {
+                                                                let mut flat: Vec<DropdownMenuEntry> =
+                                                                    Vec::new();
+                                                                flatten_entries(&mut flat, entries);
+                                                                flat.len()
+                                                            });
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
@@ -1519,9 +1526,22 @@ impl DropdownMenu {
                                                                             cx.bounds,
                                                                             window_margin,
                                                                         );
-                                                                    let desired = Size::new(
+                                                                    let submenu_max_h = theme
+                                                                        .metric_by_key(
+                                                                            "component.dropdown_menu.max_height",
+                                                                        )
+                                                                        .map(|h| {
+                                                                            Px(h.0.min(
+                                                                                outer.size.height.0,
+                                                                            ))
+                                                                        })
+                                                                        .unwrap_or(outer.size.height);
+                                                                    let desired = menu::sub::estimated_desired_size_for_row_count(
                                                                         Px(192.0),
-                                                                        Px(1.0e9),
+                                                                        Px(28.0),
+                                                                        submenu_row_count_for_hint
+                                                                            .unwrap_or(1),
+                                                                        submenu_max_h,
                                                                     );
                                                                     menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                         outer,
@@ -1749,7 +1769,13 @@ impl DropdownMenu {
                                 submenu_max_h,
                             )
                         })
-                        .unwrap_or(Size::new(Px(192.0), Px(1.0e9)));
+                        .unwrap_or_else(|| {
+                            let submenu_max_h = theme
+                                .metric_by_key("component.dropdown_menu.max_height")
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            Size::new(Px(192.0), submenu_max_h)
+                        });
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
