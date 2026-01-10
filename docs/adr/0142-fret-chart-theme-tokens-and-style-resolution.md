@@ -1,6 +1,6 @@
 # ADR 0142: `fret-chart` Theme Tokens and Style Resolution (ECharts-Inspired)
 
-Status: Proposed
+Status: Accepted (P1)
 
 ## Context
 
@@ -50,6 +50,9 @@ We define an extensible token namespace for chart styling:
 - `chart.axis.tick`
 - `chart.axis.label`
 - `chart.crosshair`
+- Series palette (order-based, ECharts-like):
+  - `chart.palette.0` .. `chart.palette.9`
+  - Fallback: shadcn/new-york extended tokens `chart-1` .. `chart-5`
 - `chart.tooltip.background`
 - `chart.tooltip.border`
 - `chart.tooltip.text`
@@ -128,3 +131,8 @@ P1:
 - Theme registry: `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`
 - ECharts theme packs: https://echarts.apache.org/en/theme-builder.html (concept reference)
 
+## Evidence
+
+- Style resolution: `ecosystem/fret-chart/src/retained/style.rs` (`ChartStyle::from_theme`)
+- Style application: `ecosystem/fret-chart/src/retained/canvas.rs` (`ChartCanvas::sync_style_from_theme`)
+- Series palette usage: `ecosystem/fret-chart/src/retained/canvas.rs` (`ChartCanvas::series_color`)

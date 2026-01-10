@@ -151,6 +151,7 @@ pub struct ChartCanvas {
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     cached_rects: Vec<CachedRect>,
     cached_points: Vec<CachedPoint>,
+    series_rank_by_id: BTreeMap<delinea::SeriesId, usize>,
     axis_text: Vec<TextBlobId>,
     tooltip_text: Vec<TextBlobId>,
     legend_text: Vec<TextBlobId>,
@@ -198,6 +199,7 @@ impl ChartCanvas {
             cached_paths: BTreeMap::default(),
             cached_rects: Vec::default(),
             cached_points: Vec::default(),
+            series_rank_by_id: BTreeMap::default(),
             axis_text: Vec::default(),
             tooltip_text: Vec::default(),
             legend_text: Vec::default(),
@@ -1204,60 +1206,21 @@ impl ChartCanvas {
         self.legend_item_rects.clear();
     }
 
-    fn series_color(series: delinea::SeriesId) -> Color {
-        const PALETTE: [Color; 8] = [
-            Color {
-                r: 0.20,
-                g: 0.60,
-                b: 1.00,
-                a: 1.0,
-            },
-            Color {
-                r: 0.96,
-                g: 0.50,
-                b: 0.25,
-                a: 1.0,
-            },
-            Color {
-                r: 0.40,
-                g: 0.85,
-                b: 0.45,
-                a: 1.0,
-            },
-            Color {
-                r: 0.90,
-                g: 0.35,
-                b: 0.60,
-                a: 1.0,
-            },
-            Color {
-                r: 0.65,
-                g: 0.50,
-                b: 0.95,
-                a: 1.0,
-            },
-            Color {
-                r: 0.95,
-                g: 0.85,
-                b: 0.30,
-                a: 1.0,
-            },
-            Color {
-                r: 0.30,
-                g: 0.80,
-                b: 0.85,
-                a: 1.0,
-            },
-            Color {
-                r: 0.85,
-                g: 0.55,
-                b: 0.40,
-                a: 1.0,
-            },
-        ];
-
-        let idx = (series.0 as usize) % PALETTE.len();
-        PALETTE[idx]
+    fn series_color(&self, series: delinea::SeriesId) -> Color {
+        let order_idx = self
+            .series_rank_by_id
+            .get(&series)
+            .copied()
+            .unwrap_or_else(|| {
+                self.engine
+                    .model()
+                    .series_order
+                    .iter()
+                    .position(|id| *id == series)
+                    .unwrap_or(0)
+            });
+        let palette = &self.style.series_palette;
+        palette[order_idx % palette.len()]
     }
 
     fn legend_series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
@@ -1360,7 +1323,7 @@ impl ChartCanvas {
                 });
             }
 
-            let mut swatch = Self::series_color(series_id);
+            let mut swatch = self.series_color(series_id);
             swatch.a = if visible { 0.9 } else { 0.25 };
             let sw_x = x0 + pad.left.0;
             let sw_y = y + 0.5 * (row_h - sw);
@@ -1617,6 +1580,11 @@ impl ChartCanvas {
         let marks = &self.engine.output().marks;
         let origin = self.last_layout.plot.origin;
         let model = self.engine.model();
+
+        self.series_rank_by_id.clear();
+        for (i, series_id) in model.series_order.iter().enumerate() {
+            self.series_rank_by_id.insert(*series_id, i);
+        }
 
         let mut band_ranges: BTreeMap<
             delinea::SeriesId,
@@ -2992,7 +2960,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
             let mut fill_color = self.style.stroke_color;
             if let Some(series) = cached.source_series {
-                fill_color = Self::series_color(series);
+                fill_color = self.series_color(series);
                 fill_color.a *= self.style.stroke_color.a;
             }
             if let Some(hover) = self.legend_hover
@@ -3022,7 +2990,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
             let mut stroke_color = self.style.stroke_color;
             if let Some(series) = cached.source_series {
-                stroke_color = Self::series_color(series);
+                stroke_color = self.series_color(series);
                 stroke_color.a *= self.style.stroke_color.a;
             }
             if let Some(hover) = self.legend_hover
@@ -3073,7 +3041,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
             let mut fill_color = self.style.stroke_color;
             if let Some(series) = cached.source_series {
-                fill_color = Self::series_color(series);
+                fill_color = self.series_color(series);
                 fill_color.a *= self.style.scatter_fill_alpha;
             }
             if let Some(hover) = self.legend_hover
@@ -3586,10 +3554,68 @@ mod tests {
 
     #[test]
     fn series_color_is_stable() {
-        let a = ChartCanvas::series_color(delinea::SeriesId::new(1));
-        let b = ChartCanvas::series_color(delinea::SeriesId::new(2));
+        let canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        let a = canvas.series_color(delinea::SeriesId::new(1));
+        let b = canvas.series_color(delinea::SeriesId::new(2));
         assert_ne!(a, b);
-        assert_eq!(a, ChartCanvas::series_color(delinea::SeriesId::new(1)));
+        assert_eq!(a, canvas.series_color(delinea::SeriesId::new(1)));
+    }
+
+    #[test]
+    fn series_color_respects_theme_palette_when_style_is_fixed() {
+        let mut app = fret_app::App::new();
+        let theme = Theme::global_mut(&mut app);
+
+        let mut cfg = fret_ui::ThemeConfig::default();
+        cfg.colors
+            .insert("chart.palette.0".to_string(), "#FF0000".to_string());
+        cfg.colors
+            .insert("chart.palette.1".to_string(), "#00FF00".to_string());
+        theme.apply_config(&cfg);
+
+        let style = ChartStyle::from_theme(theme);
+        let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
+        canvas.set_style(style);
+
+        assert_eq!(
+            canvas.series_color(delinea::SeriesId::new(1)),
+            theme.color_required("chart.palette.0")
+        );
+        assert_eq!(
+            canvas.series_color(delinea::SeriesId::new(2)),
+            theme.color_required("chart.palette.1")
+        );
+    }
+
+    #[test]
+    fn series_color_follows_series_order_not_series_id() {
+        let mut app = fret_app::App::new();
+        let theme = Theme::global_mut(&mut app);
+
+        let mut cfg = fret_ui::ThemeConfig::default();
+        cfg.colors
+            .insert("chart.palette.0".to_string(), "#FF0000".to_string());
+        cfg.colors
+            .insert("chart.palette.1".to_string(), "#00FF00".to_string());
+        theme.apply_config(&cfg);
+
+        let style = ChartStyle::from_theme(theme);
+
+        let mut spec = multi_axis_spec();
+        spec.series[0].id = delinea::SeriesId::new(42);
+        spec.series[1].id = delinea::SeriesId::new(1);
+
+        let mut canvas = ChartCanvas::new(spec).expect("spec should be valid");
+        canvas.set_style(style);
+
+        assert_eq!(
+            canvas.series_color(delinea::SeriesId::new(42)),
+            theme.color_required("chart.palette.0")
+        );
+        assert_eq!(
+            canvas.series_color(delinea::SeriesId::new(1)),
+            theme.color_required("chart.palette.1")
+        );
     }
 
     fn multi_axis_spec() -> ChartSpec {

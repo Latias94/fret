@@ -1,6 +1,40 @@
 use fret_core::{Color, DrawOrder, Edges, Px};
 use fret_ui::Theme;
 
+fn srgb_channel_to_linear(v: u8) -> f32 {
+    let c = (v as f32) / 255.0;
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+fn color_from_srgb8(r: u8, g: u8, b: u8) -> Color {
+    Color {
+        r: srgb_channel_to_linear(r),
+        g: srgb_channel_to_linear(g),
+        b: srgb_channel_to_linear(b),
+        a: 1.0,
+    }
+}
+
+fn default_series_palette() -> [Color; 10] {
+    // ECharts default palette (concept reference): https://echarts.apache.org/en/option.html#color
+    [
+        color_from_srgb8(0x54, 0x70, 0xC6),
+        color_from_srgb8(0x91, 0xCC, 0x75),
+        color_from_srgb8(0xEE, 0x66, 0x66),
+        color_from_srgb8(0x73, 0xC0, 0xDE),
+        color_from_srgb8(0x3B, 0xA2, 0x72),
+        color_from_srgb8(0xFC, 0x84, 0x52),
+        color_from_srgb8(0x9A, 0x60, 0xB4),
+        color_from_srgb8(0xEA, 0x7C, 0xCC),
+        color_from_srgb8(0xFA, 0xC8, 0x58),
+        color_from_srgb8(0x6E, 0x70, 0x74),
+    ]
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ChartStyle {
     pub background: Option<Color>,
@@ -46,11 +80,15 @@ pub struct ChartStyle {
     pub legend_swatch_size: Px,
     pub legend_swatch_gap: Px,
     pub legend_hover_background: Color,
+
+    pub series_palette: [Color; 10],
     pub draw_order: DrawOrder,
 }
 
 impl Default for ChartStyle {
     fn default() -> Self {
+        let series_palette = default_series_palette();
+
         Self {
             background: Some(Color {
                 r: 0.06,
@@ -181,6 +219,7 @@ impl Default for ChartStyle {
                 b: 1.0,
                 a: 0.06,
             },
+            series_palette,
             draw_order: DrawOrder(100),
         }
     }
@@ -280,6 +319,35 @@ impl ChartStyle {
             with_alpha(foreground, 0.06),
         );
 
+        const PALETTE_KEYS: [&str; 10] = [
+            "chart.palette.0",
+            "chart.palette.1",
+            "chart.palette.2",
+            "chart.palette.3",
+            "chart.palette.4",
+            "chart.palette.5",
+            "chart.palette.6",
+            "chart.palette.7",
+            "chart.palette.8",
+            "chart.palette.9",
+        ];
+        const SHADCN_CHART_KEYS: [&str; 5] =
+            ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"];
+
+        let fallback_palette = default_series_palette();
+        let mut series_palette = fallback_palette;
+        for (index, key) in PALETTE_KEYS.iter().enumerate() {
+            if let Some(c) = color(theme, key) {
+                series_palette[index] = c;
+                continue;
+            }
+            if index < SHADCN_CHART_KEYS.len() {
+                if let Some(c) = color(theme, SHADCN_CHART_KEYS[index]) {
+                    series_palette[index] = c;
+                }
+            }
+        }
+
         Self {
             background: Some(background),
             stroke_color: with_alpha(foreground, 0.9),
@@ -320,7 +388,35 @@ impl ChartStyle {
             legend_swatch_size,
             legend_swatch_gap,
             legend_hover_background,
+            series_palette,
             draw_order: DrawOrder(100),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_ui::{Theme, ThemeConfig};
+
+    use super::ChartStyle;
+
+    #[test]
+    fn series_palette_prefers_chart_palette_tokens_over_shadcn_aliases() {
+        let mut app = App::new();
+        let theme = Theme::global_mut(&mut app);
+
+        let mut cfg = ThemeConfig::default();
+        cfg.colors
+            .insert("chart.palette.0".to_string(), "#FF0000".to_string());
+        cfg.colors
+            .insert("chart-1".to_string(), "#00FF00".to_string());
+        theme.apply_config(&cfg);
+
+        let style = ChartStyle::from_theme(theme);
+        assert_eq!(
+            style.series_palette[0],
+            theme.color_required("chart.palette.0")
+        );
     }
 }

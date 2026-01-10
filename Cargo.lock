@@ -1163,6 +1163,7 @@ name = "fret-chart"
 version = "0.1.0"
 dependencies = [
  "delinea",
+ "fret-app",
  "fret-core",
  "fret-ui",
 ]

@@ -7,3 +7,6 @@ edition.workspace = true
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
 delinea = { path = "../delinea" }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
