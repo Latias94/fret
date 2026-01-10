@@ -166,6 +166,13 @@ pub struct GizmoConfig {
     pub show_view_axis_ring: bool,
     /// Radius multiplier for the view-axis ring (outer ring).
     pub view_axis_ring_radius_scale: f32,
+    /// Rotate ring visibility fade window in terms of `abs(dot(view_dir, axis_dir))`.
+    ///
+    /// - When `dot <= rotate_ring_fade_dot.0`, the axis ring is fully faded out (and not pickable).
+    /// - When `dot >= rotate_ring_fade_dot.1`, the axis ring is fully visible.
+    ///
+    /// This reduces ring clutter and prevents edge-on rings from stealing interaction.
+    pub rotate_ring_fade_dot: (f32, f32),
     /// When `true`, includes a free-rotation arcball (trackball) in `Rotate`/`Universal`.
     ///
     /// This is intended to match transform-gizmo's `Arcball` affordance: click/drag inside the
@@ -236,6 +243,7 @@ impl Default for GizmoConfig {
             occluded_alpha: 0.25,
             show_view_axis_ring: true,
             view_axis_ring_radius_scale: 1.2,
+            rotate_ring_fade_dot: (0.10, 0.30),
             show_arcball: true,
             arcball_radius_scale: 0.85,
             arcball_rotation_speed: 1.0,
@@ -648,6 +656,37 @@ impl Gizmo {
         )
         .unwrap_or(hi);
         ((len_px - lo) / (hi - lo)).clamp(0.0, 1.0)
+    }
+
+    fn rotate_ring_visibility_alpha(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        axis_dir: Vec3,
+    ) -> f32 {
+        let (lo, hi) = self.config.rotate_ring_fade_dot;
+        if !(lo.is_finite() && hi.is_finite()) {
+            return 1.0;
+        }
+        let lo = lo.min(hi);
+        let hi = hi.max(lo + 1e-3);
+
+        let Some(view_dir) =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+        else {
+            return 1.0;
+        };
+        let axis = axis_dir.normalize_or_zero();
+        let view = view_dir.normalize_or_zero();
+        if axis.length_squared() == 0.0 || view.length_squared() == 0.0 {
+            return 1.0;
+        }
+
+        let dot = view.dot(axis).abs().clamp(0.0, 1.0);
+        let t = ((dot - lo) / (hi - lo)).clamp(0.0, 1.0);
+        // smoothstep
+        t * t * (3.0 - 2.0 * t)
     }
 
     fn plane_visibility_alpha(
@@ -3011,11 +3050,17 @@ impl Gizmo {
                 continue;
             }
             let (u, v) = plane_basis(axis_dir);
+            let alpha =
+                self.rotate_ring_visibility_alpha(view_projection, viewport, origin, axis_dir);
+            if alpha <= 0.01 {
+                continue;
+            }
             let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
                 self.config.hover_color
             } else {
                 color
             };
+            let c = mix_alpha(c, alpha);
 
             let mut prev = origin + u * radius_world;
             for i in 1..=segments {
@@ -4302,6 +4347,11 @@ impl Gizmo {
             if axis_dir.length_squared() == 0.0 {
                 continue;
             }
+            let alpha =
+                self.rotate_ring_visibility_alpha(view_projection, viewport, origin, axis_dir);
+            if alpha <= 0.01 {
+                continue;
+            }
             let (u, v) = plane_basis(axis_dir);
 
             let mut prev_world = origin + u * radius_world;
@@ -4327,7 +4377,8 @@ impl Gizmo {
 
                 if prev.inside_clip && p.inside_clip {
                     let d = distance_point_to_segment_px(cursor, prev.screen, p.screen);
-                    if d <= self.config.pick_radius_px {
+                    let r = self.config.pick_radius_px * alpha.sqrt();
+                    if d <= r {
                         match best_axis {
                             Some(best) if d >= best.score => {}
                             _ => best_axis = Some(PickHit { handle, score: d }),
@@ -5683,6 +5734,70 @@ mod tests {
             _ => panic!("expected rotation"),
         };
         assert!(back_total.abs() < 1e-3, "total={back_total}");
+    }
+
+    #[test]
+    fn rotate_ring_fade_hides_edge_on_axis_ring() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 5.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Rotate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.show_view_axis_ring = false;
+        config.show_arcball = false;
+        // Only show rings when looking almost along the axis direction.
+        config.rotate_ring_fade_dot = (0.90, 0.95);
+        let gizmo = Gizmo::new(config);
+
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        // Looking down -Z: X ring is edge-on and should be hidden.
+        let axis_x = axes[0].normalize_or_zero();
+        let (ux, _vx) = plane_basis(axis_x);
+        let px = project_point(
+            view_proj,
+            vp,
+            origin + ux * radius_world,
+            gizmo.config.depth_range,
+        )
+        .unwrap()
+        .screen;
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, px, axes)
+                .is_none(),
+            "edge-on ring should not be pickable when faded"
+        );
+
+        // Z ring faces the camera and should remain pickable.
+        let axis_z = axes[2].normalize_or_zero();
+        let (uz, _vz) = plane_basis(axis_z);
+        let pz = project_point(
+            view_proj,
+            vp,
+            origin + uz * radius_world,
+            gizmo.config.depth_range,
+        )
+        .unwrap()
+        .screen;
+        let hit = gizmo
+            .pick_rotate_axis(view_proj, vp, origin, pz, axes)
+            .unwrap();
+        assert_eq!(hit.handle, HandleId(3));
     }
 
     #[test]
