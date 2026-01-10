@@ -22,6 +22,7 @@ mod fullscreen;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;
+mod render_plan_effects;
 mod render_scene;
 mod resources;
 mod services;
