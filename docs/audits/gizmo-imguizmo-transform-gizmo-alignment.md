@@ -30,7 +30,7 @@ Key surfaces:
   - universal: `UNIVERSAL = TRANSLATE | ROTATE | SCALEU` (scale-universal flavor)
 - Interaction queries: `IsOver(...)`, `IsUsing(...)`
 - View gizmo: `ViewManipulate(...)`
-- Behavior knobs: axis flip, axis/plane hide limits, axis masking
+- Behavior knobs: axis flip, axis/plane fade limits, axis masking
 - Style knobs: per-part colors and line/arrow thickness (`Style`)
 
 ### transform-gizmo
@@ -208,7 +208,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Per-axis colors + hover color | Yes | Yes | **Aligned** | `GizmoConfig::{x_color,y_color,z_color,hover_color}`. |
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
-| Axis flip, axis masking, axis/plane hide limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_hide_limit_px`, `plane_hide_limit_px2` in `GizmoConfig`. Gaps: thresholds are pixel-based (not clip-space units) and currently applied to translate/scale axes+planes, not rotate rings. |
+| Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Gaps: fade windows are pixel-based (not clip-space units) and currently applied to translate/scale axes+planes (including picking bias), not rotate rings. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Not implemented** | Separate feature; can be built as another tool using similar math. |
 | Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
 
@@ -236,7 +236,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 2. **Plane scaling (XY/XZ/YZ)**
    - Parity with transform-gizmo; useful for non-uniform edits without axis-only drags.
 3. **ImGuizmo-style behavior knobs**
-   - Axis flip, axis mask, axis/plane hide limits (these are feel multipliers in dense scenes).
+   - Axis flip, axis mask, axis/plane fade limits (these are feel multipliers in dense scenes).
 
 ### P2 (ImGuizmo-specific extras)
 
