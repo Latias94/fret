@@ -10,8 +10,8 @@ mod gizmo;
 mod math;
 
 pub use gizmo::{
-    DepthMode, Gizmo, GizmoConfig, GizmoInput, GizmoMode, GizmoOrientation, GizmoResult,
-    GizmoState, GizmoUpdate, HandleId, Line3d, Transform3d,
+    DepthMode, Gizmo, GizmoConfig, GizmoInput, GizmoMode, GizmoOrientation, GizmoPhase,
+    GizmoResult, GizmoState, GizmoUpdate, HandleId, Line3d, Transform3d,
 };
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,

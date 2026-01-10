@@ -3,7 +3,10 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
-use fret_gizmo::{DepthMode, Gizmo, GizmoConfig, GizmoInput, Transform3d, ViewportRect};
+use fret_gizmo::{
+    DepthMode, Gizmo, GizmoConfig, GizmoInput, GizmoMode, GizmoOrientation, GizmoPhase,
+    Transform3d, ViewportRect,
+};
 use fret_launch::{
     EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
@@ -25,6 +28,78 @@ struct Vertex {
 unsafe impl bytemuck::Zeroable for Vertex {}
 unsafe impl bytemuck::Pod for Vertex {}
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+struct LineVertex {
+    a: [f32; 3],
+    b: [f32; 3],
+    t: f32,
+    side: f32,
+    color: [f32; 4],
+}
+
+unsafe impl bytemuck::Zeroable for LineVertex {}
+unsafe impl bytemuck::Pod for LineVertex {}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+struct Uniforms {
+    view_proj: [[f32; 4]; 4],
+    /// x = viewport_w_px, y = viewport_h_px, z = line_thickness_px, w = unused
+    viewport_and_thickness: [f32; 4],
+}
+
+unsafe impl bytemuck::Zeroable for Uniforms {}
+unsafe impl bytemuck::Pod for Uniforms {}
+
+fn push_thick_line_quad(out: &mut Vec<LineVertex>, a: [f32; 3], b: [f32; 3], color: [f32; 4]) {
+    // Two triangles (6 vertices) for a screen-space thick line quad.
+    out.extend_from_slice(&[
+        LineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: -1.0,
+            color,
+        },
+        LineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: 1.0,
+            color,
+        },
+        LineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: 1.0,
+            color,
+        },
+        LineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: -1.0,
+            color,
+        },
+        LineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: 1.0,
+            color,
+        },
+        LineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: -1.0,
+            color,
+        },
+    ]);
+}
+
 struct Gizmo3dDemoTarget {
     id: RenderTargetId,
     size: (u32, u32),
@@ -36,8 +111,8 @@ struct Gizmo3dDemoGpu {
     uniform: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     tri_pipeline: wgpu::RenderPipeline,
-    line_depth_pipeline: wgpu::RenderPipeline,
-    line_always_pipeline: wgpu::RenderPipeline,
+    thick_line_depth_pipeline: wgpu::RenderPipeline,
+    thick_line_always_pipeline: wgpu::RenderPipeline,
     cube_vb: wgpu::Buffer,
     cube_ib: wgpu::Buffer,
     cube_index_count: u32,
@@ -49,25 +124,31 @@ struct Gizmo3dDemoModel {
     viewport_px: (u32, u32),
     gizmo: Gizmo,
     target: Transform3d,
+    drag_start_target: Option<Transform3d>,
     input: GizmoInput,
 }
 
 impl Default for Gizmo3dDemoModel {
     fn default() -> Self {
+        let mut gizmo_cfg = GizmoConfig::default();
+        gizmo_cfg.translate_snap_step = Some(0.25);
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
-            gizmo: Gizmo::new(GizmoConfig::default()),
+            gizmo: Gizmo::new(gizmo_cfg),
             target: Transform3d {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 rotation: Quat::IDENTITY,
                 scale: Vec3::ONE,
             },
+            drag_start_target: None,
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
                 drag_started: false,
                 dragging: false,
+                snap: false,
+                cancel: false,
             },
         }
     }
@@ -237,6 +318,14 @@ impl Gizmo3dDemoDriver {
                 label: Some("gizmo3d demo shader"),
                 source: wgpu::ShaderSource::Wgsl(
                     r#"
+struct Globals {
+  view_proj: mat4x4f,
+  viewport_and_thickness: vec4f,
+};
+
+@group(0) @binding(0)
+var<uniform> globals: Globals;
+
 struct VsIn {
   @location(0) pos: vec3f,
   @location(1) color: vec4f,
@@ -247,13 +336,47 @@ struct VsOut {
   @location(0) color: vec4f,
 };
 
-@group(0) @binding(0)
-var<uniform> view_proj: mat4x4f;
+@vertex
+fn vs_main_tri(in: VsIn) -> VsOut {
+  var out: VsOut;
+  out.pos = globals.view_proj * vec4f(in.pos, 1.0);
+  out.color = in.color;
+  return out;
+}
+
+struct LineVsIn {
+  @location(0) a: vec3f,
+  @location(1) b: vec3f,
+  @location(2) t: f32,
+  @location(3) side: f32,
+  @location(4) color: vec4f,
+};
 
 @vertex
-fn vs_main(in: VsIn) -> VsOut {
+fn vs_main_thick_line(in: LineVsIn) -> VsOut {
+  let clip_a = globals.view_proj * vec4f(in.a, 1.0);
+  let clip_b = globals.view_proj * vec4f(in.b, 1.0);
+
+  let viewport = globals.viewport_and_thickness.xy;
+  let thickness_px = globals.viewport_and_thickness.z;
+
+  let ndc_a = clip_a.xy / clip_a.w;
+  let ndc_b = clip_b.xy / clip_b.w;
+  let dir_px = (ndc_b - ndc_a) * viewport;
+
+  var offset_ndc = vec2f(0.0, 0.0);
+  if dot(dir_px, dir_px) > 1e-8 && thickness_px > 0.0 {
+    let dir_px_norm = normalize(dir_px);
+    let normal_px = vec2f(-dir_px_norm.y, dir_px_norm.x);
+    offset_ndc = normal_px * (thickness_px / viewport) * 0.5;
+  }
+
+  let clip = mix(clip_a, clip_b, in.t);
+  let ndc = clip.xy / clip.w;
+  let ndc_out = ndc + offset_ndc * in.side;
+
   var out: VsOut;
-  out.pos = view_proj * vec4f(in.pos, 1.0);
+  out.pos = vec4f(ndc_out * clip.w, clip.z, clip.w);
   out.color = in.color;
   return out;
 }
@@ -269,7 +392,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
 
         let uniform = context.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("gizmo3d demo view_proj uniform"),
-            size: std::mem::size_of::<[[f32; 4]; 4]>() as u64,
+            size: std::mem::size_of::<Uniforms>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -317,6 +440,18 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
         };
 
+        let line_vertex_layout = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<LineVertex>() as u64,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &wgpu::vertex_attr_array![
+                0 => Float32x3, // a
+                1 => Float32x3, // b
+                2 => Float32,   // t
+                3 => Float32,   // side
+                4 => Float32x4  // color
+            ],
+        };
+
         let depth_state = wgpu::DepthStencilState {
             format: wgpu::TextureFormat::Depth24Plus,
             depth_write_enabled: true,
@@ -332,7 +467,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: Some("vs_main"),
+                    entry_point: Some("vs_main_tri"),
                     buffers: &[vertex_layout.clone()],
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                 },
@@ -356,16 +491,16 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 cache: None,
             });
 
-        let line_depth_pipeline =
+        let thick_line_depth_pipeline =
             context
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo line depth pipeline"),
+                    label: Some("gizmo3d demo thick line depth pipeline"),
                     layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &shader,
-                        entry_point: Some("vs_main"),
-                        buffers: &[vertex_layout.clone()],
+                        entry_point: Some("vs_main_thick_line"),
+                        buffers: &[line_vertex_layout.clone()],
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     },
                     fragment: Some(wgpu::FragmentState {
@@ -379,11 +514,17 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     }),
                     primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::LineList,
+                        topology: wgpu::PrimitiveTopology::TriangleList,
                         ..Default::default()
                     },
                     depth_stencil: Some(wgpu::DepthStencilState {
                         depth_write_enabled: false,
+                        // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
+                        bias: wgpu::DepthBiasState {
+                            constant: -2,
+                            slope_scale: -1.0,
+                            clamp: 0.0,
+                        },
                         ..depth_state.clone()
                     }),
                     multisample: wgpu::MultisampleState::default(),
@@ -391,16 +532,16 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     cache: None,
                 });
 
-        let line_always_pipeline =
+        let thick_line_always_pipeline =
             context
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo line always pipeline"),
+                    label: Some("gizmo3d demo thick line always pipeline"),
                     layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &shader,
-                        entry_point: Some("vs_main"),
-                        buffers: &[vertex_layout],
+                        entry_point: Some("vs_main_thick_line"),
+                        buffers: &[line_vertex_layout],
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     },
                     fragment: Some(wgpu::FragmentState {
@@ -414,7 +555,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                     }),
                     primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::LineList,
+                        topology: wgpu::PrimitiveTopology::TriangleList,
                         ..Default::default()
                     },
                     depth_stencil: Some(wgpu::DepthStencilState {
@@ -450,8 +591,8 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             uniform,
             bind_group,
             tri_pipeline,
-            line_depth_pipeline,
-            line_always_pipeline,
+            thick_line_depth_pipeline,
+            thick_line_always_pipeline,
             cube_vb,
             cube_ib,
             cube_index_count: cube_indices.len().min(u32::MAX as usize) as u32,
@@ -504,7 +645,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
     type WindowState = Gizmo3dDemoWindowState;
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+        let state = Self::build_ui(app, window);
+        // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
+        // the first input event happens to request a redraw.
+        app.request_redraw(window);
+        state
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
@@ -517,12 +662,108 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         } = context;
 
         match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
+            Event::WindowCloseRequested => {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            }
+            Event::KeyDown {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                let mut did_cancel = false;
+                let _ = state.demo.update(app, |m, _cx| {
+                    let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+                    if !is_dragging {
+                        return;
+                    }
+
+                    let view_projection = camera_view_projection(m.viewport_px);
+                    let viewport = ViewportRect::new(
+                        Vec2::ZERO,
+                        Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
+                    );
+
+                    let mut input = m.input;
+                    input.drag_started = false;
+                    input.dragging = false;
+                    input.cancel = true;
+
+                    if let Some(update) = m.gizmo.update(
+                        view_projection,
+                        viewport,
+                        input,
+                        std::slice::from_ref(&m.target),
+                    ) {
+                        if update.phase == GizmoPhase::Cancel {
+                            if let Some(start) = m.drag_start_target.take() {
+                                m.target = start;
+                            }
+                            did_cancel = true;
+                        }
+                    }
+
+                    m.input.cancel = false;
+                    m.input.dragging = false;
+                    m.input.drag_started = false;
+                });
+
+                if did_cancel {
+                    app.request_redraw(window);
+                } else {
+                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                }
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyR,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.mode = GizmoMode::Rotate;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyS,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.mode = GizmoMode::Scale;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyT,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.mode = GizmoMode::Translate;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyU,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.mode = GizmoMode::Universal;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyL,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.orientation = match m.gizmo.config.orientation {
+                        GizmoOrientation::World => GizmoOrientation::Local,
+                        GizmoOrientation::Local => GizmoOrientation::World,
+                    };
+                });
+                app.request_redraw(window);
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);
@@ -543,16 +784,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 return;
             }
 
+            // Use UV instead of integer target pixels to avoid cursor quantization.
             let cursor_px = Vec2::new(
-                event.target_px.0 as f32 + 0.5,
-                event.target_px.1 as f32 + 0.5,
+                event.uv.0 * m.viewport_px.0 as f32,
+                event.uv.1 * m.viewport_px.1 as f32,
             );
             let (drag_started, dragging) = match event.kind {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Left,
                     ..
                 } => (true, true),
-                ViewportInputKind::PointerMove { buttons, .. } => (false, buttons.left),
+                ViewportInputKind::PointerMove { buttons, .. } => {
+                    // Some platforms can produce inconsistent "buttons" state for move events.
+                    // Prefer to keep dragging latched until an explicit PointerUp arrives.
+                    (false, m.input.dragging || buttons.left)
+                }
                 ViewportInputKind::PointerUp {
                     button: fret_core::MouseButton::Left,
                     ..
@@ -560,11 +806,20 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 _ => (false, m.input.dragging),
             };
 
+            let snap = match event.kind {
+                ViewportInputKind::PointerMove { modifiers, .. } => modifiers.shift,
+                ViewportInputKind::PointerDown { modifiers, .. } => modifiers.shift,
+                ViewportInputKind::PointerUp { modifiers, .. } => modifiers.shift,
+                ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
+            };
+
             m.input = GizmoInput {
                 cursor_px,
                 hovered: true,
                 drag_started,
                 dragging,
+                snap,
+                cancel: false,
             };
 
             let view_projection = camera_view_projection(m.viewport_px);
@@ -578,7 +833,22 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.input,
                 std::slice::from_ref(&m.target),
             ) {
-                m.target = update.updated_targets[0];
+                match update.phase {
+                    GizmoPhase::Begin => {
+                        m.drag_start_target = Some(m.target);
+                    }
+                    GizmoPhase::Update => {
+                        m.target = update.updated_targets[0];
+                    }
+                    GizmoPhase::Commit => {
+                        m.drag_start_target = None;
+                    }
+                    GizmoPhase::Cancel => {
+                        if let Some(start) = m.drag_start_target.take() {
+                            m.target = start;
+                        }
+                    }
+                }
             }
         });
 
@@ -603,61 +873,60 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         let gpu = state.gpu.as_ref().expect("gpu ensured");
 
         let view_proj = camera_view_projection(size);
-        context.queue.write_buffer(
-            &gpu.uniform,
-            0,
-            bytemuck::cast_slice(&view_proj.to_cols_array_2d()),
-        );
+        let uniforms = Uniforms {
+            view_proj: view_proj.to_cols_array_2d(),
+            viewport_and_thickness: [size.0 as f32, size.1 as f32, 4.0, 0.0],
+        };
+        context
+            .queue
+            .write_buffer(&gpu.uniform, 0, bytemuck::bytes_of(&uniforms));
 
         let lines = state
             .demo
             .read(app, |_app, m| {
-                m.gizmo.draw_translate_axes(
+                m.gizmo.draw(
                     view_proj,
                     ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                    m.target.translation,
+                    m.target,
                 )
             })
             .unwrap_or_else(|_| Vec::new());
 
-        let mut line_verts_depth: Vec<Vertex> = Vec::new();
-        let mut line_verts_always: Vec<Vertex> = Vec::new();
+        let mut line_verts_depth: Vec<LineVertex> = Vec::new();
+        let mut line_verts_always: Vec<LineVertex> = Vec::new();
 
         for line in lines {
-            let v0 = Vertex {
-                pos: line.a.to_array(),
-                color: [line.color.r, line.color.g, line.color.b, line.color.a],
-            };
-            let v1 = Vertex {
-                pos: line.b.to_array(),
-                color: [line.color.r, line.color.g, line.color.b, line.color.a],
-            };
+            let a = line.a.to_array();
+            let b = line.b.to_array();
+            let color = [line.color.r, line.color.g, line.color.b, line.color.a];
             match line.depth {
                 DepthMode::Test => {
-                    line_verts_depth.push(v0);
-                    line_verts_depth.push(v1);
+                    push_thick_line_quad(&mut line_verts_depth, a, b, color);
                 }
                 DepthMode::Always => {
-                    line_verts_always.push(v0);
-                    line_verts_always.push(v1);
+                    push_thick_line_quad(&mut line_verts_always, a, b, color);
                 }
             }
         }
 
-        let line_vb_depth = context
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gizmo3d demo line vb (depth)"),
-                contents: bytemuck::cast_slice(&line_verts_depth),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
-        let line_vb_always = context
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gizmo3d demo line vb (always)"),
-                contents: bytemuck::cast_slice(&line_verts_always),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+        let line_vb_depth = (!line_verts_depth.is_empty()).then(|| {
+            context
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("gizmo3d demo thick line vb (depth)"),
+                    contents: bytemuck::cast_slice(&line_verts_depth),
+                    usage: wgpu::BufferUsages::VERTEX,
+                })
+        });
+        let line_vb_always = (!line_verts_always.is_empty()).then(|| {
+            context
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("gizmo3d demo thick line vb (always)"),
+                    contents: bytemuck::cast_slice(&line_verts_always),
+                    usage: wgpu::BufferUsages::VERTEX,
+                })
+        });
 
         let clear = wgpu::Color {
             r: 0.08,
@@ -704,16 +973,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             pass.set_index_buffer(gpu.cube_ib.slice(..), wgpu::IndexFormat::Uint16);
             pass.draw_indexed(0..gpu.cube_index_count, 0, 0..1);
 
-            if !line_verts_depth.is_empty() {
-                pass.set_pipeline(&gpu.line_depth_pipeline);
+            if let Some(line_vb_depth) = &line_vb_depth {
+                pass.set_pipeline(&gpu.thick_line_depth_pipeline);
                 pass.set_vertex_buffer(0, line_vb_depth.slice(..));
                 pass.draw(
                     0..(line_verts_depth.len().min(u32::MAX as usize) as u32),
                     0..1,
                 );
             }
-            if !line_verts_always.is_empty() {
-                pass.set_pipeline(&gpu.line_always_pipeline);
+            if let Some(line_vb_always) = &line_vb_always {
+                pass.set_pipeline(&gpu.thick_line_always_pipeline);
                 pass.set_vertex_buffer(0, line_vb_always.slice(..));
                 pass.draw(
                     0..(line_verts_always.len().min(u32::MAX as usize) as u32),

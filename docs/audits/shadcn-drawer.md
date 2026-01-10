@@ -41,6 +41,10 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: Fret provides `Drawer` as a recipe driven by a `Model<bool>` open state.
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: `DrawerTrigger` exists as a thin passthrough wrapper for taxonomy parity.
+- Pass: `DrawerPortal` is exposed for taxonomy parity (portal mounting is owned by the overlay
+  manager in Fret).
+- Pass: `DrawerOverlay` is exposed as a shadcn-named configuration surface (delegates to `Sheet`
+  overlay defaults).
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
 - Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog
   substrate building blocks (`Title`/`Description`).
@@ -74,8 +78,6 @@ Upstream exports a thin wrapper around `vaul`:
 - Vaul-specific snap-points are not modeled yet.
 - Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet (Fret currently
   uses a simple threshold-based close).
-- `DrawerPortal` / `DrawerOverlay` are not currently exposed as standalone building blocks in Fret
-  because the overlay manager owns portal mounting and the barrier is authored by the recipe layer.
 
 ## Validation
 
