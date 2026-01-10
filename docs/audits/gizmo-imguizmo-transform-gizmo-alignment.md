@@ -177,9 +177,10 @@ Fret's current contract:
 | Mode | Reference behavior (high level) | Fret status | Evidence / notes |
 | --- | --- | --- | --- |
 | Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Partially aligned** | Center handle early-out exists in `pick_translate_handle`; plane-vs-axis priority is still heuristic-based. |
-| Rotate | Prefer the ring the user aims at; disambiguate view ring vs axis rings; avoid "wrong ring" when rings overlap in screen space. | **Partially aligned** | `pick_rotate_axis` exists, but there is no explicit priority ladder across view/axis rings and no per-ring bias knobs. |
-| Scale | Prefer axis end boxes when cursor is on the shaft; prefer center uniform only when close to origin; avoid fighting Universal overlays. | **Partially aligned** | `pick_scale_handle` has a center radius and an axis bias, but no plane scale and no unified policy with other modes. |
-| Universal | Protect translate center/planes and scale end boxes; otherwise disambiguate rotate vs scale vs translate deterministically. | **Partially aligned** | `pick_universal_handle` enforces a priority ladder (translate center/plane interior wins; scale end boxes win; otherwise tie-break rotate > scale > translate). Still needs more tuning for edge cases (ring overlap, orthographic, behind-camera). |
+| Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Aligned (basic)** | Explicit early-outs exist for center handle and plane interior: `translate_center_handle_wins_near_origin`, `translate_plane_inside_wins_over_axis_when_both_hit` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
+| Rotate | Prefer the ring the user aims at; disambiguate view ring vs axis rings; avoid "wrong ring" when rings overlap in screen space. | **Aligned (basic)** | `pick_rotate_axis` has explicit view-ring vs axis-ring disambiguation (axis "strong hit" wins), backed by `rotate_view_ring_does_not_steal_axis_ring_when_both_hit`. Axis rings also fade out (and become unpickable) when edge-on: `rotate_ring_fade_hides_edge_on_axis_ring`. |
+| Scale | Prefer axis end boxes when cursor is on the shaft; prefer center uniform only when close to origin; avoid fighting Universal overlays. | **Aligned (basic)** | Plane scale (XY/XZ/YZ) is implemented in `Scale` mode, and bounds handles win when overlapping scale axis end boxes: `scale_prefers_bounds_face_handle_over_axis_end_box_when_overlapping`. |
+| Universal | Protect translate center/planes and scale end boxes; otherwise disambiguate rotate vs scale vs translate deterministically. | **Aligned (with known gaps)** | `pick_universal_handle` enforces a priority ladder (translate center/plane interior wins; scale end boxes win; otherwise tie-break rotate > scale > translate). Known gaps: more coverage for orthographic + near-plane + behind-camera overlap cases. |
 
 #### Drag stability invariants (what we must lock down)
 
@@ -208,7 +209,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Per-axis colors + hover color | Yes | Yes | **Aligned** | `GizmoConfig::{x_color,y_color,z_color,hover_color}`. |
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
-| Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Gaps: fade windows are pixel-based (not clip-space units) and currently applied to translate/scale axes+planes (including picking bias), not rotate rings. |
+| Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Rotate rings use a separate view-angle fade window (`rotate_ring_fade_dot`) to avoid edge-on rings stealing interaction. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Not implemented** | Separate feature; can be built as another tool using similar math. |
 | Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
 
@@ -243,7 +244,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 1. **Bounds / box scaling (basic in place)**
    - Fret already implements a bounds-style box with corner + face handles, and supports `GizmoTarget3d::local_bounds`
      as the ImGuizmo `localBounds` equivalent input surface.
-   - Next alignment targets: `boundsSnap`, tighter multi-selection scaling semantics (pivot/anchor/axis constraints), and
+   - Next alignment targets: tighter multi-selection scaling semantics (pivot/anchor/axis constraints), and
      more mature visuals (thickness/AA/consistent occlusion feedback).
 2. **View gizmo (camera cube)**
    - A separate tool; can be layered on the same math/picking substrate.
