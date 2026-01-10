@@ -6,8 +6,8 @@ use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextS
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, RenderTransformProps,
+    SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -417,8 +417,8 @@ impl Popover {
                             opacity,
                         },
                         move |cx| {
-                            let wrapper = cx.visual_transform_props(
-                                VisualTransformProps {
+                            let wrapper = cx.render_transform_props(
+                                RenderTransformProps {
                                     layout: opacity_layout,
                                     transform,
                                 },

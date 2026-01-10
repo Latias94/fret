@@ -6,7 +6,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, PointerRegionProps,
-    SizeStyle, VisualTransformProps,
+    RenderTransformProps, SizeStyle,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -562,8 +562,8 @@ impl HoverCard {
                         opacity,
                     },
                     move |cx| {
-                        vec![cx.visual_transform_props(
-                            VisualTransformProps {
+                        vec![cx.render_transform_props(
+                            RenderTransformProps {
                                 layout: overlay_layout,
                                 transform,
                             },
@@ -1316,10 +1316,37 @@ mod tests {
             .expect("content bounds");
 
         // Pointer down on the content, then drag out.
-        let down_pos = Point::new(
-            Px(content_bounds.origin.x.0 + 1.0),
-            Px(content_bounds.origin.y.0 + 1.0),
-        );
+        //
+        // Note: the hover card subtree may be wrapped in a render transform (motion), so the
+        // semantics snapshot bounds are not guaranteed to map 1:1 to interactive hit testing.
+        // Find an actual hit-testable point within the content subtree.
+        let mut down_pos: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(8) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(8) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                let Some(hit) = ui.debug_hit_test(pos).hit else {
+                    continue;
+                };
+                if ui.debug_node_path(hit).contains(&content_node) {
+                    down_pos = Some(pos);
+                    break;
+                }
+            }
+            if down_pos.is_some() {
+                break;
+            }
+        }
+        let down_pos = down_pos.unwrap_or_else(|| {
+            let fallback = Point::new(
+                Px(content_bounds.origin.x.0 + 1.0),
+                Px(content_bounds.origin.y.0 + 1.0),
+            );
+            panic!(
+                "failed to find hover card content hit target; fallback={:?} hit={:?}",
+                fallback,
+                ui.debug_hit_test(fallback)
+            );
+        });
         ui.dispatch_event(
             &mut app,
             &mut services,

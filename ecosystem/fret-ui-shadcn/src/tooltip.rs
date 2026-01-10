@@ -20,8 +20,8 @@ use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, T
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
-    PointerRegionProps, SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps, TextProps,
-    VisualTransformProps,
+    PointerRegionProps, RenderTransformProps, SemanticsProps, SizeStyle, SpinnerProps,
+    SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -734,8 +734,8 @@ impl Tooltip {
                         opacity,
                     },
                     move |cx| {
-                        vec![cx.visual_transform_props(
-                            VisualTransformProps {
+                        vec![cx.render_transform_props(
+                            RenderTransformProps {
                                 layout: overlay_layout,
                                 transform,
                             },
