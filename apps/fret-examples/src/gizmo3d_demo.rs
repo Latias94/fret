@@ -11,6 +11,7 @@ use fret_gizmo::{
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
     WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::ViewportOverlay3dContext;
@@ -2674,12 +2675,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 viewport_px: size,
             };
 
-            let hooks = app
-                .global::<ViewportOverlay3dHooksService>()
-                .and_then(|svc| svc.hooks());
-            if let Some(hooks) = hooks {
-                hooks.record(app, window, target_id, &mut pass, &ctx);
-            }
+            record_viewport_overlay_3d(app, window, target_id, &mut pass, &ctx);
 
             let _ = _frame_id;
         }

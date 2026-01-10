@@ -79,6 +79,25 @@ impl ViewportOverlay3dHooksService {
     }
 }
 
+/// Records app-owned engine-pass viewport overlays into an existing render pass.
+///
+/// This is a convenience helper over `ViewportOverlay3dHooksService` to keep engine integrations
+/// and demos free of boilerplate.
+pub fn record_viewport_overlay_3d(
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    target: fret_core::RenderTargetId,
+    pass: &mut wgpu::RenderPass<'_>,
+    ctx: &ViewportOverlay3dContext,
+) {
+    let hooks = app
+        .global::<ViewportOverlay3dHooksService>()
+        .and_then(|svc| svc.hooks());
+    if let Some(hooks) = hooks {
+        hooks.record(app, window, target, pass, ctx);
+    }
+}
+
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
     pub main_window_size: LogicalSize<f64>,
