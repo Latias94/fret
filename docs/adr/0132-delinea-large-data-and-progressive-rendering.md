@@ -87,6 +87,14 @@ The engine must be able to:
 The UI adapter may call `step()` multiple times per frame, but the engine must never assume it
 can finish a full rebuild in one call.
 
+UI integration requirement (event-driven scheduling):
+
+- When `step()` reports unfinished work, the UI adapter must continue driving future frames by
+  requesting animation frames (ADR 0034). Progressive rendering must not depend on pointer-driven
+  redraws.
+- UI runtimes with paint caching must ensure progressive adapters are not skipped by cache replays
+  while the engine is unfinished (e.g. disable cache for that node until the engine finishes).
+
 ### 5) Hover/tooltip must not force full geometry rebuild
 
 Hover and tooltip sampling should:
@@ -120,3 +128,5 @@ P1:
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
 - ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
 - ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- Zed/GPUI reference: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\zed\\crates\\gpui\\src\\window.rs` (`Window::request_animation_frame`)
