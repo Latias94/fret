@@ -496,6 +496,7 @@ impl Default for Gizmo3dDemoModel {
     fn default() -> Self {
         let mut gizmo_cfg = GizmoConfig::default();
         gizmo_cfg.translate_snap_step = Some(0.25);
+        gizmo_cfg.show_bounds = true;
         let targets = vec![
             GizmoTarget3d {
                 id: GizmoTargetId(1),

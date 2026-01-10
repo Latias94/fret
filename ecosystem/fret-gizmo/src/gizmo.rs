@@ -132,6 +132,14 @@ pub struct GizmoConfig {
     pub arcball_radius_scale: f32,
     /// Rotation speed multiplier for arcball drags.
     pub arcball_rotation_speed: f32,
+    /// When `true`, draws a bounds (box) scaling gizmo in `GizmoMode::Scale`.
+    ///
+    /// This is an ImGuizmo `BOUNDS`-style affordance: a box around the selection with corner and
+    /// face handles. Current implementation derives bounds from selected target translations
+    /// (no mesh/local-AABB inputs yet).
+    pub show_bounds: bool,
+    /// Bounds handle visual size in pixels.
+    pub bounds_handle_size_px: f32,
     /// When `true`, `GizmoMode::Universal` includes scale interaction (axis scaling).
     ///
     /// Note: uniform scaling (handle id 7) remains exclusive to `GizmoMode::Scale` to avoid
@@ -187,6 +195,8 @@ impl Default for GizmoConfig {
             show_arcball: true,
             arcball_radius_scale: 0.85,
             arcball_rotation_speed: 1.0,
+            show_bounds: false,
+            bounds_handle_size_px: 12.0,
             universal_includes_scale: true,
             allow_axis_flip: true,
             axis_fade_px: (4.0, 18.0),
@@ -239,6 +249,19 @@ enum TranslateHandle {
     PlaneXZ,
     PlaneYZ,
     Screen,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BoundsHandle {
+    Corner {
+        x_max: bool,
+        y_max: bool,
+        z_max: bool,
+    },
+    Face {
+        axis: usize,
+        max_side: bool,
+    },
 }
 
 impl TranslateHandle {
@@ -327,6 +350,16 @@ pub struct GizmoState {
     drag_arcball_prev_vec: Vec3,
     drag_total_arcball_raw: Quat,
     drag_total_arcball_applied: Quat,
+    drag_scale_is_bounds: bool,
+    drag_bounds_basis: [Vec3; 3],
+    drag_bounds_min_local: Vec3,
+    drag_bounds_max_local: Vec3,
+    drag_bounds_anchor_local: Vec3,
+    drag_bounds_axes_mask: [bool; 3],
+    drag_bounds_axis_sign: [f32; 3],
+    drag_bounds_start_extent: Vec3,
+    drag_bounds_total_raw: Vec3,
+    drag_bounds_total_applied: Vec3,
     drag_scale_axis: Option<usize>,
     drag_scale_plane_axes: Option<(usize, usize)>,
     drag_scale_plane_u: Vec3,
@@ -372,6 +405,16 @@ impl Default for GizmoState {
             drag_arcball_prev_vec: Vec3::Z,
             drag_total_arcball_raw: Quat::IDENTITY,
             drag_total_arcball_applied: Quat::IDENTITY,
+            drag_scale_is_bounds: false,
+            drag_bounds_basis: [Vec3::X, Vec3::Y, Vec3::Z],
+            drag_bounds_min_local: Vec3::ZERO,
+            drag_bounds_max_local: Vec3::ZERO,
+            drag_bounds_anchor_local: Vec3::ZERO,
+            drag_bounds_axes_mask: [false; 3],
+            drag_bounds_axis_sign: [1.0; 3],
+            drag_bounds_start_extent: Vec3::ONE,
+            drag_bounds_total_raw: Vec3::ONE,
+            drag_bounds_total_applied: Vec3::ONE,
             drag_scale_axis: None,
             drag_scale_plane_axes: None,
             drag_scale_plane_u: Vec3::X,
@@ -432,6 +475,10 @@ impl Gizmo {
     const UNIVERSAL_TRANSLATE_TIP_SCALE: f32 = 1.25;
     const ROTATE_VIEW_HANDLE: HandleId = HandleId(8);
     const ROTATE_ARCBALL_HANDLE: HandleId = HandleId(9);
+    const BOUNDS_CORNER_BASE: u64 = 20;
+    const BOUNDS_CORNER_END: u64 = 27;
+    const BOUNDS_FACE_BASE: u64 = 30;
+    const BOUNDS_FACE_END: u64 = 35;
 
     fn translate_axis_tip_scale(&self) -> f32 {
         if self.config.mode == GizmoMode::Universal && self.config.universal_includes_scale {
@@ -622,12 +669,8 @@ impl Gizmo {
             return None;
         };
 
-        let axes = self.flip_axes_for_view(
-            view_projection,
-            viewport,
-            origin,
-            self.axis_dirs(&active_transform),
-        );
+        let axes_raw = self.axis_dirs(&active_transform);
+        let axes = self.flip_axes_for_view(view_projection, viewport, origin, axes_raw);
         let mut hovered: Option<HandleId> = None;
         let mut hovered_kind: Option<GizmoMode> = None;
         if self.state.active.is_none() && input.hovered {
@@ -639,14 +682,14 @@ impl Gizmo {
                     .pick_rotate_axis(view_projection, viewport, origin, input.cursor_px, axes)
                     .map(|h| (h, GizmoMode::Rotate)),
                 GizmoMode::Scale => self
-                    .pick_scale_handle(
+                    .pick_scale_or_bounds_handle(
                         view_projection,
                         viewport,
                         origin,
                         input.cursor_px,
                         axes,
-                        true,
-                        true,
+                        axes_raw,
+                        targets,
                     )
                     .map(|h| (h, GizmoMode::Scale)),
                 GizmoMode::Universal => self.pick_universal_handle(
@@ -690,16 +733,52 @@ impl Gizmo {
                             h,
                             axes,
                         ),
-                        GizmoMode::Scale => self.begin_scale_drag(
-                            view_projection,
-                            viewport,
-                            input,
-                            targets,
-                            cursor_ray,
-                            origin,
-                            h,
-                            axes,
-                        ),
+                        GizmoMode::Scale => {
+                            if self.config.show_bounds {
+                                if let Some(bounds_handle) = Self::bounds_handle_from_id(h) {
+                                    let origin_z01 = origin_z01(
+                                        view_projection,
+                                        viewport,
+                                        origin,
+                                        self.config.depth_range,
+                                    )?;
+                                    self.begin_bounds_drag(
+                                        view_projection,
+                                        viewport,
+                                        input,
+                                        targets,
+                                        cursor_ray,
+                                        origin,
+                                        origin_z01,
+                                        bounds_handle,
+                                        h,
+                                        axes_raw,
+                                    )
+                                } else {
+                                    self.begin_scale_drag(
+                                        view_projection,
+                                        viewport,
+                                        input,
+                                        targets,
+                                        cursor_ray,
+                                        origin,
+                                        h,
+                                        axes,
+                                    )
+                                }
+                            } else {
+                                self.begin_scale_drag(
+                                    view_projection,
+                                    viewport,
+                                    input,
+                                    targets,
+                                    cursor_ray,
+                                    origin,
+                                    h,
+                                    axes,
+                                )
+                            }
+                        }
                         GizmoMode::Universal => match self.state.hovered_kind {
                             Some(GizmoMode::Translate) => self.begin_translate_drag(
                                 view_projection,
@@ -1169,12 +1248,15 @@ impl Gizmo {
                 };
 
                 if input.cancel {
-                    let total = if self.state.drag_scale_plane_axes.is_some() {
+                    let total = if self.state.drag_scale_is_bounds {
+                        self.state.drag_bounds_total_applied
+                    } else if self.state.drag_scale_plane_axes.is_some() {
                         total_plane_vec(self.state.drag_total_scale_plane_applied)
                     } else {
                         total_vec(self.state.drag_total_scale_applied)
                     };
                     self.state.active = None;
+                    self.state.drag_scale_is_bounds = false;
                     return Some(GizmoUpdate {
                         phase: GizmoPhase::Cancel,
                         active,
@@ -1201,6 +1283,123 @@ impl Gizmo {
                     } else {
                         false
                     };
+
+                    if self.state.drag_scale_is_bounds {
+                        let hit_world = ray_plane_intersect(
+                            cursor_ray,
+                            self.state.drag_origin,
+                            self.state.drag_plane_normal,
+                        )
+                        .filter(|p| p.is_finite())
+                        .unwrap_or_else(|| {
+                            unproject_point(
+                                view_projection,
+                                viewport,
+                                input.cursor_px,
+                                self.config.depth_range,
+                                self.state.drag_origin_z01,
+                            )
+                            .unwrap_or(self.state.drag_origin)
+                        });
+
+                        let basis = self.state.drag_bounds_basis;
+                        let delta_world = hit_world - self.state.drag_prev_hit_world;
+                        self.state.drag_prev_hit_world = hit_world;
+                        let delta_local = Vec3::new(
+                            delta_world.dot(basis[0]),
+                            delta_world.dot(basis[1]),
+                            delta_world.dot(basis[2]),
+                        );
+
+                        for i in 0..3 {
+                            if self.state.drag_bounds_axes_mask[i] {
+                                let sign = self.state.drag_bounds_axis_sign[i];
+                                let extent = self.state.drag_bounds_start_extent[i].max(1e-6);
+                                self.state.drag_bounds_total_raw[i] +=
+                                    (delta_local[i] * sign) / extent;
+                            }
+                        }
+
+                        let mut desired = Vec3::ONE;
+                        for i in 0..3 {
+                            if self.state.drag_bounds_axes_mask[i] {
+                                let mut factor =
+                                    (1.0 + self.state.drag_bounds_total_raw[i]).max(0.01);
+                                if input.snap {
+                                    if let Some(step) = self
+                                        .config
+                                        .scale_snap_step
+                                        .filter(|s| s.is_finite() && *s > 0.0)
+                                    {
+                                        factor = 1.0 + ((factor - 1.0) / step).round() * step;
+                                        factor = factor.max(0.01);
+                                    }
+                                }
+                                desired[i] = factor;
+                            }
+                        }
+
+                        let delta = Vec3::new(
+                            desired.x / self.state.drag_bounds_total_applied.x,
+                            desired.y / self.state.drag_bounds_total_applied.y,
+                            desired.z / self.state.drag_bounds_total_applied.z,
+                        );
+                        self.state.drag_bounds_total_applied = desired;
+
+                        let updated_targets = targets
+                            .iter()
+                            .map(|t| {
+                                let origin = self.state.drag_origin;
+                                let basis = self.state.drag_bounds_basis;
+                                let anchor = self.state.drag_bounds_anchor_local;
+
+                                let p = t.transform.translation - origin;
+                                let coords =
+                                    Vec3::new(p.dot(basis[0]), p.dot(basis[1]), p.dot(basis[2]));
+                                let mut next = coords;
+                                for i in 0..3 {
+                                    if self.state.drag_bounds_axes_mask[i] {
+                                        next[i] = anchor[i] + (coords[i] - anchor[i]) * delta[i];
+                                    }
+                                }
+                                let translation = origin
+                                    + basis[0] * next.x
+                                    + basis[1] * next.y
+                                    + basis[2] * next.z;
+
+                                let mut scale = t.transform.scale;
+                                for i in 0..3 {
+                                    if self.state.drag_bounds_axes_mask[i] {
+                                        scale[i] = (scale[i] * delta[i]).max(1e-4);
+                                    }
+                                }
+
+                                GizmoTarget3d {
+                                    id: t.id,
+                                    transform: Transform3d {
+                                        translation,
+                                        scale,
+                                        ..t.transform
+                                    },
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        return Some(GizmoUpdate {
+                            phase: if started_this_call {
+                                GizmoPhase::Begin
+                            } else {
+                                GizmoPhase::Update
+                            },
+                            active,
+                            result: GizmoResult::Scale {
+                                delta,
+                                total: desired,
+                            },
+                            updated_targets,
+                        });
+                    }
+
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -1378,15 +1577,19 @@ impl Gizmo {
 
                 if !self.state.drag_has_started {
                     self.state.active = None;
+                    self.state.drag_scale_is_bounds = false;
                     return None;
                 }
 
-                let total = if self.state.drag_scale_plane_axes.is_some() {
+                let total = if self.state.drag_scale_is_bounds {
+                    self.state.drag_bounds_total_applied
+                } else if self.state.drag_scale_plane_axes.is_some() {
                     total_plane_vec(self.state.drag_total_scale_plane_applied)
                 } else {
                     total_vec(self.state.drag_total_scale_applied)
                 };
                 self.state.active = None;
+                self.state.drag_scale_is_bounds = false;
                 Some(GizmoUpdate {
                     phase: GizmoPhase::Commit,
                     active,
@@ -1433,12 +1636,8 @@ impl Gizmo {
                 sum / (targets.len().max(1) as f32)
             }
         };
-        let axes = self.flip_axes_for_view(
-            view_projection,
-            viewport,
-            origin,
-            self.axis_dirs(&active_transform),
-        );
+        let axes_raw = self.axis_dirs(&active_transform);
+        let axes = self.flip_axes_for_view(view_projection, viewport, origin, axes_raw);
         match self.config.mode {
             GizmoMode::Translate => {
                 let mut out = GizmoDrawList3d::default();
@@ -1469,17 +1668,41 @@ impl Gizmo {
                 out.triangles.extend(feedback.triangles);
                 out
             }
-            GizmoMode::Scale => GizmoDrawList3d {
-                lines: self.draw_scale_handles(view_projection, viewport, origin, axes, true, true),
-                triangles: self.draw_scale_solids(
+            GizmoMode::Scale => {
+                let mut out = GizmoDrawList3d::default();
+                if self.config.show_bounds {
+                    let bounds_axes = [
+                        axes_raw[0].normalize_or_zero(),
+                        axes_raw[1].normalize_or_zero(),
+                        axes_raw[2].normalize_or_zero(),
+                    ];
+                    self.draw_bounds(
+                        &mut out,
+                        view_projection,
+                        viewport,
+                        origin,
+                        bounds_axes,
+                        targets,
+                    );
+                }
+                out.lines.extend(self.draw_scale_handles(
                     view_projection,
                     viewport,
                     origin,
                     axes,
                     true,
                     true,
-                ),
-            },
+                ));
+                out.triangles.extend(self.draw_scale_solids(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    true,
+                    true,
+                ));
+                out
+            }
             GizmoMode::Universal => {
                 let mut out = GizmoDrawList3d::default();
                 if !self.config.universal_includes_scale {
@@ -1530,6 +1753,169 @@ impl Gizmo {
                 }
                 out.triangles.extend(rotate_feedback.triangles);
                 out
+            }
+        }
+    }
+
+    fn draw_bounds(
+        &self,
+        out: &mut GizmoDrawList3d,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        basis: [Vec3; 3],
+        targets: &[GizmoTarget3d],
+    ) {
+        if targets.is_empty() {
+            return;
+        }
+        if basis.iter().any(|v| v.length_squared() == 0.0) {
+            return;
+        }
+
+        let (min_local, max_local) =
+            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let center_local = (min_local + max_local) * 0.5;
+
+        let to_world = |local: Vec3| -> Vec3 {
+            origin + basis[0] * local.x + basis[1] * local.y + basis[2] * local.z
+        };
+
+        let corners_local = [
+            Vec3::new(min_local.x, min_local.y, min_local.z),
+            Vec3::new(max_local.x, min_local.y, min_local.z),
+            Vec3::new(max_local.x, max_local.y, min_local.z),
+            Vec3::new(min_local.x, max_local.y, min_local.z),
+            Vec3::new(min_local.x, min_local.y, max_local.z),
+            Vec3::new(max_local.x, min_local.y, max_local.z),
+            Vec3::new(max_local.x, max_local.y, max_local.z),
+            Vec3::new(min_local.x, max_local.y, max_local.z),
+        ];
+        let corners_world = corners_local.map(to_world);
+
+        let box_color = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.45,
+        };
+        for (a, b) in [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 0),
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (7, 4),
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7),
+        ] {
+            self.push_line(
+                &mut out.lines,
+                corners_world[a],
+                corners_world[b],
+                box_color,
+                self.config.depth_mode,
+            );
+        }
+
+        let Some(view_dir) =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+        else {
+            return;
+        };
+        let (u, v) = plane_basis(view_dir);
+
+        let handle_size_px = self.config.bounds_handle_size_px.max(1.0);
+        let handle_half_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            handle_size_px,
+        )
+        .unwrap_or(1.0)
+        .max(1e-6)
+            * 0.5;
+
+        let push_handle = |this: &Gizmo,
+                           out: &mut GizmoDrawList3d,
+                           pos: Vec3,
+                           handle: HandleId,
+                           base: Color,
+                           bias: f32| {
+            let outline = if this.is_handle_highlighted(GizmoMode::Scale, handle) {
+                this.config.hover_color
+            } else {
+                base
+            };
+            let fill = mix_alpha(outline, (0.55 - bias).clamp(0.08, 0.55));
+            let outline = mix_alpha(outline, (0.95 - bias).clamp(0.15, 0.95));
+
+            let p0 = pos + (-u - v) * handle_half_world;
+            let p1 = pos + (u - v) * handle_half_world;
+            let p2 = pos + (u + v) * handle_half_world;
+            let p3 = pos + (-u + v) * handle_half_world;
+            this.push_tri(&mut out.triangles, p0, p1, p2, fill, this.config.depth_mode);
+            this.push_tri(&mut out.triangles, p0, p2, p3, fill, this.config.depth_mode);
+            for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
+                this.push_line(&mut out.lines, a, b, outline, this.config.depth_mode);
+            }
+        };
+
+        let corner_base = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.9,
+        };
+        for z_max in [false, true] {
+            for y_max in [false, true] {
+                for x_max in [false, true] {
+                    let local = Vec3::new(
+                        if x_max { max_local.x } else { min_local.x },
+                        if y_max { max_local.y } else { min_local.y },
+                        if z_max { max_local.z } else { min_local.z },
+                    );
+                    let world = to_world(local);
+                    push_handle(
+                        self,
+                        out,
+                        world,
+                        Self::bounds_corner_id(x_max, y_max, z_max),
+                        corner_base,
+                        0.0,
+                    );
+                }
+            }
+        }
+
+        let face_base = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.65,
+        };
+        for axis in 0..3 {
+            for &max_side in &[false, true] {
+                let mut local = center_local;
+                local[axis] = if max_side {
+                    max_local[axis]
+                } else {
+                    min_local[axis]
+                };
+                let world = to_world(local);
+                push_handle(
+                    self,
+                    out,
+                    world,
+                    Self::bounds_face_id(axis, max_side),
+                    face_base,
+                    0.25,
+                );
             }
         }
     }
@@ -1589,6 +1975,71 @@ impl Gizmo {
                 target.rotation * Vec3::Y,
                 target.rotation * Vec3::Z,
             ],
+        }
+    }
+
+    fn bounds_min_max_local(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        basis: [Vec3; 3],
+        targets: &[GizmoTarget3d],
+    ) -> (Vec3, Vec3) {
+        let mut min_v = Vec3::splat(f32::INFINITY);
+        let mut max_v = Vec3::splat(f32::NEG_INFINITY);
+
+        for t in targets {
+            let p = t.transform.translation - origin;
+            let v = Vec3::new(p.dot(basis[0]), p.dot(basis[1]), p.dot(basis[2]));
+            min_v = min_v.min(v);
+            max_v = max_v.max(v);
+        }
+
+        let min_extent = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )
+        .unwrap_or(1.0)
+        .max(1e-6)
+            * 0.25;
+
+        let center = (min_v + max_v) * 0.5;
+        let extent = (max_v - min_v).max(Vec3::splat(min_extent));
+        (center - extent * 0.5, center + extent * 0.5)
+    }
+
+    fn bounds_corner_id(x_max: bool, y_max: bool, z_max: bool) -> HandleId {
+        let bits = (x_max as u64) | ((y_max as u64) << 1) | ((z_max as u64) << 2);
+        HandleId(Self::BOUNDS_CORNER_BASE + bits)
+    }
+
+    fn bounds_face_id(axis: usize, max_side: bool) -> HandleId {
+        let axis = axis.min(2) as u64;
+        let side = if max_side { 1u64 } else { 0u64 };
+        HandleId(Self::BOUNDS_FACE_BASE + axis * 2 + side)
+    }
+
+    fn bounds_handle_from_id(handle: HandleId) -> Option<BoundsHandle> {
+        match handle.0 {
+            Self::BOUNDS_CORNER_BASE..=Self::BOUNDS_CORNER_END => {
+                let bits = handle.0 - Self::BOUNDS_CORNER_BASE;
+                Some(BoundsHandle::Corner {
+                    x_max: (bits & 1) != 0,
+                    y_max: (bits & 2) != 0,
+                    z_max: (bits & 4) != 0,
+                })
+            }
+            Self::BOUNDS_FACE_BASE..=Self::BOUNDS_FACE_END => {
+                let v = handle.0 - Self::BOUNDS_FACE_BASE;
+                let axis = (v / 2) as usize;
+                let max_side = (v % 2) == 1;
+                Some(BoundsHandle::Face { axis, max_side })
+            }
+            _ => None,
         }
     }
 
@@ -1939,6 +2390,128 @@ impl Gizmo {
         self.state.drag_total_scale_plane_raw = Vec2::ZERO;
         self.state.drag_total_scale_plane_applied = Vec2::ONE;
         self.state.drag_scale_is_uniform = axis.is_none() && plane_axes.is_none();
+        self.state.drag_scale_is_bounds = false;
+
+        Some(GizmoUpdate {
+            phase: GizmoPhase::Begin,
+            active,
+            result: GizmoResult::Scale {
+                delta: Vec3::ONE,
+                total: Vec3::ONE,
+            },
+            updated_targets: targets.to_vec(),
+        })
+    }
+
+    fn begin_bounds_drag(
+        &mut self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        input: GizmoInput,
+        targets: &[GizmoTarget3d],
+        cursor_ray: Ray3d,
+        origin: Vec3,
+        origin_z01: f32,
+        handle: BoundsHandle,
+        active: HandleId,
+        axes_raw: [Vec3; 3],
+    ) -> Option<GizmoUpdate> {
+        let basis = [
+            axes_raw[0].normalize_or_zero(),
+            axes_raw[1].normalize_or_zero(),
+            axes_raw[2].normalize_or_zero(),
+        ];
+        if basis.iter().any(|v| v.length_squared() == 0.0) {
+            return None;
+        }
+
+        let (min_local, max_local) =
+            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let center_local = (min_local + max_local) * 0.5;
+        let extent = (max_local - min_local).max(Vec3::splat(1e-6));
+
+        let mut axes_mask = [false; 3];
+        let mut axis_sign = [1.0f32; 3];
+        let mut anchor_local = min_local;
+
+        match handle {
+            BoundsHandle::Corner {
+                x_max,
+                y_max,
+                z_max,
+            } => {
+                let sides = [x_max, y_max, z_max];
+                for i in 0..3 {
+                    axes_mask[i] = true;
+                    axis_sign[i] = if sides[i] { 1.0 } else { -1.0 };
+                    anchor_local[i] = if sides[i] { min_local[i] } else { max_local[i] };
+                }
+            }
+            BoundsHandle::Face { axis, max_side } => {
+                axes_mask[axis.min(2)] = true;
+                axis_sign[axis.min(2)] = if max_side { 1.0 } else { -1.0 };
+                for i in 0..3 {
+                    anchor_local[i] = match (i, axis.min(2)) {
+                        (a, b) if a == b => {
+                            if max_side {
+                                min_local[i]
+                            } else {
+                                max_local[i]
+                            }
+                        }
+                        _ => center_local[i],
+                    };
+                }
+            }
+        }
+
+        let axes_count = axes_mask.iter().filter(|v| **v).count();
+        let plane_normal = if axes_count == 1 {
+            let axis = axes_mask.iter().position(|v| *v).unwrap_or(0);
+            let axis_dir = basis[axis] * axis_sign[axis];
+            axis_drag_plane_normal_facing_camera(
+                view_projection,
+                viewport,
+                self.config.depth_range,
+                origin,
+                axis_dir,
+            )?
+        } else {
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?
+        };
+
+        let start_hit_world = ray_plane_intersect(cursor_ray, origin, plane_normal)
+            .filter(|p| p.is_finite())
+            .unwrap_or(origin);
+
+        self.state.active = Some(active);
+        self.state.drag_mode = GizmoMode::Scale;
+        self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
+        self.state.drag_origin = origin;
+        self.state.drag_origin_z01 = origin_z01;
+        self.state.drag_plane_normal = plane_normal.normalize_or_zero();
+        self.state.drag_prev_hit_world = start_hit_world;
+
+        self.state.drag_scale_is_bounds = true;
+        self.state.drag_bounds_basis = basis;
+        self.state.drag_bounds_min_local = min_local;
+        self.state.drag_bounds_max_local = max_local;
+        self.state.drag_bounds_anchor_local = anchor_local;
+        self.state.drag_bounds_axes_mask = axes_mask;
+        self.state.drag_bounds_axis_sign = axis_sign;
+        self.state.drag_bounds_start_extent = extent;
+        self.state.drag_bounds_total_raw = Vec3::ZERO;
+        self.state.drag_bounds_total_applied = Vec3::ONE;
+
+        self.state.drag_total_scale_raw = 0.0;
+        self.state.drag_total_scale_applied = 1.0;
+        self.state.drag_total_scale_plane_raw = Vec2::ZERO;
+        self.state.drag_total_scale_plane_applied = Vec2::ONE;
+        self.state.drag_scale_axis = None;
+        self.state.drag_scale_plane_axes = None;
+        self.state.drag_scale_is_uniform = false;
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
@@ -3304,6 +3877,203 @@ impl Gizmo {
         best
     }
 
+    fn pick_scale_or_bounds_handle(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes_flipped: [Vec3; 3],
+        axes_raw: [Vec3; 3],
+        targets: &[GizmoTarget3d],
+    ) -> Option<PickHit> {
+        let scale = self
+            .pick_scale_handle(
+                view_projection,
+                viewport,
+                origin,
+                cursor,
+                axes_flipped,
+                true,
+                true,
+            )
+            .map(|h| (h, 1usize));
+
+        if let Some((hit, _)) = scale {
+            if hit.handle == ScaleHandle::Uniform.id() {
+                return Some(hit);
+            }
+        }
+
+        let bounds = self
+            .config
+            .show_bounds
+            .then(|| {
+                self.pick_bounds_handle(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor,
+                    axes_raw,
+                    targets,
+                )
+            })
+            .flatten()
+            .map(|h| (h, 0usize));
+
+        let mut best: Option<(PickHit, usize)> = None;
+        let mut consider = |cand: Option<(PickHit, usize)>| {
+            let Some((hit, pri)) = cand else {
+                return;
+            };
+            if !hit.score.is_finite() {
+                return;
+            }
+            match best {
+                Some((best_hit, best_pri)) => {
+                    if hit.score < best_hit.score || (hit.score == best_hit.score && pri < best_pri)
+                    {
+                        best = Some((hit, pri));
+                    }
+                }
+                None => best = Some((hit, pri)),
+            }
+        };
+
+        consider(bounds);
+        consider(scale);
+        best.map(|(h, _)| h)
+    }
+
+    fn pick_bounds_handle(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes_raw: [Vec3; 3],
+        targets: &[GizmoTarget3d],
+    ) -> Option<PickHit> {
+        if targets.is_empty() {
+            return None;
+        }
+        let basis = [
+            axes_raw[0].normalize_or_zero(),
+            axes_raw[1].normalize_or_zero(),
+            axes_raw[2].normalize_or_zero(),
+        ];
+        if basis.iter().any(|v| v.length_squared() == 0.0) {
+            return None;
+        }
+
+        let (min_local, max_local) =
+            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let center_local = (min_local + max_local) * 0.5;
+
+        let Some(view_dir) =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+        else {
+            return None;
+        };
+        let (u, v) = plane_basis(view_dir);
+
+        let handle_half_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.bounds_handle_size_px.max(1.0),
+        )
+        .unwrap_or(1.0)
+        .max(1e-6)
+            * 0.5;
+
+        let mut best: Option<PickHit> = None;
+        let mut consider = |handle: HandleId, score: f32| {
+            if !score.is_finite() {
+                return;
+            }
+            match best {
+                Some(best) if score >= best.score => {}
+                _ => best = Some(PickHit { handle, score }),
+            }
+        };
+
+        // Corner handles.
+        for z_max in [false, true] {
+            for y_max in [false, true] {
+                for x_max in [false, true] {
+                    let local = Vec3::new(
+                        if x_max { max_local.x } else { min_local.x },
+                        if y_max { max_local.y } else { min_local.y },
+                        if z_max { max_local.z } else { min_local.z },
+                    );
+                    let world =
+                        origin + basis[0] * local.x + basis[1] * local.y + basis[2] * local.z;
+                    let quad_world = [
+                        world + (-u - v) * handle_half_world,
+                        world + (u - v) * handle_half_world,
+                        world + (u + v) * handle_half_world,
+                        world + (-u + v) * handle_half_world,
+                    ];
+                    let Some(p) = project_quad(
+                        view_projection,
+                        viewport,
+                        quad_world,
+                        self.config.depth_range,
+                    ) else {
+                        continue;
+                    };
+                    let inside = point_in_convex_quad(cursor, p);
+                    let edge_d = quad_edge_distance(cursor, p);
+                    let handle = Self::bounds_corner_id(x_max, y_max, z_max);
+                    if inside {
+                        consider(handle, 0.0);
+                    } else if edge_d <= self.config.pick_radius_px {
+                        consider(handle, edge_d);
+                    }
+                }
+            }
+        }
+
+        // Face handles.
+        for axis in 0..3 {
+            for &max_side in &[false, true] {
+                let mut local = center_local;
+                local[axis] = if max_side {
+                    max_local[axis]
+                } else {
+                    min_local[axis]
+                };
+                let world = origin + basis[0] * local.x + basis[1] * local.y + basis[2] * local.z;
+                let quad_world = [
+                    world + (-u - v) * handle_half_world,
+                    world + (u - v) * handle_half_world,
+                    world + (u + v) * handle_half_world,
+                    world + (-u + v) * handle_half_world,
+                ];
+                let Some(p) = project_quad(
+                    view_projection,
+                    viewport,
+                    quad_world,
+                    self.config.depth_range,
+                ) else {
+                    continue;
+                };
+                let inside = point_in_convex_quad(cursor, p);
+                let edge_d = quad_edge_distance(cursor, p);
+                let handle = Self::bounds_face_id(axis, max_side);
+                if inside {
+                    consider(handle, 0.25);
+                } else if edge_d <= self.config.pick_radius_px {
+                    consider(handle, edge_d + 0.8);
+                }
+            }
+        }
+
+        best
+    }
+
     fn pick_rotate_axis(
         &self,
         view_projection: Mat4,
@@ -3569,6 +4339,40 @@ fn axis_drag_plane_normal(
     let view_dir = view_ray.dir.normalize_or_zero();
 
     let mut n = axis.cross(view_dir);
+    if n.length_squared() < 1e-6 {
+        // Degenerate when viewing straight down the axis; pick a stable fallback basis.
+        n = axis.cross(Vec3::Y);
+        if n.length_squared() < 1e-6 {
+            n = axis.cross(Vec3::X);
+        }
+    }
+    let plane_normal = n.normalize_or_zero();
+    (plane_normal.length_squared() > 0.0).then_some(plane_normal)
+}
+
+fn axis_drag_plane_normal_facing_camera(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    depth: DepthRange,
+    origin: Vec3,
+    axis_dir: Vec3,
+) -> Option<Vec3> {
+    // Camera-facing variant for axis dragging:
+    // - plane passes through origin
+    // - contains the axis direction (plane normal ⟂ axis)
+    // - normal is as close to the view direction as possible (stable ray-plane intersection)
+    //
+    // A good choice is: n = axis × (axis × view_dir) = axis*(axis·view_dir) - view_dir.
+    let p0 = project_point(view_projection, viewport, origin, depth)?;
+    let view_ray = ray_from_screen(view_projection, viewport, p0.screen, depth)?;
+
+    let axis = axis_dir.normalize_or_zero();
+    if axis.length_squared() == 0.0 {
+        return None;
+    }
+    let view_dir = view_ray.dir.normalize_or_zero();
+
+    let mut n = axis.cross(axis.cross(view_dir));
     if n.length_squared() < 1e-6 {
         // Degenerate when viewing straight down the axis; pick a stable fallback basis.
         n = axis.cross(Vec3::Y);
@@ -4788,6 +5592,138 @@ mod tests {
             (back_total - Vec3::ONE).length() < 1e-3,
             "total={back_total:?}"
         );
+    }
+
+    #[test]
+    fn bounds_face_scale_returns_to_one_when_cursor_returns() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Scale;
+        config.pivot_mode = GizmoPivotMode::Center;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.show_bounds = true;
+        // Avoid conflicts with axis/plane scale handles in this test.
+        config.axis_mask = [true; 3];
+
+        let mut gizmo = Gizmo::new(config);
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d {
+                    translation: Vec3::new(-1.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+            },
+        ];
+
+        let origin = Vec3::ZERO;
+        let axes_raw = gizmo.axis_dirs(&Transform3d::default());
+        let basis = [
+            axes_raw[0].normalize_or_zero(),
+            axes_raw[1].normalize_or_zero(),
+            axes_raw[2].normalize_or_zero(),
+        ];
+        let (min_local, max_local) =
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+        let center_local = (min_local + max_local) * 0.5;
+
+        // Drag the +X face handle.
+        let handle_local = Vec3::new(max_local.x, center_local.y, center_local.z);
+        let handle_world = origin
+            + basis[0] * handle_local.x
+            + basis[1] * handle_local.y
+            + basis[2] * handle_local.z;
+        let handle_screen =
+            project_point(view_proj, vp, handle_world, gizmo.config.depth_range).unwrap();
+        let cursor_start = handle_screen.screen;
+        let cursor_moved = cursor_start + Vec2::new(40.0, 0.0);
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.is_finite());
+        assert!(moved_total.distance(Vec3::ONE) > 1e-5);
+        let moved_targets = moved.updated_targets.clone();
+
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            back_total.distance(Vec3::ONE) < 5e-3,
+            "total={back_total:?}"
+        );
+
+        for t in &back.updated_targets {
+            let start = targets.iter().find(|s| s.id == t.id).unwrap();
+            assert!(
+                t.transform
+                    .translation
+                    .distance(start.transform.translation)
+                    < 5e-3,
+                "id={:?} translation={:?} start={:?}",
+                t.id,
+                t.transform.translation,
+                start.transform.translation
+            );
+            assert!(
+                t.transform.scale.distance(start.transform.scale) < 5e-3,
+                "id={:?} scale={:?} start={:?}",
+                t.id,
+                t.transform.scale,
+                start.transform.scale
+            );
+        }
     }
 
     #[test]
