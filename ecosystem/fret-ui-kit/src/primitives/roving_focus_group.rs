@@ -17,6 +17,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::{roving_focus, typeahead};
+use crate::primitives::direction::LayoutDirection;
 
 pub use fret_ui::element::{RovingFlexProps, RovingFocusProps};
 
@@ -43,8 +44,20 @@ pub fn roving_focus_group_apg<H: UiHost>(
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
+    roving_focus_group_apg_with_direction(cx, props, typeahead, LayoutDirection::default(), f)
+}
+
+/// Like `roving_focus_group_apg`, but respects Radix `dir` behavior for horizontal navigation.
+#[track_caller]
+pub fn roving_focus_group_apg_with_direction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: RovingFlexProps,
+    typeahead: TypeaheadPolicy,
+    dir: LayoutDirection,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
     cx.roving_flex(props, |cx| {
-        nav_apg(cx);
+        nav_apg_with_direction(cx, dir);
         match typeahead {
             TypeaheadPolicy::None => {}
             TypeaheadPolicy::FirstChar { labels } => typeahead_first_char_arc_str(cx, labels),
@@ -67,8 +80,26 @@ pub fn roving_focus_group_apg_entry_fallback<H: UiHost>(
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
+    roving_focus_group_apg_entry_fallback_with_direction(
+        cx,
+        props,
+        typeahead,
+        LayoutDirection::default(),
+        f,
+    )
+}
+
+/// Like `roving_focus_group_apg_entry_fallback`, but respects Radix `dir` behavior for horizontal navigation.
+#[track_caller]
+pub fn roving_focus_group_apg_entry_fallback_with_direction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: RovingFlexProps,
+    typeahead: TypeaheadPolicy,
+    dir: LayoutDirection,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
     cx.roving_flex(props, |cx| {
-        nav_apg_entry_fallback(cx);
+        nav_apg_entry_fallback_with_direction(cx, dir);
         match typeahead {
             TypeaheadPolicy::None => {}
             TypeaheadPolicy::FirstChar { labels } => typeahead_first_char_arc_str(cx, labels),
@@ -101,7 +132,14 @@ pub fn on_typeahead<H: UiHost>(cx: &mut ElementContext<'_, H>, handler: OnRoving
 /// The runtime forwards key events to this handler and performs the focus request when a target
 /// index is returned.
 pub fn nav_apg<H: UiHost>(cx: &mut ElementContext<'_, H>) {
-    cx.roving_add_on_navigate(Arc::new(|_host, _cx, it| {
+    nav_apg_with_direction(cx, LayoutDirection::default());
+}
+
+/// Like `nav_apg`, but respects Radix `dir` behavior for horizontal navigation.
+///
+/// In RTL, Left/Right arrow semantics are flipped.
+pub fn nav_apg_with_direction<H: UiHost>(cx: &mut ElementContext<'_, H>, dir: LayoutDirection) {
+    cx.roving_add_on_navigate(Arc::new(move |_host, _cx, it| {
         use fret_core::KeyCode;
 
         match it.key {
@@ -125,8 +163,9 @@ pub fn nav_apg<H: UiHost>(cx: &mut ElementContext<'_, H>) {
         let forward = match (it.axis, it.key) {
             (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
             (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
-            (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-            (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+            (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
+                horizontal_forward_for_key(it.key, dir)
+            }
             _ => None,
         };
 
@@ -144,7 +183,17 @@ pub fn nav_apg<H: UiHost>(cx: &mut ElementContext<'_, H>) {
 /// when no item is active, ArrowDown/PageUp/Home select the first enabled item and
 /// ArrowUp/PageDown/End select the last enabled item.
 pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
-    cx.roving_add_on_navigate(Arc::new(|_host, _cx, it| {
+    nav_apg_entry_fallback_with_direction(cx, LayoutDirection::default());
+}
+
+/// Like `nav_apg_entry_fallback`, but respects Radix `dir` behavior for horizontal navigation.
+///
+/// In RTL, Left/Right arrow semantics are flipped.
+pub fn nav_apg_entry_fallback_with_direction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    dir: LayoutDirection,
+) {
+    cx.roving_add_on_navigate(Arc::new(move |_host, _cx, it| {
         use fret_core::KeyCode;
 
         match it.key {
@@ -162,21 +211,7 @@ pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
         }
 
         if it.current.is_none() {
-            let target = match (it.axis, it.key) {
-                (fret_core::Axis::Vertical, KeyCode::ArrowDown | KeyCode::PageUp) => {
-                    roving_focus::first_enabled(&it.disabled)
-                }
-                (fret_core::Axis::Vertical, KeyCode::ArrowUp | KeyCode::PageDown) => {
-                    roving_focus::last_enabled(&it.disabled)
-                }
-                (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => {
-                    roving_focus::first_enabled(&it.disabled)
-                }
-                (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => {
-                    roving_focus::last_enabled(&it.disabled)
-                }
-                _ => None,
-            };
+            let target = entry_fallback_target_for_key(it.axis, it.key, dir, &it.disabled);
 
             return RovingNavigateResult::Handled { target };
         }
@@ -188,8 +223,9 @@ pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
         let forward = match (it.axis, it.key) {
             (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
             (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
-            (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-            (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+            (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
+                horizontal_forward_for_key(it.key, dir)
+            }
             _ => None,
         };
 
@@ -201,6 +237,113 @@ pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
             target: roving_focus::next_enabled(&it.disabled, current, forward, it.wrap),
         }
     }));
+}
+
+fn horizontal_forward_for_key(key: fret_core::KeyCode, dir: LayoutDirection) -> Option<bool> {
+    match (key, dir) {
+        (fret_core::KeyCode::ArrowRight, LayoutDirection::Ltr) => Some(true),
+        (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr) => Some(false),
+        (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl) => Some(false),
+        (fret_core::KeyCode::ArrowLeft, LayoutDirection::Rtl) => Some(true),
+        _ => None,
+    }
+}
+
+fn entry_fallback_target_for_key(
+    axis: fret_core::Axis,
+    key: fret_core::KeyCode,
+    dir: LayoutDirection,
+    disabled: &[bool],
+) -> Option<usize> {
+    use fret_core::KeyCode;
+
+    match (axis, key) {
+        (fret_core::Axis::Vertical, KeyCode::ArrowDown | KeyCode::PageUp | KeyCode::Home) => {
+            roving_focus::first_enabled(disabled)
+        }
+        (fret_core::Axis::Vertical, KeyCode::ArrowUp | KeyCode::PageDown | KeyCode::End) => {
+            roving_focus::last_enabled(disabled)
+        }
+        (fret_core::Axis::Horizontal, KeyCode::ArrowRight | KeyCode::ArrowLeft) => {
+            match horizontal_forward_for_key(key, dir) {
+                Some(true) => roving_focus::first_enabled(disabled),
+                Some(false) => roving_focus::last_enabled(disabled),
+                None => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rtl_flips_horizontal_arrow_semantics() {
+        use fret_core::KeyCode;
+
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Ltr),
+            Some(true)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Ltr),
+            Some(false)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowRight, LayoutDirection::Rtl),
+            Some(false)
+        );
+        assert_eq!(
+            horizontal_forward_for_key(KeyCode::ArrowLeft, LayoutDirection::Rtl),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn rtl_flips_entry_fallback_target() {
+        use fret_core::{Axis, KeyCode};
+
+        let disabled: [bool; 3] = [false, false, false];
+
+        assert_eq!(
+            entry_fallback_target_for_key(
+                Axis::Horizontal,
+                KeyCode::ArrowRight,
+                LayoutDirection::Ltr,
+                &disabled
+            ),
+            Some(0)
+        );
+        assert_eq!(
+            entry_fallback_target_for_key(
+                Axis::Horizontal,
+                KeyCode::ArrowLeft,
+                LayoutDirection::Ltr,
+                &disabled
+            ),
+            Some(2)
+        );
+        assert_eq!(
+            entry_fallback_target_for_key(
+                Axis::Horizontal,
+                KeyCode::ArrowRight,
+                LayoutDirection::Rtl,
+                &disabled
+            ),
+            Some(2)
+        );
+        assert_eq!(
+            entry_fallback_target_for_key(
+                Axis::Horizontal,
+                KeyCode::ArrowLeft,
+                LayoutDirection::Rtl,
+                &disabled
+            ),
+            Some(0)
+        );
+    }
 }
 
 /// Install a first-character typeahead policy for the current roving container.

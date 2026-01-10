@@ -16,6 +16,7 @@ use std::sync::Arc;
 use fret_ui::element::{AnyElement, RovingFlexProps};
 use fret_ui::{ElementContext, UiHost};
 
+use crate::primitives::direction::LayoutDirection;
 use crate::primitives::roving_focus_group::{self, TypeaheadPolicy};
 use crate::primitives::separator::SeparatorOrientation;
 
@@ -62,4 +63,21 @@ pub fn toolbar_roving_group_apg<H: UiHost>(
     children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     roving_focus_group::roving_focus_group_apg(cx, props, TypeaheadPolicy::None, children)
+}
+
+/// Like `toolbar_roving_group_apg`, but respects Radix `dir` behavior for horizontal navigation.
+#[track_caller]
+pub fn toolbar_roving_group_apg_with_direction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: RovingFlexProps,
+    dir: LayoutDirection,
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    roving_focus_group::roving_focus_group_apg_with_direction(
+        cx,
+        props,
+        TypeaheadPolicy::None,
+        dir,
+        children,
+    )
 }
