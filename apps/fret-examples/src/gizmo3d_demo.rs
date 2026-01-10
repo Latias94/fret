@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret_app::{App, Effect, WindowRequest};
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
@@ -8,7 +8,8 @@ use fret_gizmo::{
     GizmoPhase, Transform3d, ViewportRect,
 };
 use fret_launch::{
-    EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
@@ -855,6 +856,35 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         state
     }
 
+    fn handle_command(
+        &mut self,
+        context: WinitCommandContext<'_, Self::WindowState>,
+        command: CommandId,
+    ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        // Prefer focused-surface command handling (e.g. local widget histories) before falling
+        // back to the window's active document undo stack (ADR 0136, ADR 0020).
+        if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+
+        match command.as_str() {
+            "edit.undo" => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, true);
+            }
+            "edit.redo" => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
+            }
+            _ => {}
+        }
+    }
+
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
         let WinitEventContext {
             app,
@@ -867,21 +897,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         match event {
             Event::WindowCloseRequested => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyZ,
-                modifiers,
-                repeat: false,
-            } if modifiers.ctrl || modifiers.meta => {
-                let redo = modifiers.shift;
-                let _ = self.handle_undo_redo_shortcut(app, window, state, !redo);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyY,
-                modifiers,
-                repeat: false,
-            } if modifiers.ctrl || modifiers.meta => {
-                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
             }
             Event::KeyDown {
                 key: fret_core::KeyCode::Escape,
