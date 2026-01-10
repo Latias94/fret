@@ -76,6 +76,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         *self.stack.last().expect("root exists")
     }
 
+    /// Returns the nearest ancestor state value of type `S` in the current element scope stack.
+    ///
+    /// This is a lightweight building block for component-layer "provider" patterns (e.g. Radix
+    /// `DirectionProvider`) without requiring a dedicated runtime context mechanism.
+    pub fn inherited_state<S: Any>(&self) -> Option<&S> {
+        self.inherited_state_where(|_state: &S| true)
+    }
+
+    /// Like `inherited_state`, but allows skipping "inactive" states while continuing to search.
+    ///
+    /// This is useful when a state entry remains allocated but temporarily holds no active value
+    /// (e.g. an `Option<T>` that is `None` outside of a scope).
+    pub fn inherited_state_where<S: Any>(&self, predicate: impl Fn(&S) -> bool) -> Option<&S> {
+        let ty = TypeId::of::<S>();
+        for &id in self.stack.iter().rev() {
+            let Some(entry) = self.window_state.state.get(&(id, ty)) else {
+                continue;
+            };
+            let Some(state) = entry.value.downcast_ref::<S>() else {
+                continue;
+            };
+            if predicate(state) {
+                return Some(state);
+            }
+        }
+        None
+    }
+
     /// Returns the last known `NodeId` for a declarative element, if available.
     ///
     /// This is safe to call during element rendering: it reads from the `ElementCx`'s already

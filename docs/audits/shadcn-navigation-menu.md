@@ -70,6 +70,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   `zoom-in-90` on open and `zoom-out-95` on close (best-effort, tick driven).
 - Pass: Directional content switching matches shadcn's `data-motion` semantics via
   `navigation_menu_content_transition(...)` + `navigation_menu_content_switch(...)`.
+- Pass: Viewport placement uses logical start alignment under RTL when configured with
+  `align=Start` (Radix/Floating parity).
 
 ### Indicator parity (new-york)
 
@@ -83,6 +85,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn navigation_menu`
+- `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
 
 ## Follow-ups (recommended)
 

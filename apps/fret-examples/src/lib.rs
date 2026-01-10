@@ -38,6 +38,8 @@ pub mod drag_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod gizmo3d_demo;
 pub mod grouped_bars_demo;
 pub mod heatmap_demo;
 pub mod histogram2d_demo;

@@ -15,15 +15,15 @@ use fret_ui::element::{
     ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
@@ -1084,6 +1084,7 @@ impl MenubarMenuEntries {
                         content_focus_id_for_children.clone();
                     let content_focus_id_for_children_for_submenu =
                         content_focus_id_for_children.clone();
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let (overlay_children, dismissible_on_pointer_move) =
                         cx.with_root_name(&overlay_root_name, move |cx| {
@@ -1106,7 +1107,7 @@ impl MenubarMenuEntries {
                             anchor,
                             desired,
                             popper::PopperContentPlacement::new(
-                                LayoutDirection::Ltr,
+                                direction,
                                 Side::Bottom,
                                 Align::Start,
                                 side_offset,
@@ -1170,7 +1171,7 @@ impl MenubarMenuEntries {
                         let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                         let disabled_arc: Arc<[bool]> =
                             Arc::from(disabled_flags.clone().into_boxed_slice());
-                        let active = roving_focus::first_enabled(&disabled_flags);
+                        let active = roving_focus_group::first_enabled(&disabled_flags);
 
                         let roving = RovingFocusProps {
                             enabled: true,
@@ -2053,7 +2054,7 @@ impl MenubarMenuEntries {
                                     let disabled_arc: Arc<[bool]> = Arc::from(
                                         disabled_flags.clone().into_boxed_slice(),
                                     );
-                                    let active = roving_focus::first_enabled(&disabled_flags);
+                                    let active = roving_focus_group::first_enabled(&disabled_flags);
                                     let item_count = submenu_entries
                                         .iter()
                                         .filter(|e| {

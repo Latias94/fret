@@ -31,6 +31,8 @@ Key upstream behaviors/surfaces:
 
 - Pass: Per-window overlay root (portal-like), rendered via `OverlayController`.
 - Pass: Anchored placement via `anchored_panel_bounds_sized` (flip + clamp).
+- Pass: `align="start"` respects the direction provider: under RTL, the content aligns to the
+  trigger's logical start edge (Radix/Floating parity).
 - Pass: Default `side_offset` aligns with upstream (`4`).
 - Pass: Viewport size tracks trigger width (with a minimum) and clamps height to available space;
   internal scrolling is via `Scroll` (Y-axis).
@@ -92,6 +94,7 @@ Notes on API mapping:
   (ensures `pos_in_set`/`set_size` exclude separators).
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
+- Direction test: `dropdown_menu_align_start_respects_direction_provider`
 
 ## Follow-ups (recommended)
 

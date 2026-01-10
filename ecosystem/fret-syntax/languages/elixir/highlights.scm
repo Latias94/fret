@@ -76,21 +76,21 @@
 ; Note that we explicitly target sigil quoted start/end, so they are not overridden by delimiters
 
 (sigil
-  (sigil_name) @__name__
+  (sigil_name) @_sigil_name
   quoted_start: _ @string.special
   quoted_end: _ @string.special) @string.special
 
 (sigil
-  (sigil_name) @__name__
+  (sigil_name) @_sigil_name
   quoted_start: _ @string
   quoted_end: _ @string
-  (#match? @__name__ "^[sS]$")) @string
+  (#match? @_sigil_name "^[sS]$")) @string
 
 (sigil
-  (sigil_name) @__name__
+  (sigil_name) @_sigil_name
   quoted_start: _ @string.regex
   quoted_end: _ @string.regex
-  (#match? @__name__ "^[rR]$")) @string.regex
+  (#match? @_sigil_name "^[rR]$")) @string.regex
 
 ; Calls
 
@@ -198,7 +198,7 @@
 (unary_operator
   operator: "@" @comment.doc
   operand: (call
-    target: (identifier) @comment.doc.__attribute__
+    target: (identifier) @comment.doc
     (arguments
       [
         (string) @comment.doc
@@ -208,7 +208,7 @@
           quoted_end: _ @comment.doc) @comment.doc
         (boolean) @comment.doc
       ]))
-  (#any-of? @comment.doc.__attribute__ "moduledoc" "typedoc" "doc"))
+  (#any-of? @comment.doc "moduledoc" "typedoc" "doc"))
 
 ; Module
 

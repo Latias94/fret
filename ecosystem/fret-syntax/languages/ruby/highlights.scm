@@ -40,13 +40,13 @@
 
 ; Function calls
 
-"defined?" @function.method.builtin
+"defined?" @function.builtin
 
 (call
   method: [(identifier) (constant)] @function.method)
 
-((identifier) @function.method.builtin
- (#eq? @function.method.builtin "require"))
+((identifier) @function.builtin
+ (#eq? @function.builtin "require"))
 
 ; Function definitions
 
@@ -108,8 +108,8 @@
   (bare_symbol)
 ] @string.special.symbol
 
-(regex) @string.special.regex
-(escape_sequence) @escape
+(regex) @string.regex
+(escape_sequence) @string.escape
 
 [
   (integer)

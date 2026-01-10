@@ -12,7 +12,7 @@ use fret_ui::element::{
     ScrollProps, SizeStyle, StackProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
@@ -21,12 +21,13 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::primitives::select as radix_select;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
@@ -998,6 +999,7 @@ fn select_impl<H: UiHost>(
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let border_width = resolved.border_width;
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let item_aligned = if position == SelectPosition::ItemAligned {
                         let (value_node, viewport, listbox, content_panel, selected_item, selected_item_text, did_scroll) =
@@ -1033,7 +1035,7 @@ fn select_impl<H: UiHost>(
                         ) {
                             Some((
                                 radix_select::SelectItemAlignedElementInputs {
-                                    direction: LayoutDirection::Ltr,
+                                    direction,
                                     window: cx.bounds,
                                     trigger: anchor,
                                     content_border_top: border_width,
@@ -1066,7 +1068,7 @@ fn select_impl<H: UiHost>(
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
                     let popper_placement = popper::PopperContentPlacement::new(
-                        LayoutDirection::Ltr,
+                        direction,
                         side.into(),
                         align.into(),
                         side_offset,
@@ -1128,8 +1130,9 @@ fn select_impl<H: UiHost>(
                     let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+                    let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
 
-                    let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
                         let open_for_content = open_for_overlay.clone();
                         let open_for_barrier_children = open_for_overlay.clone();
@@ -1187,12 +1190,12 @@ fn select_impl<H: UiHost>(
                             });
                             selected_idx
                                 .and_then(|idx| (!disabled.get(idx).copied().unwrap_or(true)).then_some(idx))
-                                .or_else(|| roving_focus::first_enabled(&disabled))
+                                .or_else(|| roving_focus_group::first_enabled(&disabled))
                         } else {
-                            roving_focus::first_enabled(&disabled)
+                            roving_focus_group::first_enabled(&disabled)
                         };
                         let active_row = {
-                            let mut state = trigger_state
+                            let mut state = trigger_state_for_overlay
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
 
@@ -1777,7 +1780,7 @@ fn select_impl<H: UiHost>(
                             cx,
                             open_for_barrier_children.clone(),
                             dismiss_on_overlay_press,
-                            on_dismiss_request.clone(),
+                            on_dismiss_request_for_overlay_children.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
                             Vec::new(),
                             animated,

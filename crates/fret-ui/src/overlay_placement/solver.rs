@@ -347,7 +347,24 @@ fn anchored_origin_ex(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> Point {
-    let origin = anchored_origin(anchor, content, gap, side, align);
+    let is_vertical = matches!(side, Side::Top | Side::Bottom);
+    let rtl = options.direction == LayoutDirection::Rtl;
+
+    // Interpret Start/End as logical alignment for vertical placements (Top/Bottom).
+    // This matches Radix/Floating's `dir` behavior: `start` flips under RTL.
+    let physical_align = if is_vertical && rtl {
+        match align {
+            Align::Start => Align::End,
+            Align::End => Align::Start,
+            Align::Center => Align::Center,
+        }
+    } else {
+        align
+    };
+
+    // Important: `apply_cross_axis_offset` must use the logical `align` (not the physical one),
+    // because `Offset.alignment_axis` flips under RTL for vertical placements.
+    let origin = anchored_origin(anchor, content, gap, side, physical_align);
     apply_cross_axis_offset(origin, side, align, options)
 }
 

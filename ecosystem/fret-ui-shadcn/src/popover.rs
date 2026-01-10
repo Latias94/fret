@@ -9,11 +9,12 @@ use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
     SizeStyle, TextProps, VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -291,6 +292,7 @@ impl Popover {
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
                 let open_for_barrier = self.open.clone();
+                let direction = direction_prim::use_direction_in_scope(cx, None);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
@@ -342,14 +344,9 @@ impl Popover {
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
                         anchor,
                         content_size,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_align_offset(align_offset)
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_align_offset(align_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;

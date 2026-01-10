@@ -14,7 +14,7 @@ use fret_ui::element::{
     ScrollProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -917,6 +918,7 @@ impl DropdownMenu {
                 let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
                     cx.with_root_name(&overlay_root_name, move |cx| {
@@ -996,13 +998,8 @@ impl DropdownMenu {
                         outer,
                         anchor,
                         desired,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;
@@ -2464,6 +2461,9 @@ mod tests {
     };
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
+    use fret_ui::element::PressableA11y;
+    use fret_ui_kit::primitives::direction as direction_prim;
+    use fret_ui_kit::primitives::direction::LayoutDirection;
 
     #[derive(Default)]
     struct FakeServices;
@@ -2737,6 +2737,171 @@ mod tests {
             .flatten()
             .expect("captured trigger element id");
         (root, trigger_id)
+    }
+
+    fn render_frame_capture_trigger_id_with_direction(
+        dir: LayoutDirection,
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        trigger_id_out: Model<Option<fret_ui::elements::GlobalElementId>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> (fret_core::NodeId, fret_ui::elements::GlobalElementId) {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let trigger_id_out_for_render = trigger_id_out.clone();
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-dir",
+            move |cx| {
+                direction_prim::with_direction_provider(cx, dir, |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            padding: Edges {
+                                top: Px(100.0),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                                left: Px(500.0),
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let trigger_id_out = trigger_id_out_for_render.clone();
+                            vec![DropdownMenu::new(open).arrow(false).into_element(
+                                cx,
+                                move |cx| {
+                                    cx.pressable_with_id_props(move |cx, _st, id| {
+                                        let _ = cx
+                                            .app
+                                            .models_mut()
+                                            .update(&trigger_id_out, |v| *v = Some(id));
+                                        (
+                                            PressableProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Px(Px(120.0));
+                                                    layout.size.height = Length::Px(Px(40.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                a11y: PressableA11y {
+                                                    label: Some(Arc::from("Trigger")),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })],
+                                        )
+                                    })
+                                },
+                                move |_cx| entries.clone(),
+                            )]
+                        },
+                    )]
+                })
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let trigger_id = app
+            .models_mut()
+            .read(&trigger_id_out, |v| *v)
+            .ok()
+            .flatten()
+            .expect("captured trigger element id");
+        (root, trigger_id)
+    }
+
+    #[test]
+    fn dropdown_menu_align_start_respects_direction_provider() {
+        fn run(dir: LayoutDirection) -> (Rect, Rect) {
+            let window = AppWindowId::default();
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(1200.0), Px(700.0)),
+            );
+            let mut services = FakeServices::default();
+
+            let open = app.models_mut().insert(true);
+            let trigger_id_out = app.models_mut().insert(None);
+
+            let entries = vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("Alpha").value("alpha"),
+            )];
+
+            // Two frames: first establishes trigger bounds; second mounts the overlay anchored to them.
+            let _ = render_frame_capture_trigger_id_with_direction(
+                dir,
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                trigger_id_out.clone(),
+                entries.clone(),
+            );
+            let _ = render_frame_capture_trigger_id_with_direction(
+                dir,
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open,
+                trigger_id_out.clone(),
+                entries,
+            );
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Trigger"))
+                .expect("trigger semantics");
+            let trigger_bounds = trigger.bounds;
+            let alpha = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+                .expect("Alpha menu item");
+            (trigger_bounds, alpha.bounds)
+        }
+
+        let (ltr_trigger, ltr_item) = run(LayoutDirection::Ltr);
+        let ltr_trigger_center = ltr_trigger.origin.x.0 + ltr_trigger.size.width.0 * 0.5;
+        let ltr_item_center = ltr_item.origin.x.0 + ltr_item.size.width.0 * 0.5;
+        assert!(
+            ltr_item_center > ltr_trigger_center,
+            "expected LTR start alignment to place the menu content to the right of the trigger center; trigger={ltr_trigger:?} item={ltr_item:?}",
+        );
+
+        let (rtl_trigger, rtl_item) = run(LayoutDirection::Rtl);
+        let rtl_trigger_center = rtl_trigger.origin.x.0 + rtl_trigger.size.width.0 * 0.5;
+        let rtl_item_center = rtl_item.origin.x.0 + rtl_item.size.width.0 * 0.5;
+        assert!(
+            rtl_item_center < rtl_trigger_center,
+            "expected RTL start alignment to place the menu content to the left of the trigger center; trigger={rtl_trigger:?} item={rtl_item:?}",
+        );
     }
 
     fn render_frame_clipped_surface(

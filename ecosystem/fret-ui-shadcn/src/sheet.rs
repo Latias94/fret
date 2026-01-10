@@ -6,8 +6,9 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges,
+    OpacityProps, Overflow, PositionStyle, SemanticsProps, SizeStyle, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -26,8 +27,40 @@ fn default_overlay_color() -> Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
-        a: 0.8,
+        a: 0.5,
     }
+}
+
+#[derive(Debug, Default)]
+struct SheetSideProviderState {
+    current: Option<SheetSide>,
+}
+
+fn inherited_sheet_side<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SheetSide> {
+    cx.inherited_state_where::<SheetSideProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current)
+}
+
+#[track_caller]
+fn with_sheet_side_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    side: SheetSide,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(SheetSideProviderState::default, |st| {
+        let prev = st.current;
+        st.current = Some(side);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(SheetSideProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
+fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
+    inherited_sheet_side(cx).unwrap_or_default()
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -51,6 +84,8 @@ pub struct Sheet {
     overlay_closable: bool,
     overlay_color: Option<Color>,
     on_dismiss_request: Option<OnDismissRequest>,
+    vertical_edge_gap_px: Option<Px>,
+    vertical_auto_max_height_fraction: Option<f32>,
 }
 
 impl std::fmt::Debug for Sheet {
@@ -62,6 +97,11 @@ impl std::fmt::Debug for Sheet {
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("vertical_edge_gap_px", &self.vertical_edge_gap_px)
+            .field(
+                "vertical_auto_max_height_fraction",
+                &self.vertical_auto_max_height_fraction,
+            )
             .finish()
     }
 }
@@ -75,6 +115,8 @@ impl Sheet {
             overlay_closable: true,
             overlay_color: None,
             on_dismiss_request: None,
+            vertical_edge_gap_px: None,
+            vertical_auto_max_height_fraction: None,
         }
     }
 
@@ -114,6 +156,24 @@ impl Sheet {
 
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
+        self
+    }
+
+    /// Installs an extra edge gap for vertical (`Top` / `Bottom`) sheets.
+    ///
+    /// This exists to support strict shadcn Drawer parity (`mt-24` / `mb-24`) while still using
+    /// the shared Sheet overlay scaffolding.
+    pub(crate) fn vertical_edge_gap_px(mut self, gap: Px) -> Self {
+        self.vertical_edge_gap_px = Some(gap);
+        self
+    }
+
+    /// Caps vertical (`Top` / `Bottom`) auto-sized sheets to a fraction of the viewport height.
+    ///
+    /// This exists to support strict shadcn Drawer parity (`max-h-[80vh]`) while still using the
+    /// shared Sheet overlay scaffolding.
+    pub(crate) fn vertical_auto_max_height_fraction(mut self, fraction: f32) -> Self {
+        self.vertical_auto_max_height_fraction = Some(fraction);
         self
     }
 
@@ -166,11 +226,15 @@ impl Sheet {
                     .dismiss_on_overlay_press(overlay_closable)
                     .initial_focus(None);
 
+                let size_override = self.size_override;
+                let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
+                let vertical_auto_max_height_fraction =
+                    self.vertical_auto_max_height_fraction.unwrap_or(1.0);
                 let default_size = theme
                     .metric_by_key("component.sheet.size")
                     .or_else(|| theme.metric_by_key("component.sheet.width"))
                     .unwrap_or(Px(350.0));
-                let size = self.size_override.unwrap_or(default_size);
+                let size = size_override.unwrap_or(default_size);
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
@@ -194,7 +258,7 @@ impl Sheet {
                         |_cx| Vec::new(),
                     );
 
-                    let content = content(cx);
+                    let content = with_sheet_side_provider(cx, sheet_side, |cx| content(cx));
 
                     let outer = cx.bounds;
                     let max_w = outer.size.width;
@@ -203,7 +267,15 @@ impl Sheet {
                     let sheet_w = Px(size.0.min(max_w.0).max(0.0));
                     let sheet_h = Px(size.0.min(max_h.0).max(0.0));
 
-                    let (inset, size) = match sheet_side {
+                    let vertical_auto_max_h = if size_override.is_some() {
+                        None
+                    } else {
+                        let cap = Px((max_h.0 * vertical_auto_max_height_fraction).max(0.0));
+                        let by_gap = Px((max_h.0 - vertical_edge_gap_px.0).max(0.0));
+                        Some(Px(cap.0.min(by_gap.0)))
+                    };
+
+                    let (inset, size, estimated_motion_distance) = match sheet_side {
                         SheetSide::Right => (
                             InsetStyle {
                                 top: Some(Px(0.0)),
@@ -216,6 +288,7 @@ impl Sheet {
                                 height: Length::Fill,
                                 ..Default::default()
                             },
+                            sheet_w,
                         ),
                         SheetSide::Left => (
                             InsetStyle {
@@ -229,6 +302,7 @@ impl Sheet {
                                 height: Length::Fill,
                                 ..Default::default()
                             },
+                            sheet_w,
                         ),
                         SheetSide::Top => (
                             InsetStyle {
@@ -239,9 +313,15 @@ impl Sheet {
                             },
                             SizeStyle {
                                 width: Length::Fill,
-                                height: Length::Px(sheet_h),
+                                height: if size_override.is_some() {
+                                    Length::Px(sheet_h)
+                                } else {
+                                    Length::Auto
+                                },
+                                max_height: vertical_auto_max_h,
                                 ..Default::default()
                             },
+                            sheet_h,
                         ),
                         SheetSide::Bottom => (
                             InsetStyle {
@@ -252,9 +332,15 @@ impl Sheet {
                             },
                             SizeStyle {
                                 width: Length::Fill,
-                                height: Length::Px(sheet_h),
+                                height: if size_override.is_some() {
+                                    Length::Px(sheet_h)
+                                } else {
+                                    Length::Auto
+                                },
+                                max_height: vertical_auto_max_h,
                                 ..Default::default()
                             },
+                            sheet_h,
                         ),
                     };
 
@@ -264,21 +350,25 @@ impl Sheet {
                         SheetSide::Top => Side::Top,
                         SheetSide::Bottom => Side::Bottom,
                     };
-                    let motion_distance = match sheet_side {
-                        SheetSide::Left | SheetSide::Right => sheet_w,
-                        SheetSide::Top | SheetSide::Bottom => sheet_h,
-                    };
-                    let slide = overlay_motion::shadcn_modal_slide_transform(
-                        motion_side,
-                        motion_distance,
-                        opacity,
-                    );
 
                     let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset,
+                                margin: match sheet_side {
+                                    SheetSide::Top if vertical_edge_gap_px.0 > 0.0 => MarginEdges {
+                                        bottom: MarginEdge::Px(vertical_edge_gap_px),
+                                        ..Default::default()
+                                    },
+                                    SheetSide::Bottom if vertical_edge_gap_px.0 > 0.0 => {
+                                        MarginEdges {
+                                            top: MarginEdge::Px(vertical_edge_gap_px),
+                                            ..Default::default()
+                                        }
+                                    }
+                                    _ => Default::default(),
+                                },
                                 size,
                                 overflow: Overflow::Visible,
                                 ..Default::default()
@@ -286,6 +376,22 @@ impl Sheet {
                             ..Default::default()
                         },
                         move |_cx| vec![content],
+                    );
+
+                    let motion_distance =
+                        if matches!(sheet_side, SheetSide::Top | SheetSide::Bottom)
+                            && size_override.is_none()
+                        {
+                            cx.last_bounds_for_element(wrapper.id)
+                                .map(|r| r.size.height)
+                                .unwrap_or(estimated_motion_distance)
+                        } else {
+                            estimated_motion_distance
+                        };
+                    let slide = overlay_motion::shadcn_modal_slide_transform(
+                        motion_side,
+                        motion_distance,
+                        opacity,
                     );
 
                     let opacity_layout = LayoutStyle {
@@ -382,11 +488,18 @@ impl SheetContent {
             .p(Space::N6)
             .merge(self.chrome);
 
-        let layout = LayoutRefinement::default()
-            .w_full()
-            .h_full()
-            .overflow_hidden()
-            .merge(self.layout);
+        let side = sheet_side_in_scope(cx);
+        let base_layout = match side {
+            SheetSide::Left | SheetSide::Right => LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .overflow_hidden(),
+            SheetSide::Top | SheetSide::Bottom => {
+                // Auto height by default for top/bottom sheets, matching upstream intent.
+                LayoutRefinement::default().w_full().overflow_hidden()
+            }
+        };
+        let layout = base_layout.merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
@@ -564,9 +677,9 @@ mod tests {
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
-    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::PressableProps;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]

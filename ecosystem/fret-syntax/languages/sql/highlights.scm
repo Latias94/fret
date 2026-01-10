@@ -100,7 +100,7 @@
  (keyword_when)
  (keyword_then)
  (keyword_else)
-] @conditional
+] @keyword.conditional
 
 [
   (keyword_select)

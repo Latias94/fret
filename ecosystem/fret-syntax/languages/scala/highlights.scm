@@ -193,7 +193,7 @@
   "if"
   "match"
   "then"
-] @conditional
+] @keyword.conditional
 
 [
  "("
@@ -214,7 +214,7 @@
   "for"
   "while"
   "yield"
-] @repeat
+] @keyword.repeat
 
 "def" @keyword.function
 
@@ -230,7 +230,7 @@
   "try"
   "catch"
   "throw"
-] @exception
+] @keyword.exception
 
 "return" @keyword.return
 
@@ -240,9 +240,9 @@
 ;; `case` is a conditional keyword in case_block
 
 (case_block
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword.conditional))
 (indented_cases
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword.conditional))
 
 (operator_identifier) @operator
 

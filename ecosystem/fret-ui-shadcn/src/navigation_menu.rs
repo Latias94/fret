@@ -8,10 +8,11 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, StackProps, TextProps,
     VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::{
@@ -867,7 +868,7 @@ impl NavigationMenu {
                 };
 
                 let placement = popper::PopperContentPlacement::new(
-                    LayoutDirection::Ltr,
+                    direction_prim::use_direction_in_scope(cx, None),
                     Side::Bottom,
                     Align::Start,
                     side_offset,
@@ -1180,6 +1181,9 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
+    use fret_ui_kit::primitives::direction as direction_prim;
+    use fret_ui_kit::primitives::direction::LayoutDirection;
 
     #[derive(Default)]
     struct FakeServices;
@@ -1229,6 +1233,63 @@ mod tests {
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    fn assert_align_start(dir: LayoutDirection, anchor: Rect, panel: Rect) {
+        let eps = 0.75;
+        match dir {
+            LayoutDirection::Ltr => {
+                assert!(
+                    (panel.origin.x.0 - anchor.origin.x.0).abs() <= eps,
+                    "expected LTR start alignment (panel.left == anchor.left); anchor={anchor:?} panel={panel:?}",
+                );
+            }
+            LayoutDirection::Rtl => {
+                let panel_right = panel.origin.x.0 + panel.size.width.0;
+                let anchor_right = anchor.origin.x.0 + anchor.size.width.0;
+                assert!(
+                    (panel_right - anchor_right).abs() <= eps,
+                    "expected RTL start alignment (panel.right == anchor.right); anchor={anchor:?} panel={panel:?}",
+                );
+            }
+        }
+    }
+
+    fn find_overlay_panel_bounds(ui: &UiTree<App>, window_bounds: Rect, point: Point) -> Rect {
+        let hit = ui.debug_hit_test(point);
+        let Some(hit_node) = hit.hit else {
+            panic!("expected hit at point={point:?} (window={window_bounds:?})");
+        };
+
+        let path = ui.debug_node_path(hit_node);
+        for node in path.iter().copied().rev() {
+            let Some(bounds) = ui.debug_node_bounds(node) else {
+                continue;
+            };
+
+            if !bounds.contains(point) {
+                continue;
+            }
+
+            let is_fullscreen =
+                bounds.origin == window_bounds.origin && bounds.size == window_bounds.size;
+            if is_fullscreen {
+                continue;
+            }
+
+            if bounds.size.width.0 >= 100.0
+                && bounds.size.height.0 >= 80.0
+                && bounds.size.width.0 <= window_bounds.size.width.0 - 1.0
+                && bounds.size.height.0 <= window_bounds.size.height.0 - 1.0
+            {
+                return bounds;
+            }
+        }
+
+        panic!(
+            "expected to find an overlay panel bounds in hit path; point={point:?} hit_node={hit_node:?} path_len={}",
+            path.len()
+        );
     }
 
     #[test]
@@ -1689,5 +1750,98 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn navigation_menu_viewport_align_start_respects_direction_provider() {
+        fn run(dir: LayoutDirection) -> (Rect, Rect) {
+            let window = AppWindowId::default();
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(1200.0), Px(700.0)),
+            );
+            let mut services = FakeServices::default();
+
+            let render_frame = |ui: &mut UiTree<App>,
+                                app: &mut App,
+                                services: &mut FakeServices| {
+                bump_frame(app);
+                OverlayController::begin_frame(app, window);
+                let model_for_render = model.clone();
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "navigation-menu-dir",
+                    move |cx| {
+                        direction_prim::with_direction_provider(cx, dir, |cx| {
+                            vec![cx.container(
+                                ContainerProps {
+                                    padding: Edges {
+                                        top: Px(100.0),
+                                        right: Px(0.0),
+                                        bottom: Px(0.0),
+                                        left: Px(500.0),
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let items = vec![
+                                        NavigationMenuItem::new(
+                                            "alpha",
+                                            "Alpha",
+                                            vec![cx.text("A")],
+                                        ),
+                                        NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                                    ];
+                                    vec![
+                                        NavigationMenu::new(model_for_render.clone())
+                                            .items(items)
+                                            .into_element(cx),
+                                    ]
+                                },
+                            )]
+                        })
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+            // Two frames: first establishes trigger bounds; second mounts the overlay anchored to them.
+            render_frame(&mut ui, &mut app, &mut services);
+            render_frame(&mut ui, &mut app, &mut services);
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let alpha_btn = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+                .expect("alpha button semantics");
+            let anchor = alpha_btn.bounds;
+
+            let probe = Point::new(
+                Px(anchor.origin.x.0 + anchor.size.width.0 * 0.5),
+                Px(anchor.origin.y.0 + anchor.size.height.0 + 60.0),
+            );
+            let panel = find_overlay_panel_bounds(&ui, bounds, probe);
+            (anchor, panel)
+        }
+
+        let (ltr_anchor, ltr_panel) = run(LayoutDirection::Ltr);
+        assert_align_start(LayoutDirection::Ltr, ltr_anchor, ltr_panel);
+
+        let (rtl_anchor, rtl_panel) = run(LayoutDirection::Rtl);
+        assert_align_start(LayoutDirection::Rtl, rtl_anchor, rtl_panel);
     }
 }

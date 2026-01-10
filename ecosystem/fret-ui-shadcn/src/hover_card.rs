@@ -8,11 +8,12 @@ use fret_ui::element::{
     AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, PointerRegionProps,
     SizeStyle, VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
 use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
 use fret_ui_kit::primitives::popper;
@@ -412,7 +413,8 @@ impl HoverCard {
                 return out;
             }
 
-            let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -441,7 +443,7 @@ impl HoverCard {
                     anchor,
                     content_size,
                     popper::PopperContentPlacement::new(
-                        LayoutDirection::Ltr,
+                        direction,
                         Side::Bottom,
                         align,
                         side_offset,

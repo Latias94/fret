@@ -26,8 +26,8 @@ mod styled;
 
 pub use sizing::{Sizable, Size};
 pub use style::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, OverflowRefinement,
-    Radius, Space,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef,
+    OverflowRefinement, Radius, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 

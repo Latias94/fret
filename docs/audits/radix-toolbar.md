@@ -31,9 +31,10 @@ Fret does not use React context. Toolbar outcomes are composed via:
 - Pass: Toolbar roving focus defaults can be expressed via `toolbar_roving_flex_props(...)`.
 - Pass: Separator axis mapping is exposed via `toolbar_separator_orientation(...)`.
 - Pass: Toolbar-level roving focus composition helper exists via `toolbar_roving_group_apg(...)`.
+- Pass: RTL/LTR arrow-key behavior can be expressed by installing a direction-aware roving policy
+  via `toolbar_roving_group_apg_with_direction(...)` (delegates to `roving_focus_group`'s Radix
+  `dir` mapping).
 
 ## Gaps / intentional differences
 
-- Not modeled: `dir`/RTL navigation nuances (Radix `useDirection`).
 - Deferred: Full toolbar a11y semantics (`role="toolbar"`), pending the a11y roadmap.
-

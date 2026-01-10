@@ -100,6 +100,7 @@ pub const HIGHLIGHT_NAMES: &[&str] = &[
     "variable.member",
     "variable.parameter",
     "variable.parameter.builtin",
+    "none",
 ];
 
 thread_local! {
