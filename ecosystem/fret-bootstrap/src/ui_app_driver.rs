@@ -8,7 +8,9 @@ use fret_launch::{
 };
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::AnyElement;
+use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, UiFrameCx, UiTree};
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::OverlayController;
 use std::cell::Cell;
 
@@ -613,6 +615,16 @@ fn ui_app_render<S>(
                 "ui_app_render: view begin window={window:?} depth={view_depth}"
             ));
 
+            // Install a Radix-style direction provider for the whole app subtree.
+            //
+            // Apps may override this by setting `LayoutDirection` as a global; otherwise we
+            // default to LTR (matching Radix `useDirection` default).
+            let dir = cx
+                .app
+                .global::<LayoutDirection>()
+                .copied()
+                .unwrap_or_default();
+
             #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
             {
                 let view_ptr = driver.view as usize as u64;
@@ -679,12 +691,14 @@ fn ui_app_render<S>(
                     if use_direct { "direct" } else { "hotfn" }
                 ));
 
-                let out = if use_direct {
-                    (driver.view)(cx, &mut state.state)
-                } else {
-                    let mut hot = subsecond::HotFn::current(driver.view);
-                    hot.call((cx, &mut state.state))
-                };
+                let out = direction_prim::with_direction_provider(cx, dir, |cx| {
+                    if use_direct {
+                        (driver.view)(cx, &mut state.state)
+                    } else {
+                        let mut hot = subsecond::HotFn::current(driver.view);
+                        hot.call((cx, &mut state.state))
+                    }
+                });
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view end window={window:?} depth={view_depth}"
                 ));
@@ -694,7 +708,9 @@ fn ui_app_render<S>(
 
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
-                let out = (driver.view)(cx, &mut state.state);
+                let out = direction_prim::with_direction_provider(cx, dir, |cx| {
+                    (driver.view)(cx, &mut state.state)
+                });
                 hotpatch_trace_log(&format!(
                     "ui_app_render: view end window={window:?} depth={view_depth}"
                 ));

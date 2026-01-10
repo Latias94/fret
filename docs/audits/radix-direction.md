@@ -31,3 +31,5 @@ Fret does not use React context. Direction outcomes are represented as:
 
 - Pass: A lightweight, component-layer provider mechanism exists via
   `primitives::direction::with_direction_provider(...)` + `inherited_direction(...)`.
+  - Golden path: `fret-bootstrap` installs this provider for the root view using an optional
+    `LayoutDirection` global (defaults to LTR when unset).
