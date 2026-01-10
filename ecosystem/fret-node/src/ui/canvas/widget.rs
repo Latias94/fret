@@ -7304,6 +7304,7 @@ mod tests {
     mod perf_cache;
     mod portal_conformance;
     mod portal_keyboard_conformance;
+    mod portal_pointer_passthrough_conformance;
 
     #[test]
     fn inflate_rect_expands_by_margin() {

@@ -533,6 +533,7 @@ High-level layering (ADR 0135):
     - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
     - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_conformance.rs`
     - portal keyboard conformance (focused text input isolates shortcuts): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
+    - portal pointer passthrough conformance (interactive region is opt-in): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction
