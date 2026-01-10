@@ -142,6 +142,8 @@ code should follow these rules:
    production code paths. The `_if_needed` helper skips work when the subtree is clean, and avoids
    engine solves for translation-only changes (size stable, origin shifts).
 2. Keep solve stats per-call and use them to detect regressions.
+3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
+   and incremental updates (do not let `end_frame` prune large subtrees during scrolling/panning).
 
 Regression tests that lock these behaviors:
 
