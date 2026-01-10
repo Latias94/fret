@@ -497,7 +497,11 @@ High-level layering (ADR 0135):
 - [~] **Manual interaction checklist exists**
   - fret-node: `docs/node-graph-interaction-checklist.md`
 
-- [ ] **Automated conformance tests**
+- [~] **Automated conformance tests**
+  - Current coverage:
+    - drag/connect undo granularity: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - connection drag threshold helper: `ecosystem/fret-node/src/ui/canvas/widget/threshold.rs`
+    - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction

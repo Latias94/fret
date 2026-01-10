@@ -5821,8 +5821,15 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use fret_core::{Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextBlobId};
+    use fret_runtime::ui_host::{
+        CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
+    };
+    use fret_runtime::{ClipboardToken, CommandRegistry, DragKind, DragSession, Effect, FrameId};
+    use fret_runtime::{ModelHost, ModelStore, TickId, TimerToken};
     use serde_json::Value;
+    use std::any::{Any, TypeId};
+    use std::collections::{HashMap, HashSet};
 
     use crate::core::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -5830,7 +5837,275 @@ mod tests {
     };
     use crate::rules::EdgeEndpoint;
 
+    use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
     use super::NodeGraphCanvas;
+
+    #[derive(Default)]
+    struct NullServices;
+
+    impl fret_core::TextService for NullServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &fret_core::TextStyle,
+            _constraints: fret_core::TextConstraints,
+        ) -> (TextBlobId, fret_core::TextMetrics) {
+            (
+                TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl fret_core::PathService for NullServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for NullServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    #[derive(Default)]
+    struct TestUiHostImpl {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
+        commands: CommandRegistry,
+        redraw: HashSet<AppWindowId>,
+        effects: Vec<Effect>,
+        drag: Option<DragSession>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for TestUiHostImpl {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|b| b.downcast_ref::<T>())
+        }
+
+        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
+            self.globals
+                .get_mut(&TypeId::of::<T>())
+                .and_then(|b| b.downcast_mut::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            let type_id = TypeId::of::<T>();
+            if !self.globals.contains_key(&type_id) {
+                self.globals.insert(type_id, Box::new(init()));
+            }
+
+            // Avoid aliasing `&mut self` by temporarily removing the value.
+            let boxed = self
+                .globals
+                .remove(&type_id)
+                .expect("global must exist")
+                .downcast::<T>()
+                .ok()
+                .expect("global has wrong type");
+            let mut value = *boxed;
+
+            let out = f(&mut value, self);
+            self.globals.insert(type_id, Box::new(value));
+            out
+        }
+    }
+
+    impl ModelHost for TestUiHostImpl {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl ModelsHost for TestUiHostImpl {
+        fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl CommandsHost for TestUiHostImpl {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
+    }
+
+    impl EffectSink for TestUiHostImpl {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw.insert(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl TimeHost for TestUiHostImpl {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            fret_runtime::ImageUploadToken(self.next_image_upload_token)
+        }
+    }
+
+    impl DragHost for TestUiHostImpl {
+        fn drag(&self) -> Option<&DragSession> {
+            self.drag.as_ref()
+        }
+
+        fn drag_mut(&mut self) -> Option<&mut DragSession> {
+            self.drag.as_mut()
+        }
+
+        fn cancel_drag(&mut self) {
+            self.drag = None;
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            _kind: DragKind,
+            _source_window: AppWindowId,
+            _start: Point,
+            _payload: T,
+        ) {
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            _kind: DragKind,
+            _source_window: AppWindowId,
+            _start: Point,
+            _payload: T,
+        ) {
+        }
+    }
+
+    fn event_cx<'a>(
+        host: &'a mut TestUiHostImpl,
+        services: &'a mut NullServices,
+        bounds: Rect,
+    ) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
+        fret_ui::retained_bridge::EventCx {
+            app: host,
+            services,
+            node: fret_core::NodeId::default(),
+            window: None,
+            input_ctx: fret_runtime::InputContext::default(),
+            children: &[],
+            focus: None,
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            stop_propagation: false,
+        }
+    }
+
+    fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        (graph, a, b)
+    }
+
+    fn read_node_pos(
+        host: &mut TestUiHostImpl,
+        model: &fret_runtime::Model<Graph>,
+        id: NodeId,
+    ) -> CanvasPoint {
+        model
+            .read_ref(host, |g| g.nodes.get(&id).map(|n| n.pos))
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
 
     #[test]
     fn distance_sq_point_to_rect_is_zero_inside_and_positive_outside() {
@@ -6027,5 +6302,178 @@ mod tests {
             &[],
             p_in
         ));
+    }
+
+    #[test]
+    fn node_drag_records_single_history_entry_for_multi_node_move() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+        let snapshot = canvas.sync_view_state(&mut host);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        canvas.interaction.node_drag = Some(NodeDrag {
+            primary: a,
+            nodes: vec![
+                (a, CanvasPoint { x: 0.0, y: 0.0 }),
+                (b, CanvasPoint { x: 10.0, y: 0.0 }),
+            ],
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_pos: Point::new(Px(0.0), Px(0.0)),
+        });
+
+        for pos in [
+            Point::new(Px(20.0), Px(5.0)),
+            Point::new(Px(40.0), Px(10.0)),
+            Point::new(Px(60.0), Px(10.0)),
+        ] {
+            let did = super::node_drag::handle_node_drag_move(
+                &mut canvas,
+                &mut cx,
+                &snapshot,
+                pos,
+                fret_core::Modifiers::default(),
+                snapshot.zoom,
+            );
+            assert!(did);
+            assert_eq!(canvas.history.undo_len(), 0);
+        }
+
+        let did_up = super::pointer_up::handle_pointer_up(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            Point::new(Px(60.0), Px(10.0)),
+            fret_core::MouseButton::Left,
+            1,
+            fret_core::Modifiers::default(),
+            snapshot.zoom,
+        );
+        assert!(did_up);
+        assert_eq!(canvas.history.undo_len(), 1);
+
+        assert!(canvas.undo_last(&mut host, None));
+        assert_eq!(
+            read_node_pos(&mut host, &graph, a),
+            CanvasPoint { x: 0.0, y: 0.0 }
+        );
+        assert_eq!(
+            read_node_pos(&mut host, &graph, b),
+            CanvasPoint { x: 10.0, y: 0.0 }
+        );
+    }
+
+    #[test]
+    fn connect_bundle_records_single_history_entry() {
+        let mut host = TestUiHostImpl::default();
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let n1 = NodeId::new();
+        let out1 = PortId::new();
+        let out2 = PortId::new();
+        graph.nodes.insert(
+            n1,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![out1, out2],
+                data: Value::Null,
+            },
+        );
+        for (id, key) in [(out1, "out1"), (out2, "out2")] {
+            graph.ports.insert(
+                id,
+                Port {
+                    node: n1,
+                    key: PortKey::new(key),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Multi,
+                    ty: None,
+                    data: Value::Null,
+                },
+            );
+        }
+
+        let n2 = NodeId::new();
+        let inn = PortId::new();
+        graph.nodes.insert(
+            n2,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 100.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![inn],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            inn,
+            Port {
+                node: n2,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        let graph_model = host.models.insert(graph);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
+        let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        canvas.interaction.wire_drag = Some(WireDrag {
+            kind: WireDragKind::New {
+                from: out1,
+                bundle: vec![out1, out2],
+            },
+            pos: Point::new(Px(0.0), Px(0.0)),
+        });
+
+        let did = super::wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(inn),
+        );
+        assert!(did);
+        assert_eq!(canvas.history.undo_len(), 1);
+        let edges_len = graph_model
+            .read_ref(&mut host, |g| g.edges.len())
+            .unwrap_or(0);
+        assert_eq!(edges_len, 2);
+
+        assert!(canvas.undo_last(&mut host, None));
+        let edges_len = graph_model
+            .read_ref(&mut host, |g| g.edges.len())
+            .unwrap_or(0);
+        assert_eq!(edges_len, 0);
     }
 }
