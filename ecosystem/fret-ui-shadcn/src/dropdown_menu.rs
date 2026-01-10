@@ -975,10 +975,6 @@ impl DropdownMenu {
 
                      let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
-                     // shadcn: content width tracks trigger width (with a minimum), and height clamps
-                     // to available space (scrolls internally).
-                     let desired = Size::new(Px(anchor.size.width.0.max(min_width.0)), Px(1.0e9));
-
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
                         DropdownMenuAlign::Center => Align::Center,
@@ -994,13 +990,26 @@ impl DropdownMenu {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let layout = popper::popper_content_layout_sized(
-                        outer,
-                        anchor,
-                        desired,
+                    let popper_placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                            .with_arrow(arrow_options, arrow_protrusion),
-                    );
+                            .with_arrow(arrow_options, arrow_protrusion);
+
+                    // shadcn: content width tracks trigger width (with a minimum), and height
+                    // clamps to available space (scrolls internally). Radix exposes the available
+                    // metrics via `--radix-dropdown-menu-content-available-*`; compute the same
+                    // values from the popper substrate.
+                    let popper_vars =
+                        menu::dropdown_menu_popper_vars(outer, anchor, min_width, popper_placement);
+                    let desired_w =
+                        menu::dropdown_menu_popper_desired_width(outer, anchor, min_width);
+                    let max_h = theme
+                        .metric_by_key("component.dropdown_menu.max_height")
+                        .map(|h| Px(h.0.min(popper_vars.available_height.0)))
+                        .unwrap_or(popper_vars.available_height);
+                    let desired = Size::new(desired_w, max_h);
+
+                    let layout =
+                        popper::popper_content_layout_sized(outer, anchor, desired, popper_placement);
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
