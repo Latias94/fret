@@ -225,6 +225,10 @@ impl<H: UiHost> UiTree<H> {
                     start: start as u32,
                     end: end as u32,
                 });
+            } else {
+                // When caching is disabled for this node (e.g. due to a render transform),
+                // ensure we don't keep a stale cache entry that could be replayed later.
+                n.paint_cache = None;
             }
         }
     }
