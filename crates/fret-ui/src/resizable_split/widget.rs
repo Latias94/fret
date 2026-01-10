@@ -304,7 +304,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
             let tree = &mut *cx.tree;
 
             if !cx.children.is_empty() {
-                tree.precompute_flow_root_island_if_needed(
+                tree.precompute_barrier_flow_root_island_if_needed(
                     app,
                     services,
                     cx.children[0],
@@ -313,7 +313,7 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                 );
             }
             if cx.children.len() >= 2 {
-                tree.precompute_flow_root_island_if_needed(
+                tree.precompute_barrier_flow_root_island_if_needed(
                     app,
                     services,
                     cx.children[1],

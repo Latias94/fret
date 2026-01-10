@@ -400,7 +400,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn precompute_flow_root_island(
+    pub(crate) fn precompute_barrier_flow_root_island(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -439,7 +439,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn precompute_flow_root_island_if_needed(
+    pub(crate) fn precompute_barrier_flow_root_island_if_needed(
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
@@ -464,7 +464,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        self.precompute_flow_root_island(app, services, root, root_bounds, scale_factor);
+        self.precompute_barrier_flow_root_island(app, services, root, root_bounds, scale_factor);
     }
 
     #[cfg(feature = "layout-engine-v2")]

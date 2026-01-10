@@ -140,9 +140,10 @@ Acceptance:
 To keep solve counts stable and avoid accidental re-introduction of re-entrant layout patterns, v2
 code should follow these rules:
 
-1. Prefer `precompute_flow_root_island_if_needed(...)` over `precompute_flow_root_island(...)` in
-   production code paths. The `_if_needed` helper skips work when the subtree is clean, and avoids
-   engine solves for translation-only changes (size stable, origin shifts).
+1. Treat barrier precompute as an escape hatch: do not call it from normal wrappers/flow containers.
+   Only explicit barriers (e.g. Scroll/VirtualList/ResizableSplit) may call
+   `precompute_barrier_flow_root_island_if_needed(...)`. The `_if_needed` helper skips work when the
+   subtree is clean, and avoids engine solves for translation-only changes (size stable, origin shifts).
 2. Keep solve stats per-call and use them to detect regressions.
 3. Translation-only bounds shifts must still keep existing engine nodes "alive" for stable identity
    and incremental updates (do not let `end_frame` prune large subtrees during scrolling/panning).

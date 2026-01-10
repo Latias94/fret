@@ -652,6 +652,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
+    #[allow(dead_code)]
     pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
         let Some(&child) = self.children(root).first() else {
             return false;

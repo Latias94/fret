@@ -360,32 +360,6 @@ impl ElementHostWidget {
         );
         let inner_size = root_layout.size;
 
-        #[cfg(feature = "layout-engine-v2")]
-        if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-            let sf = cx.scale_factor;
-            let app = &mut *cx.app;
-            let services = &mut *cx.services;
-            let tree = &mut *cx.tree;
-
-            for &(child, layout_rect) in &child_layouts {
-                if tree.children(child).is_empty() {
-                    continue;
-                }
-                if tree.flow_subtree_is_engine_backed(child) {
-                    continue;
-                }
-
-                let rect = Rect::new(
-                    fret_core::Point::new(
-                        Px(inner_origin.x.0 + layout_rect.origin.x.0),
-                        Px(inner_origin.y.0 + layout_rect.origin.y.0),
-                    ),
-                    layout_rect.size,
-                );
-                tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
-            }
-        }
-
         for (child, layout_rect) in child_layouts {
             let rect = Rect::new(
                 fret_core::Point::new(

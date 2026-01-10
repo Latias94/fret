@@ -222,52 +222,6 @@ impl ElementHostWidget {
                 let inner_bounds = Rect::new(inner_origin, inner_size);
                 let probe_inner_bounds = Rect::new(inner_origin, inner_avail);
 
-                #[cfg(feature = "layout-engine-v2")]
-                if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-                    let sf = cx.scale_factor;
-                    let app = &mut *cx.app;
-                    let services = &mut *cx.services;
-                    let tree = &mut *cx.tree;
-
-                    for &child in cx.children {
-                        let child_style = layout_style_for_node(app, window, child);
-                        if child_style.position == crate::element::PositionStyle::Absolute {
-                            continue;
-                        }
-
-                        let child_size = non_absolute_sizes
-                            .iter()
-                            .find_map(|(id, size)| (*id == child).then_some(*size))
-                            .unwrap_or(Size::new(Px(0.0), Px(0.0)));
-
-                        let child_bounds = match positioned_layout_style(child_style) {
-                            PositionedLayoutStyle::Static => {
-                                Rect::new(inner_bounds.origin, child_size)
-                            }
-                            PositionedLayoutStyle::Relative(inset) => {
-                                let dx = inset.left.unwrap_or(Px(0.0)).0
-                                    - inset.right.unwrap_or(Px(0.0)).0;
-                                let dy = inset.top.unwrap_or(Px(0.0)).0
-                                    - inset.bottom.unwrap_or(Px(0.0)).0;
-                                let origin = fret_core::Point::new(
-                                    Px(inner_bounds.origin.x.0 + dx),
-                                    Px(inner_bounds.origin.y.0 + dy),
-                                );
-                                Rect::new(origin, child_size)
-                            }
-                            PositionedLayoutStyle::Absolute(_) => continue,
-                        };
-
-                        tree.precompute_flow_root_island_if_needed(
-                            app,
-                            services,
-                            child,
-                            child_bounds,
-                            sf,
-                        );
-                    }
-                }
-
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
@@ -499,45 +453,6 @@ impl ElementHostWidget {
                 let desired = clamp_to_constraints(desired_child, props.layout, cx.available);
                 let base = Rect::new(cx.bounds.origin, desired);
 
-                #[cfg(feature = "layout-engine-v2")]
-                if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-                    let sf = cx.scale_factor;
-                    let app = &mut *cx.app;
-                    let services = &mut *cx.services;
-                    let tree = &mut *cx.tree;
-
-                    for &child in cx.children {
-                        let child_style = layout_style_for_node(app, window, child);
-                        if child_style.position == crate::element::PositionStyle::Absolute {
-                            continue;
-                        }
-
-                        let child_bounds = match positioned_layout_style(child_style) {
-                            PositionedLayoutStyle::Static => base,
-                            PositionedLayoutStyle::Relative(inset) => {
-                                let dx = inset.left.unwrap_or(Px(0.0)).0
-                                    - inset.right.unwrap_or(Px(0.0)).0;
-                                let dy = inset.top.unwrap_or(Px(0.0)).0
-                                    - inset.bottom.unwrap_or(Px(0.0)).0;
-                                let origin = fret_core::Point::new(
-                                    Px(base.origin.x.0 + dx),
-                                    Px(base.origin.y.0 + dy),
-                                );
-                                Rect::new(origin, base.size)
-                            }
-                            PositionedLayoutStyle::Absolute(_) => continue,
-                        };
-
-                        tree.precompute_flow_root_island_if_needed(
-                            app,
-                            services,
-                            child,
-                            child_bounds,
-                            sf,
-                        );
-                    }
-                }
-
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     match positioned_layout_style(layout_style) {
@@ -586,29 +501,10 @@ impl ElementHostWidget {
                 let base = cx.bounds;
 
                 #[cfg(feature = "layout-engine-v2")]
+                if let Some(size) =
+                    try_layout_children_from_engine_or_manual_absolute(cx, window, base)
                 {
-                    if let Some(size) =
-                        try_layout_children_from_engine_or_manual_absolute(cx, window, base)
-                    {
-                        return size;
-                    }
-
-                    if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
-                        && !cx.children.is_empty()
-                        && !cx.tree.flow_subtree_is_engine_backed(cx.node)
-                    {
-                        let sf = cx.scale_factor;
-                        let app = &mut *cx.app;
-                        let services = &mut *cx.services;
-                        let tree = &mut *cx.tree;
-                        tree.precompute_flow_root_island(app, services, cx.node, base, sf);
-
-                        if let Some(size) =
-                            try_layout_children_from_engine_or_manual_absolute(cx, window, base)
-                        {
-                            return size;
-                        }
-                    }
+                    return size;
                 }
 
                 for &child in cx.children {

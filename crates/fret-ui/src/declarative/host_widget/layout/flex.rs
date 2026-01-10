@@ -635,19 +635,6 @@ impl ElementHostWidget {
                 layout.size,
             );
 
-            #[cfg(feature = "layout-engine-v2")]
-            if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
-                && !cx.tree.children(child).is_empty()
-            {
-                let sf = cx.scale_factor;
-                let app = &mut *cx.app;
-                let services = &mut *cx.services;
-                let tree = &mut *cx.tree;
-                if !tree.flow_subtree_is_engine_backed(child) {
-                    tree.precompute_flow_root_island_if_needed(app, services, child, rect, sf);
-                }
-            }
-
             let _ = cx.layout_in(child, rect);
         }
 

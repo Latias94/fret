@@ -812,9 +812,9 @@ fn precompute_flow_root_island_reuses_solved_root_even_after_other_solves() {
             let services = &mut *cx.services;
             let tree = &mut *cx.tree;
 
-            tree.precompute_flow_root_island(app, services, self.a, self.rect, sf);
-            tree.precompute_flow_root_island(app, services, self.b, self.rect, sf);
-            tree.precompute_flow_root_island(app, services, self.a, self.rect, sf);
+            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
+            tree.precompute_barrier_flow_root_island(app, services, self.b, self.rect, sf);
+            tree.precompute_barrier_flow_root_island(app, services, self.a, self.rect, sf);
 
             cx.available
         }
@@ -886,10 +886,16 @@ fn precompute_flow_root_island_if_needed_skips_translation_only_bounds_changes()
             let tree = &mut *cx.tree;
 
             let rect = if self.calls == 0 {
-                tree.precompute_flow_root_island(app, services, self.child, self.rect_a, sf);
+                tree.precompute_barrier_flow_root_island(
+                    app,
+                    services,
+                    self.child,
+                    self.rect_a,
+                    sf,
+                );
                 self.rect_a
             } else {
-                tree.precompute_flow_root_island_if_needed(
+                tree.precompute_barrier_flow_root_island_if_needed(
                     app,
                     services,
                     self.child,
