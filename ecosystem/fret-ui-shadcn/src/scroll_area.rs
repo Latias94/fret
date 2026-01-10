@@ -247,9 +247,6 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
-            if matches!(layout.size.height, Length::Auto) {
-                layout.size.height = Length::Fill;
-            }
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
@@ -385,6 +382,7 @@ impl ScrollAreaRoot {
 #[derive(Debug, Clone)]
 pub struct ScrollArea {
     children: Vec<AnyElement>,
+    axis: ScrollAxis,
     show_scrollbar: bool,
     scrollbar_type: ScrollAreaType,
     scroll_hide_delay_ticks: u64,
@@ -396,12 +394,18 @@ impl ScrollArea {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
+            axis: ScrollAxis::Y,
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
             layout: LayoutRefinement::default(),
             scroll_handle: None,
         }
+    }
+
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.axis = axis;
+        self
     }
 
     pub fn show_scrollbar(mut self, show: bool) -> Self {
@@ -434,18 +438,24 @@ impl ScrollArea {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut root = ScrollAreaRoot::new(ScrollAreaViewport::new(self.children))
+        let mut root = ScrollAreaRoot::new(ScrollAreaViewport::new(self.children).axis(self.axis))
             .show_scrollbar(self.show_scrollbar)
             .type_(self.scrollbar_type)
             .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
             .refine_layout(self.layout)
-            .corner(true)
-            .scrollbar(
+            .corner(matches!(self.axis, ScrollAxis::Both));
+
+        if self.axis.scroll_y() {
+            root = root.scrollbar(
                 ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Vertical),
-            )
-            .scrollbar(
+            );
+        }
+
+        if self.axis.scroll_x() {
+            root = root.scrollbar(
                 ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Horizontal),
             );
+        }
 
         if let Some(handle) = self.scroll_handle {
             root = root.scroll_handle(handle);
@@ -538,6 +548,29 @@ mod tests {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
                 vec![ScrollArea::new(content(cx)).type_(ty).into_element(cx)]
+            });
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds(), 1.0);
+        root
+    }
+
+    fn render_with_axis(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        axis: ScrollAxis,
+        ty: ScrollAreaType,
+        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+    ) -> fret_core::NodeId {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
+                vec![
+                    ScrollArea::new(content(cx))
+                        .axis(axis)
+                        .type_(ty)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         ui.layout_all(app, services, bounds(), 1.0);
@@ -798,19 +831,21 @@ mod tests {
             )]
         };
 
-        let _ = render_with(
+        let _ = render_with_axis(
             &mut ui,
             &mut app,
             &mut services,
             window,
+            ScrollAxis::X,
             ScrollAreaType::Auto,
             wide,
         );
-        let root = render_with(
+        let root = render_with_axis(
             &mut ui,
             &mut app,
             &mut services,
             window,
+            ScrollAxis::X,
             ScrollAreaType::Auto,
             wide,
         );
@@ -847,19 +882,21 @@ mod tests {
             )]
         };
 
-        let _ = render_with(
+        let _ = render_with_axis(
             &mut ui,
             &mut app,
             &mut services,
             window,
+            ScrollAxis::Both,
             ScrollAreaType::Auto,
             large,
         );
-        let root = render_with(
+        let root = render_with_axis(
             &mut ui,
             &mut app,
             &mut services,
             window,
+            ScrollAxis::Both,
             ScrollAreaType::Auto,
             large,
         );
