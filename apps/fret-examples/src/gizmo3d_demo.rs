@@ -18,6 +18,45 @@ use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct UndoEntry {
+    before: Transform3d,
+    after: Transform3d,
+}
+
+#[derive(Debug, Default)]
+struct UndoStack {
+    undo: Vec<UndoEntry>,
+    redo: Vec<UndoEntry>,
+    limit: usize,
+}
+
+impl UndoStack {
+    fn record(&mut self, entry: UndoEntry) {
+        if self.limit == 0 {
+            self.limit = 128;
+        }
+        self.undo.push(entry);
+        self.redo.clear();
+        if self.undo.len() > self.limit {
+            let excess = self.undo.len() - self.limit;
+            self.undo.drain(0..excess);
+        }
+    }
+
+    fn undo(&mut self) -> Option<UndoEntry> {
+        let entry = self.undo.pop()?;
+        self.redo.push(entry);
+        Some(entry)
+    }
+
+    fn redo(&mut self) -> Option<UndoEntry> {
+        let entry = self.redo.pop()?;
+        self.undo.push(entry);
+        Some(entry)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct OrbitCamera {
     target: Vec3,
@@ -153,6 +192,7 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
+    undo: UndoStack,
     input: GizmoInput,
     camera: OrbitCamera,
 }
@@ -171,6 +211,11 @@ impl Default for Gizmo3dDemoModel {
                 scale: Vec3::ONE,
             },
             drag_start_target: None,
+            undo: UndoStack {
+                undo: Vec::new(),
+                redo: Vec::new(),
+                limit: 128,
+            },
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -708,6 +753,58 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             cube_index_count: cube_indices.len().min(u32::MAX as usize) as u32,
         });
     }
+
+    fn handle_undo_redo_shortcut(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut Gizmo3dDemoWindowState,
+        undo: bool,
+    ) -> bool {
+        let mut did_apply = false;
+        let _ = state.demo.update(app, |m, _cx| {
+            let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+            if is_dragging {
+                let view_projection = camera_view_projection(m.viewport_px, m.camera);
+                let viewport = ViewportRect::new(
+                    Vec2::ZERO,
+                    Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
+                );
+                let mut input = m.input;
+                input.drag_started = false;
+                input.dragging = false;
+                input.cancel = true;
+                if let Some(update) = m.gizmo.update(
+                    view_projection,
+                    viewport,
+                    input,
+                    std::slice::from_ref(&m.target),
+                ) {
+                    if update.phase == GizmoPhase::Cancel {
+                        if let Some(start) = m.drag_start_target.take() {
+                            m.target = start;
+                        }
+                    }
+                }
+                m.drag_start_target = None;
+                m.input.cancel = false;
+                m.input.dragging = false;
+                m.input.drag_started = false;
+            }
+
+            let entry = if undo { m.undo.undo() } else { m.undo.redo() };
+            let Some(entry) = entry else {
+                return;
+            };
+            m.target = if undo { entry.before } else { entry.after };
+            did_apply = true;
+        });
+
+        if did_apply {
+            app.request_redraw(window);
+        }
+        did_apply
+    }
 }
 
 fn cube_mesh() -> (Vec<Vertex>, Vec<u16>) {
@@ -780,6 +877,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         match event {
             Event::WindowCloseRequested => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyZ,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let redo = modifiers.shift;
+                let _ = self.handle_undo_redo_shortcut(app, window, state, !redo);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyY,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
             }
             Event::KeyDown {
                 key: fret_core::KeyCode::Escape,
@@ -1054,7 +1166,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.target = update.updated_targets[0];
                     }
                     GizmoPhase::Commit => {
-                        m.drag_start_target = None;
+                        if let Some(before) = m.drag_start_target.take() {
+                            let after = m.target;
+                            if before != after {
+                                m.undo.record(UndoEntry { before, after });
+                            }
+                        }
                     }
                     GizmoPhase::Cancel => {
                         if let Some(start) = m.drag_start_target.take() {
