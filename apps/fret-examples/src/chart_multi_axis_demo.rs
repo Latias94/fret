@@ -14,8 +14,8 @@ use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
 use delinea::ids::{AxisId, FieldId};
 use delinea::{
-    Action, ChartSpec, DataZoomXSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode,
-    SeriesSpec,
+    Action, ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec,
+    SeriesEncode, SeriesSpec,
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
 use fret_chart::retained::ChartCanvas;
@@ -36,7 +36,10 @@ impl ChartMultiAxisDemoDriver {
         eprintln!(
             "[chart_multi_axis_demo] X minSpan/maxSpan are enforced for interaction-derived zoom writes only.\n\
              If the current span is already outside limits (e.g. programmatic set), interactions do not force it back.\n\
-             Config: X minSpan=50, maxSpan=2000; initial window [-200, 200]."
+             Config:\n\
+             - X minSpan=50, maxSpan=2000; initial window [-200, 200].\n\
+             - Y(left) minSpan=2, maxSpan=40; initial window [-15, 15].\n\
+             - Y(right) minSpan=50, maxSpan=2000; initial window [0, 1600]."
         );
 
         ChartMultiAxisDemoWindowState { ui, root: None }
@@ -112,7 +115,7 @@ impl ChartMultiAxisDemoDriver {
                 },
                 delinea::AxisSpec {
                     id: y_left,
-                    name: Some("Y (left)".to_string()),
+                    name: Some("Y (left) [minSpan=2 maxSpan=40]".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
                     position: Some(AxisPosition::Left),
@@ -121,7 +124,7 @@ impl ChartMultiAxisDemoDriver {
                 },
                 delinea::AxisSpec {
                     id: y_right,
-                    name: Some("Y (right)".to_string()),
+                    name: Some("Y (right) [minSpan=50 maxSpan=2000]".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
                     position: Some(AxisPosition::Right),
@@ -145,7 +148,20 @@ impl ChartMultiAxisDemoDriver {
                     max_value_span: Some(2000.0),
                 },
             ],
-            data_zoom_y: vec![],
+            data_zoom_y: vec![
+                DataZoomYSpec {
+                    id: delinea::ids::DataZoomId::new(10),
+                    axis: y_left,
+                    min_value_span: Some(2.0),
+                    max_value_span: Some(40.0),
+                },
+                DataZoomYSpec {
+                    id: delinea::ids::DataZoomId::new(11),
+                    axis: y_right,
+                    min_value_span: Some(50.0),
+                    max_value_span: Some(2000.0),
+                },
+            ],
             axis_pointer: Some(delinea::AxisPointerSpec::default()),
             series: vec![
                 SeriesSpec {
@@ -265,6 +281,21 @@ impl ChartMultiAxisDemoDriver {
             window: Some(DataWindow {
                 min: -200.0,
                 max: 200.0,
+            }),
+        });
+
+        canvas.engine_mut().apply_action(Action::SetDataWindowY {
+            axis: y_left,
+            window: Some(DataWindow {
+                min: -15.0,
+                max: 15.0,
+            }),
+        });
+        canvas.engine_mut().apply_action(Action::SetDataWindowY {
+            axis: y_right,
+            window: Some(DataWindow {
+                min: 0.0,
+                max: 1600.0,
             }),
         });
 
