@@ -13,6 +13,7 @@ pub mod measured;
 pub mod overlays;
 pub mod portal;
 pub mod presenter;
+pub mod registry;
 pub mod style;
 
 pub use a11y::NodeGraphA11yActiveDescendant;
@@ -45,6 +46,7 @@ pub use presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
+pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
 pub use style::NodeGraphStyle;
 
 pub use overlays::{

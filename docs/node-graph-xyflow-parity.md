@@ -139,11 +139,19 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Pluggable view layer for nodes and edges**
   - XyFlow: `nodeTypes`, `edgeTypes` + wrappers (`repo-ref/xyflow/packages/react/src/components/*`)
-  - fret-node: portal is the mechanism (`ecosystem/fret-node/src/ui/portal.rs`), but we still need a B-layer registry/lifecycle API
+  - fret-node:
+    - portal mechanism: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost`)
+    - `nodeTypes` registry (portal-based): `ecosystem/fret-node/src/ui/registry.rs` (`NodeGraphNodeTypes`)
+  - Notes:
+    - `edgeTypes` is still presenter-driven today (`NodeGraphPresenter::edge_render_hint`) and lacks a first-class registry surface.
 
 - [ ] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
-  - fret-node: needs a concrete "node view instance" model beyond current MVP labels + portal escape hatch
+  - fret-node:
+    - `NodeGraphNodeTypes` stores per-kind renderers as `FnMut`, enabling per-type state/caches
+    - portal subtree instances are keyed by `NodeId` via `NodeGraphPortalHost` (`ecx.keyed(node_id, ...)`)
+  - Notes:
+    - still missing a first-class lifecycle contract for node/edge wrappers and update scheduling (internals measurement invalidation, memoization policy).
 
 - [ ] **Plugin-like policy hooks (no forking the canvas)**
   - XyFlow: store middleware maps for node/edge changes
