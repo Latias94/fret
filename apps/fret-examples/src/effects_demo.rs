@@ -3,20 +3,130 @@ use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
+use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 
 #[derive(Default)]
 struct EffectsDemoDriver;
 
+#[derive(Debug, Clone)]
+struct OverlayTextCache {
+    last_text: String,
+    last_scale_bits: u32,
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<fret_core::text::TextMetrics>,
+}
+
+impl Default for OverlayTextCache {
+    fn default() -> Self {
+        Self {
+            last_text: String::new(),
+            last_scale_bits: 0,
+            blob: None,
+            metrics: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct EffectsDemoState {
+    panel0_enabled: bool,
+    panel1_enabled: bool,
+    panel2_enabled: bool,
+
+    quality: EffectQuality,
+
+    panel0_blur_radius_px: u32,
+    panel0_blur_downsample: u32,
+
+    panel1_pixelate_scale: u32,
+    panel2_pixelate_scale: u32,
+
+    show_help: bool,
+    overlay_dirty: bool,
+    overlay: OverlayTextCache,
+}
+
+impl Default for EffectsDemoState {
+    fn default() -> Self {
+        Self {
+            panel0_enabled: true,
+            panel1_enabled: true,
+            panel2_enabled: true,
+
+            quality: EffectQuality::Auto,
+
+            panel0_blur_radius_px: 6,
+            panel0_blur_downsample: 2,
+
+            panel1_pixelate_scale: 8,
+            panel2_pixelate_scale: 6,
+
+            show_help: true,
+            overlay_dirty: true,
+            overlay: OverlayTextCache::default(),
+        }
+    }
+}
+
+impl EffectsDemoState {
+    fn any_effects_enabled(&self) -> bool {
+        self.panel0_enabled || self.panel1_enabled || self.panel2_enabled
+    }
+
+    fn cycle_quality(&mut self) {
+        self.quality = match self.quality {
+            EffectQuality::Auto => EffectQuality::Low,
+            EffectQuality::Low => EffectQuality::Medium,
+            EffectQuality::Medium => EffectQuality::High,
+            EffectQuality::High => EffectQuality::Auto,
+        };
+    }
+
+    fn overlay_text(&self) -> String {
+        if !self.show_help {
+            return String::new();
+        }
+
+        let quality = match self.quality {
+            EffectQuality::Auto => "Auto",
+            EffectQuality::Low => "Low",
+            EffectQuality::Medium => "Medium",
+            EffectQuality::High => "High",
+        };
+
+        format!(
+            "effects_demo controls\n\
+             0: toggle all effects ({})\n\
+             1/2/3: toggle panels (p0={}, p1={}, p2={})\n\
+             Q: cycle quality (current: {})\n\
+             [/]: blur radius (p0={}, downsample={})\n\
+             -/=: pixelate scale (p1={})\n\
+             Z/X: pixelate scale (p2={})\n\
+             H: toggle this help\n\
+             Esc: close window",
+            self.any_effects_enabled(),
+            self.panel0_enabled,
+            self.panel1_enabled,
+            self.panel2_enabled,
+            quality,
+            self.panel0_blur_radius_px,
+            self.panel0_blur_downsample,
+            self.panel1_pixelate_scale,
+            self.panel2_pixelate_scale,
+        )
+    }
+}
+
 impl WinitAppDriver for EffectsDemoDriver {
-    type WindowState = ();
+    type WindowState = EffectsDemoState;
 
     fn create_window_state(
         &mut self,
         _app: &mut App,
         _window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        ()
+        EffectsDemoState::default()
     }
 
     fn handle_event(
@@ -24,7 +134,9 @@ impl WinitAppDriver for EffectsDemoDriver {
         context: WinitEventContext<'_, Self::WindowState>,
         event: &fret_core::Event,
     ) {
-        let WinitEventContext { app, window, .. } = context;
+        let WinitEventContext {
+            app, window, state, ..
+        } = context;
         match event {
             fret_core::Event::WindowCloseRequested
             | fret_core::Event::KeyDown {
@@ -33,12 +145,98 @@ impl WinitAppDriver for EffectsDemoDriver {
             } => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
+            fret_core::Event::KeyDown {
+                key,
+                modifiers,
+                repeat: false,
+            } => {
+                let mut changed = false;
+
+                match key {
+                    fret_core::KeyCode::Digit0 => {
+                        let enable = !state.any_effects_enabled();
+                        state.panel0_enabled = enable;
+                        state.panel1_enabled = enable;
+                        state.panel2_enabled = enable;
+                        changed = true;
+                    }
+                    fret_core::KeyCode::Digit1 => {
+                        state.panel0_enabled = !state.panel0_enabled;
+                        changed = true;
+                    }
+                    fret_core::KeyCode::Digit2 => {
+                        state.panel1_enabled = !state.panel1_enabled;
+                        changed = true;
+                    }
+                    fret_core::KeyCode::Digit3 => {
+                        state.panel2_enabled = !state.panel2_enabled;
+                        changed = true;
+                    }
+                    fret_core::KeyCode::KeyQ => {
+                        state.cycle_quality();
+                        changed = true;
+                    }
+                    fret_core::KeyCode::BracketLeft => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel0_blur_radius_px =
+                            state.panel0_blur_radius_px.saturating_sub(step).max(0);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::BracketRight => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel0_blur_radius_px =
+                            (state.panel0_blur_radius_px.saturating_add(step)).min(64);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::Minus => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel1_pixelate_scale =
+                            state.panel1_pixelate_scale.saturating_sub(step).max(1);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::Equal => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel1_pixelate_scale =
+                            (state.panel1_pixelate_scale.saturating_add(step)).min(64);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::KeyZ => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel2_pixelate_scale =
+                            state.panel2_pixelate_scale.saturating_sub(step).max(1);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::KeyX => {
+                        let step = if modifiers.shift { 4 } else { 1 };
+                        state.panel2_pixelate_scale =
+                            (state.panel2_pixelate_scale.saturating_add(step)).min(64);
+                        changed = true;
+                    }
+                    fret_core::KeyCode::KeyH => {
+                        state.show_help = !state.show_help;
+                        changed = true;
+                    }
+                    _ => {}
+                }
+
+                if changed {
+                    state.overlay_dirty = true;
+                    app.request_redraw(window);
+                }
+            }
             _ => {}
         }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext { bounds, scene, .. } = context;
+        let WinitRenderContext {
+            bounds,
+            scale_factor,
+            scene,
+            services,
+            state,
+            ..
+        } = context;
         scene.clear();
 
         let w = bounds.size.width.0.max(1.0);
@@ -129,22 +327,24 @@ impl WinitAppDriver for EffectsDemoDriver {
             rect: panel0,
             corner_radii: panel_radii,
         });
-        scene.push(SceneOp::PushEffect {
-            bounds: panel0,
-            mode: EffectMode::Backdrop,
-            chain: EffectChain::from_steps(&[
-                EffectStep::GaussianBlur {
-                    radius_px: Px(6.0),
-                    downsample: 2,
-                },
-                EffectStep::ColorAdjust {
-                    saturation: 1.2,
-                    brightness: 1.02,
-                    contrast: 1.02,
-                },
-            ]),
-            quality: EffectQuality::Auto,
-        });
+        if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
+            scene.push(SceneOp::PushEffect {
+                bounds: panel0,
+                mode: EffectMode::Backdrop,
+                chain: EffectChain::from_steps(&[
+                    EffectStep::GaussianBlur {
+                        radius_px: Px(state.panel0_blur_radius_px as f32),
+                        downsample: state.panel0_blur_downsample.max(2),
+                    },
+                    EffectStep::ColorAdjust {
+                        saturation: 1.2,
+                        brightness: 1.02,
+                        contrast: 1.02,
+                    },
+                ]),
+                quality: state.quality,
+            });
+        }
         scene.push(SceneOp::Quad {
             order: DrawOrder(10_000),
             rect: panel0,
@@ -166,10 +366,12 @@ impl WinitAppDriver for EffectsDemoDriver {
                 r: 0.35,
                 g: 0.35,
                 b: 0.35,
-                a: 0.35,
+                a: if state.panel0_enabled { 0.35 } else { 0.18 },
             },
         );
-        scene.push(SceneOp::PopEffect);
+        if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
+            scene.push(SceneOp::PopEffect);
+        }
         scene.push(SceneOp::PopClip);
 
         // Panel 1: backdrop pixelate.
@@ -177,12 +379,16 @@ impl WinitAppDriver for EffectsDemoDriver {
             rect: panel1,
             corner_radii: panel_radii,
         });
-        scene.push(SceneOp::PushEffect {
-            bounds: panel1,
-            mode: EffectMode::Backdrop,
-            chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 8 }]),
-            quality: EffectQuality::Auto,
-        });
+        if state.panel1_enabled {
+            scene.push(SceneOp::PushEffect {
+                bounds: panel1,
+                mode: EffectMode::Backdrop,
+                chain: EffectChain::from_steps(&[EffectStep::Pixelate {
+                    scale: state.panel1_pixelate_scale.max(1),
+                }]),
+                quality: state.quality,
+            });
+        }
         scene.push(SceneOp::Quad {
             order: DrawOrder(11_000),
             rect: panel1,
@@ -204,10 +410,12 @@ impl WinitAppDriver for EffectsDemoDriver {
                 r: 0.55,
                 g: 0.495,
                 b: 0.33,
-                a: 0.55,
+                a: if state.panel1_enabled { 0.55 } else { 0.22 },
             },
         );
-        scene.push(SceneOp::PopEffect);
+        if state.panel1_enabled {
+            scene.push(SceneOp::PopEffect);
+        }
         scene.push(SceneOp::PopClip);
 
         // Panel 2: filter-content pixelate applied to a subtree (content drawn inside the group).
@@ -215,12 +423,16 @@ impl WinitAppDriver for EffectsDemoDriver {
             rect: panel2,
             corner_radii: panel_radii,
         });
-        scene.push(SceneOp::PushEffect {
-            bounds: panel2,
-            mode: EffectMode::FilterContent,
-            chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 6 }]),
-            quality: EffectQuality::Auto,
-        });
+        if state.panel2_enabled {
+            scene.push(SceneOp::PushEffect {
+                bounds: panel2,
+                mode: EffectMode::FilterContent,
+                chain: EffectChain::from_steps(&[EffectStep::Pixelate {
+                    scale: state.panel2_pixelate_scale.max(1),
+                }]),
+                quality: state.quality,
+            });
+        }
         // High-frequency stripes so pixelation is obvious.
         let stripe_w = 2.0_f32;
         let count = (panel2.size.width.0 / stripe_w).ceil().max(1.0) as u32;
@@ -268,7 +480,9 @@ impl WinitAppDriver for EffectsDemoDriver {
             border_color: Color::TRANSPARENT,
             corner_radii: panel_radii,
         });
-        scene.push(SceneOp::PopEffect);
+        if state.panel2_enabled {
+            scene.push(SceneOp::PopEffect);
+        }
         panel_border(
             scene,
             13_000,
@@ -277,7 +491,7 @@ impl WinitAppDriver for EffectsDemoDriver {
                 r: 0.495,
                 g: 0.495,
                 b: 0.5225,
-                a: 0.55,
+                a: if state.panel2_enabled { 0.55 } else { 0.22 },
             },
         );
         scene.push(SceneOp::PopClip);
@@ -302,6 +516,86 @@ impl WinitAppDriver for EffectsDemoDriver {
             border_color: Color::TRANSPARENT,
             corner_radii: Corners::all(Px(14.0)),
         });
+
+        // Debug overlay: show controls/state without depending on higher-level widgets.
+        if state.show_help {
+            let overlay_text = state.overlay_text();
+            let scale_bits = scale_factor.to_bits();
+            if state.overlay_dirty
+                || state.overlay.last_scale_bits != scale_bits
+                || state.overlay.last_text != overlay_text
+            {
+                if let Some(blob) = state.overlay.blob.take() {
+                    services.text().release(blob);
+                }
+
+                let style = TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: Px(13.0),
+                    weight: FontWeight::MEDIUM,
+                    slant: fret_core::text::TextSlant::Normal,
+                    line_height: Some(Px(16.0)),
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: Some(Px(w - pad * 2.0)),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    scale_factor,
+                };
+
+                let (blob, metrics) = services.text().prepare(&overlay_text, &style, constraints);
+                state.overlay.last_text = overlay_text;
+                state.overlay.last_scale_bits = scale_bits;
+                state.overlay.blob = Some(blob);
+                state.overlay.metrics = Some(metrics);
+                state.overlay_dirty = false;
+            }
+
+            if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
+                let pad_px = Px(10.0);
+                let bg_rect = Rect::new(
+                    Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
+                    Size::new(
+                        Px(metrics.size.width.0 + pad_px.0 * 2.0),
+                        Px(metrics.size.height.0 + pad_px.0 * 2.0),
+                    ),
+                );
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(30_000),
+                    rect: bg_rect,
+                    background: Color {
+                        r: 0.06,
+                        g: 0.06,
+                        b: 0.07,
+                        a: 0.72,
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 0.12,
+                    },
+                    corner_radii: Corners::all(Px(12.0)),
+                });
+
+                scene.push(SceneOp::Text {
+                    order: DrawOrder(30_001),
+                    origin: Point::new(
+                        Px(bg_rect.origin.x.0 + pad_px.0),
+                        Px(bg_rect.origin.y.0 + pad_px.0 + metrics.baseline.0),
+                    ),
+                    text: blob,
+                    color: Color {
+                        r: 0.95,
+                        g: 0.95,
+                        b: 0.95,
+                        a: 0.95,
+                    },
+                });
+            }
+        }
     }
 }
 
