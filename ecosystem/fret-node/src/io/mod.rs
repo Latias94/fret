@@ -1,6 +1,6 @@
 //! On-disk wrapper formats and optional helpers.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use fret_core::Modifiers;
 use serde::{Deserialize, Serialize};
@@ -12,6 +12,13 @@ pub const GRAPH_FILE_VERSION: u32 = 1;
 
 /// Editor view-state format version (v1).
 pub const VIEW_STATE_VERSION: u32 = 1;
+
+/// Default project-scoped view-state path for a graph.
+///
+/// This follows ADR 0135's recommended `.fret/` layout.
+pub fn default_project_view_state_path(graph_id: GraphId) -> PathBuf {
+    PathBuf::from(".fret/node_graph/view_state").join(format!("{graph_id}.json"))
+}
 
 /// Graph persistence file (v1).
 ///
@@ -557,6 +564,38 @@ fn default_connection_drag_threshold() -> f32 {
     2.0
 }
 
+/// Errors for reading/writing view-state files.
+#[derive(Debug, thiserror::Error)]
+pub enum NodeGraphViewStateFileError {
+    /// Read failure.
+    #[error("failed to read node graph view-state file: {path}")]
+    Read {
+        path: String,
+        source: std::io::Error,
+    },
+    /// JSON parse failure.
+    #[error("failed to parse node graph view-state file JSON: {path}")]
+    Parse {
+        path: String,
+        source: serde_json::Error,
+    },
+    /// Write failure.
+    #[error("failed to write node graph view-state file: {path}")]
+    Write {
+        path: String,
+        source: std::io::Error,
+    },
+    /// JSON serialization failure.
+    #[error("failed to serialize node graph view-state JSON: {path}")]
+    Serialize {
+        path: String,
+        source: serde_json::Error,
+    },
+    /// Wrapper id mismatch.
+    #[error("view-state file wrapper graph_id does not match requested graph_id")]
+    InconsistentGraphId,
+}
+
 /// View-state persistence file (v1).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeGraphViewStateFileV1 {
@@ -576,5 +615,144 @@ impl NodeGraphViewStateFileV1 {
             state_version: VIEW_STATE_VERSION,
             state,
         }
+    }
+
+    /// Loads a JSON file.
+    ///
+    /// Backward compatibility: accepts both the wrapped form and a plain `NodeGraphViewState` root
+    /// object when the `graph_id` is supplied out-of-band (ADR 0135).
+    pub fn load_json(
+        path: impl AsRef<Path>,
+        graph_id: GraphId,
+    ) -> Result<Self, NodeGraphViewStateFileError> {
+        let path = path.as_ref();
+        let bytes = std::fs::read(path).map_err(|source| NodeGraphViewStateFileError::Read {
+            path: path.display().to_string(),
+            source,
+        })?;
+
+        match serde_json::from_slice::<Self>(&bytes) {
+            Ok(v) => {
+                if v.graph_id != graph_id {
+                    return Err(NodeGraphViewStateFileError::InconsistentGraphId);
+                }
+                Ok(v)
+            }
+            Err(new_err) => match serde_json::from_slice::<NodeGraphViewState>(&bytes) {
+                Ok(state) => Ok(Self::new(graph_id, state)),
+                Err(_old_err) => Err(NodeGraphViewStateFileError::Parse {
+                    path: path.display().to_string(),
+                    source: new_err,
+                }),
+            },
+        }
+    }
+
+    /// Loads the JSON file if it exists.
+    pub fn load_json_if_exists(
+        path: impl AsRef<Path>,
+        graph_id: GraphId,
+    ) -> Result<Option<Self>, NodeGraphViewStateFileError> {
+        let path = path.as_ref();
+        if !path.exists() {
+            return Ok(None);
+        }
+        Self::load_json(path, graph_id).map(Some)
+    }
+
+    /// Saves the JSON file (pretty-printed).
+    pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), NodeGraphViewStateFileError> {
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|source| {
+                NodeGraphViewStateFileError::Write {
+                    path: path.display().to_string(),
+                    source,
+                }
+            })?;
+        }
+        let bytes = serde_json::to_vec_pretty(self).map_err(|source| {
+            NodeGraphViewStateFileError::Serialize {
+                path: path.display().to_string(),
+                source,
+            }
+        })?;
+        std::fs::write(path, bytes).map_err(|source| NodeGraphViewStateFileError::Write {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_path(name: &str, graph_id: GraphId) -> PathBuf {
+        std::env::temp_dir().join(format!("fret_node_{name}_{graph_id}.json"))
+    }
+
+    #[test]
+    fn view_state_file_roundtrips() {
+        let graph_id = GraphId::new();
+        let path = temp_path("view_state_roundtrip", graph_id);
+
+        let state = NodeGraphViewState {
+            pan: crate::core::CanvasPoint { x: 12.5, y: -3.0 },
+            zoom: 1.25,
+            ..NodeGraphViewState::default()
+        };
+
+        let file = NodeGraphViewStateFileV1::new(graph_id, state.clone());
+        file.save_json(&path).unwrap();
+
+        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
+        assert_eq!(loaded.graph_id, graph_id);
+        assert_eq!(loaded.state.pan.x, state.pan.x);
+        assert_eq!(loaded.state.pan.y, state.pan.y);
+        assert_eq!(loaded.state.zoom, state.zoom);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn view_state_file_accepts_plain_state_root() {
+        let graph_id = GraphId::new();
+        let path = temp_path("view_state_plain_root", graph_id);
+
+        let state = NodeGraphViewState {
+            pan: crate::core::CanvasPoint { x: 1.0, y: 2.0 },
+            zoom: 0.75,
+            ..NodeGraphViewState::default()
+        };
+
+        let bytes = serde_json::to_vec_pretty(&state).unwrap();
+        std::fs::write(&path, bytes).unwrap();
+
+        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
+        assert_eq!(loaded.graph_id, graph_id);
+        assert_eq!(loaded.state.pan.x, state.pan.x);
+        assert_eq!(loaded.state.pan.y, state.pan.y);
+        assert_eq!(loaded.state.zoom, state.zoom);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn view_state_file_rejects_wrong_graph_id() {
+        let graph_id = GraphId::new();
+        let other = GraphId::new();
+        let path = temp_path("view_state_wrong_graph_id", graph_id);
+
+        let file = NodeGraphViewStateFileV1::new(graph_id, NodeGraphViewState::default());
+        file.save_json(&path).unwrap();
+
+        let err = NodeGraphViewStateFileV1::load_json(&path, other).unwrap_err();
+        assert!(matches!(
+            err,
+            NodeGraphViewStateFileError::InconsistentGraphId
+        ));
+
+        let _ = std::fs::remove_file(&path);
     }
 }

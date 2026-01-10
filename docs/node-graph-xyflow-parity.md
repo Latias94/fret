@@ -115,9 +115,12 @@ High-level layering (ADR 0135):
   - XyFlow: `setViewport` / `setCenter`
   - fret-node: `node_graph.reset_view`
 
-- [ ] **Viewport persistence contract**
+- [x] **Viewport persistence contract**
   - XyFlow: app decides; store holds `transform`
-  - fret-node: ADR 0135 calls this out as an open contract
+  - fret-node:
+    - contract: `docs/adr/0135-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
+    - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewStateFileV1`, `default_project_view_state_path`)
+    - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
 
 ---
 

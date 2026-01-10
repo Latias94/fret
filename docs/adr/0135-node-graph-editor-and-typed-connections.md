@@ -803,6 +803,8 @@ Persistence:
   - user scope (optional): OS config directory per ADR 0014.
 - The persistence API supports save reasons / dirty flags (navigation/selection/position/etc.) to
   allow throttling and reduce churn (inspired by `imgui-node-editor`).
+- `fret-node` provides optional IO helpers for the default JSON shape:
+  - `NodeGraphViewStateFileV1` and `default_project_view_state_path` in `ecosystem/fret-node/src/io/mod.rs`.
 
 On-disk shape (locked, v1):
 
