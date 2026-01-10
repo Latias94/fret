@@ -22,6 +22,24 @@ use crate::primitives::direction::LayoutDirection;
 
 pub use fret_ui::element::{RovingFlexProps, RovingFocusProps};
 
+/// Returns the first enabled index (Radix roving-focus fallback outcome).
+///
+/// This is a thin facade over the headless index-math helper so shadcn/recipe layers can depend on
+/// the Radix-named `primitives` boundary rather than `headless` internals.
+pub fn first_enabled(disabled: &[bool]) -> Option<usize> {
+    roving_focus::first_enabled(disabled)
+}
+
+/// Returns the last enabled index (Radix roving-focus fallback outcome).
+pub fn last_enabled(disabled: &[bool]) -> Option<usize> {
+    roving_focus::last_enabled(disabled)
+}
+
+/// Returns the next enabled index relative to `current`, respecting `wrap`.
+pub fn next_enabled(disabled: &[bool], current: usize, forward: bool, wrap: bool) -> Option<usize> {
+    roving_focus::next_enabled(disabled, current, forward, wrap)
+}
+
 #[derive(Debug, Clone)]
 pub enum TypeaheadPolicy {
     None,

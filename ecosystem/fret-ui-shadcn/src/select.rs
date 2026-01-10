@@ -21,13 +21,13 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::primitives::select as radix_select;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
@@ -1188,9 +1188,9 @@ fn select_impl<H: UiHost>(
                             });
                             selected_idx
                                 .and_then(|idx| (!disabled.get(idx).copied().unwrap_or(true)).then_some(idx))
-                                .or_else(|| roving_focus::first_enabled(&disabled))
+                                .or_else(|| roving_focus_group::first_enabled(&disabled))
                         } else {
-                            roving_focus::first_enabled(&disabled)
+                            roving_focus_group::first_enabled(&disabled)
                         };
                         let active_row = {
                             let mut state = trigger_state
