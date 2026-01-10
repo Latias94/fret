@@ -147,16 +147,139 @@ struct Gizmo3dDemoGpu {
 }
 
 #[derive(Debug, Clone, Copy)]
+enum SelectionOp {
+    Replace,
+    Add,
+    Subtract,
+    Toggle,
+}
+
+fn selection_op(modifiers: fret_core::Modifiers) -> SelectionOp {
+    if modifiers.alt || modifiers.alt_gr {
+        SelectionOp::Subtract
+    } else if modifiers.ctrl || modifiers.meta {
+        SelectionOp::Toggle
+    } else if modifiers.shift {
+        SelectionOp::Add
+    } else {
+        SelectionOp::Replace
+    }
+}
+
+fn apply_click_selection_op(
+    selection: &mut Vec<GizmoTargetId>,
+    active_target: &mut GizmoTargetId,
+    hit: Option<GizmoTargetId>,
+    op: SelectionOp,
+) {
+    match op {
+        SelectionOp::Replace => match hit {
+            Some(id) => {
+                selection.clear();
+                selection.push(id);
+                *active_target = id;
+            }
+            None => {
+                selection.clear();
+            }
+        },
+        SelectionOp::Add => {
+            let Some(id) = hit else { return };
+            if !selection.contains(&id) {
+                selection.push(id);
+            }
+            *active_target = id;
+        }
+        SelectionOp::Subtract => {
+            let Some(id) = hit else { return };
+            if let Some(pos) = selection.iter().position(|v| *v == id) {
+                selection.remove(pos);
+                if *active_target == id {
+                    if let Some(next) = selection.first().copied() {
+                        *active_target = next;
+                    }
+                }
+            }
+        }
+        SelectionOp::Toggle => {
+            let Some(id) = hit else { return };
+            if let Some(pos) = selection.iter().position(|v| *v == id) {
+                selection.remove(pos);
+                if *active_target == id {
+                    if let Some(next) = selection.first().copied() {
+                        *active_target = next;
+                    }
+                }
+            } else {
+                selection.push(id);
+                *active_target = id;
+            }
+        }
+    }
+}
+
+fn apply_marquee_selection_op(
+    base: &[GizmoTargetId],
+    hits: &[(GizmoTargetId, f32)],
+    op: SelectionOp,
+) -> (Vec<GizmoTargetId>, Option<(GizmoTargetId, f32)>) {
+    match op {
+        SelectionOp::Replace => {
+            let result: Vec<GizmoTargetId> = hits.iter().map(|(id, _z01)| *id).collect();
+            let nearest = hits.iter().min_by(|a, b| a.1.total_cmp(&b.1)).copied();
+            (result, nearest)
+        }
+        SelectionOp::Add => {
+            let mut result = base.to_vec();
+            for (id, _z01) in hits {
+                if !result.contains(id) {
+                    result.push(*id);
+                }
+            }
+            let nearest = hits.iter().min_by(|a, b| a.1.total_cmp(&b.1)).copied();
+            (result, nearest)
+        }
+        SelectionOp::Subtract => {
+            let mut result: Vec<GizmoTargetId> = base.to_vec();
+            for (id, _z01) in hits {
+                if let Some(pos) = result.iter().position(|v| *v == *id) {
+                    result.remove(pos);
+                }
+            }
+            (result, None)
+        }
+        SelectionOp::Toggle => {
+            let mut result: Vec<GizmoTargetId> = base.to_vec();
+            let mut nearest_added: Option<(GizmoTargetId, f32)> = None;
+            for (id, z01) in hits {
+                if let Some(pos) = result.iter().position(|v| *v == *id) {
+                    result.remove(pos);
+                } else {
+                    result.push(*id);
+                    if nearest_added
+                        .as_ref()
+                        .is_none_or(|(_best_id, best_z01)| *z01 < *best_z01)
+                    {
+                        nearest_added = Some((*id, *z01));
+                    }
+                }
+            }
+            (result, nearest_added)
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 struct PendingSelection {
     start_cursor_px: Vec2,
-    additive: bool,
+    op: SelectionOp,
 }
 
 #[derive(Debug, Clone, Copy)]
 struct MarqueeSelection {
     start_cursor_px: Vec2,
     cursor_px: Vec2,
-    additive: bool,
+    op: SelectionOp,
 }
 
 #[derive(Debug)]
@@ -1505,7 +1628,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         } else {
                             m.pending_selection = Some(PendingSelection {
                                 start_cursor_px: cursor_px,
-                                additive: modifiers.shift,
+                                op: selection_op(modifiers),
                             });
                             m.marquee = None;
                             m.marquee_preview.clear();
@@ -1526,7 +1649,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     m.marquee = Some(MarqueeSelection {
                                         start_cursor_px: pending.start_cursor_px,
                                         cursor_px,
-                                        additive: pending.additive,
+                                        op: pending.op,
                                     });
                                 }
                             }
@@ -1548,16 +1671,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     rect_max,
                                 );
 
-                                let mut preview: Vec<GizmoTargetId> = if marquee.additive {
-                                    m.selection.clone()
-                                } else {
-                                    Vec::new()
-                                };
-                                for (id, _z01) in hits {
-                                    if !preview.contains(&id) {
-                                        preview.push(id);
-                                    }
-                                }
+                                let (preview, _nearest) =
+                                    apply_marquee_selection_op(&m.selection, &hits, marquee.op);
                                 m.marquee_preview = preview;
                             } else {
                                 m.marquee_preview.clear();
@@ -1591,20 +1706,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     rect_max,
                                 );
 
-                                if marquee.additive {
-                                    for (id, _z01) in &hits {
-                                        if !m.selection.contains(id) {
-                                            m.selection.push(*id);
-                                        }
-                                    }
-                                } else {
-                                    m.selection = hits.iter().map(|(id, _z01)| *id).collect();
-                                }
+                                let (selection, nearest) =
+                                    apply_marquee_selection_op(&m.selection, &hits, marquee.op);
+                                m.selection = selection;
 
                                 if !m.selection.contains(&m.active_target) {
-                                    if let Some((id, _z01)) =
-                                        hits.into_iter().min_by(|a, b| a.1.total_cmp(&b.1))
-                                    {
+                                    if let Some((id, _z01)) = nearest {
                                         m.active_target = id;
                                     } else if let Some(id) = m.selection.first().copied() {
                                         m.active_target = id;
@@ -1621,35 +1728,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     m.gizmo.config.depth_range,
                                 ) {
                                     let hit = pick_target_id(ray, &m.targets);
-                                    match (hit, pending.additive) {
-                                        (Some(id), true) => {
-                                            if let Some(pos) =
-                                                m.selection.iter().position(|v| *v == id)
-                                            {
-                                                if m.selection.len() > 1 {
-                                                    m.selection.remove(pos);
-                                                    if m.active_target == id {
-                                                        m.active_target = m.selection[0];
-                                                    }
-                                                } else {
-                                                    m.active_target = id;
-                                                }
-                                            } else {
-                                                m.selection.push(id);
-                                                m.active_target = id;
-                                            }
-                                        }
-                                        (Some(id), false) => {
-                                            m.selection.clear();
-                                            m.selection.push(id);
-                                            m.active_target = id;
-                                        }
-                                        (None, false) => {
-                                            m.selection.clear();
-                                        }
-                                        (None, true) => {}
-                                    }
-                                } else if !pending.additive {
+                                    apply_click_selection_op(
+                                        &mut m.selection,
+                                        &mut m.active_target,
+                                        hit,
+                                        pending.op,
+                                    );
+                                } else if matches!(pending.op, SelectionOp::Replace) {
                                     m.selection.clear();
                                 }
                                 m.marquee_preview.clear();
@@ -1795,11 +1880,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
                 let marquee = m.marquee;
                 let selection = if marquee.is_some() {
-                    if m.marquee_preview.is_empty() {
-                        m.selection.clone()
-                    } else {
-                        m.marquee_preview.clone()
-                    }
+                    m.marquee_preview.clone()
                 } else {
                     m.selection.clone()
                 };
@@ -1948,10 +2029,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
 
             if ok {
-                let (fill, border) = if marquee.additive {
-                    ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90])
-                } else {
-                    ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90])
+                let (fill, border) = match marquee.op {
+                    SelectionOp::Replace => ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90]),
+                    SelectionOp::Add => ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90]),
+                    SelectionOp::Subtract => ([1.00, 0.25, 0.25, 0.10], [1.00, 0.25, 0.25, 0.90]),
+                    SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
                 };
 
                 solid_verts_always.push(Vertex {
