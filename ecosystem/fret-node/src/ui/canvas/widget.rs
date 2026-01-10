@@ -7300,6 +7300,8 @@ mod tests {
         Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
 
+    mod perf_cache;
+
     #[test]
     fn inflate_rect_expands_by_margin() {
         let rect = Rect::new(

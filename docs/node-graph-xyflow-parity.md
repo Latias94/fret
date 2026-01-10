@@ -527,6 +527,7 @@ High-level layering (ADR 0135):
     - drag/connect undo granularity: `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - connection drag threshold helper: `ecosystem/fret-node/src/ui/canvas/widget/threshold.rs`
     - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
+    - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
   - Target:
     - selection invariants
     - drag session -> single transaction
