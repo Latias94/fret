@@ -123,9 +123,13 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
     - for full-fidelity controlled updates, consumers can also apply `GraphCommitted.committed` via `ops::apply_transaction`.
 
-- [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
+- [~] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
-  - fret-node: presenter hooks exist (`NodeGraphPresenter`), but not a high-level callback/event stream contract
+  - fret-node:
+    - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCallbacks`, `install_callbacks`)
+    - connection change extraction: `ecosystem/fret-node/src/runtime/callbacks.rs` (`connection_changes_from_transaction`)
+  - Notes:
+    - not yet wired as first-class UI APIs; intended for B-layer shells and middleware.
 
 - [ ] **Controlled/uncontrolled patterns**
   - XyFlow: controlled nodes/edges vs internal store

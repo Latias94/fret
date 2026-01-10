@@ -2,6 +2,9 @@ use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, Node
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
+use crate::runtime::callbacks::{
+    ConnectionChange, NodeGraphCallbacks, connection_changes_from_transaction, install_callbacks,
+};
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::store::NodeGraphStore;
@@ -187,6 +190,109 @@ fn apply_edge_changes_updates_kind_and_ignores_missing() {
     assert!(report.did_change());
     assert_eq!(report.ignored, 1);
     assert_eq!(g0.edges.get(&eid).unwrap().kind, EdgeKind::Exec);
+}
+
+#[test]
+fn connection_changes_from_transaction_maps_edge_ops() {
+    let (_g0, _a, _b, out_port, in_port, eid) = make_graph();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![
+            GraphOp::AddEdge {
+                id: eid,
+                edge: Edge {
+                    kind: EdgeKind::Data,
+                    from: out_port,
+                    to: in_port,
+                },
+            },
+            GraphOp::SetEdgeEndpoints {
+                id: eid,
+                from: crate::ops::EdgeEndpoints {
+                    from: out_port,
+                    to: in_port,
+                },
+                to: crate::ops::EdgeEndpoints {
+                    from: out_port,
+                    to: in_port,
+                },
+            },
+            GraphOp::RemoveEdge {
+                id: eid,
+                edge: Edge {
+                    kind: EdgeKind::Data,
+                    from: out_port,
+                    to: in_port,
+                },
+            },
+        ],
+    };
+
+    let changes = connection_changes_from_transaction(&tx);
+    assert_eq!(changes.len(), 3);
+    assert!(matches!(changes[0], ConnectionChange::Connected(_)));
+    assert!(matches!(changes[1], ConnectionChange::Reconnected { .. }));
+    assert!(matches!(changes[2], ConnectionChange::Disconnected(_)));
+}
+
+#[test]
+fn install_callbacks_receives_graph_and_view_events() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[derive(Clone)]
+    struct Recorder {
+        log: Rc<RefCell<Vec<&'static str>>>,
+    }
+
+    impl NodeGraphCallbacks for Recorder {
+        fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {
+            self.log.borrow_mut().push("commit");
+        }
+
+        fn on_nodes_change(&mut self, _changes: &[NodeChange]) {
+            self.log.borrow_mut().push("nodes");
+        }
+
+        fn on_edges_change(&mut self, _changes: &[EdgeChange]) {
+            self.log.borrow_mut().push("edges");
+        }
+
+        fn on_connection_change(&mut self, _change: ConnectionChange) {
+            self.log.borrow_mut().push("conn");
+        }
+
+        fn on_view_change(&mut self, _changes: &[crate::runtime::events::ViewChange]) {
+            self.log.borrow_mut().push("view");
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+    let _token = install_callbacks(&mut store, recorder);
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from: CanvasPoint { x: 0.0, y: 0.0 },
+            to: CanvasPoint { x: 1.0, y: 2.0 },
+        }],
+    };
+    let _ = store.dispatch_transaction(&tx).expect("dispatch");
+
+    store.update_view_state(|s| {
+        s.pan = CanvasPoint { x: 10.0, y: 20.0 };
+    });
+
+    let got = log.borrow().clone();
+    assert!(got.contains(&"commit"));
+    assert!(got.contains(&"nodes"));
+    assert!(got.contains(&"view"));
 }
 
 #[test]
