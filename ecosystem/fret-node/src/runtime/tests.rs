@@ -1,6 +1,8 @@
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port};
+use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
+use crate::runtime::store::NodeGraphStore;
 
 fn make_graph() -> (
     Graph,
@@ -146,4 +148,98 @@ fn changes_to_transaction_is_reversible_and_applicable() {
     );
     assert_eq!(g1.edges.get(&eid).unwrap().from, out_port);
     assert_eq!(g1.edges.get(&eid).unwrap().to, in_port);
+}
+
+#[test]
+fn store_dispatch_changes_records_history_and_supports_undo() {
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let changes = NodeGraphChanges {
+        nodes: vec![NodeChange::Position {
+            id: a,
+            position: CanvasPoint { x: 12.0, y: 34.0 },
+        }],
+        edges: Vec::new(),
+    };
+
+    let outcome = store.dispatch_changes(&changes).expect("dispatch");
+    assert!(!outcome.committed.ops.is_empty());
+    assert!(store.can_undo());
+    assert_eq!(
+        store.graph().nodes.get(&a).unwrap().pos,
+        CanvasPoint { x: 12.0, y: 34.0 }
+    );
+
+    let undo = store.undo().expect("undo").expect("did undo");
+    assert!(!undo.committed.ops.is_empty());
+    assert_eq!(
+        store.graph().nodes.get(&a).unwrap().pos,
+        CanvasPoint { x: 0.0, y: 0.0 }
+    );
+}
+
+#[test]
+fn store_does_not_commit_rejected_profile_edits() {
+    use crate::rules::{ConnectPlan, Diagnostic, DiagnosticSeverity, DiagnosticTarget};
+    use crate::types::TypeDesc;
+
+    struct RejectProfile;
+
+    impl crate::profile::GraphProfile for RejectProfile {
+        fn type_of_port(&mut self, _graph: &Graph, _port: crate::core::PortId) -> Option<TypeDesc> {
+            None
+        }
+
+        fn plan_connect(
+            &mut self,
+            _graph: &Graph,
+            _a: crate::core::PortId,
+            _b: crate::core::PortId,
+        ) -> ConnectPlan {
+            ConnectPlan::reject("not used in this test")
+        }
+
+        fn validate_graph(&mut self, _graph: &Graph) -> Vec<Diagnostic> {
+            vec![Diagnostic {
+                key: "test.reject".to_string(),
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Graph,
+                message: "rejected by test profile".to_string(),
+                fixes: Vec::new(),
+            }]
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::with_profile(
+        g0.clone(),
+        NodeGraphViewState::default(),
+        Box::new(RejectProfile),
+    );
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from: CanvasPoint { x: 0.0, y: 0.0 },
+            to: CanvasPoint { x: 999.0, y: 999.0 },
+        }],
+    };
+
+    let err = store.dispatch_transaction(&tx).expect_err("reject");
+    let crate::runtime::store::DispatchError::Apply(crate::profile::ApplyPipelineError::Rejected {
+        diagnostics,
+        ..
+    }) = err
+    else {
+        panic!("unexpected error: {err:?}");
+    };
+    assert!(!diagnostics.is_empty());
+
+    assert_eq!(
+        store.graph().nodes.get(&a).unwrap().pos,
+        g0.nodes.get(&a).unwrap().pos
+    );
+    assert!(!store.can_undo());
 }

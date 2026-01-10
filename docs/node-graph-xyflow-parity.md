@@ -90,9 +90,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.1 Store and derived internals
 
-- [ ] **First-class store for nodes/edges/viewport**
+- [~] **First-class store for nodes/edges/viewport**
   - XyFlow: `repo-ref/xyflow/packages/react/src/store/*`, `repo-ref/xyflow/packages/react/src/types/store.ts`
-  - fret-node: today state is split across `Model<Graph>` + `Model<NodeGraphViewState>` + UI caches
+  - fret-node:
+    - minimal headless store: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
+    - state today is otherwise split across `Model<Graph>` + `Model<NodeGraphViewState>` + UI caches
   - Notes: B-layer should expose a single ergonomics-oriented store surface (selectors/subscriptions), while keeping
     `Graph` serialization boundaries hard.
 
@@ -111,6 +113,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - reversible edit source-of-truth: `ecosystem/fret-node/src/ops/mod.rs` (`GraphOp`, `GraphTransaction`)
     - change events + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+    - store dispatch emits changes: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::dispatch_*`)
   - Notes: still missing a store-facing `apply_*_changes` convenience API for app-owned state and view-state change coverage.
 
 - [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
