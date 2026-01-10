@@ -677,9 +677,9 @@ mod tests {
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::PressableProps;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]

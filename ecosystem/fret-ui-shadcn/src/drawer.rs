@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
@@ -13,11 +13,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::Sheet;
 use crate::layout as shadcn_layout;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
-use crate::Sheet;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -28,6 +28,35 @@ const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
 const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
+
+/// shadcn/ui `DrawerPortal` (v4).
+///
+/// In upstream (Vaul/Radix), `Portal` controls *where* the drawer is mounted in the DOM. In Fret,
+/// overlay mounting is owned by the per-window overlay manager, so this type exists for taxonomy
+/// parity only. The `Drawer` recipe always renders into an overlay root.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DrawerPortal;
+
+/// shadcn/ui `DrawerOverlay` (v4).
+///
+/// In upstream, `DrawerOverlay` is a styled overlay element rendered inside the portal. In Fret the
+/// barrier is authored by the recipe layer (`Drawer` -> `Sheet`), but we expose this type so callers
+/// can configure overlay defaults using shadcn-aligned naming.
+#[derive(Debug, Clone, Default)]
+pub struct DrawerOverlay {
+    color: Option<Color>,
+}
+
+impl DrawerOverlay {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+}
 
 #[derive(Debug, Default)]
 struct DrawerSideProviderState {
@@ -358,6 +387,13 @@ impl Drawer {
         self
     }
 
+    pub fn overlay_component(mut self, overlay: DrawerOverlay) -> Self {
+        if let Some(color) = overlay.color {
+            self.inner = self.inner.overlay_color(color);
+        }
+        self
+    }
+
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
     /// When set, Escape dismissals (overlay root) and overlay-click dismissals (barrier press) are
@@ -680,12 +716,12 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
-    use fret_ui::UiTree;
-    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
     use fret_ui_kit::MetricRef;
     use fret_ui_kit::OverlayController;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -826,6 +862,7 @@ mod tests {
 
                 let drawer = Drawer::new(open.clone())
                     .overlay_closable(true)
+                    .overlay_component(DrawerOverlay::new())
                     .on_dismiss_request(Some(handler.clone()))
                     .into_element(
                         cx,
@@ -934,7 +971,7 @@ mod tests {
                     |_cx| trigger,
                     |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new())
+                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
                         ])
                         .into_element(cx)
                     },
@@ -1044,7 +1081,7 @@ mod tests {
                     |_cx| trigger,
                     |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new())
+                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
                         ])
                         .into_element(cx)
                     },
