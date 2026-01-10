@@ -1,4 +1,4 @@
-# Node Graph — XyFlow Parity Matrix (fret-node)
+# Node Graph - XyFlow Parity Matrix (fret-node)
 
 This document is the **detailed** capability-by-capability parity map between:
 
@@ -16,12 +16,34 @@ If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed
 - Treat each section as a **checklist** for “editor-grade” behavior and a review guide for PRs.
 - Use the **XyFlow pointers** as a reference implementation, not as a strict API target.
 - Prefer “mechanism-first” parity (stable substrate) before adding “policy” conveniences (domain UX).
+- When evaluating progress, first decide whether you mean **A-layer** (`@xyflow/system` substrate)
+  or **B-layer** (ReactFlow runtime/store + component ecosystem). This doc covers both.
 
 Legend:
 
 - `[x]` implemented (or functionally equivalent)
 - `[~]` partially implemented / needs polish
 - `[ ]` missing / not started
+
+## Scope: A-layer vs B-layer
+
+This parity matrix covers two distinct targets:
+
+- **A-layer: XyFlow system substrate parity** (framework-agnostic mechanics)
+  - Reference: `repo-ref/xyflow/packages/system/src/*` (pan/zoom, drag, handle connect, resizer, minimap math)
+  - fret-node target: a stable, renderer-agnostic mechanism layer with deterministic hit-testing,
+    undo granularity, and performance/a11y guardrails.
+  - This is the required foundation for every higher-level graph editor (ShaderGraph, Blueprint, DIFy-style workflows).
+
+- **B-layer: ReactFlow runtime parity** (store + change pipeline + component ecosystem)
+  - Reference: `repo-ref/xyflow/packages/react/src/*` (store, internals update, node/edge wrappers, add-ons, callbacks)
+  - fret-node target: a developer-facing runtime that feels like ReactFlow/Unity tooling:
+    first-class change events, a registry-driven view layer, plugins/middleware, and batteries-included add-ons.
+
+Recommended sequencing:
+
+- Build and lock A-layer semantics first (via automated conformance tests), but
+- Define B-layer contracts early (store/change API boundaries) to avoid large refactors later.
 
 ## XyFlow code map (where to look)
 
@@ -57,6 +79,75 @@ High-level layering (ADR 0135):
   - portal escape hatch: `ecosystem/fret-node/src/ui/portal.rs`
   - commands: `ecosystem/fret-node/src/ui/commands.rs`
 - **Demos**: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
+
+---
+
+# 0) Runtime / Store / Ecosystem (B-layer)
+
+This section tracks the ReactFlow-style runtime features that sit *on top of* A-layer mechanics.
+These are the primary gaps between "a working canvas" and "a production-ready node editor library".
+
+## 0.1 Store and derived internals
+
+- [ ] **First-class store for nodes/edges/viewport**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/store/*`, `repo-ref/xyflow/packages/react/src/types/store.ts`
+  - fret-node: today state is split across `Model<Graph>` + `Model<NodeGraphViewState>` + UI caches
+  - Notes: B-layer should expose a single ergonomics-oriented store surface (selectors/subscriptions), while keeping
+    `Graph` serialization boundaries hard.
+
+- [~] **Internals update pipeline ("node internals" as derived UI state)**
+  - XyFlow: `updateNodeInternals(...)` in `repo-ref/xyflow/packages/react/src/store/index.ts`
+  - fret-node: `NodeGraphInternalsStore`, `MeasuredGeometryStore`, `CanvasGeometry`, `CanvasSpatialIndex`
+
+- [ ] **Canonical lookup maps (nodeLookup/edgeLookup/connectionLookup)**
+  - XyFlow: store `nodeLookup`, `edgeLookup`, `connectionLookup` (React runtime)
+  - fret-node: not implemented as a first-class public runtime surface (current access is via models and derived stores)
+
+## 0.2 Change pipeline (callbacks + diffs + apply)
+
+- [ ] **NodeChange / EdgeChange model + apply helpers**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/utils/changes.ts` (`applyNodeChanges`, `applyEdgeChanges`)
+  - fret-node: edits are `GraphOp`/`GraphTransaction` (reversible) + history; we still need a B-layer "diff event" surface
+
+- [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
+  - XyFlow: component-level callbacks + store actions
+  - fret-node: presenter hooks exist (`NodeGraphPresenter`), but not a high-level callback/event stream contract
+
+- [ ] **Controlled/uncontrolled patterns**
+  - XyFlow: controlled nodes/edges vs internal store
+  - fret-node: needs an explicit contract for app-owned graph state vs editor-owned derived state
+
+## 0.3 View registry (NodeTypes / EdgeTypes) and interaction policies
+
+- [~] **Pluggable view layer for nodes and edges**
+  - XyFlow: `nodeTypes`, `edgeTypes` + wrappers (`repo-ref/xyflow/packages/react/src/components/*`)
+  - fret-node: portal is the mechanism (`ecosystem/fret-node/src/ui/portal.rs`), but we still need a B-layer registry/lifecycle API
+
+- [ ] **Per-node/edge view lifecycle + memoization strategy**
+  - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
+  - fret-node: needs a concrete "node view instance" model beyond current MVP labels + portal escape hatch
+
+- [ ] **Plugin-like policy hooks (no forking the canvas)**
+  - XyFlow: store middleware maps for node/edge changes
+  - fret-node: profile pipeline exists (domain rules); still missing a B-layer UI middleware surface for selection/commands/shortcuts
+
+## 0.4 Batteries-included add-ons (Controls / MiniMap / Background / Panels)
+
+- [~] **MiniMap**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
+  - fret-node: overlay exists; needs polish and API stabilization for B-layer consumption
+
+- [~] **Controls**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Controls/Controls.tsx`
+  - fret-node: overlay exists; needs a B-layer integration story (store/actions + theming + composition)
+
+- [~] **Background**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
+  - fret-node: background grid exists; dot variants + configuration parity still TBD
+
+- [ ] **Panels / toolbars / overlays composition API**
+  - XyFlow: `<Panel />` composition patterns
+  - fret-node: needs a stable composition surface for editor shells and docking/multi-view integration
 
 ---
 
