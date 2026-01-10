@@ -190,12 +190,14 @@ impl ElementHostWidget {
                 let probe_bounds = Rect::new(cx.bounds.origin, inner_avail);
                 let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
+                let mut non_absolute_sizes: Vec<(NodeId, Size)> = Vec::new();
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
                     let child_size = cx.measure_in(child, probe_constraints);
+                    non_absolute_sizes.push((child, child_size));
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
@@ -230,8 +232,15 @@ impl ElementHostWidget {
                             continue;
                         }
 
+                        let child_size = non_absolute_sizes
+                            .iter()
+                            .find_map(|(id, size)| (*id == child).then_some(*size))
+                            .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+
                         let child_bounds = match positioned_layout_style(child_style) {
-                            PositionedLayoutStyle::Static => inner_bounds,
+                            PositionedLayoutStyle::Static => {
+                                Rect::new(inner_bounds.origin, child_size)
+                            }
                             PositionedLayoutStyle::Relative(inset) => {
                                 let dx = inset.left.unwrap_or(Px(0.0)).0
                                     - inset.right.unwrap_or(Px(0.0)).0;
@@ -241,7 +250,7 @@ impl ElementHostWidget {
                                     Px(inner_bounds.origin.x.0 + dx),
                                     Px(inner_bounds.origin.y.0 + dy),
                                 );
-                                Rect::new(origin, inner_bounds.size)
+                                Rect::new(origin, child_size)
                             }
                             PositionedLayoutStyle::Absolute(_) => continue,
                         };
@@ -268,7 +277,28 @@ impl ElementHostWidget {
                                 inset,
                             )
                         }
-                        style => layout_positioned_child(cx, child, inner_bounds, style),
+                        PositionedLayoutStyle::Static => {
+                            let child_size = non_absolute_sizes
+                                .iter()
+                                .find_map(|(id, size)| (*id == child).then_some(*size))
+                                .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                            let _ = cx.layout_in(child, Rect::new(inner_bounds.origin, child_size));
+                        }
+                        PositionedLayoutStyle::Relative(inset) => {
+                            let child_size = non_absolute_sizes
+                                .iter()
+                                .find_map(|(id, size)| (*id == child).then_some(*size))
+                                .unwrap_or(Size::new(Px(0.0), Px(0.0)));
+                            let dx =
+                                inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
+                            let dy =
+                                inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+                            let origin = fret_core::Point::new(
+                                Px(inner_bounds.origin.x.0 + dx),
+                                Px(inner_bounds.origin.y.0 + dy),
+                            );
+                            let _ = cx.layout_in(child, Rect::new(origin, child_size));
+                        }
                     }
                 }
 
