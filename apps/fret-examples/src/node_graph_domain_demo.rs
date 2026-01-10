@@ -21,13 +21,17 @@ use fret_node::rules::{
 };
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
+use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphA11yFocusedEdge,
-    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPresenter, register_node_graph_commands,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, MeasuredGeometryStore,
+    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphPresenter, PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit,
+    PortalNumberEditor, register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_ui::Theme;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 
@@ -148,6 +152,90 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     );
 
     graph
+}
+
+fn set_value_in_node_data(
+    mut data: serde_json::Value,
+    value: serde_json::Value,
+) -> serde_json::Value {
+    match &mut data {
+        serde_json::Value::Object(map) => {
+            map.insert("value".to_string(), value);
+            data
+        }
+        _ => {
+            let mut map = serde_json::Map::new();
+            map.insert("value".to_string(), value);
+            serde_json::Value::Object(map)
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct DomainConstNumberSpec;
+
+impl PortalNumberEditSpec for DomainConstNumberSpec {
+    fn initial_value(&self, graph: &Graph, node: NodeId) -> Option<f64> {
+        let node = graph.nodes.get(&node)?;
+        match node.kind.0.as_str() {
+            "demo.const_int" => node.data.get("value")?.as_i64().map(|v| v as f64),
+            "demo.const_float" => node.data.get("value")?.as_f64(),
+            _ => None,
+        }
+    }
+
+    fn round_value(&self, graph: &Graph, node: NodeId, value: f64) -> f64 {
+        let Some(node) = graph.nodes.get(&node) else {
+            return value;
+        };
+        match node.kind.0.as_str() {
+            "demo.const_int" => value.round(),
+            _ => value,
+        }
+    }
+
+    fn submit_value(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
+        _text: &str,
+    ) -> PortalNumberEditSubmit {
+        let Some(node_data) = graph.nodes.get(&node) else {
+            return PortalNumberEditSubmit::NotHandled;
+        };
+
+        let (to_value, normalized) = match node_data.kind.0.as_str() {
+            "demo.const_int" => {
+                let v = value.round() as i64;
+                (serde_json::Value::from(v), Some(v.to_string()))
+            }
+            "demo.const_float" => (serde_json::Value::from(value), Some(format!("{value}"))),
+            _ => return PortalNumberEditSubmit::NotHandled,
+        };
+
+        let from = node_data.data.clone();
+        let to = set_value_in_node_data(from.clone(), to_value);
+
+        PortalNumberEditSubmit::Commit {
+            tx: fret_node::ops::GraphTransaction {
+                label: Some("Set Const Value".to_string()),
+                ops: vec![GraphOp::SetNodeData { id: node, from, to }],
+            },
+            normalized_text: normalized,
+        }
+    }
+
+    fn supports_drag(&self, graph: &Graph, node: NodeId) -> bool {
+        graph
+            .nodes
+            .get(&node)
+            .is_some_and(|n| matches!(n.kind.0.as_str(), "demo.const_int" | "demo.const_float"))
+    }
+
+    fn drag_threshold_px(&self, _graph: &Graph, _node: NodeId) -> f32 {
+        2.0
+    }
 }
 
 fn is_int(t: &TypeDesc) -> bool {
@@ -560,6 +648,10 @@ impl NodeGraphDomainDemoDriver {
             .global::<Arc<NodeGraphInternalsStore>>()
             .expect("NodeGraphInternalsStore global must exist")
             .clone();
+        let measured = app
+            .global::<Arc<MeasuredGeometryStore>>()
+            .expect("MeasuredGeometryStore global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -570,11 +662,13 @@ impl NodeGraphDomainDemoDriver {
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
         let store = models.store.clone();
+        let style = NodeGraphStyle::from_theme(Theme::global(app));
 
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store)
             .with_presenter(presenter)
+            .with_style(style.clone())
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals.clone())
@@ -592,14 +686,68 @@ impl NodeGraphDomainDemoDriver {
             overlays,
             group_rename_text.clone(),
             canvas_node,
-            fret_node::ui::NodeGraphStyle::default(),
+            style.clone(),
         );
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
 
+        let portal_root = "node_graph_domain_demo.portal";
+        let portal_editor = PortalNumberEditor::new(portal_root);
+
+        let node_types = NodeGraphNodeTypes::new()
+            .register(NodeKindKey::new("demo.const_int"), {
+                let portal_editor = portal_editor.clone();
+                let portal_graph_model = models.graph.clone();
+                let style = style.clone();
+                move |ecx, graph, layout: NodeGraphPortalNodeLayout| {
+                    portal_editor.render_number_input_for_node(
+                        ecx,
+                        portal_graph_model.clone(),
+                        graph,
+                        layout,
+                        &style,
+                        layout.node,
+                        &DomainConstNumberSpec,
+                    )
+                }
+            })
+            .register(NodeKindKey::new("demo.const_float"), {
+                let portal_editor = portal_editor.clone();
+                let portal_graph_model = models.graph.clone();
+                let style = style.clone();
+                move |ecx, graph, layout: NodeGraphPortalNodeLayout| {
+                    portal_editor.render_number_input_for_node(
+                        ecx,
+                        portal_graph_model.clone(),
+                        graph,
+                        layout,
+                        &style,
+                        layout.node,
+                        &DomainConstNumberSpec,
+                    )
+                }
+            });
+
+        let portal = NodeGraphPortalHost::new(
+            models.graph.clone(),
+            models.view.clone(),
+            measured,
+            style.clone(),
+            portal_root,
+            node_types.into_portal_renderer(),
+        )
+        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_edit_queue(models.edits.clone())
+        .with_canvas_focus_target(canvas_node)
+        .with_command_handler(PortalNumberEditHandler::new(
+            portal_root,
+            DomainConstNumberSpec,
+        ));
+        let portal_node = ui.create_node_retained(portal);
+
         let root = ui.create_node_retained(NodeGraphEditor::new());
-        ui.set_children(root, vec![canvas_node, overlay_node]);
+        ui.set_children(root, vec![canvas_node, portal_node, overlay_node]);
         ui.set_root(root);
 
         NodeGraphDomainDemoWindowState { ui, root }
@@ -787,6 +935,7 @@ pub fn run() -> anyhow::Result<()> {
         path: view_state_path,
     });
     app.set_global(Arc::new(NodeGraphInternalsStore::new()));
+    app.set_global(Arc::new(MeasuredGeometryStore::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_domain_demo".to_string(),
