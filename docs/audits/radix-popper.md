@@ -90,14 +90,15 @@ and transform origin:
 - Pass: Transform origin for shadcn overlay motion is computed from geometry:
   - `popper_content_transform_origin(...)` in `ecosystem/fret-ui-kit/src/primitives/popper.rs`.
 - Pass: Collision padding can be expressed by insetting the `outer` rect prior to solving:
-  - `crates/fret-ui/src/overlay_placement/util.rs` (`inset_rect`)
-  - `ecosystem/fret-ui-kit/src/overlay.rs` (`outer_bounds_with_window_margin`)
+  - Fret supports structured collision padding/boundary via `AnchoredPanelOptions.collision`.
+  - `crates/fret-ui/src/overlay_placement/types.rs` (`CollisionOptions`)
+  - `crates/fret-ui/src/overlay_placement/solver.rs` (applies `CollisionOptions` to `outer`)
 
 ## Gaps / intentional differences
 
-- Missing: `collisionBoundary` as a list of DOM elements / alternative boundaries.
-  - Fret currently accepts a single `outer: Rect` boundary. Callers can choose which rect to use,
-    but cannot express multiple boundary elements or `altBoundary` semantics.
+- Partial: `collisionBoundary` as a list of DOM elements / alternative boundaries.
+  - Fret supports a single additional `boundary: Rect` (intersected with `outer`) via
+    `CollisionOptions`, but does not model a full boundary list nor `altBoundary` semantics.
 - Missing: Radix `sticky` modes (`limitShift()`).
   - Fret always clamps the placed rect into `outer` (and can clamp size in the sized solver), but
     it does not expose a “sticky limiter” that intentionally preserves partial detachment behavior.

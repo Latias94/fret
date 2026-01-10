@@ -7,10 +7,10 @@ pub use solver::{
     anchored_panel_layout_sized_ex,
 };
 pub use types::{
-    Align, AnchoredPanelLayout, AnchoredPanelOptions, ArrowLayout, ArrowOptions, LayoutDirection,
-    Offset, Side,
+    Align, AnchoredPanelLayout, AnchoredPanelOptions, ArrowLayout, ArrowOptions, CollisionOptions,
+    LayoutDirection, Offset, Side,
 };
-pub use util::inset_rect;
+pub use util::{inset_rect, intersect_rect};
 
 #[cfg(test)]
 mod tests;

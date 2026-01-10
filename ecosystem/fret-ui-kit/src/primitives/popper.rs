@@ -33,6 +33,7 @@ pub fn anchored_panel_options_for_popper_content(
             alignment_axis: None,
         },
         arrow,
+        collision: Default::default(),
     }
 }
 
@@ -300,6 +301,7 @@ mod tests {
                     size: Size::new(Px(12.0), Px(12.0)),
                     padding: Edges::all(Px(8.0)),
                 }),
+                collision: Default::default(),
             },
         );
 
@@ -334,6 +336,7 @@ mod tests {
                     size: Size::new(arrow_size, arrow_size),
                     padding: Edges::all(Px(8.0)),
                 }),
+                collision: Default::default(),
             },
         );
 
@@ -369,6 +372,7 @@ mod tests {
                 direction: LayoutDirection::Ltr,
                 offset: Offset::default(),
                 arrow: None,
+                collision: Default::default(),
             },
         );
 

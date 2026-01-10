@@ -170,6 +170,7 @@ mod tests {
                     size: Size::new(Px(12.0), Px(12.0)),
                     padding: Edges::all(Px(8.0)),
                 }),
+                collision: Default::default(),
             },
         );
 

@@ -1,6 +1,7 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use super::types::*;
+use super::util::{inset_rect, intersect_rect};
 
 /// Place an anchored panel near `anchor`, flipping to the opposite side if the preferred side
 /// overflows the `outer` bounds.
@@ -139,6 +140,7 @@ pub fn anchored_panel_layout_ex(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
+    let outer = apply_collision_options(outer, options.collision);
     let content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
 
@@ -207,6 +209,7 @@ pub fn anchored_panel_layout_sized_ex(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
+    let outer = apply_collision_options(outer, options.collision);
     // IMPORTANT: must still decide flip/overflow based on the *desired* size, not the clamped size.
     let desired = Size::new(Px(desired.width.0.max(0.0)), Px(desired.height.0.max(0.0)));
     let gap = Px((side_offset.0 + options.offset.main_axis.0).max(0.0));
@@ -505,6 +508,15 @@ fn clamp_rect_to_outer(outer: Rect, inner: Rect) -> Rect {
     let x = inner.origin.x.0.clamp(min_x, max_x);
     let y = inner.origin.y.0.clamp(min_y, max_y);
     Rect::new(Point::new(Px(x), Px(y)), inner.size)
+}
+
+fn apply_collision_options(outer: Rect, collision: CollisionOptions) -> Rect {
+    let outer = if let Some(boundary) = collision.boundary {
+        intersect_rect(outer, boundary)
+    } else {
+        outer
+    };
+    inset_rect(outer, collision.padding)
 }
 
 fn finalize_layout(

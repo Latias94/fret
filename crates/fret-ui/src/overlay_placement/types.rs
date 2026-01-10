@@ -36,11 +36,24 @@ pub struct Offset {
     pub alignment_axis: Option<Px>,
 }
 
+/// Collision/overflow options inspired by Floating UI's `detectOverflow` configuration.
+///
+/// This is applied to the `outer` boundary before running the placement solver:
+///
+/// 1) If `boundary` is set, intersect `outer` with it (clipping ancestor style).
+/// 2) Inset by `padding` (collision padding).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CollisionOptions {
+    pub padding: Edges,
+    pub boundary: Option<Rect>,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct AnchoredPanelOptions {
     pub direction: LayoutDirection,
     pub offset: Offset,
     pub arrow: Option<ArrowOptions>,
+    pub collision: CollisionOptions,
 }
 
 /// Arrow positioning options inspired by Floating UI's `arrow()` middleware.
