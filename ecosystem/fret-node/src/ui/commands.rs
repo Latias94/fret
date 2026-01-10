@@ -39,6 +39,10 @@ pub const CMD_NODE_GRAPH_ALIGN_CENTER_X: &str = "node_graph.align_center_x";
 pub const CMD_NODE_GRAPH_ALIGN_CENTER_Y: &str = "node_graph.align_center_y";
 pub const CMD_NODE_GRAPH_DISTRIBUTE_X: &str = "node_graph.distribute_x";
 pub const CMD_NODE_GRAPH_DISTRIBUTE_Y: &str = "node_graph.distribute_y";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT: &str = "node_graph.focus_next";
+pub const CMD_NODE_GRAPH_FOCUS_PREV: &str = "node_graph.focus_prev";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT_EDGE: &str = "node_graph.focus_next_edge";
+pub const CMD_NODE_GRAPH_FOCUS_PREV_EDGE: &str = "node_graph.focus_prev_edge";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
 pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
@@ -479,6 +483,55 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_keywords(["distribute", "y", "vertical"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT),
+        CommandMeta::new("Focus Next Node")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "next", "node", "tab"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(PlatformFilter::All, KeyCode::Tab, Modifiers::default())])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV),
+        CommandMeta::new("Focus Previous Node")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "previous", "node", "tab"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::Tab,
+                Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+            )])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_EDGE),
+        CommandMeta::new("Focus Next Edge")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "next", "edge"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV_EDGE),
+        CommandMeta::new("Focus Previous Edge")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "previous", "edge"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
     );
 
     registry.register(

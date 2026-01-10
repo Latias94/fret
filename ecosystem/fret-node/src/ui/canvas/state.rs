@@ -58,6 +58,7 @@ pub(crate) struct InteractionState {
     pub(crate) hover_edge: Option<EdgeId>,
     pub(crate) hover_edge_anchor: Option<(EdgeId, EdgeEndpoint)>,
     pub(crate) focused_edge: Option<EdgeId>,
+    pub(crate) focused_node: Option<GraphNodeId>,
     pub(crate) hover_port: Option<PortId>,
     pub(crate) hover_port_valid: bool,
     pub(crate) hover_port_convertible: bool,

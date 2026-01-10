@@ -29,12 +29,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_ALIGN_TOP,
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
     CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_DISTRIBUTE_Y,
-    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION,
-    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
-    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_NUDGE_DOWN,
-    CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT, CMD_NODE_GRAPH_NUDGE_LEFT_FAST,
-    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
-    CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_EDGE,
+    CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_EDGE, CMD_NODE_GRAPH_FRAME_ALL,
+    CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
+    CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
+    CMD_NODE_GRAPH_NUDGE_DOWN, CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT,
+    CMD_NODE_GRAPH_NUDGE_LEFT_FAST, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
+    CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
     CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
@@ -4162,11 +4163,84 @@ impl NodeGraphCanvas {
         };
 
         self.interaction.focused_edge = Some(next);
+        self.interaction.focused_node = None;
         self.update_view_state(host, |s| {
             s.selected_nodes.clear();
             s.selected_groups.clear();
             s.selected_edges.clear();
             s.selected_edges.push(next);
+        });
+        true
+    }
+
+    fn focus_next_node<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
+        let snapshot = self.sync_view_state(host);
+        if !snapshot.interaction.elements_selectable {
+            return false;
+        }
+
+        let ordered: Vec<GraphNodeId> = self
+            .graph
+            .read_ref(host, |g| {
+                let mut out: Vec<GraphNodeId> = Vec::new();
+                let mut used: HashSet<GraphNodeId> = HashSet::new();
+
+                for id in &snapshot.draw_order {
+                    if g.nodes.contains_key(id) && used.insert(*id) {
+                        out.push(*id);
+                    }
+                }
+
+                let mut rest: Vec<GraphNodeId> = g
+                    .nodes
+                    .keys()
+                    .copied()
+                    .filter(|id| used.insert(*id))
+                    .collect();
+                rest.sort_unstable();
+                out.extend(rest);
+                out
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if ordered.is_empty() {
+            return false;
+        }
+
+        let current = self
+            .interaction
+            .focused_node
+            .or_else(|| snapshot.selected_nodes.first().copied());
+
+        let next = match current.and_then(|id| ordered.iter().position(|e| *e == id)) {
+            Some(ix) => {
+                let len = ordered.len();
+                let next_ix = if forward {
+                    (ix + 1) % len
+                } else {
+                    (ix + len - 1) % len
+                };
+                ordered[next_ix]
+            }
+            None => {
+                if forward {
+                    ordered[0]
+                } else {
+                    ordered[ordered.len() - 1]
+                }
+            }
+        };
+
+        self.interaction.focused_node = Some(next);
+        self.interaction.focused_edge = None;
+        self.update_view_state(host, |s| {
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+            s.selected_nodes.clear();
+            s.selected_nodes.push(next);
+            s.draw_order.retain(|id| *id != next);
+            s.draw_order.push(next);
         });
         true
     }
@@ -4494,6 +4568,38 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
             CMD_NODE_GRAPH_REDO => {
                 let did = self.redo_last(cx.app, cx.window);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_NEXT => {
+                let did = self.focus_next_node(cx.app, true);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PREV => {
+                let did = self.focus_next_node(cx.app, false);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_NEXT_EDGE => {
+                let did = self.focus_next_edge(cx.app, true);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PREV_EDGE => {
+                let did = self.focus_next_edge(cx.app, false);
                 if did {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -4981,11 +5087,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if modifiers.ctrl || modifiers.meta {
                     if *key == fret_core::KeyCode::Tab {
-                        if self.focus_next_edge(cx.app, !modifiers.shift) {
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                        }
+                        let cmd = if modifiers.shift {
+                            CMD_NODE_GRAPH_FOCUS_PREV_EDGE
+                        } else {
+                            CMD_NODE_GRAPH_FOCUS_NEXT_EDGE
+                        };
+                        cx.dispatch_command(CommandId::from(cmd));
+                        cx.stop_propagation();
                         return;
                     }
 
@@ -5032,6 +5140,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         }
                         _ => {}
                     }
+                }
+
+                if *key == fret_core::KeyCode::Tab
+                    && !modifiers.ctrl
+                    && !modifiers.meta
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                {
+                    if self.interaction.searcher.is_some()
+                        || self.interaction.context_menu.is_some()
+                    {
+                        return;
+                    }
+
+                    let cmd = if modifiers.shift {
+                        CMD_NODE_GRAPH_FOCUS_PREV
+                    } else {
+                        CMD_NODE_GRAPH_FOCUS_NEXT
+                    };
+                    cx.dispatch_command(CommandId::from(cmd));
+                    cx.stop_propagation();
+                    return;
                 }
 
                 if *key == fret_core::KeyCode::Escape {
@@ -6667,7 +6797,10 @@ mod tests {
         Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use crate::rules::EdgeEndpoint;
-    use crate::ui::commands::{CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_NUDGE_RIGHT};
+    use crate::ui::commands::{
+        CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_PREV,
+        CMD_NODE_GRAPH_NUDGE_RIGHT,
+    };
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
     use super::NodeGraphCanvas;
@@ -7439,5 +7572,54 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 5.0 }
         );
+    }
+
+    #[test]
+    fn focus_next_cycles_nodes_and_updates_selection() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.draw_order = vec![a, b];
+            s.selected_nodes.clear();
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT)));
+        }
+        let selected = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        assert_eq!(selected, vec![a]);
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT)));
+        }
+        let selected = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        assert_eq!(selected, vec![b]);
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV)));
+        }
+        let selected = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        assert_eq!(selected, vec![a]);
     }
 }
