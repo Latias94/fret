@@ -39,6 +39,17 @@ cargo run -p fret-renderdoc -- dump `
 
 See `docs/renderdoc-inspection.md` for what fields to validate for common passes.
 
+Tip: if you're debugging pixelate/blur effects, start with:
+
+```powershell
+cargo run -p fret-renderdoc -- dump `
+  --renderdoc-dir "C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current" `
+  --capture ".fret\\renderdoc\\fret_capture.rdc" `
+  --marker "nearest" `
+  --selection all `
+  --no-outputs-png
+```
+
 ### 1.3 What “correct” usually looks like
 
 Common invariants we validate from captures:

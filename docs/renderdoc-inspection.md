@@ -50,5 +50,10 @@ Validate:
   - Upscale back into full-size target: `src_origin = (0, 0)`, `dst_origin = effect_rect.xy`.
 - `raster_state.scissors[0]` matches the expected effect region (for scissored passes).
 
+Note: on some Vulkan captures, RenderDoc's python API does not reliably surface dynamic uniform buffer
+offsets for WGSL pipelines. In that case, `tools/renderdoc/fret_dump_pass_state_json.py` falls back to
+inferring the correct `ScaleParams` slot by counting earlier `"nearest"` drawcalls in the frame. The
+JSON response includes `offset_source` to make this explicit.
+
 If the output looks "anchored to the window origin", this usually indicates a missing origin adjustment in
 the fullscreen shader when scissoring is used.

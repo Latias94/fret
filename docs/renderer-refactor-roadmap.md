@@ -218,6 +218,11 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
     - `ScaleNearest` is origin-aware (per-pass params via dynamic offsets), so pixelation is anchored to the effect bounds (not the window origin).
+
+- **In flight (worktree branches; not merged):**
+  - `refactor/render-plan-effects`:
+    - Extracts effect-chain compilation helpers out of `render_plan.rs` into `render_plan_effects.rs` (no semantic changes).
+    - Hardens `fret-renderdoc` pass inspection on Vulkan captures by dumping `ScaleParams` using a drawcall-order inference fallback when dynamic offsets are unavailable.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
