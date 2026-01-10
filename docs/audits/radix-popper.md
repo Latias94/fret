@@ -122,6 +122,15 @@ and transform origin:
 - Pass: Exposed “available width/height” metrics.
   - `popper_available_metrics(...)` returns structured `available_width/available_height` and
     `anchor_width/anchor_height` for recipes (Radix uses CSS vars).
+  - Wired into Radix-shaped recipe sizing helpers:
+    - Select: `ecosystem/fret-ui-kit/src/primitives/select.rs`,
+      `ecosystem/fret-ui-shadcn/src/select.rs`
+    - DropdownMenu: `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs`,
+      `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+    - ContextMenu: `ecosystem/fret-ui-kit/src/primitives/context_menu.rs`,
+      `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+    - Menubar: `ecosystem/fret-ui-kit/src/primitives/menubar.rs`,
+      `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - Pass: Arrow “cannot center” signal.
   - Fret exposes `ArrowLayout.center_offset` (Floating `centerOffset`), which callers can use to
     implement Radix `shouldHideArrow` (`center_offset != 0`).
