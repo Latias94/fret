@@ -11,8 +11,8 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    OpacityProps, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    OpacityProps, PressableA11y, PressableProps, RenderTransformProps, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1905,8 +1905,8 @@ impl MenubarMenuEntries {
                                 opacity,
                             },
                             move |cx| {
-                                vec![cx.visual_transform_props(
-                                    VisualTransformProps {
+                                vec![cx.render_transform_props(
+                                    RenderTransformProps {
                                         layout: opacity_layout,
                                         transform,
                                     },
@@ -2632,8 +2632,8 @@ impl MenubarMenuEntries {
                                                     opacity,
                                                 },
                                                 move |cx| {
-                                                    vec![cx.visual_transform_props(
-                                                        VisualTransformProps {
+                                                    vec![cx.render_transform_props(
+                                                        RenderTransformProps {
                                                             layout: opacity_layout,
                                                             transform,
                                                         },

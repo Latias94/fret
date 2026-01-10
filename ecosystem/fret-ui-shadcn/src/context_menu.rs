@@ -8,8 +8,8 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
-    RovingFocusProps, SizeStyle, TextProps, VisualTransformProps,
+    OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RenderTransformProps,
+    RovingFlexProps, RovingFocusProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -2001,8 +2001,8 @@ impl ContextMenu {
                             opacity,
                         },
                         move |cx| {
-                            vec![cx.visual_transform_props(
-                                VisualTransformProps {
+                            vec![cx.render_transform_props(
+                                RenderTransformProps {
                                     layout: opacity_layout,
                                     transform,
                                 },
@@ -2118,8 +2118,8 @@ impl ContextMenu {
                                             opacity,
                                         },
                                         move |cx| {
-                                            vec![cx.visual_transform_props(
-                                                VisualTransformProps {
+                                            vec![cx.render_transform_props(
+                                                RenderTransformProps {
                                                     layout: opacity_layout,
                                                     transform,
                                                 },

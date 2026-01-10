@@ -5,8 +5,8 @@ use fret_core::{TextWrap, Transform2D};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
-    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, StackProps, TextProps,
-    VisualTransformProps,
+    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
+    TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -984,8 +984,8 @@ impl NavigationMenu {
                                                     opacity: from_opacity,
                                                 },
                                                 move |cx| {
-                                                    let layer = cx.visual_transform_props(
-                                                        VisualTransformProps {
+                                                    let layer = cx.render_transform_props(
+                                                        RenderTransformProps {
                                                             layout: layer_layout,
                                                             transform: Transform2D::translation(
                                                                 Point::new(Px(from_dx), Px(0.0)),
@@ -1003,8 +1003,8 @@ impl NavigationMenu {
                                                     opacity: to_opacity,
                                                 },
                                                 move |cx| {
-                                                    let layer = cx.visual_transform_props(
-                                                        VisualTransformProps {
+                                                    let layer = cx.render_transform_props(
+                                                        RenderTransformProps {
                                                             layout: layer_layout,
                                                             transform: Transform2D::translation(
                                                                 Point::new(Px(to_dx), Px(0.0)),

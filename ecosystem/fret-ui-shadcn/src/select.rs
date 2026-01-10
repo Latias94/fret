@@ -9,7 +9,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
-    ScrollProps, SizeStyle, StackProps, TextProps, VisualTransformProps,
+    RenderTransformProps, ScrollProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1752,8 +1752,8 @@ fn select_impl<H: UiHost>(
                                 opacity,
                             },
                             move |cx| {
-                                vec![cx.visual_transform_props(
-                                    VisualTransformProps {
+                                vec![cx.render_transform_props(
+                                    RenderTransformProps {
                                         layout: opacity_layout,
                                         transform,
                                     },
