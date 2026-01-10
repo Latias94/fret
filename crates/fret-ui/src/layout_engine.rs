@@ -120,6 +120,12 @@ impl TaffyLayoutEngine {
         self.node_to_layout.get(&node).copied()
     }
 
+    pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) {
+        if self.node_to_layout.contains_key(&node) {
+            self.seen.insert(node);
+        }
+    }
+
     pub fn node_for_layout_id(&self, id: LayoutId) -> Option<NodeId> {
         self.layout_to_node.get(&id).copied()
     }

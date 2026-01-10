@@ -4181,6 +4181,10 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let scroll_node = ui.children(root)[0];
     let column_node = ui.children(scroll_node)[0];
     let before = ui.debug_node_bounds(column_node).expect("column bounds");
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected scroll content subtree nodes to remain registered in the layout engine"
+    );
 
     let wheel_pos = fret_core::Point::new(Px(5.0), Px(5.0));
     ui.dispatch_event(
@@ -4280,6 +4284,10 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
         ui.debug_stats().layout_engine_solves,
         0,
         "expected scroll translation to avoid triggering layout engine solves"
+    );
+    assert!(
+        ui.layout_engine_has_node(column_node),
+        "expected translation-only scroll to keep engine nodes alive (stable identity)"
     );
 }
 

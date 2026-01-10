@@ -630,6 +630,11 @@ impl<H: UiHost> UiTree<H> {
         self.layout_engine_child_local_rect(root, child).is_some()
     }
 
+    #[cfg(all(feature = "layout-engine-v2", test))]
+    pub(crate) fn layout_engine_has_node(&self, node: NodeId) -> bool {
+        self.layout_engine.layout_id_for_node(node).is_some()
+    }
+
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
         let mut out: Vec<NodeId> = Vec::new();
         let mut current = Some(node);

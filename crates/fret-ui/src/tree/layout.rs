@@ -525,6 +525,9 @@ impl<H: UiHost> UiTree<H> {
                 bounds.origin.y - prev_bounds.origin.y,
             );
             if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                #[cfg(feature = "layout-engine-v2")]
+                self.layout_engine.mark_seen_if_present(node);
+
                 let window = self.window;
                 let mut stack: Vec<NodeId> = Vec::new();
                 let mut i = 0usize;
@@ -542,6 +545,9 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 while let Some(id) = stack.pop() {
+                    #[cfg(feature = "layout-engine-v2")]
+                    self.layout_engine.mark_seen_if_present(id);
+
                     let Some(n) = self.nodes.get_mut(id) else {
                         continue;
                     };
