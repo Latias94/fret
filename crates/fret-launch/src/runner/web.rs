@@ -23,6 +23,7 @@ use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
 use fret_platform_web::WebPlatformServices;
 
+use super::streaming_upload::coalesce_and_budget_streaming_image_updates;
 use super::{
     RenderTargetUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -327,6 +328,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
+
+        let (effects, stats) = coalesce_and_budget_streaming_image_updates(
+            effects,
+            self.config.streaming_upload_budget_bytes_per_frame,
+        );
+        if (stats.update_effects_dropped_budget > 0 || stats.update_effects_dropped_coalesced > 0)
+            && std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+        {
+            tracing::debug!(
+                seen = stats.update_effects_seen,
+                kept = stats.update_effects_kept,
+                dropped_coalesced = stats.update_effects_dropped_coalesced,
+                dropped_budget = stats.update_effects_dropped_budget,
+                upload_bytes_kept = stats.upload_bytes_kept,
+                upload_budget_bytes_per_frame = stats.upload_bytes_budgeted,
+                "streaming image updates coalesced/budgeted"
+            );
+        }
 
         for effect in effects {
             match effect {

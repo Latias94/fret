@@ -231,7 +231,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
       forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
     - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
-    - Streaming image v1 (RGBA8 only): runner holds uploaded textures and applies `Effect::ImageUpdateRgba8` via dirty-rect `queue.write_texture` writes (desktop + web), with a visual smoke demo: `cargo run -p fret-demo --bin streaming_image_demo`.
+    - Streaming image v1 (RGBA8 only): runner holds uploaded textures and applies `Effect::ImageUpdateRgba8` via dirty-rect `queue.write_texture` writes (desktop + web), with deterministic latest-wins coalescing + a per-window upload budget (ADR 0123). Visual smoke demo: `cargo run -p fret-demo --bin streaming_image_demo`.
     - Next: consider region/tiled masks to reduce peak bytes, and lock down any future clip-path expansion strategy (ADR-gated).
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:

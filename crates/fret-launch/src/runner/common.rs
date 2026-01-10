@@ -142,6 +142,15 @@ pub struct WinitRunnerConfig {
     pub wgpu_init: WgpuInit,
     /// Canvas element id used by the wasm32 backend.
     pub web_canvas_id: String,
+
+    /// Soft upper bound on total CPU->GPU upload bytes per rendered frame (per window) for
+    /// streaming image updates (ADR 0123).
+    pub streaming_upload_budget_bytes_per_frame: u64,
+    /// Soft upper bound on pending streaming update bytes retained for a window (ADR 0123).
+    ///
+    /// Note: this is a forward-looking knob. The initial streaming update MVP applies coalescing
+    /// and per-frame budget at drain points but does not yet maintain a cross-frame pending queue.
+    pub streaming_staging_budget_bytes: u64,
 }
 
 pub enum WgpuInit {
@@ -187,6 +196,8 @@ impl Default for WinitRunnerConfig {
             text_font_families: fret_render::TextFontFamilyConfig::default(),
             wgpu_init: WgpuInit::CreateDefault,
             web_canvas_id: "fret-canvas".to_string(),
+            streaming_upload_budget_bytes_per_frame: 64 * 1024 * 1024,
+            streaming_staging_budget_bytes: 128 * 1024 * 1024,
         }
     }
 }

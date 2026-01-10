@@ -50,6 +50,7 @@ mod app_handler;
 mod no_services;
 mod renderdoc_capture;
 
+use super::streaming_upload::coalesce_and_budget_streaming_image_updates;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
@@ -1982,6 +1983,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
             let effects = self.app.flush_effects();
+            let (effects, stats) = coalesce_and_budget_streaming_image_updates(
+                effects,
+                self.config.streaming_upload_budget_bytes_per_frame,
+            );
+            if (stats.update_effects_dropped_budget > 0
+                || stats.update_effects_dropped_coalesced > 0)
+                && std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+            {
+                tracing::debug!(
+                    seen = stats.update_effects_seen,
+                    kept = stats.update_effects_kept,
+                    dropped_coalesced = stats.update_effects_dropped_coalesced,
+                    dropped_budget = stats.update_effects_dropped_budget,
+                    upload_bytes_kept = stats.upload_bytes_kept,
+                    upload_budget_bytes_per_frame = stats.upload_bytes_budgeted,
+                    "streaming image updates coalesced/budgeted"
+                );
+            }
 
             let mut did_work = self.poll_hotpatch_trigger(now);
             did_work |= !effects.is_empty();
