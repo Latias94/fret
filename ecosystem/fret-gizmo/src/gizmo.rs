@@ -150,6 +150,14 @@ pub struct GizmoConfig {
     pub translate_snap_step: Option<f32>,
     pub rotate_snap_step_radians: Option<f32>,
     pub scale_snap_step: Option<f32>,
+    /// Optional per-axis snap step for bounds/box scaling extents (ImGuizmo `boundsSnap` surface).
+    ///
+    /// This differs from `scale_snap_step` (which snaps scale *factors*): bounds snapping is
+    /// expressed in **selection box units** along the bounds basis, i.e. it snaps the resulting
+    /// box size rather than the multiplicative scale delta.
+    ///
+    /// Only used when `show_bounds` is enabled and the current interaction is bounds scaling.
+    pub bounds_snap_step: Option<Vec3>,
     /// When `true`, draw a faint always-on-top pass so occluded segments remain visible.
     pub show_occluded: bool,
     /// Alpha multiplier for the occluded always-on-top pass.
@@ -223,6 +231,7 @@ impl Default for GizmoConfig {
             translate_snap_step: None,
             rotate_snap_step_radians: Some(15.0_f32.to_radians()),
             scale_snap_step: Some(0.1),
+            bounds_snap_step: None,
             show_occluded: true,
             occluded_alpha: 0.25,
             show_view_axis_ring: true,
@@ -1364,7 +1373,18 @@ impl Gizmo {
                                 let mut factor =
                                     (1.0 + self.state.drag_bounds_total_raw[i]).max(0.01);
                                 if input.snap {
-                                    if let Some(step) = self
+                                    if let Some(steps) =
+                                        self.config.bounds_snap_step.filter(|v| v.is_finite())
+                                    {
+                                        let step = steps[i];
+                                        if step.is_finite() && step > 0.0 {
+                                            factor = snap_bounds_extent_factor(
+                                                self.state.drag_bounds_start_extent[i].max(1e-6),
+                                                factor,
+                                                step,
+                                            );
+                                        }
+                                    } else if let Some(step) = self
                                         .config
                                         .scale_snap_step
                                         .filter(|s| s.is_finite() && *s > 0.0)
@@ -4361,6 +4381,23 @@ fn snap_quat_to_angle_step(total: Quat, step: f32) -> Quat {
     }
 }
 
+fn snap_bounds_extent_factor(start_extent: f32, factor: f32, step: f32) -> f32 {
+    if !start_extent.is_finite() || start_extent <= 0.0 {
+        return factor;
+    }
+    if !factor.is_finite() {
+        return factor;
+    }
+    if !step.is_finite() || step <= 0.0 {
+        return factor;
+    }
+
+    let extent = start_extent.max(1e-6);
+    let desired_extent = (extent * factor).max(0.0);
+    let snapped_extent = (desired_extent / step).round() * step;
+    (snapped_extent / extent).max(0.01)
+}
+
 fn ray_plane_intersect(ray: Ray3d, plane_point: Vec3, plane_normal: Vec3) -> Option<Vec3> {
     let n = plane_normal.normalize_or_zero();
     if n.length_squared() == 0.0 {
@@ -5799,6 +5836,97 @@ mod tests {
     }
 
     #[test]
+    fn bounds_face_scale_snaps_to_extent_step_when_enabled() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Scale;
+        config.pivot_mode = GizmoPivotMode::Center;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.show_bounds = true;
+        config.bounds_snap_step = Some(Vec3::splat(0.5));
+        // Avoid conflicts with axis/plane scale handles in this test.
+        config.axis_mask = [true; 3];
+
+        let mut gizmo = Gizmo::new(config);
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d {
+                    translation: Vec3::new(-1.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let origin = Vec3::ZERO;
+        let basis = [Vec3::X, Vec3::Y, Vec3::Z];
+        let (min_local, max_local) =
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+        let center_local = (min_local + max_local) * 0.5;
+        let start_extent_x = (max_local.x - min_local.x).abs().max(1e-6);
+
+        // Drag the +X face handle with snapping enabled.
+        let handle_local = Vec3::new(max_local.x, center_local.y, center_local.z);
+        let handle_world = origin + handle_local;
+        let handle_screen =
+            project_point(view_proj, vp, handle_world, gizmo.config.depth_range).unwrap();
+        let cursor_start = handle_screen.screen;
+        let cursor_moved = cursor_start + Vec2::new(240.0, 0.0);
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: true,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: true,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+
+        let extent_x = start_extent_x * moved_total.x;
+        let snapped = (extent_x / 0.5).round() * 0.5;
+        assert!(
+            (extent_x - snapped).abs() < 2e-3,
+            "extent_x={extent_x} snapped={snapped}"
+        );
+        assert!((moved_total.x - 1.0).abs() > 1e-6, "total={moved_total:?}");
+    }
+
+    #[test]
     fn bounds_uses_local_bounds_when_provided() {
         let gizmo = base_gizmo(GizmoMode::Scale);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -5826,6 +5954,12 @@ mod tests {
         assert!((max_local.x - 2.0).abs() < 1e-3, "max_local={max_local:?}");
         assert!((max_local.y - 1.0).abs() < 1e-3, "max_local={max_local:?}");
         assert!((max_local.z - 3.0).abs() < 1e-3, "max_local={max_local:?}");
+    }
+
+    #[test]
+    fn bounds_snap_snaps_extent_not_factor() {
+        let snapped = snap_bounds_extent_factor(3.0, 1.1, 0.5);
+        assert!((snapped - (3.5 / 3.0)).abs() < 1e-6, "snapped={snapped}");
     }
 
     #[test]
