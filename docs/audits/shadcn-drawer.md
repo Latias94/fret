@@ -75,7 +75,7 @@ Upstream exports a thin wrapper around `vaul`:
 
 ## Known gaps / intentional differences
 
-- Vaul-specific snap-points are not modeled yet.
+- Pass: Vaul-style snap points are modeled for bottom drawers via `Drawer::snap_points(...)`.
 - Vaul drag physics (rubber-banding, velocity, snap decisions) are not modeled yet (Fret currently
   uses a simple threshold-based close).
 
