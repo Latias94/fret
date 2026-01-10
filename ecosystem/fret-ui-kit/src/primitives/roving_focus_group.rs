@@ -40,6 +40,18 @@ pub fn next_enabled(disabled: &[bool], current: usize, forward: bool, wrap: bool
     roving_focus::next_enabled(disabled, current, forward, wrap)
 }
 
+/// Returns the active index for a string-keyed roving group, preferring `selected` when enabled.
+///
+/// This matches the common Radix outcome where the "tab stop" item aligns to the currently
+/// selected value when present, falling back to the first enabled item.
+pub fn active_index_from_str_keys(
+    keys: &[Arc<str>],
+    selected: Option<&str>,
+    disabled: &[bool],
+) -> Option<usize> {
+    roving_focus::active_index_from_str_keys(keys, selected, disabled)
+}
+
 #[derive(Debug, Clone)]
 pub enum TypeaheadPolicy {
     None,

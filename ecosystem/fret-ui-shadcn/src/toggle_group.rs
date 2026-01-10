@@ -353,7 +353,7 @@ impl ToggleGroup {
                         &disabled_flags,
                     )
                 }
-                _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
+                _ => fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags),
             }
         } else {
             None

@@ -562,7 +562,7 @@ pub mod composable {
                     Arc::from(disabled_flags.clone().into_boxed_slice());
                 let list = root.clone().list(values_arc, disabled_arc.clone());
                 let tab_stop = list.tab_stop_index(cx).or_else(|| {
-                    fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags)
+                    fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
                 });
 
                 let roving = RovingFocusProps {
@@ -1202,7 +1202,7 @@ impl Accordion {
             let list = root.clone().list(values_arc, disabled_arc.clone());
             let tab_stop = list
                 .tab_stop_index(cx)
-                .or_else(|| fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags));
+                .or_else(|| fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags));
 
             let roving = RovingFocusProps {
                 enabled: !group_disabled,

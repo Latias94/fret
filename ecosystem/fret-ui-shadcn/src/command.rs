@@ -26,10 +26,10 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::cmdk_score;
 use fret_ui_kit::headless::cmdk_selection;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
@@ -873,7 +873,7 @@ impl CommandList {
                 .unwrap_or_else(|| Arc::from(""));
 
             let disabled_flags: Vec<bool> = items.iter().map(|i| disabled || i.disabled).collect();
-            let tab_stop = roving_focus::first_enabled(&disabled_flags);
+            let tab_stop = roving_focus_group::first_enabled(&disabled_flags);
 
             let roving = RovingFocusProps {
                 enabled: !disabled,

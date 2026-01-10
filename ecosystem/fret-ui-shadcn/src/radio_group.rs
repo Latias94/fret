@@ -9,8 +9,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{MetricRef, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -219,8 +219,11 @@ impl RadioGroup {
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
             let disabled: Vec<bool> = items.iter().map(|i| group_disabled || i.disabled).collect();
-            let active =
-                roving_focus::active_index_from_str_keys(&values, selected.as_deref(), &disabled);
+            let active = roving_focus_group::active_index_from_str_keys(
+                &values,
+                selected.as_deref(),
+                &disabled,
+            );
 
             let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
             let disabled_arc: Arc<[bool]> = Arc::from(disabled.clone().into_boxed_slice());
