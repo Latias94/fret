@@ -2,16 +2,17 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
+use crate::layout_constraints::LayoutConstraints;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
 
 #[cfg(feature = "layout-engine-v2")]
 use crate::layout_engine::{ParentLayoutKind, layout_children_from_engine_if_solved};
 
-#[cfg(not(feature = "layout-engine-v2"))]
-use crate::declarative::frame::layout_style_for_node;
+#[cfg(feature = "layout-engine-v2")]
+use crate::widget::MeasureCx;
 
 #[cfg(not(feature = "layout-engine-v2"))]
-use crate::layout_constraints::LayoutConstraints;
+use crate::declarative::frame::layout_style_for_node;
 
 impl ElementHostWidget {
     pub(super) fn layout_grid_impl<H: UiHost>(
@@ -253,16 +254,29 @@ impl ElementHostWidget {
         props: crate::element::GridProps,
     ) -> Size {
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
-            let constraints = crate::layout_constraints::LayoutConstraints::new(
+            let constraints = LayoutConstraints::new(
                 LayoutSize::new(None, None),
                 LayoutSize::new(
                     RuntimeAvailableSpace::Definite(cx.available.width),
                     RuntimeAvailableSpace::Definite(cx.available.height),
                 ),
             );
-            return cx
-                .tree
-                .measure_in(cx.app, cx.services, cx.node, constraints, cx.scale_factor);
+
+            // Avoid re-entrant `with_widget_mut(cx.node)` by measuring the current widget directly.
+            let mut measure_cx = MeasureCx {
+                app: cx.app,
+                tree: cx.tree,
+                node: cx.node,
+                window: cx.window,
+                focus: cx.focus,
+                children: cx.children,
+                constraints,
+                scale_factor: cx.scale_factor,
+                services: cx.services,
+                observe_model: cx.observe_model,
+                observe_global: cx.observe_global,
+            };
+            return self.measure_impl(&mut measure_cx);
         }
 
         if let Some(size) = layout_children_from_engine_if_solved(cx) {
@@ -319,10 +333,6 @@ impl ElementHostWidget {
                     Length::Fill => Dimension::length(inner_avail.height.0.max(0.0) * sf),
                     Length::Auto => Dimension::auto(),
                 },
-            },
-            max_size: TaffySize {
-                width: Dimension::length(inner_avail.width.0.max(0.0) * sf),
-                height: Dimension::length(inner_avail.height.0.max(0.0) * sf),
             },
             grid_template_columns: taffy::style_helpers::evenly_sized_tracks(props.cols),
             grid_template_rows: props
