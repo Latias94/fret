@@ -808,7 +808,10 @@ impl NodeGraphCanvas {
         } else {
             1.0
         };
-        let quant = |v: f32| (v / 0.25).round() * 0.25;
+        let quant = |v: f32| {
+            (v / crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX).round()
+                * crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX
+        };
 
         let mut node_sizes: Vec<(GraphNodeId, (f32, f32))> = Vec::with_capacity(geom.nodes.len());
         for (&node, node_geom) in &geom.nodes {

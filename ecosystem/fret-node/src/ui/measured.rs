@@ -21,6 +21,8 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::NodeGraphStyle;
 
+pub const MEASURED_GEOMETRY_EPSILON_PX: f32 = 0.25;
+
 /// Thread-safe store for measured geometry hints.
 ///
 /// Stored values are in screen-space logical pixels (px), consistent with `PortAnchorHint`.
@@ -237,7 +239,152 @@ pub struct MeasuredGeometryApplyOptions {
 
 impl Default for MeasuredGeometryApplyOptions {
     fn default() -> Self {
-        Self { epsilon_px: 0.25 }
+        Self {
+            epsilon_px: MEASURED_GEOMETRY_EPSILON_PX,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{Point, Px, Rect, Size};
+
+    fn make_hint(x: f32, y: f32) -> PortAnchorHint {
+        PortAnchorHint {
+            center: Point::new(Px(x), Px(y)),
+            bounds: Rect::new(
+                Point::new(Px(x - 2.0), Px(y - 2.0)),
+                Size::new(Px(4.0), Px(4.0)),
+            ),
+        }
+    }
+
+    #[test]
+    fn apply_batch_within_epsilon_does_not_bump_revision() {
+        let store = MeasuredGeometryStore::new();
+        let node = NodeId::new();
+        let port = PortId::new();
+
+        let r0 = store.revision();
+        assert!(
+            store
+                .apply_batch_if_changed(
+                    MeasuredGeometryBatch {
+                        node_sizes_px: vec![(node, (100.0, 100.0))],
+                        port_anchors_px: vec![(port, make_hint(10.0, 10.0))],
+                        remove_nodes: Vec::new(),
+                        remove_ports: Vec::new(),
+                    },
+                    MeasuredGeometryApplyOptions::default()
+                )
+                .is_some()
+        );
+        let r1 = store.revision();
+        assert!(r1 > r0);
+
+        assert!(
+            store
+                .apply_batch_if_changed(
+                    MeasuredGeometryBatch {
+                        node_sizes_px: vec![(
+                            node,
+                            (100.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.49, 100.0)
+                        )],
+                        port_anchors_px: vec![(
+                            port,
+                            make_hint(10.0 + MEASURED_GEOMETRY_EPSILON_PX * 0.49, 10.0)
+                        )],
+                        remove_nodes: Vec::new(),
+                        remove_ports: Vec::new(),
+                    },
+                    MeasuredGeometryApplyOptions::default()
+                )
+                .is_none()
+        );
+        assert_eq!(store.revision(), r1);
+    }
+
+    #[test]
+    fn apply_batch_beyond_epsilon_bumps_revision() {
+        let store = MeasuredGeometryStore::new();
+        let node = NodeId::new();
+        let port = PortId::new();
+
+        let _ = store.apply_batch_if_changed(
+            MeasuredGeometryBatch {
+                node_sizes_px: vec![(node, (100.0, 100.0))],
+                port_anchors_px: vec![(port, make_hint(10.0, 10.0))],
+                remove_nodes: Vec::new(),
+                remove_ports: Vec::new(),
+            },
+            MeasuredGeometryApplyOptions::default(),
+        );
+        let r1 = store.revision();
+
+        assert!(
+            store
+                .apply_batch_if_changed(
+                    MeasuredGeometryBatch {
+                        node_sizes_px: vec![(
+                            node,
+                            (100.0 + MEASURED_GEOMETRY_EPSILON_PX * 1.01, 100.0)
+                        )],
+                        port_anchors_px: vec![(
+                            port,
+                            make_hint(10.0 + MEASURED_GEOMETRY_EPSILON_PX * 1.01, 10.0)
+                        )],
+                        remove_nodes: Vec::new(),
+                        remove_ports: Vec::new(),
+                    },
+                    MeasuredGeometryApplyOptions::default()
+                )
+                .is_some()
+        );
+        assert!(store.revision() > r1);
+    }
+
+    #[test]
+    fn apply_exclusive_removes_missing_entries() {
+        let store = MeasuredGeometryStore::new();
+        let node_a = NodeId::new();
+        let node_b = NodeId::new();
+        let port_a = PortId::new();
+        let port_b = PortId::new();
+
+        let _ = store.apply_exclusive_batch_if_changed(
+            MeasuredGeometryExclusiveBatch {
+                node_sizes_px: vec![(node_a, (100.0, 100.0)), (node_b, (200.0, 200.0))],
+                port_anchors_px: vec![
+                    (port_a, make_hint(10.0, 10.0)),
+                    (port_b, make_hint(20.0, 20.0)),
+                ],
+            },
+            MeasuredGeometryApplyOptions::default(),
+        );
+        assert!(store.node_size_px(node_a).is_some());
+        assert!(store.node_size_px(node_b).is_some());
+        assert!(store.port_anchor_px(port_a).is_some());
+        assert!(store.port_anchor_px(port_b).is_some());
+
+        let r1 = store.revision();
+        assert!(
+            store
+                .apply_exclusive_batch_if_changed(
+                    MeasuredGeometryExclusiveBatch {
+                        node_sizes_px: vec![(node_a, (100.0, 100.0))],
+                        port_anchors_px: vec![(port_a, make_hint(10.0, 10.0))],
+                    },
+                    MeasuredGeometryApplyOptions::default()
+                )
+                .is_some()
+        );
+        assert!(store.revision() > r1);
+
+        assert!(store.node_size_px(node_a).is_some());
+        assert!(store.node_size_px(node_b).is_none());
+        assert!(store.port_anchor_px(port_a).is_some());
+        assert!(store.port_anchor_px(port_b).is_none());
     }
 }
 
