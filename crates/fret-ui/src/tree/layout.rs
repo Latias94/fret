@@ -65,7 +65,11 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         if pass_kind == LayoutPassKind::Final {
-            self.request_layer_root_flow_subtrees(app, &roots, bounds, scale_factor);
+            self.request_flow_subtrees(
+                app,
+                roots.iter().copied().map(|root| (root, bounds.size)),
+                scale_factor,
+            );
             self.precompute_layer_root_flow_islands(app, services, &roots, bounds, scale_factor);
         }
 
@@ -80,7 +84,13 @@ impl<H: UiHost> UiTree<H> {
                 if pass_kind == LayoutPassKind::Final {
                     let pending: Vec<(NodeId, Rect)> =
                         self.viewport_roots[viewport_cursor..].to_vec();
-                    self.request_viewport_root_flow_subtrees(app, &pending, scale_factor);
+                    self.request_flow_subtrees(
+                        app,
+                        pending
+                            .into_iter()
+                            .map(|(root, bounds)| (root, bounds.size)),
+                        scale_factor,
+                    );
                 }
 
                 // Phase 2: compute/apply only the viewport roots that actually need layout.
@@ -181,7 +191,7 @@ impl<H: UiHost> UiTree<H> {
             self.viewport_roots.clear();
 
             let mut viewport_cursor: usize = 0;
-            self.request_single_layer_root_flow_subtree(app, root, bounds, scale_factor);
+            self.request_flow_subtrees(app, std::iter::once((root, bounds.size)), scale_factor);
             self.precompute_single_layer_root_flow_island_if_needed(
                 app,
                 services,
@@ -201,7 +211,13 @@ impl<H: UiHost> UiTree<H> {
                 // Phase 1: request/build any newly-registered viewport roots so the engine retains
                 // stable identity even if we skip compute/apply for clean roots.
                 let pending: Vec<(NodeId, Rect)> = self.viewport_roots[viewport_cursor..].to_vec();
-                self.request_viewport_root_flow_subtrees(app, &pending, scale_factor);
+                self.request_flow_subtrees(
+                    app,
+                    pending
+                        .into_iter()
+                        .map(|(root, bounds)| (root, bounds.size)),
+                    scale_factor,
+                );
 
                 // Phase 2: compute/apply only the viewport roots that actually need layout.
                 while viewport_cursor < self.viewport_roots.len() {
@@ -298,11 +314,10 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    fn request_layer_root_flow_subtrees(
+    fn request_flow_subtrees(
         &mut self,
         app: &mut H,
-        roots: &[NodeId],
-        bounds: Rect,
+        roots: impl IntoIterator<Item = (NodeId, Size)>,
         scale_factor: f32,
     ) {
         let Some(window) = self.window else {
@@ -311,7 +326,7 @@ impl<H: UiHost> UiTree<H> {
 
         let sf = scale_factor;
         let mut engine = self.take_layout_engine();
-        for &root in roots {
+        for (root, size) in roots {
             if !self
                 .nodes
                 .get(root)
@@ -320,60 +335,7 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
-        }
-        self.put_layout_engine(engine);
-    }
-
-    #[cfg(feature = "layout-engine-v2")]
-    fn request_single_layer_root_flow_subtree(
-        &mut self,
-        app: &mut H,
-        root: NodeId,
-        bounds: Rect,
-        scale_factor: f32,
-    ) {
-        let Some(window) = self.window else {
-            return;
-        };
-
-        if !self
-            .nodes
-            .get(root)
-            .is_some_and(|node| node.element.is_some())
-        {
-            return;
-        }
-
-        let sf = scale_factor;
-        let mut engine = self.take_layout_engine();
-        build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
-        self.put_layout_engine(engine);
-    }
-
-    #[cfg(feature = "layout-engine-v2")]
-    fn request_viewport_root_flow_subtrees(
-        &mut self,
-        app: &mut H,
-        viewport_roots: &[(NodeId, Rect)],
-        scale_factor: f32,
-    ) {
-        let Some(window) = self.window else {
-            return;
-        };
-
-        let sf = scale_factor;
-        let mut engine = self.take_layout_engine();
-        for &(root, bounds) in viewport_roots {
-            if !self
-                .nodes
-                .get(root)
-                .is_some_and(|node| node.element.is_some())
-            {
-                continue;
-            }
-
-            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, bounds.size);
+            build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, size);
         }
         self.put_layout_engine(engine);
     }
