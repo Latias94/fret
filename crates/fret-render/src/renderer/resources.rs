@@ -113,6 +113,35 @@ impl Renderer {
             ..Default::default()
         });
 
+        let clip_mask_param_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("fret clip-mask params bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(std::num::NonZeroU64::new(16).unwrap()),
+                    },
+                    count: None,
+                }],
+            });
+        let clip_mask_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret clip-mask params buffer"),
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let clip_mask_param_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret clip-mask params bind group"),
+            layout: &clip_mask_param_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: clip_mask_param_buffer.as_entire_binding(),
+            }],
+        });
+
         let text_system = TextSystem::new(device);
 
         const FRAMES_IN_FLIGHT: usize = 3;
@@ -171,6 +200,20 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let scale_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret scale params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let color_adjust_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret color-adjust params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -208,6 +251,38 @@ impl Renderer {
             path_msaa_pipeline_sample_count: None,
             composite_pipeline_format: None,
             composite_pipeline: None,
+            composite_mask_pipeline: None,
+            composite_mask_bind_group_layout: None,
+            clip_mask_pipeline: None,
+            clip_mask_param_buffer,
+            clip_mask_param_bind_group,
+            clip_mask_param_bind_group_layout,
+            blit_pipeline_format: None,
+            blit_pipeline: None,
+            blit_bind_group_layout: None,
+            blit_mask_bind_group_layout: None,
+            blur_pipeline_format: None,
+            blur_h_pipeline: None,
+            blur_v_pipeline: None,
+            blur_h_masked_pipeline: None,
+            blur_v_masked_pipeline: None,
+            blur_h_mask_pipeline: None,
+            blur_v_mask_pipeline: None,
+            scale_pipeline_format: None,
+            downsample_pipeline: None,
+            upscale_pipeline: None,
+            upscale_masked_pipeline: None,
+            upscale_mask_pipeline: None,
+            scale_bind_group_layout: None,
+            scale_mask_bind_group_layout: None,
+            scale_param_buffer,
+            color_adjust_pipeline_format: None,
+            color_adjust_pipeline: None,
+            color_adjust_masked_pipeline: None,
+            color_adjust_mask_pipeline: None,
+            color_adjust_bind_group_layout: None,
+            color_adjust_mask_bind_group_layout: None,
+            color_adjust_param_buffer,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,
@@ -231,6 +306,14 @@ impl Renderer {
             svg_perf_enabled: false,
             svg_perf: SvgPerfStats::default(),
             path_msaa_samples: 4,
+            debug_offscreen_blit_enabled: false,
+            debug_pixelate_scale: 0,
+            debug_blur_radius: 0,
+            debug_blur_scissor: None,
+            intermediate_budget_bytes: 256 * 1024 * 1024,
+            intermediate_perf_enabled: false,
+            intermediate_perf: IntermediatePerfStats::default(),
+            intermediate_pool: IntermediatePool::default(),
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
             viewport_bind_groups: HashMap::new(),
