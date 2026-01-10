@@ -6,6 +6,7 @@ mod svg;
 mod svg_cache;
 mod targets;
 mod text;
+pub mod viewport_overlay;
 
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;

@@ -13,11 +13,11 @@ use fret_launch::{
     WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
+use fret_render::viewport_overlay::{ViewportOverlay3d, ViewportOverlay3dContext, run_overlays};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
-use fret_viewport_wgpu::{ViewportOverlay3d, ViewportOverlay3dContext, run_overlays};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use std::time::Instant;
