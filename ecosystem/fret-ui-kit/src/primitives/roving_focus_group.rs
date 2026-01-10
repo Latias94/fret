@@ -17,6 +17,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::{roving_focus, typeahead};
+use crate::primitives::direction as direction_prim;
 use crate::primitives::direction::LayoutDirection;
 
 pub use fret_ui::element::{RovingFlexProps, RovingFocusProps};
@@ -132,7 +133,7 @@ pub fn on_typeahead<H: UiHost>(cx: &mut ElementContext<'_, H>, handler: OnRoving
 /// The runtime forwards key events to this handler and performs the focus request when a target
 /// index is returned.
 pub fn nav_apg<H: UiHost>(cx: &mut ElementContext<'_, H>) {
-    nav_apg_with_direction(cx, LayoutDirection::default());
+    nav_apg_with_direction(cx, direction_prim::use_direction_in_scope(cx, None));
 }
 
 /// Like `nav_apg`, but respects Radix `dir` behavior for horizontal navigation.
@@ -183,7 +184,7 @@ pub fn nav_apg_with_direction<H: UiHost>(cx: &mut ElementContext<'_, H>, dir: La
 /// when no item is active, ArrowDown/PageUp/Home select the first enabled item and
 /// ArrowUp/PageDown/End select the last enabled item.
 pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
-    nav_apg_entry_fallback_with_direction(cx, LayoutDirection::default());
+    nav_apg_entry_fallback_with_direction(cx, direction_prim::use_direction_in_scope(cx, None));
 }
 
 /// Like `nav_apg_entry_fallback`, but respects Radix `dir` behavior for horizontal navigation.
