@@ -566,11 +566,16 @@ impl NodeGraphCanvas {
         }
         self.store_rev = Some(rev);
 
-        let Ok(next) = store.read_ref(host, |s| s.view_state().clone()) else {
+        let Ok((next_view, next_graph)) =
+            store.read_ref(host, |s| (s.view_state().clone(), s.graph().clone()))
+        else {
             return;
         };
+        let _ = self.graph.update(host, |g, _cx| {
+            *g = next_graph;
+        });
         let _ = self.view_state.update(host, |s, _cx| {
-            *s = next;
+            *s = next_view;
         });
     }
 
@@ -1040,6 +1045,76 @@ impl NodeGraphCanvas {
         host: &mut H,
         tx: &GraphTransaction,
     ) -> Result<GraphTransaction, Vec<Diagnostic>> {
+        if let Some(store) = self.store.as_ref() {
+            if let Some(profile) = self.presenter.profile_mut() {
+                match store.update(host, |store, _cx| {
+                    store.dispatch_transaction_with_profile(tx, profile)
+                }) {
+                    Ok(Ok(outcome)) => {
+                        self.sync_view_state(host);
+                        return Ok(outcome.committed);
+                    }
+                    Ok(Err(err)) => match &err {
+                        ApplyPipelineError::Rejected {
+                            diagnostics: diags, ..
+                        } => return Err(diags.clone()),
+                        _ => {
+                            return Err(vec![Diagnostic {
+                                key: "tx.apply_failed".to_string(),
+                                severity: DiagnosticSeverity::Error,
+                                target: crate::rules::DiagnosticTarget::Graph,
+                                message: err.to_string(),
+                                fixes: Vec::new(),
+                            }]);
+                        }
+                    },
+                    Err(_) => {
+                        return Err(vec![Diagnostic {
+                            key: "tx.apply_failed".to_string(),
+                            severity: DiagnosticSeverity::Error,
+                            target: crate::rules::DiagnosticTarget::Graph,
+                            message: "store unavailable".to_string(),
+                            fixes: Vec::new(),
+                        }]);
+                    }
+                }
+            }
+
+            match store.update(host, |store, _cx| store.dispatch_transaction(tx)) {
+                Ok(Ok(outcome)) => {
+                    self.sync_view_state(host);
+                    return Ok(outcome.committed);
+                }
+                Ok(Err(err)) => {
+                    let message = match &err {
+                        crate::runtime::store::DispatchError::Apply(err) => match err {
+                            ApplyPipelineError::Rejected {
+                                diagnostics: diags, ..
+                            } => return Err(diags.clone()),
+                            _ => err.to_string(),
+                        },
+                        crate::runtime::store::DispatchError::Changes(err) => err.to_string(),
+                    };
+                    return Err(vec![Diagnostic {
+                        key: "tx.apply_failed".to_string(),
+                        severity: DiagnosticSeverity::Error,
+                        target: crate::rules::DiagnosticTarget::Graph,
+                        message,
+                        fixes: Vec::new(),
+                    }]);
+                }
+                Err(_) => {
+                    return Err(vec![Diagnostic {
+                        key: "tx.apply_failed".to_string(),
+                        severity: DiagnosticSeverity::Error,
+                        target: crate::rules::DiagnosticTarget::Graph,
+                        message: "store unavailable".to_string(),
+                        fixes: Vec::new(),
+                    }]);
+                }
+            }
+        }
+
         let Some(mut scratch) = self.graph.read_ref(host, |g| g.clone()).ok() else {
             return Err(vec![Diagnostic {
                 key: "tx.graph_unavailable".to_string(),
@@ -1119,7 +1194,9 @@ impl NodeGraphCanvas {
     ) -> bool {
         match self.apply_transaction_result(host, tx) {
             Ok(committed) => {
-                self.history.record(committed);
+                if self.store.is_none() {
+                    self.history.record(committed);
+                }
                 true
             }
             Err(diags) => {
@@ -1133,6 +1210,75 @@ impl NodeGraphCanvas {
 
     fn undo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
         let preferred_focus = self.interaction.focused_edge;
+
+        if let Some(store) = self.store.as_ref() {
+            if let Some(profile) = self.presenter.profile_mut() {
+                match store.update(host, |store, _cx| store.undo_with_profile(profile)) {
+                    Ok(Ok(Some(_outcome))) => {
+                        self.sync_view_state(host);
+                        self.update_view_state(host, |s| {
+                            s.selected_edges.clear();
+                            s.selected_nodes.clear();
+                            s.selected_groups.clear();
+                        });
+                        self.repair_focused_edge_after_graph_change(host, preferred_focus);
+                        return true;
+                    }
+                    Ok(Ok(None)) => return false,
+                    Ok(Err(err)) => {
+                        self.show_toast(
+                            host,
+                            window,
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from(err.to_string()),
+                        );
+                        return false;
+                    }
+                    Err(_) => {
+                        self.show_toast(
+                            host,
+                            window,
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from("store unavailable"),
+                        );
+                        return false;
+                    }
+                }
+            }
+
+            match store.update(host, |store, _cx| store.undo()) {
+                Ok(Ok(Some(_outcome))) => {
+                    self.sync_view_state(host);
+                    self.update_view_state(host, |s| {
+                        s.selected_edges.clear();
+                        s.selected_nodes.clear();
+                        s.selected_groups.clear();
+                    });
+                    self.repair_focused_edge_after_graph_change(host, preferred_focus);
+                    return true;
+                }
+                Ok(Ok(None)) => return false,
+                Ok(Err(err)) => {
+                    self.show_toast(
+                        host,
+                        window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from(err.to_string()),
+                    );
+                    return false;
+                }
+                Err(_) => {
+                    self.show_toast(
+                        host,
+                        window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from("store unavailable"),
+                    );
+                    return false;
+                }
+            }
+        }
+
         let mut history = std::mem::take(&mut self.history);
         let result = history.undo(|tx| self.apply_transaction_result(host, tx));
         self.history = history;
@@ -1159,6 +1305,75 @@ impl NodeGraphCanvas {
 
     fn redo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
         let preferred_focus = self.interaction.focused_edge;
+
+        if let Some(store) = self.store.as_ref() {
+            if let Some(profile) = self.presenter.profile_mut() {
+                match store.update(host, |store, _cx| store.redo_with_profile(profile)) {
+                    Ok(Ok(Some(_outcome))) => {
+                        self.sync_view_state(host);
+                        self.update_view_state(host, |s| {
+                            s.selected_edges.clear();
+                            s.selected_nodes.clear();
+                            s.selected_groups.clear();
+                        });
+                        self.repair_focused_edge_after_graph_change(host, preferred_focus);
+                        return true;
+                    }
+                    Ok(Ok(None)) => return false,
+                    Ok(Err(err)) => {
+                        self.show_toast(
+                            host,
+                            window,
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from(err.to_string()),
+                        );
+                        return false;
+                    }
+                    Err(_) => {
+                        self.show_toast(
+                            host,
+                            window,
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from("store unavailable"),
+                        );
+                        return false;
+                    }
+                }
+            }
+
+            match store.update(host, |store, _cx| store.redo()) {
+                Ok(Ok(Some(_outcome))) => {
+                    self.sync_view_state(host);
+                    self.update_view_state(host, |s| {
+                        s.selected_edges.clear();
+                        s.selected_nodes.clear();
+                        s.selected_groups.clear();
+                    });
+                    self.repair_focused_edge_after_graph_change(host, preferred_focus);
+                    return true;
+                }
+                Ok(Ok(None)) => return false,
+                Ok(Err(err)) => {
+                    self.show_toast(
+                        host,
+                        window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from(err.to_string()),
+                    );
+                    return false;
+                }
+                Err(_) => {
+                    self.show_toast(
+                        host,
+                        window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from("store unavailable"),
+                    );
+                    return false;
+                }
+            }
+        }
+
         let mut history = std::mem::take(&mut self.history);
         let result = history.redo(|tx| self.apply_transaction_result(host, tx));
         self.history = history;
