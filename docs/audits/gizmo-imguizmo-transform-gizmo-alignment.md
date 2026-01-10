@@ -129,7 +129,7 @@ Fret's current contract:
 | Scale axis X/Y/Z | Yes | Yes | **Aligned** | Axis scaling is supported and axis picking matches the rendered end boxes (not the whole shaft). `pick_scale_handle`, `begin_scale_drag`. |
 | Scale uniform (center handle) | Partial (via `SCALEU`/center) | Yes (`ScaleUniform`) | **Aligned** | Center uniform handle id 7, with pivot-respecting translation compensation. |
 | Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Aligned** | Plane scale handles (XY/XZ/YZ) are supported in `Scale` mode. `pick_scale_handle` + `begin_scale_drag` + scale update path. |
-| Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Not implemented** | No bounds gizmo surface in Fret; would require a new handle set + snapping. |
+| Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Partially aligned** | Fret supports a bounds-style box in `GizmoMode::Scale` gated by `GizmoConfig::show_bounds`, with corner + face handles derived from selected target translations (`ecosystem/fret-gizmo/src/gizmo.rs`). Gaps: no `localBounds` input (mesh/AABB) yet; no dedicated bounds snap (`boundsSnap`); multi-selection scaling semantics are TRS-only (no shear). |
 
 ### B) "Universal" / multi-mode behavior
 
@@ -159,7 +159,7 @@ Fret's current contract:
 | Rotation snap step | Yes (degrees) | Yes (radians) | **Aligned** | `rotate_snap_step_radians: Option<f32>`; note unit differences vs ImGuizmo. |
 | Scale snap step | Yes | Yes | **Aligned** | `scale_snap_step: Option<f32>`. |
 | Snap visualization (rotation ticks) | No (varies) | Yes (visuals) | **Partially aligned** | Fret renders rotate tick marks when snapping is active. `draw_rotate_feedback`. Translation/scale snap visuals are not implemented. |
-| Bounds snap | Yes (`boundsSnap`) | No | **Not implemented** | Requires bounds gizmo. |
+| Bounds snap | Yes (`boundsSnap`) | No | **Not implemented** | Bounds gizmo exists, but there is no dedicated `boundsSnap` equivalent yet (only generic scale snapping via `scale_snap_step`). |
 
 ### E) Interaction lifecycle and "editor feel"
 
