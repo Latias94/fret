@@ -31,6 +31,14 @@ pub const CMD_NODE_GRAPH_NUDGE_LEFT_FAST: &str = "node_graph.nudge_left_fast";
 pub const CMD_NODE_GRAPH_NUDGE_RIGHT_FAST: &str = "node_graph.nudge_right_fast";
 pub const CMD_NODE_GRAPH_NUDGE_UP_FAST: &str = "node_graph.nudge_up_fast";
 pub const CMD_NODE_GRAPH_NUDGE_DOWN_FAST: &str = "node_graph.nudge_down_fast";
+pub const CMD_NODE_GRAPH_ALIGN_LEFT: &str = "node_graph.align_left";
+pub const CMD_NODE_GRAPH_ALIGN_RIGHT: &str = "node_graph.align_right";
+pub const CMD_NODE_GRAPH_ALIGN_TOP: &str = "node_graph.align_top";
+pub const CMD_NODE_GRAPH_ALIGN_BOTTOM: &str = "node_graph.align_bottom";
+pub const CMD_NODE_GRAPH_ALIGN_CENTER_X: &str = "node_graph.align_center_x";
+pub const CMD_NODE_GRAPH_ALIGN_CENTER_Y: &str = "node_graph.align_center_y";
+pub const CMD_NODE_GRAPH_DISTRIBUTE_X: &str = "node_graph.distribute_x";
+pub const CMD_NODE_GRAPH_DISTRIBUTE_Y: &str = "node_graph.distribute_y";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
 pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
@@ -406,6 +414,71 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_LEFT),
+        CommandMeta::new("Align Left")
+            .with_category("Node Graph")
+            .with_keywords(["align", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_RIGHT),
+        CommandMeta::new("Align Right")
+            .with_category("Node Graph")
+            .with_keywords(["align", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_TOP),
+        CommandMeta::new("Align Top")
+            .with_category("Node Graph")
+            .with_keywords(["align", "top"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_BOTTOM),
+        CommandMeta::new("Align Bottom")
+            .with_category("Node Graph")
+            .with_keywords(["align", "bottom"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_X),
+        CommandMeta::new("Align Center X")
+            .with_category("Node Graph")
+            .with_keywords(["align", "center", "x"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_Y),
+        CommandMeta::new("Align Center Y")
+            .with_category("Node Graph")
+            .with_keywords(["align", "center", "y"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X),
+        CommandMeta::new("Distribute X")
+            .with_category("Node Graph")
+            .with_keywords(["distribute", "x", "horizontal"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_Y),
+        CommandMeta::new("Distribute Y")
+            .with_category("Node Graph")
+            .with_keywords(["distribute", "y", "vertical"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
     );
 
     registry.register(

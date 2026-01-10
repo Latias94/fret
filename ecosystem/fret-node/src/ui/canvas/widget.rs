@@ -25,13 +25,16 @@ use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use crate::ui::commands::{
+    CMD_NODE_GRAPH_ALIGN_BOTTOM, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_CENTER_Y,
+    CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_ALIGN_TOP,
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
-    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_ALL,
-    CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
-    CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_NUDGE_DOWN, CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT,
-    CMD_NODE_GRAPH_NUDGE_LEFT_FAST, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
-    CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_DISTRIBUTE_Y,
+    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION,
+    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
+    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_NUDGE_DOWN,
+    CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT, CMD_NODE_GRAPH_NUDGE_LEFT_FAST,
+    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
+    CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
     CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
@@ -86,6 +89,18 @@ use super::state::{
     SearcherState, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AlignDistributeMode {
+    AlignLeft,
+    AlignRight,
+    AlignTop,
+    AlignBottom,
+    AlignCenterX,
+    AlignCenterY,
+    DistributeX,
+    DistributeY,
+}
 
 /// Retained node-graph canvas widget (MVP).
 ///
@@ -1532,6 +1547,410 @@ impl NodeGraphCanvas {
         }
 
         let _ = self.commit_ops(host, window, Some("Nudge"), ops);
+    }
+
+    fn align_or_distribute_selection<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        mode: AlignDistributeMode,
+    ) {
+        let selected_nodes = snapshot.selected_nodes.clone();
+        let selected_groups = snapshot.selected_groups.clone();
+        if selected_nodes.is_empty() && selected_groups.is_empty() {
+            return;
+        }
+
+        let geom = self.canvas_geometry(&*host, snapshot);
+
+        let ops = self
+            .graph
+            .read_ref(host, |g| {
+                #[derive(Clone, Copy)]
+                enum ElementId {
+                    Node(GraphNodeId),
+                    Group(crate::core::GroupId),
+                }
+
+                #[derive(Clone, Copy)]
+                struct Elem {
+                    id: ElementId,
+                    x: f32,
+                    y: f32,
+                    w: f32,
+                    h: f32,
+                }
+
+                let selected_groups_set: std::collections::HashSet<crate::core::GroupId> =
+                    selected_groups.iter().copied().collect();
+
+                let mut moved_by_group: std::collections::HashSet<GraphNodeId> =
+                    std::collections::HashSet::new();
+                for (&node_id, node) in &g.nodes {
+                    if let Some(parent) = node.parent
+                        && selected_groups_set.contains(&parent)
+                    {
+                        moved_by_group.insert(node_id);
+                    }
+                }
+
+                let mut elems: Vec<Elem> = Vec::new();
+                for node_id in &selected_nodes {
+                    let Some(node_geom) = geom.nodes.get(node_id) else {
+                        continue;
+                    };
+                    elems.push(Elem {
+                        id: ElementId::Node(*node_id),
+                        x: node_geom.rect.origin.x.0,
+                        y: node_geom.rect.origin.y.0,
+                        w: node_geom.rect.size.width.0,
+                        h: node_geom.rect.size.height.0,
+                    });
+                }
+                for group_id in &selected_groups {
+                    let Some(group) = g.groups.get(group_id) else {
+                        continue;
+                    };
+                    elems.push(Elem {
+                        id: ElementId::Group(*group_id),
+                        x: group.rect.origin.x,
+                        y: group.rect.origin.y,
+                        w: group.rect.size.width,
+                        h: group.rect.size.height,
+                    });
+                }
+
+                if elems.len() < 2 {
+                    return Vec::new();
+                }
+
+                let mut min_x = f32::INFINITY;
+                let mut min_y = f32::INFINITY;
+                let mut max_x = f32::NEG_INFINITY;
+                let mut max_y = f32::NEG_INFINITY;
+                for e in &elems {
+                    min_x = min_x.min(e.x);
+                    min_y = min_y.min(e.y);
+                    max_x = max_x.max(e.x + e.w);
+                    max_y = max_y.max(e.y + e.h);
+                }
+                if !min_x.is_finite()
+                    || !min_y.is_finite()
+                    || !max_x.is_finite()
+                    || !max_y.is_finite()
+                {
+                    return Vec::new();
+                }
+
+                let target_left = min_x;
+                let target_top = min_y;
+                let target_right = max_x;
+                let target_bottom = max_y;
+                let target_center_x = 0.5 * (min_x + max_x);
+                let target_center_y = 0.5 * (min_y + max_y);
+
+                let mut ops: Vec<GraphOp> = Vec::new();
+
+                let mut per_group_delta: std::collections::HashMap<
+                    crate::core::GroupId,
+                    CanvasPoint,
+                > = std::collections::HashMap::new();
+                let mut per_node_delta: std::collections::HashMap<GraphNodeId, CanvasPoint> =
+                    std::collections::HashMap::new();
+
+                match mode {
+                    AlignDistributeMode::AlignLeft => {
+                        for e in &elems {
+                            let dx = target_left - e.x;
+                            if dx.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::AlignRight => {
+                        for e in &elems {
+                            let new_left = target_right - e.w;
+                            let dx = new_left - e.x;
+                            if dx.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::AlignTop => {
+                        for e in &elems {
+                            let dy = target_top - e.y;
+                            if dy.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::AlignBottom => {
+                        for e in &elems {
+                            let new_top = target_bottom - e.h;
+                            let dy = new_top - e.y;
+                            if dy.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::AlignCenterX => {
+                        for e in &elems {
+                            let cur = e.x + 0.5 * e.w;
+                            let dx = target_center_x - cur;
+                            if dx.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::AlignCenterY => {
+                        for e in &elems {
+                            let cur = e.y + 0.5 * e.h;
+                            let dy = target_center_y - cur;
+                            if dy.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::DistributeX => {
+                        if elems.len() < 3 {
+                            return Vec::new();
+                        }
+                        let mut sorted = elems;
+                        sorted.sort_by(|a, b| {
+                            a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal)
+                        });
+                        let first = sorted.first().copied().unwrap();
+                        let last = sorted.last().copied().unwrap();
+                        let c0 = first.x + 0.5 * first.w;
+                        let c1 = last.x + 0.5 * last.w;
+                        let span = c1 - c0;
+                        if !span.is_finite() || span.abs() <= 1.0e-6 {
+                            return Vec::new();
+                        }
+                        let step = span / (sorted.len() as f32 - 1.0);
+                        for (ix, e) in sorted.iter().enumerate().skip(1).take(sorted.len() - 2) {
+                            let desired = c0 + (ix as f32) * step;
+                            let cur = e.x + 0.5 * e.w;
+                            let dx = desired - cur;
+                            if dx.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: dx, y: 0.0 });
+                                }
+                            }
+                        }
+                    }
+                    AlignDistributeMode::DistributeY => {
+                        if elems.len() < 3 {
+                            return Vec::new();
+                        }
+                        let mut sorted = elems;
+                        sorted.sort_by(|a, b| {
+                            a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal)
+                        });
+                        let first = sorted.first().copied().unwrap();
+                        let last = sorted.last().copied().unwrap();
+                        let c0 = first.y + 0.5 * first.h;
+                        let c1 = last.y + 0.5 * last.h;
+                        let span = c1 - c0;
+                        if !span.is_finite() || span.abs() <= 1.0e-6 {
+                            return Vec::new();
+                        }
+                        let step = span / (sorted.len() as f32 - 1.0);
+                        for (ix, e) in sorted.iter().enumerate().skip(1).take(sorted.len() - 2) {
+                            let desired = c0 + (ix as f32) * step;
+                            let cur = e.y + 0.5 * e.h;
+                            let dy = desired - cur;
+                            if dy.abs() <= 1.0e-9 {
+                                continue;
+                            }
+                            match e.id {
+                                ElementId::Group(id) => {
+                                    per_group_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                                ElementId::Node(id) => {
+                                    per_node_delta.insert(id, CanvasPoint { x: 0.0, y: dy });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Apply group deltas first (and move their child nodes).
+                let mut groups_sorted = selected_groups.clone();
+                groups_sorted.sort();
+                for group_id in groups_sorted {
+                    let Some(delta) = per_group_delta.get(&group_id).copied() else {
+                        continue;
+                    };
+                    let Some(group) = g.groups.get(&group_id) else {
+                        continue;
+                    };
+                    let from = group.rect;
+                    let to = crate::core::CanvasRect {
+                        origin: CanvasPoint {
+                            x: from.origin.x + delta.x,
+                            y: from.origin.y + delta.y,
+                        },
+                        size: from.size,
+                    };
+                    if from != to {
+                        ops.push(GraphOp::SetGroupRect {
+                            id: group_id,
+                            from,
+                            to,
+                        });
+                    }
+
+                    for (&node_id, node) in &g.nodes {
+                        if node.parent != Some(group_id) {
+                            continue;
+                        }
+                        let from = node.pos;
+                        let to = CanvasPoint {
+                            x: from.x + delta.x,
+                            y: from.y + delta.y,
+                        };
+                        if from != to {
+                            ops.push(GraphOp::SetNodePos {
+                                id: node_id,
+                                from,
+                                to,
+                            });
+                        }
+                    }
+                }
+
+                // Apply node deltas for nodes not moved by a selected group.
+                let mut nodes_sorted = selected_nodes.clone();
+                nodes_sorted.sort();
+                for node_id in nodes_sorted {
+                    if moved_by_group.contains(&node_id) {
+                        continue;
+                    }
+                    let Some(delta) = per_node_delta.get(&node_id).copied() else {
+                        continue;
+                    };
+                    let Some(node) = g.nodes.get(&node_id) else {
+                        continue;
+                    };
+                    let from = node.pos;
+                    let mut to = CanvasPoint {
+                        x: from.x + delta.x,
+                        y: from.y + delta.y,
+                    };
+
+                    // Reuse the same extent constraints as drag/nudge.
+                    if let Some(node_geom) = geom.nodes.get(&node_id) {
+                        let node_w = node_geom.rect.size.width.0;
+                        let node_h = node_geom.rect.size.height.0;
+
+                        if let Some(extent) = snapshot.interaction.node_extent {
+                            let min_x = extent.origin.x;
+                            let min_y = extent.origin.y;
+                            let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
+                            let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+
+                        if let Some(parent) = node.parent
+                            && let Some(group) = g.groups.get(&parent)
+                        {
+                            let min_x = group.rect.origin.x;
+                            let min_y = group.rect.origin.y;
+                            let max_x =
+                                group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
+                            let max_y =
+                                group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+                    }
+
+                    if from != to {
+                        ops.push(GraphOp::SetNodePos {
+                            id: node_id,
+                            from,
+                            to,
+                        });
+                    }
+                }
+
+                ops
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if ops.is_empty() {
+            return;
+        }
+
+        let label = match mode {
+            AlignDistributeMode::AlignLeft => "Align Left",
+            AlignDistributeMode::AlignRight => "Align Right",
+            AlignDistributeMode::AlignTop => "Align Top",
+            AlignDistributeMode::AlignBottom => "Align Bottom",
+            AlignDistributeMode::AlignCenterX => "Align Center X",
+            AlignDistributeMode::AlignCenterY => "Align Center Y",
+            AlignDistributeMode::DistributeX => "Distribute X",
+            AlignDistributeMode::DistributeY => "Distribute Y",
+        };
+        let _ = self.commit_ops(host, window, Some(label), ops);
     }
 
     pub(super) fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
@@ -4287,6 +4706,94 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.invalidate_self(Invalidation::Paint);
                 true
             }
+            CMD_NODE_GRAPH_ALIGN_LEFT => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignLeft,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ALIGN_RIGHT => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignRight,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ALIGN_TOP => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignTop,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ALIGN_BOTTOM => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignBottom,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ALIGN_CENTER_X => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignCenterX,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_ALIGN_CENTER_Y => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::AlignCenterY,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_DISTRIBUTE_X => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::DistributeX,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_DISTRIBUTE_Y => {
+                self.align_or_distribute_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    AlignDistributeMode::DistributeY,
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             _ => false,
         }
     }
@@ -6156,11 +6663,11 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use crate::core::{
-        CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
-        PortCapacity, PortDirection, PortId, PortKey, PortKind,
+        CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
+        Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use crate::rules::EdgeEndpoint;
-    use crate::ui::commands::CMD_NODE_GRAPH_NUDGE_RIGHT;
+    use crate::ui::commands::{CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_NUDGE_RIGHT};
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
     use super::NodeGraphCanvas;
@@ -6430,6 +6937,49 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 parent: None,
                 size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        (graph, a, b)
+    }
+
+    fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 5.0 },
+                parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
                 collapsed: false,
                 ports: Vec::new(),
                 data: Value::Null,
@@ -6853,6 +7403,41 @@ mod tests {
         assert_eq!(
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 0.0 }
+        );
+    }
+
+    #[test]
+    fn align_left_moves_selected_nodes_and_records_history_entry() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ALIGN_LEFT)));
+        assert_eq!(canvas.history.undo_len(), 1);
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 0.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 0.0);
+
+        assert!(canvas.undo_last(&mut host, None));
+        assert_eq!(
+            read_node_pos(&mut host, &graph, a),
+            CanvasPoint { x: 0.0, y: 0.0 }
+        );
+        assert_eq!(
+            read_node_pos(&mut host, &graph, b),
+            CanvasPoint { x: 10.0, y: 5.0 }
         );
     }
 }
