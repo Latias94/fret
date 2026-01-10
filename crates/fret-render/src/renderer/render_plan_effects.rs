@@ -87,7 +87,6 @@ pub(super) fn apply_chain_in_place(
             dst_size: mask_size,
             dst_scissor: None,
             uniform_index,
-            viewport_rect: scissor,
         }));
         Some(MaskRef {
             target: mask_target,

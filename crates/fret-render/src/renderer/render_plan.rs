@@ -1,5 +1,4 @@
 use super::frame_targets::downsampled_size;
-use super::intermediate_pool::estimate_texture_bytes;
 use super::render_plan_effects as effects;
 use super::util::union_scissor;
 use super::{EffectMarkerKind, OrderedDraw, SceneEncoding, ScissorRect};
@@ -67,7 +66,6 @@ pub(super) struct ClipMaskPass {
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<ScissorRect>,
     pub(super) uniform_index: u32,
-    pub(super) viewport_rect: ScissorRect,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1122,6 +1120,7 @@ fn append_postprocess(
 #[cfg(test)]
 mod tests {
     use super::super::EffectMarker;
+    use super::super::intermediate_pool::estimate_texture_bytes;
     use super::*;
 
     fn strip_releases<'a>(passes: &'a [RenderPlanPass]) -> Vec<&'a RenderPlanPass> {
