@@ -29,6 +29,5 @@ Fret does not use React context. Direction outcomes are represented as:
 
 ## Gaps / intentional differences
 
-- Not implemented: a built-in "direction context" provider mechanism; callers must thread an
-  inherited direction explicitly.
-
+- Pass: A lightweight, component-layer provider mechanism exists via
+  `primitives::direction::with_direction_provider(...)` + `inherited_direction(...)`.
