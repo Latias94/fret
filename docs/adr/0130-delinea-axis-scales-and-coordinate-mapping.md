@@ -36,8 +36,8 @@ Related context:
 
 Introduce an explicit scale kind:
 
-- v1: `Value`, `Category`
-- v2 (follow-up): `Time`, `Log`, custom user scales
+- v1: `Value`, `Category`, `Time` (see ADR 0139)
+- v2 (follow-up): `Log`, custom user scales
 
 This avoids “implicit axis type” drift, and keeps future extensions additive.
 

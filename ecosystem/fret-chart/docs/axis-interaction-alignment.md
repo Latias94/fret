@@ -5,6 +5,9 @@ and how it maps to `delinea`’s headless semantics.
 
 The goal is to provide an ImPlot-like “muscle memory” baseline without committing to ImPlot API compatibility.
 
+For ECharts alignment and durable contracts, prefer the ADR series under `docs/adr/0128-0143-*` and
+`docs/delinea-echarts-alignment.md`.
+
 ## Coordinate conventions
 
 - Screen space: Fret logical pixels, origin at the top-left of the widget bounds.
@@ -33,6 +36,7 @@ The defaults are intentionally aligned with ImPlot:
 
 - Fit view to data: `F` (focused canvas)
 - Reset view to auto: `R` (focused canvas)
+- Clear brush selection: `A` (focused canvas)
 - Toggle X filter mode: `M` (focused canvas)
   - `Filter` (default): X window filters bounds/LOD and slices rows (best performance, auto-scales Y to visible X).
   - `None`: X window does not filter bounds/LOD and does not slice rows (keeps global Y scale, more expensive).
@@ -46,15 +50,24 @@ Box zoom selection modifiers (ImPlot style):
 Note: if a modifier is required to start the drag gesture (e.g. `Shift + LMB drag`), it is treated as part of the
 gesture chord and does not implicitly apply edge expansion.
 
+## Multi-axis routing (P0)
+
+When multiple X/Y axes are present, `ChartCanvas` follows the “active axis pair” contract (ADR 0134):
+
+- Hovering an axis band updates the active axis for that dimension.
+- Interactions in the plot region target the active axis pair (X + Y), unless constrained by modifiers.
+- Axis-band hit tests take precedence over plot-region fallback.
+- Y slider UI targets the active Y axis (left/right) based on axis-band routing.
+
 ## Axis locks (P0)
 
-`ChartCanvas` currently supports UI-level axis locks:
+`ChartCanvas` supports per-axis interaction locks:
 
 - Lock pan: prevents panning the corresponding axis while dragging.
 - Lock zoom: prevents zooming the corresponding axis via wheel or box zoom.
 
-These locks are **pure UI policy** (local to the widget) and do not modify the chart spec/model.
-For persistent axis constraints, use `delinea::AxisRange` in the spec/model:
+These locks live in `delinea::ChartState.axis_locks` and gate **interaction-derived** actions only
+(see ADR 0135). For persistent axis constraints, use `delinea::AxisRange` in the spec/model:
 
 - `AxisRange::Fixed { min, max }` disables interaction on that axis.
 - `AxisRange::LockMin { .. }` / `LockMax { .. }` clamp interaction updates.
@@ -74,9 +87,12 @@ Axis targeting is based on the rendered layout:
 All UI input is mapped into headless actions:
 
 - Hover: `Action::HoverAt { point: widget-local px }` (logical pixels)
-- Pan: `Action::SetDataWindowX/Y { axis, window: Some(DataWindow) }`
-- Zoom (wheel/box): same as above, with windows computed from pixel-space interaction
-- Reset: `Action::SetDataWindowX/Y { axis, window: None }`
+- Toggle locks: `Action::ToggleAxisPanLock` / `Action::ToggleAxisZoomLock`
+- Pan: `Action::PanDataWindowXFromBase` / `Action::PanDataWindowYFromBase`
+- Wheel zoom: `Action::ZoomDataWindowXFromBase` / `Action::ZoomDataWindowYFromBase`
+- Box zoom: `Action::SetViewWindow2DFromZoom` (plot-region drag) and `Action::SetDataWindow*FromZoom` (axis slider)
+- Brush selection: `Action::SetBrushSelection2D` / `Action::ClearBrushSelection` (selection output; does not zoom)
+- Reset: `Action::SetViewWindow2D { x: None, y: None }` (plot) or `Action::SetDataWindowX/Y { window: None }` (single axis)
 
 ## Hover / crosshair / tooltip (P0)
 
@@ -89,7 +105,8 @@ Current behavior is intentionally ImPlot-like:
 
 ## Known limitations
 
-- Only a single primary X/Y axis is supported (no multi-axis / multi-grid yet).
-- Axis rendering is minimal (no grid lines, titles, legends, or rich formatting yet).
+- Multi-grid layout is not implemented yet; the current widget assumes a single plot rect.
+- Axis rendering is intentionally minimal (no grid lines, titles, or rich formatting yet).
 - Crosshair is currently rendered as solid lines (no dash pattern yet).
 - Fit/reset requires focus (currently acquired by clicking the canvas).
+- Brush selection highlight is minimal in v1: a selection rect is rendered, and non-matching axis-pair series are dimmed.

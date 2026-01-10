@@ -72,6 +72,16 @@ However, many ECharts transforms are not representable as a single range:
 - aggregation and grouping,
 - stacking that needs intermediate columns.
 
+## Stacking note (v1)
+
+We currently support a minimal subset of ECharts stacking for `SeriesKind::Line` via:
+
+- `SeriesSpec.stack` + `SeriesSpec.stack_strategy`
+
+This is intentionally not modeled as a full dataset transform yet. The long-term direction is to move
+stacking into the transform pipeline as derived columns (base/top), so stacked areas/bars can share the same
+headless contract without UI-specific logic.
+
 ## Next steps (P0 → P1)
 
 1. Introduce an internal selection type that can represent:

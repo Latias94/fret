@@ -25,6 +25,26 @@ pub fn data_at_x_in_rect(window: DataWindow, x_px: f32, rect: Rect) -> f64 {
     data_at_px(window, x_px, rect.origin.x.0, rect.size.width.0)
 }
 
+pub fn data_at_y_in_rect(window: DataWindow, y_px: f32, rect: Rect) -> f64 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 {
+        return window.min;
+    }
+
+    let span_px = rect.size.height.0;
+    if !span_px.is_finite() || span_px <= 0.0 {
+        return window.min;
+    }
+
+    // Y axis is inverted in screen space (top-down), but data space uses the conventional
+    // bottom-up orientation.
+    let t = ((y_px - rect.origin.y.0) / span_px).clamp(0.0, 1.0) as f64;
+    window.min + (1.0 - t) * span
+}
+
 pub fn category_domain_window(axis: &AxisModel) -> Option<DataWindow> {
     let AxisScale::Category(scale) = &axis.scale else {
         return None;
@@ -47,6 +67,7 @@ pub fn format_value(axis: &AxisModel, window: DataWindow, value: f64) -> String 
     match &axis.scale {
         AxisScale::Value(_) => crate::format::format_tick_value(window, value),
         AxisScale::Category(scale) => format_category_value(scale, value),
+        AxisScale::Time(_) => crate::time_axis::format_tick(window, value),
     }
 }
 
@@ -54,6 +75,30 @@ pub fn axis_ticks(axis: &AxisModel, window: DataWindow, target_count: usize) -> 
     match &axis.scale {
         AxisScale::Value(_) => crate::format::nice_ticks(window, target_count),
         AxisScale::Category(scale) => category_ticks(scale, window, target_count),
+        AxisScale::Time(_) => crate::time_axis::ticks(window, target_count),
+    }
+}
+
+pub fn axis_ticks_with_labels(
+    axis: &AxisModel,
+    window: DataWindow,
+    target_count: usize,
+) -> Vec<(f64, String)> {
+    let ticks = axis_ticks(axis, window, target_count);
+    match &axis.scale {
+        AxisScale::Time(_) => ticks
+            .into_iter()
+            .map(|value| {
+                (
+                    value,
+                    crate::time_axis::format_tick_with_target(window, value, target_count),
+                )
+            })
+            .collect(),
+        _ => ticks
+            .into_iter()
+            .map(|value| (value, format_axis_tick(axis, window, value)))
+            .collect(),
     }
 }
 
@@ -61,6 +106,7 @@ pub fn format_axis_tick(axis: &AxisModel, window: DataWindow, value: f64) -> Str
     match &axis.scale {
         AxisScale::Value(_) => crate::format::format_tick_value(window, value),
         AxisScale::Category(scale) => format_category_value(scale, value),
+        AxisScale::Time(_) => crate::time_axis::format_tick(window, value),
     }
 }
 
@@ -75,6 +121,24 @@ pub fn axis_ticks_for(
         .get(&axis_id)
         .map(|axis| axis_ticks(axis, window, count))
         .unwrap_or_else(|| crate::format::nice_ticks(window, count))
+}
+
+pub fn axis_ticks_with_labels_for(
+    model: &ChartModel,
+    axis_id: AxisId,
+    window: DataWindow,
+    count: usize,
+) -> Vec<(f64, String)> {
+    model
+        .axes
+        .get(&axis_id)
+        .map(|axis| axis_ticks_with_labels(axis, window, count))
+        .unwrap_or_else(|| {
+            crate::format::nice_ticks(window, count)
+                .into_iter()
+                .map(|value| (value, crate::format::format_tick_value(window, value)))
+                .collect()
+        })
 }
 
 pub fn format_value_for(

@@ -31,6 +31,7 @@ define_id!(GridId);
 define_id!(DatasetId);
 define_id!(FieldId);
 define_id!(TransformId);
+define_id!(StackId);
 define_id!(LinkGroupId);
 define_id!(DataZoomId);
 

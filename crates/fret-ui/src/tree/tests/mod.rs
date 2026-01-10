@@ -7,7 +7,7 @@ use fret_runtime::{BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Mo
 use slotmap::KeyData;
 use std::sync::{
     Arc,
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 #[derive(Default)]

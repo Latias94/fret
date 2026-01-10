@@ -5,10 +5,11 @@ use fret_core::Rect;
 use crate::engine::model::{
     AxisModel, ChartModel, DatasetModel, GridModel, ModelError, SeriesModel,
 };
-use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId, StackId};
 use crate::scale::AxisScale;
 use crate::spec::{
     AreaBaseline, AxisKind, AxisPosition, AxisRange, FieldSpec, SeriesEncode, SeriesKind,
+    StackStrategy,
 };
 
 #[cfg(feature = "serde")]
@@ -311,6 +312,11 @@ impl ChartPatch {
                             reason: "series.kind=Band requires encode.y2",
                         });
                     }
+                    if series.kind != SeriesKind::Bar && series.bar_layout != Default::default() {
+                        return Err(ModelError::InvalidSpec {
+                            reason: "bar_layout is only supported for Bar series in v1",
+                        });
+                    }
                     if series.kind == SeriesKind::Bar {
                         let Some(x_axis) = model.axes.get(&series.x_axis) else {
                             return Err(ModelError::MissingReference {
@@ -536,6 +542,31 @@ fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
                 kind: "axis.y_axis",
             });
         }
+
+        if series.stack.is_some()
+            && !matches!(
+                series.kind,
+                SeriesKind::Line | SeriesKind::Area | SeriesKind::Bar
+            )
+        {
+            return Err(ModelError::InvalidSpec {
+                reason: "stack is only supported for line/area/bar in v1",
+            });
+        }
+    }
+
+    let mut stack_groups: BTreeMap<StackId, (AxisId, AxisId, DatasetId, FieldId, StackStrategy)> =
+        BTreeMap::new();
+    for s in model.series.values() {
+        let Some(stack) = s.stack else {
+            continue;
+        };
+        let key = (s.x_axis, s.y_axis, s.dataset, s.encode.x, s.stack_strategy);
+        if let Some(existing) = stack_groups.insert(stack, key) {
+            if existing != key {
+                return Err(ModelError::StackGroupMismatch { stack });
+            }
+        }
     }
 
     Ok(())
@@ -641,6 +672,9 @@ pub struct SeriesPatch {
     pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
+    pub stack: Option<StackId>,
+    pub stack_strategy: StackStrategy,
+    pub bar_layout: crate::spec::BarLayoutSpec,
     pub visible: Option<bool>,
     pub area_baseline: Option<AreaBaseline>,
 }
@@ -655,8 +689,11 @@ impl From<SeriesPatch> for SeriesModel {
             encode: p.encode,
             x_axis: p.x_axis,
             y_axis: p.y_axis,
+            stack: p.stack,
+            stack_strategy: p.stack_strategy,
             visible: p.visible.unwrap_or(true),
             area_baseline: p.area_baseline.unwrap_or_default(),
+            bar_layout: p.bar_layout,
         }
     }
 }

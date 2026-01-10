@@ -1,6 +1,6 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
+use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId};
 use crate::scale::AxisScale;
 
 #[cfg(feature = "serde")]
@@ -15,6 +15,7 @@ pub struct ChartSpec {
     pub grids: Vec<GridSpec>,
     pub axes: Vec<AxisSpec>,
     pub data_zoom_x: Vec<DataZoomXSpec>,
+    pub data_zoom_y: Vec<DataZoomYSpec>,
     pub axis_pointer: Option<AxisPointerSpec>,
     pub series: Vec<SeriesSpec>,
 }
@@ -160,12 +161,16 @@ pub struct AxisSpec {
     pub range: Option<AxisRange>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DataZoomXSpec {
     pub id: DataZoomId,
     pub axis: AxisId,
     pub filter_mode: FilterMode,
+    /// Minimum allowed span (in data value space) for interaction-derived zoom updates.
+    pub min_value_span: Option<f64>,
+    /// Maximum allowed span (in data value space) for interaction-derived zoom updates.
+    pub max_value_span: Option<f64>,
 }
 
 impl Default for DataZoomXSpec {
@@ -174,6 +179,30 @@ impl Default for DataZoomXSpec {
             id: DataZoomId::new(0),
             axis: AxisId::new(0),
             filter_mode: FilterMode::Filter,
+            min_value_span: None,
+            max_value_span: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DataZoomYSpec {
+    pub id: DataZoomId,
+    pub axis: AxisId,
+    /// Minimum allowed span (in data value space) for interaction-derived zoom updates.
+    pub min_value_span: Option<f64>,
+    /// Maximum allowed span (in data value space) for interaction-derived zoom updates.
+    pub max_value_span: Option<f64>,
+}
+
+impl Default for DataZoomYSpec {
+    fn default() -> Self {
+        Self {
+            id: DataZoomId::new(0),
+            axis: AxisId::new(0),
+            min_value_span: None,
+            max_value_span: None,
         }
     }
 }
@@ -185,7 +214,8 @@ pub struct AxisPointerSpec {
     pub trigger: AxisPointerTrigger,
     /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
     pub snap: bool,
-    /// Maximum distance (in pixels) to activate the pointer/tooltip.
+    /// For `trigger=Item`, this is the maximum distance (in pixels) to activate the pointer/tooltip.
+    /// For `trigger=Axis`, this only gates whether `AxisPointerOutput.hit` is populated (marker dot, snap anchor).
     pub trigger_distance_px: f32,
     /// Minimum pointer movement (in pixels) to recompute hit testing.
     pub throttle_px: f32,
@@ -195,9 +225,9 @@ pub struct AxisPointerSpec {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AxisPointerTrigger {
     /// Similar to ECharts tooltip trigger="item": show details for a single series hit.
-    #[default]
     Item,
     /// Similar to ECharts tooltip trigger="axis": show values for all visible series at the same X.
+    #[default]
     Axis,
 }
 
@@ -205,7 +235,7 @@ impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
-            trigger: AxisPointerTrigger::Item,
+            trigger: AxisPointerTrigger::Axis,
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,
@@ -221,6 +251,150 @@ pub enum SeriesKind {
     /// A filled band between `encode.y` (low) and `encode.y2` (high).
     Band,
     Bar,
+    /// A point series (ECharts `series.scatter`-like).
+    ///
+    /// v1 semantics:
+    /// - rendering uses point marks (not connected by segments),
+    /// - large-data mode may downsample to a pixel-driven budget.
+    Scatter,
+}
+
+/// Bar width specification (ECharts-inspired).
+///
+/// ECharts semantics:
+/// - number: pixels,
+/// - percent string (e.g. `"30%"`): fraction of category band width.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BarWidthSpec {
+    Px(f64),
+    Band(f64),
+}
+
+/// Bar layout parameters (ECharts-inspired).
+///
+/// v1:
+/// - `bar_width` supports ECharts-style px/percent, but is currently only used for category axes.
+/// - `bar_gap` and `bar_category_gap` are expressed as ratios (percent strings are accepted when
+///   `serde` is enabled).
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct BarLayoutSpec {
+    /// Bar width (`series.barWidth`).
+    ///
+    /// - `None` means auto width based on group slot count and gaps.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_bar_width_opt")
+    )]
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_bar_width_opt"))]
+    pub bar_width: Option<BarWidthSpec>,
+    /// Gap between adjacent bar slots, expressed as a multiple of `bar_width`.
+    ///
+    /// Example: `0.3` means the gap is `0.3 * bar_width`.
+    ///
+    /// Negative values are allowed to overlap bars (ECharts `barGap`-like semantics):
+    /// `-1.0` means "full overlap" (all slots share the same center).
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_ratio_opt")
+    )]
+    pub bar_gap: Option<f64>,
+    /// Outer padding inside each category band, expressed as a fraction of band width.
+    ///
+    /// Example: `0.2` means 20% of the band is reserved as padding.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "deserialize_ratio_opt")
+    )]
+    pub bar_category_gap: Option<f64>,
+}
+
+#[cfg(feature = "serde")]
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum BarWidthInput {
+    Num(f64),
+    Str(String),
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_bar_width_opt<'de, D>(deserializer: D) -> Result<Option<BarWidthSpec>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input = Option::<BarWidthInput>::deserialize(deserializer)?;
+    let Some(input) = input else {
+        return Ok(None);
+    };
+    match input {
+        BarWidthInput::Num(v) => Ok(Some(BarWidthSpec::Px(v))),
+        BarWidthInput::Str(s) => {
+            let Some(r) = parse_percent_ratio(&s) else {
+                return Err(serde::de::Error::custom("invalid barWidth percent string"));
+            };
+            Ok(Some(BarWidthSpec::Band(r)))
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+fn serialize_bar_width_opt<S>(
+    value: &Option<BarWidthSpec>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        None => serializer.serialize_none(),
+        Some(BarWidthSpec::Px(v)) => serializer.serialize_some(v),
+        Some(BarWidthSpec::Band(r)) => serializer.serialize_some(&format!("{:.6}%", r * 100.0)),
+    }
+}
+
+#[cfg(feature = "serde")]
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum RatioInput {
+    Num(f64),
+    Str(String),
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_ratio_opt<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input = Option::<RatioInput>::deserialize(deserializer)?;
+    let Some(input) = input else {
+        return Ok(None);
+    };
+    match input {
+        RatioInput::Num(v) => Ok(Some(v)),
+        RatioInput::Str(s) => parse_percent_ratio(&s)
+            .ok_or_else(|| serde::de::Error::custom("invalid percent string")),
+    }
+}
+
+#[cfg(feature = "serde")]
+fn parse_percent_ratio(s: &str) -> Option<f64> {
+    let s = s.trim();
+    let (number, suffix) = s.split_at(s.len().saturating_sub(1));
+    if suffix != "%" {
+        return None;
+    }
+    let v: f64 = number.trim().parse().ok()?;
+    if v.is_finite() { Some(v / 100.0) } else { None }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum StackStrategy {
+    /// Match ECharts default: stack positive and negative values separately.
+    #[default]
+    SameSign,
+    /// Stack all values together (including mixed sign).
+    All,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -254,6 +428,14 @@ pub struct SeriesSpec {
     pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
+    /// Stack group id (ECharts `series.stack`).
+    ///
+    /// v1: only supported for `SeriesKind::Line`, `SeriesKind::Area`, and `SeriesKind::Bar`.
+    pub stack: Option<StackId>,
+    /// Stacking strategy (ECharts `series.stackStrategy`).
+    pub stack_strategy: StackStrategy,
+    /// Bar layout parameters (only used when `kind == Bar`).
+    pub bar_layout: BarLayoutSpec,
     /// Area baseline configuration (only used when `kind == Area`).
     pub area_baseline: Option<AreaBaseline>,
 }
