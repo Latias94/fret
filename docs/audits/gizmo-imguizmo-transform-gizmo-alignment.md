@@ -208,7 +208,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Per-axis colors + hover color | Yes | Yes | **Aligned** | `GizmoConfig::{x_color,y_color,z_color,hover_color}`. |
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
-| Axis flip, axis masking, axis/plane hide limits | Yes | Partial | **Not implemented** | ImGuizmo has `AllowAxisFlip`, `SetAxisMask`, `SetAxisLimit`, `SetPlaneLimit`. |
+| Axis flip, axis masking, axis/plane hide limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_hide_limit_px`, `plane_hide_limit_px2` in `GizmoConfig`. Gaps: thresholds are pixel-based (not clip-space units) and currently applied to translate/scale axes+planes, not rotate rings. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Not implemented** | Separate feature; can be built as another tool using similar math. |
 | Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
 

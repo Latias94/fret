@@ -128,6 +128,20 @@ pub struct GizmoConfig {
     /// Note: uniform scaling (handle id 7) remains exclusive to `GizmoMode::Scale` to avoid
     /// center-handle conflicts with view-plane translation.
     pub universal_includes_scale: bool,
+    /// When `true` (default), axes may flip direction for better screen-space visibility
+    /// (ImGuizmo `AllowAxisFlip` behavior).
+    pub allow_axis_flip: bool,
+    /// Minimum projected axis length (in pixels) required for axis handles to be visible/pickable.
+    /// This primarily hides axes that are almost aligned with the view direction.
+    pub axis_hide_limit_px: f32,
+    /// Minimum projected plane quad area (in px^2) required for plane handles to be visible/pickable.
+    /// This primarily hides planes that are nearly edge-on in screen space.
+    pub plane_hide_limit_px2: f32,
+    /// Axis mask (true -> hidden) for X/Y/Z (ImGuizmo `SetAxisMask`).
+    ///
+    /// Mask semantics for plane handles follows ImGuizmo: if exactly one axis is hidden, only the
+    /// plane perpendicular to that axis is shown; if multiple axes are hidden, all planes are hidden.
+    pub axis_mask: [bool; 3],
     pub x_color: Color,
     pub y_color: Color,
     pub z_color: Color,
@@ -154,6 +168,10 @@ impl Default for GizmoConfig {
             show_view_axis_ring: true,
             view_axis_ring_radius_scale: 1.2,
             universal_includes_scale: true,
+            allow_axis_flip: true,
+            axis_hide_limit_px: 8.0,
+            plane_hide_limit_px2: 300.0,
+            axis_mask: [false; 3],
             x_color: Color {
                 r: 1.0,
                 g: 0.2,
@@ -385,6 +403,91 @@ impl Gizmo {
         }
     }
 
+    fn axis_is_masked(&self, axis_index: usize) -> bool {
+        self.config
+            .axis_mask
+            .get(axis_index)
+            .copied()
+            .unwrap_or(false)
+    }
+
+    fn plane_allowed_by_mask(&self, plane_axes: (usize, usize)) -> bool {
+        let (a, b) = plane_axes;
+        if a == b || a > 2 || b > 2 {
+            return false;
+        }
+        let masked = self.config.axis_mask;
+        let masked_count = masked.iter().filter(|m| **m).count();
+        if masked_count == 0 {
+            return true;
+        }
+        if masked_count == 1 {
+            // Show only the plane perpendicular to the masked axis.
+            let perp = 3usize.saturating_sub(a + b);
+            return perp <= 2 && masked[perp];
+        }
+        false
+    }
+
+    fn flip_axes_for_view(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        axes: [Vec3; 3],
+    ) -> [Vec3; 3] {
+        if !self.config.allow_axis_flip {
+            return axes;
+        }
+        let Some(length_world) = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        ) else {
+            return axes;
+        };
+
+        let mut out = axes;
+        for i in 0..3 {
+            let axis = axes[i].normalize_or_zero();
+            if axis.length_squared() == 0.0 {
+                continue;
+            }
+
+            let len_plus = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis,
+                length_world,
+            );
+            let len_minus = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                -axis,
+                length_world,
+            );
+
+            out[i] = match (len_plus, len_minus) {
+                (Some(a), Some(b)) => {
+                    if b > a + 1e-3 {
+                        -axis
+                    } else {
+                        axis
+                    }
+                }
+                (None, Some(_)) => -axis,
+                _ => axis,
+            };
+        }
+        out
+    }
+
     pub fn new(config: GizmoConfig) -> Self {
         Self {
             config,
@@ -433,7 +536,12 @@ impl Gizmo {
             return None;
         };
 
-        let axes = self.axis_dirs(&active_transform);
+        let axes = self.flip_axes_for_view(
+            view_projection,
+            viewport,
+            origin,
+            self.axis_dirs(&active_transform),
+        );
         let mut hovered: Option<HandleId> = None;
         let mut hovered_kind: Option<GizmoMode> = None;
         if self.state.active.is_none() && input.hovered {
@@ -1120,7 +1228,12 @@ impl Gizmo {
                 sum / (targets.len().max(1) as f32)
             }
         };
-        let axes = self.axis_dirs(&active_transform);
+        let axes = self.flip_axes_for_view(
+            view_projection,
+            viewport,
+            origin,
+            self.axis_dirs(&active_transform),
+        );
         match self.config.mode {
             GizmoMode::Translate => {
                 let mut out = GizmoDrawList3d::default();
@@ -1547,13 +1660,29 @@ impl Gizmo {
             self.config.size_px,
         )
         .unwrap_or(1.0);
+        let axis_tip_len = length_world * self.translate_axis_tip_scale();
         let head_len = length_world * 0.18;
         let shaft_len = (length_world - head_len).max(length_world * 0.2);
-        for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), HandleId(1)),
-            ((axes[1], self.config.y_color), HandleId(2)),
-            ((axes[2], self.config.z_color), HandleId(3)),
+        for &(((axis_dir, color), handle), axis_index) in &[
+            (((axes[0], self.config.x_color), HandleId(1)), 0usize),
+            (((axes[1], self.config.y_color), HandleId(2)), 1usize),
+            (((axes[2], self.config.z_color), HandleId(3)), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
+            if let Some(len_px) = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+                axis_tip_len,
+            ) {
+                if len_px < self.config.axis_hide_limit_px {
+                    continue;
+                }
+            }
             let c = if self.is_handle_highlighted(GizmoMode::Translate, handle) {
                 self.config.hover_color
             } else {
@@ -1610,6 +1739,15 @@ impl Gizmo {
                 TranslateHandle::PlaneYZ,
             ), // YZ
         ] {
+            let plane_axes = match handle {
+                TranslateHandle::PlaneXY => (0usize, 1usize),
+                TranslateHandle::PlaneXZ => (0usize, 2usize),
+                TranslateHandle::PlaneYZ => (1usize, 2usize),
+                _ => continue,
+            };
+            if !self.plane_allowed_by_mask(plane_axes) {
+                continue;
+            }
             let handle_id = handle.id();
             let color = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
                 mix_alpha(self.config.hover_color, 0.85)
@@ -1618,6 +1756,14 @@ impl Gizmo {
             };
 
             let quad = translate_plane_quad_world(origin, u, v, off, size);
+            if let Some(p) = project_quad(view_projection, viewport, quad, self.config.depth_range)
+            {
+                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                    continue;
+                }
+            } else {
+                continue;
+            }
             for (a, b) in [
                 (quad[0], quad[1]),
                 (quad[1], quad[2]),
@@ -1694,11 +1840,26 @@ impl Gizmo {
 
         let mut out = Vec::new();
 
-        for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), HandleId(1)),
-            ((axes[1], self.config.y_color), HandleId(2)),
-            ((axes[2], self.config.z_color), HandleId(3)),
+        for &(((axis_dir, color), handle), axis_index) in &[
+            (((axes[0], self.config.x_color), HandleId(1)), 0usize),
+            (((axes[1], self.config.y_color), HandleId(2)), 1usize),
+            (((axes[2], self.config.z_color), HandleId(3)), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
+            if let Some(len_px) = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+                axis_tip_len,
+            ) {
+                if len_px < self.config.axis_hide_limit_px {
+                    continue;
+                }
+            }
             let axis_dir = axis_dir.normalize_or_zero();
             if axis_dir.length_squared() == 0.0 {
                 continue;
@@ -1747,6 +1908,15 @@ impl Gizmo {
                 TranslateHandle::PlaneYZ,
             ), // YZ
         ] {
+            let plane_axes = match handle {
+                TranslateHandle::PlaneXY => (0usize, 1usize),
+                TranslateHandle::PlaneXZ => (0usize, 2usize),
+                TranslateHandle::PlaneYZ => (1usize, 2usize),
+                _ => continue,
+            };
+            if !self.plane_allowed_by_mask(plane_axes) {
+                continue;
+            }
             let handle_id = handle.id();
             let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
                 mix_alpha(self.config.hover_color, 0.85)
@@ -1759,6 +1929,14 @@ impl Gizmo {
                 mix_alpha(outline, 0.30)
             };
             let quad = translate_plane_quad_world(origin, u, v, off, size);
+            if let Some(p) = project_quad(view_projection, viewport, quad, self.config.depth_range)
+            {
+                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                    continue;
+                }
+            } else {
+                continue;
+            }
             self.push_tri(
                 &mut out,
                 quad[0],
@@ -1825,11 +2003,14 @@ impl Gizmo {
         let segments: usize = 64;
         let mut out = Vec::with_capacity(segments * 3);
 
-        for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), HandleId(1)),
-            ((axes[1], self.config.y_color), HandleId(2)),
-            ((axes[2], self.config.z_color), HandleId(3)),
+        for &(((axis_dir, color), handle), axis_index) in &[
+            (((axes[0], self.config.x_color), HandleId(1)), 0usize),
+            (((axes[1], self.config.y_color), HandleId(2)), 1usize),
+            (((axes[2], self.config.z_color), HandleId(3)), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
             let axis_dir = axis_dir.normalize_or_zero();
             if axis_dir.length_squared() == 0.0 {
                 continue;
@@ -2079,11 +2260,35 @@ impl Gizmo {
 
         let mut out = Vec::new();
 
-        for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
-            ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
-            ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
+        for &(((axis_dir, color), handle), axis_index) in &[
+            (
+                ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
+                0usize,
+            ),
+            (
+                ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
+                1usize,
+            ),
+            (
+                ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
+                2usize,
+            ),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
+            if let Some(len_px) = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+                length_world,
+            ) {
+                if len_px < self.config.axis_hide_limit_px {
+                    continue;
+                }
+            }
             let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
             } else {
@@ -2128,6 +2333,15 @@ impl Gizmo {
                 ), // YZ
             ] {
                 let handle_id = handle.id();
+                let plane_axes = match handle {
+                    ScaleHandle::PlaneXY => (0usize, 1usize),
+                    ScaleHandle::PlaneXZ => (0usize, 2usize),
+                    ScaleHandle::PlaneYZ => (1usize, 2usize),
+                    _ => continue,
+                };
+                if !self.plane_allowed_by_mask(plane_axes) {
+                    continue;
+                }
                 let color = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
                     mix_alpha(self.config.hover_color, 0.85)
                 } else {
@@ -2135,6 +2349,15 @@ impl Gizmo {
                 };
 
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
+                if let Some(p) =
+                    project_quad(view_projection, viewport, quad, self.config.depth_range)
+                {
+                    if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
                 for (a, b) in [
                     (quad[0], quad[1]),
                     (quad[1], quad[2]),
@@ -2193,11 +2416,35 @@ impl Gizmo {
         let mut out = Vec::new();
 
         // Axis end boxes (screen-facing filled quads).
-        for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
-            ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
-            ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
+        for &(((axis_dir, color), handle), axis_index) in &[
+            (
+                ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
+                0usize,
+            ),
+            (
+                ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
+                1usize,
+            ),
+            (
+                ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
+                2usize,
+            ),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
+            if let Some(len_px) = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+                length_world,
+            ) {
+                if len_px < self.config.axis_hide_limit_px {
+                    continue;
+                }
+            }
             let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
             } else {
@@ -2243,6 +2490,15 @@ impl Gizmo {
                 ), // YZ
             ] {
                 let handle_id = handle.id();
+                let plane_axes = match handle {
+                    ScaleHandle::PlaneXY => (0usize, 1usize),
+                    ScaleHandle::PlaneXZ => (0usize, 2usize),
+                    ScaleHandle::PlaneYZ => (1usize, 2usize),
+                    _ => continue,
+                };
+                if !self.plane_allowed_by_mask(plane_axes) {
+                    continue;
+                }
                 let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
                     mix_alpha(self.config.hover_color, 0.85)
                 } else {
@@ -2254,6 +2510,15 @@ impl Gizmo {
                     mix_alpha(outline, 0.22)
                 };
                 let quad = translate_plane_quad_world(origin, u, v, off, size);
+                if let Some(p) =
+                    project_quad(view_projection, viewport, quad, self.config.depth_range)
+                {
+                    if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
                 self.push_tri(
                     &mut out,
                     quad[0],
@@ -2347,11 +2612,14 @@ impl Gizmo {
         };
 
         // Axis handles (distance to projected segments).
-        for &(axis_dir, handle) in &[
-            (axes[0], TranslateHandle::AxisX.id()),
-            (axes[1], TranslateHandle::AxisY.id()),
-            (axes[2], TranslateHandle::AxisZ.id()),
+        for &((axis_dir, handle), axis_index) in &[
+            ((axes[0], TranslateHandle::AxisX.id()), 0usize),
+            ((axes[1], TranslateHandle::AxisY.id()), 1usize),
+            ((axes[2], TranslateHandle::AxisZ.id()), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
             let a = origin;
             let b = origin + axis_dir * axis_tip_len;
             let Some(pa) = project_point(view_projection, viewport, a, self.config.depth_range)
@@ -2362,6 +2630,9 @@ impl Gizmo {
             else {
                 continue;
             };
+            if (pb.screen - pa.screen).length() < self.config.axis_hide_limit_px {
+                continue;
+            }
             let d = distance_point_to_segment_px(cursor, pa.screen, pb.screen);
             if d <= self.config.pick_radius_px {
                 consider(handle, d);
@@ -2371,16 +2642,31 @@ impl Gizmo {
         // Plane handles (distance to projected quad; accept when inside).
         let off = length_world * 0.15;
         let size = length_world * 0.25;
-        for &(u, v, handle) in &[
-            (axes[0], axes[1], TranslateHandle::PlaneXY.id()),
-            (axes[0], axes[2], TranslateHandle::PlaneXZ.id()),
-            (axes[1], axes[2], TranslateHandle::PlaneYZ.id()),
+        for &((u, v, handle), plane_axes) in &[
+            (
+                (axes[0], axes[1], TranslateHandle::PlaneXY.id()),
+                (0usize, 1usize),
+            ),
+            (
+                (axes[0], axes[2], TranslateHandle::PlaneXZ.id()),
+                (0usize, 2usize),
+            ),
+            (
+                (axes[1], axes[2], TranslateHandle::PlaneYZ.id()),
+                (1usize, 2usize),
+            ),
         ] {
+            if !self.plane_allowed_by_mask(plane_axes) {
+                continue;
+            }
             let world = translate_plane_quad_world(origin, u, v, off, size);
             let Some(p) = project_quad(view_projection, viewport, world, self.config.depth_range)
             else {
                 continue;
             };
+            if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                continue;
+            }
 
             let inside = point_in_convex_quad(cursor, p);
             let edge_d = quad_edge_distance(cursor, p);
@@ -2437,7 +2723,7 @@ impl Gizmo {
                 let r = self.config.pick_radius_px.max(6.0);
                 if d <= r {
                     return Some(PickHit {
-                        handle: HandleId(7),
+                        handle: ScaleHandle::Uniform.id(),
                         score: d,
                     });
                 }
@@ -2448,11 +2734,27 @@ impl Gizmo {
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             .map(plane_basis)
             .unwrap_or((Vec3::X, Vec3::Y));
-        for &(axis_dir, handle) in &[
-            (axes[0], ScaleHandle::AxisX.id()),
-            (axes[1], ScaleHandle::AxisY.id()),
-            (axes[2], ScaleHandle::AxisZ.id()),
+        for &((axis_dir, handle), axis_index) in &[
+            ((axes[0], ScaleHandle::AxisX.id()), 0usize),
+            ((axes[1], ScaleHandle::AxisY.id()), 1usize),
+            ((axes[2], ScaleHandle::AxisZ.id()), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
+            if let Some(len_px) = axis_segment_len_px(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+                length_world,
+            ) {
+                if len_px < self.config.axis_hide_limit_px {
+                    continue;
+                }
+            }
+
             let end = origin + axis_dir * length_world;
             let half = length_world * 0.06;
             let quad_world = [
@@ -2481,17 +2783,32 @@ impl Gizmo {
         if include_planes {
             let off = length_world * 0.15;
             let size = length_world * 0.25;
-            for &(u, v, handle) in &[
-                (axes[0], axes[1], ScaleHandle::PlaneXY.id()),
-                (axes[0], axes[2], ScaleHandle::PlaneXZ.id()),
-                (axes[1], axes[2], ScaleHandle::PlaneYZ.id()),
+            for &((u, v, handle), plane_axes) in &[
+                (
+                    (axes[0], axes[1], ScaleHandle::PlaneXY.id()),
+                    (0usize, 1usize),
+                ),
+                (
+                    (axes[0], axes[2], ScaleHandle::PlaneXZ.id()),
+                    (0usize, 2usize),
+                ),
+                (
+                    (axes[1], axes[2], ScaleHandle::PlaneYZ.id()),
+                    (1usize, 2usize),
+                ),
             ] {
+                if !self.plane_allowed_by_mask(plane_axes) {
+                    continue;
+                }
                 let world = translate_plane_quad_world(origin, u, v, off, size);
                 let Some(p) =
                     project_quad(view_projection, viewport, world, self.config.depth_range)
                 else {
                     continue;
                 };
+                if quad_area_px2(p) < self.config.plane_hide_limit_px2 {
+                    continue;
+                }
 
                 let inside = point_in_convex_quad(cursor, p);
                 let edge_d = quad_edge_distance(cursor, p);
@@ -2609,11 +2926,14 @@ impl Gizmo {
         let segments: usize = 64;
         let mut best_axis: Option<PickHit> = None;
 
-        for &(axis_dir, handle) in &[
-            (axes[0], HandleId(1)),
-            (axes[1], HandleId(2)),
-            (axes[2], HandleId(3)),
+        for &((axis_dir, handle), axis_index) in &[
+            ((axes[0], HandleId(1)), 0usize),
+            ((axes[1], HandleId(2)), 1usize),
+            ((axes[2], HandleId(3)), 2usize),
         ] {
+            if self.axis_is_masked(axis_index) {
+                continue;
+            }
             let axis_dir = axis_dir.normalize_or_zero();
             if axis_dir.length_squared() == 0.0 {
                 continue;
@@ -2831,6 +3151,36 @@ fn distance_point_to_segment_px(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     (p - q).length()
 }
 
+fn axis_segment_len_px(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    origin: Vec3,
+    depth: DepthRange,
+    axis_dir: Vec3,
+    axis_len_world: f32,
+) -> Option<f32> {
+    let p0 = project_point(view_projection, viewport, origin, depth)?;
+    let p1 = project_point(
+        view_projection,
+        viewport,
+        origin + axis_dir * axis_len_world,
+        depth,
+    )?;
+    let d = (p1.screen - p0.screen).length();
+    d.is_finite().then_some(d)
+}
+
+fn quad_area_px2(q: [Vec2; 4]) -> f32 {
+    // Shoelace formula (absolute area of the convex quad).
+    let mut a = 0.0f32;
+    for i in 0..4 {
+        let p0 = q[i];
+        let p1 = q[(i + 1) % 4];
+        a += p0.x * p1.y - p1.x * p0.y;
+    }
+    (a * 0.5).abs()
+}
+
 fn mix_alpha(mut c: Color, a: f32) -> Color {
     c.a = (c.a * a).clamp(0.0, 1.0);
     c
@@ -3031,6 +3381,12 @@ mod tests {
         config.mode = mode;
         config.depth_range = DepthRange::ZeroToOne;
         config.drag_start_threshold_px = 0.0;
+        // Keep tests deterministic: axis flip + visibility thresholds are UX heuristics that can
+        // vary with camera orientation and viewport shape.
+        config.allow_axis_flip = false;
+        config.axis_hide_limit_px = 0.0;
+        config.plane_hide_limit_px2 = 0.0;
+        config.axis_mask = [false; 3];
         Gizmo::new(config)
     }
 
@@ -3371,6 +3727,167 @@ mod tests {
                 .is_none(),
             "behind-camera gizmo should not be pickable"
         );
+    }
+
+    #[test]
+    fn axis_mask_hides_translate_axis_pick() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_hide_limit_px = 0.0;
+        config.plane_hide_limit_px2 = 0.0;
+        config.axis_mask = [true, false, false]; // hide X
+        let gizmo = Gizmo::new(config);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let pa = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let pb = project_point(
+            view_proj,
+            vp,
+            origin + axes[0].normalize_or_zero() * length_world,
+            gizmo.config.depth_range,
+        )
+        .unwrap();
+        let cursor = pa.screen.lerp(pb.screen, 0.65);
+
+        let hit = gizmo.pick_translate_handle(view_proj, vp, origin, cursor, axes);
+        assert!(
+            hit.is_none() || hit.unwrap().handle != TranslateHandle::AxisX.id(),
+            "masked X axis should not be pickable"
+        );
+    }
+
+    #[test]
+    fn axis_mask_single_axis_shows_only_perp_plane() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_hide_limit_px = 0.0;
+        config.plane_hide_limit_px2 = 0.0;
+        config.axis_mask = [true, false, false]; // hide X -> only YZ plane should remain
+        let gizmo = Gizmo::new(config);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+
+        let quad_xy = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_xz = translate_plane_quad_world(origin, axes[0], axes[2], off, size);
+        let quad_yz = translate_plane_quad_world(origin, axes[1], axes[2], off, size);
+        let p_xy = project_quad(view_proj, vp, quad_xy, gizmo.config.depth_range).unwrap();
+        let p_xz = project_quad(view_proj, vp, quad_xz, gizmo.config.depth_range).unwrap();
+        let p_yz = project_quad(view_proj, vp, quad_yz, gizmo.config.depth_range).unwrap();
+
+        let c_xy = (p_xy[0] + p_xy[1] + p_xy[2] + p_xy[3]) * 0.25;
+        let c_xz = (p_xz[0] + p_xz[1] + p_xz[2] + p_xz[3]) * 0.25;
+        let c_yz = (p_yz[0] + p_yz[1] + p_yz[2] + p_yz[3]) * 0.25;
+
+        let h_xy = gizmo.pick_translate_handle(view_proj, vp, origin, c_xy, axes);
+        assert!(
+            h_xy.is_none() || h_xy.unwrap().handle != TranslateHandle::PlaneXY.id(),
+            "XY plane should be hidden when X is masked"
+        );
+
+        let h_xz = gizmo.pick_translate_handle(view_proj, vp, origin, c_xz, axes);
+        assert!(
+            h_xz.is_none() || h_xz.unwrap().handle != TranslateHandle::PlaneXZ.id(),
+            "XZ plane should be hidden when X is masked"
+        );
+
+        let h_yz = gizmo
+            .pick_translate_handle(view_proj, vp, origin, c_yz, axes)
+            .unwrap();
+        assert_eq!(h_yz.handle, TranslateHandle::PlaneYZ.id());
+    }
+
+    #[test]
+    fn allow_axis_flip_prefers_more_visible_direction() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = true;
+        config.axis_hide_limit_px = 0.0;
+        config.plane_hide_limit_px2 = 0.0;
+        let gizmo = Gizmo::new(config);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let flipped = gizmo.flip_axes_for_view(view_proj, vp, origin, axes);
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let plus = axis_segment_len_px(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            axes[0],
+            length_world,
+        )
+        .unwrap();
+        let minus = axis_segment_len_px(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            -axes[0],
+            length_world,
+        )
+        .unwrap();
+        let chosen = axis_segment_len_px(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            flipped[0],
+            length_world,
+        )
+        .unwrap();
+
+        assert!(
+            (chosen - plus).abs() < 1e-3 || (chosen - minus).abs() < 1e-3,
+            "chosen axis should match +/- axis"
+        );
+        assert!(chosen >= plus.min(minus) - 1e-3);
+        assert!(chosen >= plus.max(minus) - 1e-2);
     }
 
     #[test]
