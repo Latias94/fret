@@ -88,7 +88,7 @@ Fret's current contract:
 | Translate | `TRANSLATE_*` (bitmask) | `Translate*` modes | `GizmoMode::Translate` |
 | Rotate | `ROTATE_*`, `ROTATE_SCREEN` | `Rotate*`, `RotateView`, `Arcball` | `GizmoMode::Rotate` |
 | Scale | `SCALE_*`, `SCALEU`, `BOUNDS` | `Scale*` + plane scale | `GizmoMode::Scale` |
-| "Universal" (combo) | `UNIVERSAL` | `EnumSet<GizmoMode>` (multi-mode) | `GizmoMode::Universal` (currently translate+rotate) |
+| "Universal" (combo) | `UNIVERSAL` | `EnumSet<GizmoMode>` (multi-mode) | `GizmoMode::Universal` (translate+rotate+axis scale by default; see `universal_includes_scale`) |
 | World vs local | `MODE::{WORLD,LOCAL}` | `GizmoOrientation` | `GizmoOrientation::{World,Local}` |
 | Pivot | (external; matrix origin) | `TransformPivotPoint` | `GizmoPivotMode::{Active,Center}` |
 
@@ -221,9 +221,9 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 1. **Stability + picking UX audit (lock-in editor feel)**
    - Motivation: most user pain comes from drift/overshoot/mispicks, not missing modes.
    - Outcome: add targeted tests for translate/rotate/scale drag stability + explicit picking priority ladder.
-2. **Universal + scale (or explicitly decide against it)**
-   - If we keep `Universal`, decide whether it should include scale.
-   - If yes: add scale picking rules that don't fight translate planes / rotate rings.
+2. **Universal: scale semantics + picking**
+   - Fret already supports axis scale in `Universal` (via `GizmoConfig::universal_includes_scale`).
+   - Decide whether `Universal` should also include uniform scale, and tighten picking rules so scale doesn't fight translate planes / rotate rings.
 3. **Picking priority ladder**
    - Explicit priority ordering (e.g. active > hovered; center/plane/axis; rotate view ring) with tunable bias.
 4. **Projection edge-case audit**

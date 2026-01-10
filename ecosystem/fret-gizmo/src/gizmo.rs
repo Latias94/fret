@@ -170,8 +170,8 @@ pub struct GizmoConfig {
     /// When `true`, draws a bounds (box) scaling gizmo in `GizmoMode::Scale`.
     ///
     /// This is an ImGuizmo `BOUNDS`-style affordance: a box around the selection with corner and
-    /// face handles. Current implementation derives bounds from selected target translations
-    /// (no mesh/local-AABB inputs yet).
+    /// face handles. Bounds are derived from `GizmoTarget3d::local_bounds` when provided; otherwise
+    /// they fall back to selected target translations.
     pub show_bounds: bool,
     /// Bounds handle visual size in pixels.
     pub bounds_handle_size_px: f32,
