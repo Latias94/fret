@@ -1,6 +1,16 @@
-# Local generated state (captures, layouts, debug outputs).
-.fret/
-target/
-
-# Safety net: avoid accidentally committing ad-hoc dump artifacts at repo root.
-fret_dump_pass_state_json.fallback.response.json
+/target
+/target*
+/repo-ref
+.DS_Store
+/local
+/.fret
+/.worktrees
+/.codanna
+/.fastembed_cache
+/.codannaignore
+.codex_tmp/
+.idea/
+tools/_clippy*.txt
+/apps/fret-demo-web/dist/
+tmp*
+*.rej
