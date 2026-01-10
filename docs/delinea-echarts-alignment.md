@@ -49,6 +49,7 @@ baseline for validating interaction semantics and span limits on both native and
   - Y span limits clamp interaction-derived zoom updates (wheel/slider/box zoom) when `DataZoomYSpec` is configured.
   - When the current/base span is already outside the configured limits, interactions do not force it back into range
     (they only prevent moving further out of bounds).
+  - BrushLink: `Alt + RMB drag` brush selection in one chart is mirrored into the other chart (same `LinkGroup`).
 
 ### Web (wasm)
 
@@ -140,6 +141,11 @@ reference demo for validating these scenarios on desktop + wasm.
 
 - Chord: `Alt + RMB drag` in plot starts a brush selection.
 - Brush selection does not write view windows (it is selection-only in v1).
+- When `LinkGroup` is configured, brush selection changes emit a `LinkEvent::BrushSelectionChanged`
+  event, enabling ECharts-like `brushLink` behavior (see ADR 0146).
+- In the multi-axis harness, the demo runs two charts in the same link group:
+  - Brushing in one chart updates the selection in the other chart.
+  - Clearing brush selection in one chart clears it in the other chart.
 
 ### DataZoom sliders (UI-only, v1)
 
