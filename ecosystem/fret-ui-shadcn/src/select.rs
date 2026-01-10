@@ -1065,16 +1065,12 @@ fn select_impl<H: UiHost>(
                     // to the current window + trigger placement. Prefer that behavior by computing
                     // the available height from our popper substrate, while still allowing an
                     // explicit theme override for apps that want a fixed cap.
-                    let available_h = if position == SelectPosition::Popper {
-                        radix_select::select_popper_available_height(
-                            outer,
-                            anchor,
-                            min_width,
-                            popper_placement,
-                        )
-                    } else {
-                        outer.size.height
-                    };
+                    let popper_vars = (position == SelectPosition::Popper).then(|| {
+                        radix_select::select_popper_vars(outer, anchor, min_width, popper_placement)
+                    });
+                    let available_h = popper_vars
+                        .map(|vars| vars.available_height)
+                        .unwrap_or(outer.size.height);
                     let max_h = theme
                         .metric_by_key("component.select.max_list_height")
                         .map(|h| Px(h.0.min(available_h.0)))
@@ -1085,8 +1081,7 @@ fn select_impl<H: UiHost>(
                             .max(item_h.0)
                             .min(outer.size.height.0),
                     );
-                    let desired_w =
-                        Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
+                    let desired_w = radix_select::select_popper_desired_width(outer, anchor, min_width);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let (item_aligned_inputs, did_scroll) = match item_aligned {
