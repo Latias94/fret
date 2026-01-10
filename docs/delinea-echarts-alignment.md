@@ -93,6 +93,8 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[~]` Tooltip content parity (series ordering, formatting hooks, value snapping) (in progress).
 - `[~]` Legend semantics (series visibility) (engine supports `SetSeriesVisible`; UI parity TBD).
 - `[x]` X dataZoom inside (wheel/drag zoom/pan) (ADR 0129).
+- Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (axis-band pan, plot modifiers, and window writes).
+- Demo: `apps/fret-examples/src/chart_multi_axis_demo.rs` (multi-axis interaction conformance harness; desktop + wasm).
 - `[x]` X dataZoom slider (UI-only) in `fret-chart` (bottom X axis only).
 - `[x]` Y inside zoom/pan (wheel on Y axis band; drag pan constrained via axis band or plot modifiers) (ADR 0136).
 - `[x]` 2D box zoom that writes `SetViewWindow2D` for the active axis pair (ADR 0136).
@@ -121,7 +123,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 → P1)
 
-1. P0: Audit 2D box zoom semantics (axis routing + lock gating) and add a conformance demo (desktop + wasm) (ADR 0134/0136).
+1. P0: Audit 2D box zoom semantics (axis routing + lock gating) using `apps/fret-examples/src/chart_multi_axis_demo.rs` (desktop + wasm) (ADR 0134/0136).
 2. P0: Implement DataZoom Y “inside” semantics in `fret-chart` (axis band + plot modifiers), with lock gating (ADR 0135/0136).
 3. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity).
 4. P1: Introduce span constraints and a durable `DataZoomYSpec` only if slider UI or persisted defaults are required (ADR 0138).
