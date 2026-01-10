@@ -484,12 +484,14 @@ High-level layering (ADR 0135):
   - XyFlow: DOM-based; relies on React optimizations and virtualization patterns
   - fret-node:
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
-    - [ ] spatial culling by viewport for canvas paint (nodes/edges) to reduce scene ops
+    - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
     - [ ] incremental scene op updates
 
-- [ ] **Derived geometry invalidation discipline**
+- [~] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched
-  - fret-node: needs a conformance harness for invalidation ordering (ADR 0135 notes “frame-order hazards”)
+  - fret-node:
+    - [~] measured geometry epsilon + batch semantics conformance tests: `ecosystem/fret-node/src/ui/measured.rs`
+    - [ ] conformance harness for invalidation ordering (ADR 0135 notes “frame-order hazards”)
 
 ---
 

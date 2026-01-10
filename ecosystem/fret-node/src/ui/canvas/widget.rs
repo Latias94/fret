@@ -6170,6 +6170,27 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let viewport_h = cx.bounds.size.height.0 / zoom;
         let viewport_origin_x = -pan.x;
         let viewport_origin_y = -pan.y;
+        let render_cull_rect = {
+            let margin_screen = self.style.render_cull_margin_px;
+            if !margin_screen.is_finite()
+                || margin_screen <= 0.0
+                || !viewport_w.is_finite()
+                || !viewport_h.is_finite()
+                || viewport_w <= 0.0
+                || viewport_h <= 0.0
+            {
+                None
+            } else {
+                let margin = margin_screen / zoom;
+                Some(inflate_rect(
+                    Rect::new(
+                        Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
+                        Size::new(Px(viewport_w), Px(viewport_h)),
+                    ),
+                    margin,
+                ))
+            }
+        };
 
         cx.scene.push(SceneOp::PushClipRect {
             rect: Rect::new(
@@ -6306,6 +6327,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             let this = &*self;
             let geom = geom.clone();
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
+            let cull = render_cull_rect;
             this.graph
                 .read_ref(cx.app, |graph| {
                     let mut out = RenderData::default();
@@ -6325,6 +6347,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             Point::new(Px(group.rect.origin.x), Px(group.rect.origin.y)),
                             Size::new(Px(group.rect.size.width), Px(group.rect.size.height)),
                         );
+                        if cull.is_some_and(|c| !rects_intersect(rect, c)) {
+                            continue;
+                        }
                         out.groups.push((
                             rect,
                             Arc::<str>::from(group.title.clone()),
@@ -6332,10 +6357,22 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         ));
                     }
 
+                    let mut visible_nodes: HashSet<GraphNodeId> = HashSet::new();
+                    if let Some(c) = cull {
+                        for (&node, node_geom) in &geom.nodes {
+                            if rects_intersect(node_geom.rect, c) {
+                                visible_nodes.insert(node);
+                            }
+                        }
+                    }
+
                     for node in geom.order.iter().copied() {
                         let Some(node_geom) = geom.nodes.get(&node) else {
                             continue;
                         };
+                        if cull.is_some() && !visible_nodes.contains(&node) {
+                            continue;
+                        }
                         let is_selected = selected.contains(&node);
                         let title = presenter.node_title(graph, node);
                         let (inputs, outputs) = node_ports(graph, node);
@@ -6356,6 +6393,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                     for (&port_id, handle) in &geom.ports {
                         out.port_centers.insert(port_id, handle.center);
+                        if cull.is_some() && !visible_nodes.contains(&handle.node) {
+                            continue;
+                        }
                         let max_w = graph
                             .ports
                             .get(&port_id)
@@ -6399,6 +6439,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let hint = presenter
                             .edge_render_hint(graph, edge_id, &this.style)
                             .normalized();
+                        if let Some(c) = cull {
+                            let pad = (snapshot
+                                .interaction
+                                .edge_interaction_width
+                                .max(this.style.wire_width * this.style.wire_width_selected_mul)
+                                .max(this.style.wire_width * this.style.wire_width_hover_mul))
+                                / zoom;
+                            let bounds = edge_bounds_rect(hint.route, from, to, zoom, pad);
+                            if !rects_intersect(bounds, c) {
+                                continue;
+                            }
+                        }
                         let mut color = presenter.edge_color(graph, edge_id, &this.style);
                         if let Some(override_color) = hint.color {
                             color = override_color;
@@ -7347,6 +7399,44 @@ fn rects_intersect(a: Rect, b: Rect) -> bool {
     ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
 }
 
+fn inflate_rect(rect: Rect, margin: f32) -> Rect {
+    if !margin.is_finite() || margin <= 0.0 {
+        return rect;
+    }
+    Rect::new(
+        Point::new(Px(rect.origin.x.0 - margin), Px(rect.origin.y.0 - margin)),
+        Size::new(
+            Px(rect.size.width.0 + 2.0 * margin),
+            Px(rect.size.height.0 + 2.0 * margin),
+        ),
+    )
+}
+
+fn edge_bounds_rect(route: EdgeRouteKind, from: Point, to: Point, zoom: f32, pad: f32) -> Rect {
+    let mut min_x = from.x.0.min(to.x.0);
+    let mut min_y = from.y.0.min(to.y.0);
+    let mut max_x = from.x.0.max(to.x.0);
+    let mut max_y = from.y.0.max(to.y.0);
+
+    if route == EdgeRouteKind::Bezier {
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+        min_x = min_x.min(c1.x.0).min(c2.x.0);
+        min_y = min_y.min(c1.y.0).min(c2.y.0);
+        max_x = max_x.max(c1.x.0).max(c2.x.0);
+        max_y = max_y.max(c1.y.0).max(c2.y.0);
+    }
+
+    let pad = if pad.is_finite() { pad.max(0.0) } else { 0.0 };
+
+    Rect::new(
+        Point::new(Px(min_x - pad), Px(min_y - pad)),
+        Size::new(
+            Px((max_x - min_x) + 2.0 * pad),
+            Px((max_y - min_y) + 2.0 * pad),
+        ),
+    )
+}
+
 fn hit_context_menu_item(
     style: &NodeGraphStyle,
     menu: &ContextMenuState,
@@ -7538,6 +7628,36 @@ mod tests {
         CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
         Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
+
+    #[test]
+    fn inflate_rect_expands_by_margin() {
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        );
+        let inflated = super::inflate_rect(rect, 5.0);
+        assert_eq!(
+            inflated,
+            Rect::new(Point::new(Px(5.0), Px(15.0)), Size::new(Px(40.0), Px(50.0)))
+        );
+    }
+
+    #[test]
+    fn edge_bounds_rect_applies_padding() {
+        let from = Point::new(Px(10.0), Px(10.0));
+        let to = Point::new(Px(30.0), Px(20.0));
+        let bounds = super::edge_bounds_rect(
+            crate::ui::presenter::EdgeRouteKind::Straight,
+            from,
+            to,
+            1.0,
+            2.0,
+        );
+        assert_eq!(
+            bounds,
+            Rect::new(Point::new(Px(8.0), Px(8.0)), Size::new(Px(24.0), Px(14.0)))
+        );
+    }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
         CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT,

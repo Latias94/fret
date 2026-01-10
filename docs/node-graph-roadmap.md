@@ -146,4 +146,5 @@ Legend:
 - [ ] Blackboard variables + typed symbol references (domain-ready).
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
+  - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
 - [ ] Deterministic graph diff/patch set for collaboration.

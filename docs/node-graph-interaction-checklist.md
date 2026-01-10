@@ -259,6 +259,7 @@ Invariants:
 
 - (todo) A 5k–20k node graph remains usable (target frame time TBD).
 - (prototype) Offscreen nodes do not mount portal subtrees to avoid UI tree blowup (portal culling).
+- (prototype) Offscreen nodes/edges do not emit canvas paint ops to avoid scene blowup (canvas culling).
 
 ### Invariants
 

@@ -84,6 +84,12 @@ pub struct NodeGraphStyle {
     /// Controls pressed background color.
     pub controls_active_background: Color,
 
+    /// Extra render culling margin in screen-space pixels (logical px).
+    ///
+    /// This is used to avoid emitting `SceneOp`s for far-offscreen nodes/edges in large graphs,
+    /// while keeping a small prefetch band to reduce pop-in during panning.
+    pub render_cull_margin_px: f32,
+
     pub min_zoom: f32,
     pub max_zoom: f32,
 }
@@ -295,6 +301,8 @@ impl Default for NodeGraphStyle {
                 a: 0.25,
             },
 
+            render_cull_margin_px: 256.0,
+
             min_zoom: 0.15,
             max_zoom: 4.0,
         }
@@ -404,6 +412,8 @@ impl NodeGraphStyle {
             },
             controls_hover_background: accent,
             controls_active_background: alpha(ring, 0.22),
+
+            render_cull_margin_px: 256.0,
 
             min_zoom: 0.15,
             max_zoom: 4.0,
