@@ -1084,6 +1084,7 @@ impl MenubarMenuEntries {
                         content_focus_id_for_children.clone();
                     let content_focus_id_for_children_for_submenu =
                         content_focus_id_for_children.clone();
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let (overlay_children, dismissible_on_pointer_move) =
                         cx.with_root_name(&overlay_root_name, move |cx| {
@@ -1100,7 +1101,6 @@ impl MenubarMenuEntries {
                         let font_line_height = theme.metric_required("font.line_height");
                         let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
                         desired.width.0 = desired.width.0.max(anchor.size.width.0);
-                        let direction = direction_prim::use_direction_in_scope(cx, None);
 
                         let layout = popper::popper_content_layout_sized(
                             outer,

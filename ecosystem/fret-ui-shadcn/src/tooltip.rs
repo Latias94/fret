@@ -466,13 +466,8 @@ impl Tooltip {
                     outer,
                     anchor,
                     content_size,
-                    popper::PopperContentPlacement::new(
-                        direction,
-                        side,
-                        align,
-                        side_offset,
-                    )
-                    .with_arrow(arrow_options, arrow_protrusion),
+                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                        .with_arrow(arrow_options, arrow_protrusion),
                 );
 
                 // Use the panel rect (not the wrapper rect that includes motion insets) for hover
@@ -635,8 +630,9 @@ impl Tooltip {
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
+            let direction = direction_prim::use_direction_in_scope(cx, None);
 
-            let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     return Vec::new();
@@ -662,19 +658,13 @@ impl Tooltip {
 
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,
                     anchor,
                     content_size,
-                    popper::PopperContentPlacement::new(
-                        direction,
-                        side,
-                        align,
-                        side_offset,
-                    )
-                    .with_arrow(arrow_options, arrow_protrusion),
+                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                        .with_arrow(arrow_options, arrow_protrusion),
                 );
 
                 let placed = layout.rect;

@@ -1335,6 +1335,7 @@ impl ContextMenu {
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
                     cx.with_root_name(&overlay_root_name, move |cx| {
@@ -1406,7 +1407,6 @@ impl ContextMenu {
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
                     let layout = popper::popper_content_layout_sized(

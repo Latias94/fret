@@ -292,6 +292,7 @@ impl Popover {
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
                 let open_for_barrier = self.open.clone();
+                let direction = direction_prim::use_direction_in_scope(cx, None);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
@@ -338,20 +339,14 @@ impl Popover {
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let layout = popper::popper_content_layout_sized(
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
                         anchor,
                         content_size,
-                        popper::PopperContentPlacement::new(
-                            direction,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_align_offset(align_offset)
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_align_offset(align_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;

@@ -143,10 +143,27 @@ fn offset_applies_cross_axis_skidding() {
 }
 
 #[test]
-fn alignment_axis_inverts_for_end_and_rtl_vertical() {
+fn alignment_axis_inverts_under_rtl_for_vertical_alignments() {
     let outer = r(0.0, 0.0, 400.0, 400.0);
     let anchor = r(100.0, 100.0, 40.0, 10.0);
     let content = Size::new(Px(120.0), Px(80.0));
+
+    let ltr_base = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(8.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            direction: LayoutDirection::Ltr,
+            offset: Offset {
+                alignment_axis: None,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
 
     let ltr = anchored_panel_layout_ex(
         outer,
@@ -154,11 +171,28 @@ fn alignment_axis_inverts_for_end_and_rtl_vertical() {
         content,
         Px(8.0),
         Side::Bottom,
-        Align::End,
+        Align::Start,
         AnchoredPanelOptions {
             direction: LayoutDirection::Ltr,
             offset: Offset {
                 alignment_axis: Some(Px(10.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+
+    let rtl_base = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(8.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            direction: LayoutDirection::Rtl,
+            offset: Offset {
+                alignment_axis: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -171,7 +205,7 @@ fn alignment_axis_inverts_for_end_and_rtl_vertical() {
         content,
         Px(8.0),
         Side::Bottom,
-        Align::End,
+        Align::Start,
         AnchoredPanelOptions {
             direction: LayoutDirection::Rtl,
             offset: Offset {
@@ -182,8 +216,13 @@ fn alignment_axis_inverts_for_end_and_rtl_vertical() {
         },
     );
 
-    // For vertical placements, the `alignment_axis` flips for End and flips again under RTL.
-    assert_eq!(rtl.rect.origin.x, Px(ltr.rect.origin.x.0 + 20.0));
+    // `alignment_axis` is applied as a signed delta relative to the base aligned position.
+    // For vertical placements, Radix/Floating flip the sign under RTL.
+    assert_eq!(Px(ltr.rect.origin.x.0 - ltr_base.rect.origin.x.0), Px(10.0));
+    assert_eq!(
+        Px(rtl.rect.origin.x.0 - rtl_base.rect.origin.x.0),
+        Px(-10.0)
+    );
 }
 
 #[test]

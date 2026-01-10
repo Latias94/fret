@@ -413,7 +413,8 @@ impl HoverCard {
                 return out;
             }
 
-            let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -436,7 +437,6 @@ impl HoverCard {
 
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,

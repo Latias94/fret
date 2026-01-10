@@ -10,8 +10,8 @@ use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::AnyElement;
 use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, UiFrameCx, UiTree};
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
 
 type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> Vec<AnyElement>;

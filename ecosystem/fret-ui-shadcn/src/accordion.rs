@@ -1200,9 +1200,9 @@ impl Accordion {
             let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
             let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.clone().into_boxed_slice());
             let list = root.clone().list(values_arc, disabled_arc.clone());
-            let tab_stop = list
-                .tab_stop_index(cx)
-                .or_else(|| fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags));
+            let tab_stop = list.tab_stop_index(cx).or_else(|| {
+                fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
+            });
 
             let roving = RovingFocusProps {
                 enabled: !group_disabled,
