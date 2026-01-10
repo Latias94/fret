@@ -183,7 +183,12 @@ High-level layering (ADR 0135):
 
 - [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)
-  - fret-node: `Ctrl/Cmd+Tab` cycles edge focus/selection; full a11y semantics (per-element focus nodes, arrow-key navigation) still TBD
+  - fret-node:
+    - `Tab` / `Shift+Tab` cycles node focus/selection.
+    - `Ctrl/Cmd+Tab` cycles edge focus/selection.
+    - `[` / `]` cycles port focus within the focused/selected node (filters to the opposite side during an active wire drag).
+    - `Enter` activates click-connect (start/commit) for the focused/hovered port.
+    - Full semantics (per-element focus nodes, arrow-key navigation, screen reader roles) are still TBD.
 
 ## 3.2 Marquee selection
 

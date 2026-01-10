@@ -95,6 +95,11 @@ Recommended harness:
   - click a port handle to start a connection preview,
   - click another handle to attempt the connection,
   - the click-connect session ends regardless of validity (no “stuck connecting” state).
+- (prototype) Keyboard click-connect:
+  - focus a port handle (or hover it),
+  - press `Enter` to start a connection preview,
+  - focus/hover another handle and press `Enter` to attempt the connection,
+  - the session ends regardless of validity.
 - (prototype) Toggle connection mode (strict/loose) and verify targeting behavior changes.
 - (prototype) Release on empty space:
   - a menu/searcher appears,
@@ -203,6 +208,7 @@ Invariants:
 - (todo) Selecting an edge is deterministic and undo/redo does not affect selection state unexpectedly.
 - (done) Keyboard edge focus: `Ctrl/Cmd+Tab` cycles focus/selection across edges (when enabled).
 - (done) Keyboard node focus: `Tab` / `Shift+Tab` cycles focus/selection across nodes.
+- (done) Keyboard port focus: `[` / `]` cycles port focus within the focused/selected node.
 - (prototype) Focus anchors: focused/selected edge shows endpoint anchors (reconnect affordance).
 - (prototype) Anchor reconnect: click an edge endpoint anchor and drag to reconnect.
 - (prototype) Anchor hover: hovering an anchor highlights it and uses pointer cursor.

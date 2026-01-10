@@ -874,6 +874,8 @@ Selection is editor-owned policy but must be exposed as data:
   - `node_graph.distribute_x|distribute_y`
   - `node_graph.focus_next|focus_prev`
   - `node_graph.focus_next_edge|focus_prev_edge`
+  - `node_graph.focus_next_port|focus_prev_port`
+  - `node_graph.activate` (keyboard click-connect)
 
 ### 17) Clipboard and drag payloads have stable formats
 

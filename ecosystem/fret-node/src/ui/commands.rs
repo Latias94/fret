@@ -43,6 +43,9 @@ pub const CMD_NODE_GRAPH_FOCUS_NEXT: &str = "node_graph.focus_next";
 pub const CMD_NODE_GRAPH_FOCUS_PREV: &str = "node_graph.focus_prev";
 pub const CMD_NODE_GRAPH_FOCUS_NEXT_EDGE: &str = "node_graph.focus_next_edge";
 pub const CMD_NODE_GRAPH_FOCUS_PREV_EDGE: &str = "node_graph.focus_prev_edge";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT_PORT: &str = "node_graph.focus_next_port";
+pub const CMD_NODE_GRAPH_FOCUS_PREV_PORT: &str = "node_graph.focus_prev_port";
+pub const CMD_NODE_GRAPH_ACTIVATE: &str = "node_graph.activate";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
 pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
@@ -165,6 +168,20 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ACTIVATE),
+        CommandMeta::new("Activate")
+            .with_category("Node Graph")
+            .with_keywords(["activate", "confirm", "connect"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::Enter,
+                Modifiers::default(),
+            )]),
+    );
+
+    registry.register(
         CommandId::from(CMD_NODE_GRAPH_CREATE_GROUP),
         CommandMeta::new("Create Group")
             .with_category("Node Graph")
@@ -216,6 +233,36 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_keywords(["reroute", "edge", "wire"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_PORT),
+        CommandMeta::new("Focus Next Port")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "handle"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::BracketRight,
+                Modifiers::default(),
+            )])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV_PORT),
+        CommandMeta::new("Focus Previous Port")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "handle"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::BracketLeft,
+                Modifiers::default(),
+            )])
+            .repeatable(),
     );
 
     registry.register(

@@ -25,17 +25,18 @@ use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use crate::ui::commands::{
-    CMD_NODE_GRAPH_ALIGN_BOTTOM, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_CENTER_Y,
-    CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_ALIGN_TOP,
-    CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
+    CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_BOTTOM, CMD_NODE_GRAPH_ALIGN_CENTER_X,
+    CMD_NODE_GRAPH_ALIGN_CENTER_Y, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_ALIGN_RIGHT,
+    CMD_NODE_GRAPH_ALIGN_TOP, CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
     CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X, CMD_NODE_GRAPH_DISTRIBUTE_Y,
     CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_EDGE,
-    CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_EDGE, CMD_NODE_GRAPH_FRAME_ALL,
-    CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
-    CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_NUDGE_DOWN, CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT,
-    CMD_NODE_GRAPH_NUDGE_LEFT_FAST, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
-    CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_EDGE,
+    CMD_NODE_GRAPH_FOCUS_PREV_PORT, CMD_NODE_GRAPH_FRAME_ALL, CMD_NODE_GRAPH_FRAME_SELECTION,
+    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
+    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_NUDGE_DOWN,
+    CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT, CMD_NODE_GRAPH_NUDGE_LEFT_FAST,
+    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
+    CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
     CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_RESET_VIEW,
     CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
@@ -4164,6 +4165,9 @@ impl NodeGraphCanvas {
 
         self.interaction.focused_edge = Some(next);
         self.interaction.focused_node = None;
+        self.interaction.focused_port = None;
+        self.interaction.focused_port_valid = false;
+        self.interaction.focused_port_convertible = false;
         self.update_view_state(host, |s| {
             s.selected_nodes.clear();
             s.selected_groups.clear();
@@ -4234,6 +4238,9 @@ impl NodeGraphCanvas {
 
         self.interaction.focused_node = Some(next);
         self.interaction.focused_edge = None;
+        self.interaction.focused_port = None;
+        self.interaction.focused_port_valid = false;
+        self.interaction.focused_port_convertible = false;
         self.update_view_state(host, |s| {
             s.selected_edges.clear();
             s.selected_groups.clear();
@@ -4242,6 +4249,264 @@ impl NodeGraphCanvas {
             s.draw_order.retain(|id| *id != next);
             s.draw_order.push(next);
         });
+        true
+    }
+
+    fn refresh_focused_port_hints<H: UiHost>(&mut self, host: &mut H) {
+        self.interaction.focused_port_valid = false;
+        self.interaction.focused_port_convertible = false;
+
+        let Some(target) = self.interaction.focused_port else {
+            return;
+        };
+        let Some(wire_drag) = self.interaction.wire_drag.clone() else {
+            return;
+        };
+
+        let presenter = &mut *self.presenter;
+        let (valid, convertible) = self
+            .graph
+            .read_ref(host, |graph| {
+                let mut scratch = graph.clone();
+
+                let valid = match &wire_drag.kind {
+                    WireDragKind::New { from, bundle } => {
+                        let sources = if bundle.is_empty() {
+                            std::slice::from_ref(from)
+                        } else {
+                            bundle.as_slice()
+                        };
+                        let mut any_accept = false;
+                        for src in sources {
+                            let plan = presenter.plan_connect(&scratch, *src, target);
+                            if plan.decision != ConnectDecision::Accept {
+                                continue;
+                            }
+                            any_accept = true;
+                            let tx = GraphTransaction {
+                                label: None,
+                                ops: plan.ops.clone(),
+                            };
+                            let _ = apply_transaction(&mut scratch, &tx);
+                        }
+                        any_accept
+                    }
+                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                        presenter
+                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target)
+                            .decision,
+                        ConnectDecision::Accept
+                    ),
+                    WireDragKind::ReconnectMany { edges } => {
+                        let mut any_accept = false;
+                        for (edge, endpoint, _fixed) in edges {
+                            let plan =
+                                presenter.plan_reconnect_edge(&scratch, *edge, *endpoint, target);
+                            if plan.decision != ConnectDecision::Accept {
+                                continue;
+                            }
+                            any_accept = true;
+                            let tx = GraphTransaction {
+                                label: None,
+                                ops: plan.ops.clone(),
+                            };
+                            let _ = apply_transaction(&mut scratch, &tx);
+                        }
+                        any_accept
+                    }
+                };
+
+                let convertible = if !valid {
+                    match &wire_drag.kind {
+                        WireDragKind::New { from, bundle } if bundle.len() <= 1 => {
+                            conversion::is_convertible(presenter, &scratch, *from, target)
+                        }
+                        _ => false,
+                    }
+                } else {
+                    false
+                };
+
+                (valid, convertible)
+            })
+            .ok()
+            .unwrap_or((false, false));
+
+        if self.interaction.wire_drag.is_some() && self.interaction.focused_port == Some(target) {
+            self.interaction.focused_port_valid = valid;
+            self.interaction.focused_port_convertible = convertible;
+        }
+    }
+
+    fn focus_next_port<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
+        let snapshot = self.sync_view_state(host);
+        if !snapshot.interaction.elements_selectable {
+            return false;
+        }
+
+        let focused_node = self
+            .interaction
+            .focused_node
+            .or_else(|| snapshot.selected_nodes.first().copied())
+            .or_else(|| {
+                self.graph
+                    .read_ref(host, |g| g.nodes.keys().next().copied())
+                    .ok()
+                    .flatten()
+            });
+
+        let Some(focused_node) = focused_node else {
+            return false;
+        };
+
+        let wire_dir = self.interaction.wire_drag.as_ref().and_then(|w| {
+            let from_port = match &w.kind {
+                WireDragKind::New { from, .. } => Some(*from),
+                WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
+                WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+            }?;
+            self.graph
+                .read_ref(host, |g| g.ports.get(&from_port).map(|p| p.dir))
+                .ok()
+                .flatten()
+        });
+
+        let ports = self
+            .graph
+            .read_ref(host, |g| {
+                let (inputs, outputs) = node_ports(g, focused_node);
+                let mut ports = Vec::with_capacity(inputs.len() + outputs.len());
+                ports.extend(inputs);
+                ports.extend(outputs);
+
+                if let Some(wire_dir) = wire_dir {
+                    let want = match wire_dir {
+                        PortDirection::In => PortDirection::Out,
+                        PortDirection::Out => PortDirection::In,
+                    };
+                    ports.retain(|id| g.ports.get(id).is_some_and(|p| p.dir == want));
+                }
+
+                ports
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if ports.is_empty() {
+            return false;
+        }
+
+        let current = self
+            .interaction
+            .focused_port
+            .filter(|id| ports.iter().any(|p| *p == *id));
+
+        let next = match current.and_then(|id| ports.iter().position(|p| *p == id)) {
+            Some(ix) => {
+                let len = ports.len();
+                let next_ix = if forward {
+                    (ix + 1) % len
+                } else {
+                    (ix + len - 1) % len
+                };
+                ports[next_ix]
+            }
+            None => {
+                if forward {
+                    ports[0]
+                } else {
+                    ports[ports.len() - 1]
+                }
+            }
+        };
+
+        self.interaction.focused_node = Some(focused_node);
+        self.interaction.focused_edge = None;
+        self.interaction.focused_port = Some(next);
+        self.refresh_focused_port_hints(host);
+        self.update_view_state(host, |s| {
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+            s.selected_nodes.clear();
+            s.selected_nodes.push(focused_node);
+        });
+        true
+    }
+
+    fn port_center_window<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        snapshot: &ViewSnapshot,
+        port: PortId,
+    ) -> Option<Point> {
+        let (geom, _) = self.canvas_derived(&*host, snapshot);
+        geom.ports.get(&port).map(|h| h.center)
+    }
+
+    fn activate_focused_port<H: UiHost>(
+        &mut self,
+        cx: &mut CommandCx<'_, H>,
+        snapshot: &ViewSnapshot,
+    ) -> bool {
+        if !snapshot.interaction.elements_selectable {
+            return false;
+        }
+
+        let Some(port) = self
+            .interaction
+            .focused_port
+            .or(self.interaction.hover_port)
+        else {
+            return false;
+        };
+
+        let pos = self
+            .port_center_window(cx.app, snapshot, port)
+            .or(self.interaction.last_pos)
+            .unwrap_or_else(|| {
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                Point::new(
+                    Px(bounds.origin.x.0 + 0.5 * bounds.size.width.0),
+                    Px(bounds.origin.y.0 + 0.5 * bounds.size.height.0),
+                )
+            });
+
+        if self.interaction.wire_drag.is_none() {
+            self.interaction.wire_drag = Some(WireDrag {
+                kind: WireDragKind::New {
+                    from: port,
+                    bundle: Vec::new(),
+                },
+                pos,
+            });
+            self.interaction.click_connect = true;
+            self.interaction.pending_wire_drag = None;
+            self.interaction.suspended_wire_drag = None;
+            self.interaction.sticky_wire = false;
+            self.interaction.sticky_wire_ignore_next_up = false;
+            self.interaction.focused_edge = None;
+            self.interaction.focused_port = None;
+            self.interaction.focused_port_valid = false;
+            self.interaction.focused_port_convertible = false;
+            self.interaction.hover_port = None;
+            self.interaction.hover_port_valid = false;
+            self.interaction.hover_port_convertible = false;
+            return true;
+        }
+
+        if let Some(mut w) = self.interaction.wire_drag.take() {
+            w.pos = pos;
+            self.interaction.wire_drag = Some(w);
+        }
+
+        let _ = wire_drag::handle_wire_left_up_with_forced_target(
+            self,
+            cx,
+            snapshot,
+            snapshot.zoom,
+            Some(port),
+        );
+        self.refresh_focused_port_hints(cx.app);
         true
     }
 }
@@ -4600,6 +4865,30 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
             CMD_NODE_GRAPH_FOCUS_PREV_EDGE => {
                 let did = self.focus_next_edge(cx.app, false);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_NEXT_PORT => {
+                let did = self.focus_next_port(cx.app, true);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_FOCUS_PREV_PORT => {
+                let did = self.focus_next_port(cx.app, false);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_ACTIVATE => {
+                let did = self.activate_focused_port(cx, &snapshot);
                 if did {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -5608,6 +5897,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let hovered_port = self.interaction.hover_port;
         let hovered_port_valid = self.interaction.hover_port_valid;
         let hovered_port_convertible = self.interaction.hover_port_convertible;
+        let focused_port = self.interaction.focused_port;
+        let focused_port_valid = self.interaction.focused_port_valid;
+        let focused_port_convertible = self.interaction.focused_port_convertible;
         let wire_drag = self.interaction.wire_drag.clone();
         let marked_ports: HashSet<PortId> = match wire_drag.as_ref().map(|w| &w.kind) {
             Some(WireDragKind::New { bundle, .. }) if bundle.len() > 1 => {
@@ -6038,8 +6330,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
 
         if let Some(w) = &self.interaction.wire_drag {
+            let focused_target =
+                focused_port.filter(|_| focused_port_valid || focused_port_convertible);
             let to = hovered_port
                 .filter(|_| hovered_port_valid || hovered_port_convertible)
+                .or(focused_target)
                 .and_then(|port| render.port_centers.get(&port).copied())
                 .unwrap_or(w.pos);
             let color =
@@ -6051,6 +6346,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         a: 0.95,
                     }
                 } else if hovered_port.is_some() && hovered_port_convertible && !hovered_port_valid
+                {
+                    Color {
+                        r: 0.95,
+                        g: 0.75,
+                        b: 0.20,
+                        a: 0.95,
+                    }
+                } else if focused_port.is_some()
+                    && !focused_port_valid
+                    && !focused_port_convertible
+                    && hovered_port.is_none()
+                {
+                    Color {
+                        r: 0.90,
+                        g: 0.35,
+                        b: 0.35,
+                        a: 0.95,
+                    }
+                } else if focused_port.is_some()
+                    && focused_port_convertible
+                    && !focused_port_valid
+                    && hovered_port.is_none()
                 {
                     Color {
                         r: 0.95,
@@ -6299,6 +6616,48 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         a: 1.0,
                     }
                 };
+                let pad = 2.0 / zoom;
+                let hover_rect = Rect::new(
+                    Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                    Size::new(
+                        Px(rect.size.width.0 + 2.0 * pad),
+                        Px(rect.size.height.0 + 2.0 * pad),
+                    ),
+                );
+                let r = Px(0.5 * hover_rect.size.width.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: hover_rect,
+                    background: Color::TRANSPARENT,
+                    border: Edges::all(Px(2.0 / zoom)),
+                    border_color,
+                    corner_radii: Corners::all(r),
+                });
+            }
+
+            if hovered_port != Some(port_id) && focused_port == Some(port_id) {
+                let border_color = if self.interaction.wire_drag.is_some() {
+                    if focused_port_valid {
+                        color
+                    } else if focused_port_convertible {
+                        Color {
+                            r: 0.95,
+                            g: 0.75,
+                            b: 0.20,
+                            a: 1.0,
+                        }
+                    } else {
+                        Color {
+                            r: 0.90,
+                            g: 0.35,
+                            b: 0.35,
+                            a: 1.0,
+                        }
+                    }
+                } else {
+                    self.style.node_border_selected
+                };
+
                 let pad = 2.0 / zoom;
                 let hover_rect = Rect::new(
                     Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
@@ -6798,7 +7157,8 @@ mod tests {
     };
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
-        CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_PREV,
+        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT,
+        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
         CMD_NODE_GRAPH_NUDGE_RIGHT,
     };
 
@@ -7120,6 +7480,82 @@ mod tests {
         );
 
         (graph, a, b)
+    }
+
+    fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let a_in = PortId::new();
+        let a_out = PortId::new();
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![a_in, a_out],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            a_in,
+            Port {
+                node: a,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            a_out,
+            Port {
+                node: a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        let b = NodeId::new();
+        let b_in = PortId::new();
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 200.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![b_in],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            b_in,
+            Port {
+                node: b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        (graph, a, a_in, a_out, b, b_in)
     }
 
     fn read_node_pos(
@@ -7621,5 +8057,113 @@ mod tests {
             .read_ref(&host, |s| s.selected_nodes.clone())
             .unwrap_or_default();
         assert_eq!(selected, vec![a]);
+    }
+
+    #[test]
+    fn focus_next_port_cycles_ports_within_focused_node() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a];
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_PORT)));
+        }
+        assert_eq!(canvas.interaction.focused_port, Some(a_in));
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_PORT)));
+        }
+        assert_eq!(canvas.interaction.focused_port, Some(a_out));
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV_PORT)));
+        }
+        assert_eq!(canvas.interaction.focused_port, Some(a_in));
+    }
+
+    #[test]
+    fn focus_next_port_filters_by_wire_direction() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a];
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+        })
+        .unwrap();
+
+        canvas.interaction.wire_drag = Some(WireDrag {
+            kind: WireDragKind::New {
+                from: a_out,
+                bundle: Vec::new(),
+            },
+            pos: Point::new(Px(0.0), Px(0.0)),
+        });
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_PORT)));
+        assert_eq!(canvas.interaction.focused_port, Some(a_in));
+    }
+
+    #[test]
+    fn activate_starts_and_commits_wire_drag() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
+        let graph_model = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
+        canvas.sync_view_state(&mut host);
+
+        canvas.interaction.focused_port = Some(a_out);
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ACTIVATE)));
+        }
+        assert!(canvas.interaction.wire_drag.is_some());
+        assert!(canvas.interaction.click_connect);
+        assert!(canvas.interaction.focused_port.is_none());
+
+        canvas.interaction.focused_port = Some(b_in);
+        {
+            let mut cx = command_cx(&mut host, &mut services, &mut tree);
+            assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_ACTIVATE)));
+        }
+        assert!(canvas.interaction.wire_drag.is_none());
+
+        let edges_len = graph_model
+            .read_ref(&mut host, |g| g.edges.len())
+            .unwrap_or(0);
+        assert_eq!(edges_len, 1);
     }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Modifiers, Point, Px};
+use fret_core::{AppWindowId, Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
 use crate::core::{EdgeId, PortId};
@@ -14,6 +14,65 @@ use super::super::state::{
     ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::NodeGraphCanvas;
+
+pub(super) trait WireCommitCx<H: UiHost> {
+    fn host(&mut self) -> &mut H;
+    fn window(&self) -> Option<AppWindowId>;
+    fn bounds(&self, canvas: &NodeGraphCanvas) -> Rect;
+    fn release_pointer_capture(&mut self);
+    fn request_redraw(&mut self);
+    fn invalidate_paint(&mut self);
+}
+
+impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::EventCx<'a, H> {
+    fn host(&mut self) -> &mut H {
+        self.app
+    }
+
+    fn window(&self) -> Option<AppWindowId> {
+        self.window
+    }
+
+    fn bounds(&self, _canvas: &NodeGraphCanvas) -> Rect {
+        self.bounds
+    }
+
+    fn release_pointer_capture(&mut self) {
+        self.release_pointer_capture();
+    }
+
+    fn request_redraw(&mut self) {
+        self.request_redraw();
+    }
+
+    fn invalidate_paint(&mut self) {
+        self.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    }
+}
+
+impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::CommandCx<'a, H> {
+    fn host(&mut self) -> &mut H {
+        self.app
+    }
+
+    fn window(&self) -> Option<AppWindowId> {
+        self.window
+    }
+
+    fn bounds(&self, canvas: &NodeGraphCanvas) -> Rect {
+        canvas.interaction.last_bounds.unwrap_or_default()
+    }
+
+    fn release_pointer_capture(&mut self) {}
+
+    fn request_redraw(&mut self) {
+        self.request_redraw();
+    }
+
+    fn invalidate_paint(&mut self) {
+        self.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    }
+}
 
 pub(super) fn handle_wire_drag_move<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
@@ -219,7 +278,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
 
 pub(super) fn handle_wire_left_up<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
 ) -> bool {
@@ -228,7 +287,7 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
 
 pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
     forced_target: Option<PortId>,
@@ -237,6 +296,9 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
         return false;
     };
 
+    let window = cx.window();
+    let bounds = cx.bounds(canvas);
+
     let from_port = match &w.kind {
         WireDragKind::New { from, .. } => Some(*from),
         WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
@@ -244,11 +306,11 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     };
     let target = forced_target.or_else(|| {
         from_port.and_then(|from_port| {
-            let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+            let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
             let this = &*canvas;
             let index = index.clone();
             this.graph
-                .read_ref(cx.app, |graph| {
+                .read_ref(cx.host(), |graph| {
                     let mut scratch_ports: Vec<PortId> = Vec::new();
                     this.pick_target_port(
                         graph,
@@ -289,7 +351,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     let style = canvas.style.clone();
                     canvas
                         .graph
-                        .read_ref(cx.app, |graph| {
+                        .read_ref(cx.host(), |graph| {
                             let mut scratch = graph.clone();
                             let sources: Vec<PortId> = if bundle.is_empty() {
                                 vec![from]
@@ -382,9 +444,9 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
 
                 match outcome {
                     Outcome::Apply(ops) => {
-                        canvas.apply_ops(cx.app, cx.window, ops);
+                        canvas.apply_ops(cx.host(), window, ops);
                         if let Some((sev, msg)) = toast {
-                            canvas.show_toast(cx.app, cx.window, sev, msg);
+                            canvas.show_toast(cx.host(), window, sev, msg);
                         }
                     }
                     Outcome::OpenConversionPicker(candidates) => {
@@ -407,7 +469,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         let origin = canvas.clamp_searcher_origin(
                             Point::new(Px(convert_at.x), Px(convert_at.y)),
                             visible,
-                            cx.bounds,
+                            bounds,
                             snapshot,
                         );
                         let active_row = NodeGraphCanvas::searcher_first_selectable_row(&rows)
@@ -432,17 +494,17 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         });
                     }
                     Outcome::Reject(sev, msg) => {
-                        canvas.show_toast(cx.app, cx.window, sev, msg);
+                        canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
                 }
             } else if bundle.is_empty() {
                 let hit_edge = {
-                    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+                    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
                     let this = &*canvas;
                     let index = index.clone();
                     this.graph
-                        .read_ref(cx.app, |graph| {
+                        .read_ref(cx.host(), |graph| {
                             let mut scratch_edges: Vec<EdgeId> = Vec::new();
                             this.hit_edge(
                                 graph,
@@ -459,7 +521,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 };
 
                 if let Some(edge_id) = hit_edge {
-                    canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_id, w.pos);
+                    canvas.open_edge_insert_node_picker(cx.host(), window, edge_id, w.pos);
                 } else {
                     let at = crate::core::CanvasPoint {
                         x: w.pos.x.0,
@@ -472,7 +534,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         },
                         pos: suspended_pos,
                     });
-                    canvas.open_connection_insert_node_picker(cx.app, from, at);
+                    canvas.open_connection_insert_node_picker(cx.host(), from, at);
                 }
             }
         }
@@ -492,7 +554,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     let presenter = &mut *canvas.presenter;
                     canvas
                         .graph
-                        .read_ref(cx.app, |graph| {
+                        .read_ref(cx.host(), |graph| {
                             let plan = presenter.plan_reconnect_edge(graph, edge, endpoint, target);
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
@@ -507,9 +569,9 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         .unwrap_or(Outcome::Ignore)
                 };
                 match outcome {
-                    Outcome::Apply(ops) => canvas.apply_ops(cx.app, cx.window, ops),
+                    Outcome::Apply(ops) => canvas.apply_ops(cx.host(), window, ops),
                     Outcome::Reject(sev, msg) => {
-                        canvas.show_toast(cx.app, cx.window, sev, msg);
+                        canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
                 }
@@ -520,7 +582,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 let presenter = &mut *canvas.presenter;
                 let (ops_all, toast) = canvas
                     .graph
-                    .read_ref(cx.app, |graph| {
+                    .read_ref(cx.host(), |graph| {
                         let mut scratch = graph.clone();
                         let mut ops_all: Vec<GraphOp> = Vec::new();
                         let mut toast: Option<(DiagnosticSeverity, Arc<str>)> = None;
@@ -553,10 +615,10 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     .unwrap_or_default();
 
                 if !ops_all.is_empty() {
-                    canvas.apply_ops(cx.app, cx.window, ops_all);
+                    canvas.apply_ops(cx.host(), window, ops_all);
                 }
                 if let Some((sev, msg)) = toast {
-                    canvas.show_toast(cx.app, cx.window, sev, msg);
+                    canvas.show_toast(cx.host(), window, sev, msg);
                 }
             }
         }
@@ -564,6 +626,6 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
 
     cx.release_pointer_capture();
     cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    cx.invalidate_paint();
     true
 }
