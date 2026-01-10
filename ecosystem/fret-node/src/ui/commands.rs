@@ -23,6 +23,14 @@ pub const CMD_NODE_GRAPH_PASTE: &str = "node_graph.paste";
 pub const CMD_NODE_GRAPH_DUPLICATE: &str = "node_graph.duplicate";
 pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
+pub const CMD_NODE_GRAPH_NUDGE_LEFT: &str = "node_graph.nudge_left";
+pub const CMD_NODE_GRAPH_NUDGE_RIGHT: &str = "node_graph.nudge_right";
+pub const CMD_NODE_GRAPH_NUDGE_UP: &str = "node_graph.nudge_up";
+pub const CMD_NODE_GRAPH_NUDGE_DOWN: &str = "node_graph.nudge_down";
+pub const CMD_NODE_GRAPH_NUDGE_LEFT_FAST: &str = "node_graph.nudge_left_fast";
+pub const CMD_NODE_GRAPH_NUDGE_RIGHT_FAST: &str = "node_graph.nudge_right_fast";
+pub const CMD_NODE_GRAPH_NUDGE_UP_FAST: &str = "node_graph.nudge_up_fast";
+pub const CMD_NODE_GRAPH_NUDGE_DOWN_FAST: &str = "node_graph.nudge_down_fast";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
 pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
@@ -324,6 +332,80 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_keywords(["delete", "remove", "selection"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_LEFT),
+        CommandMeta::new("Nudge Left")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT),
+        CommandMeta::new("Nudge Right")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_UP),
+        CommandMeta::new("Nudge Up")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "up"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_DOWN),
+        CommandMeta::new("Nudge Down")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "down"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_LEFT_FAST),
+        CommandMeta::new("Nudge Left (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "left", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT_FAST),
+        CommandMeta::new("Nudge Right (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "right", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_UP_FAST),
+        CommandMeta::new("Nudge Up (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "up", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_DOWN_FAST),
+        CommandMeta::new("Nudge Down (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "down", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
     );
 
     registry.register(

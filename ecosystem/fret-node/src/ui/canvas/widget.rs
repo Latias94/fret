@@ -29,10 +29,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_ALL,
     CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT,
     CMD_NODE_GRAPH_GROUP_RENAME, CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER, CMD_NODE_GRAPH_OPEN_INSERT_NODE,
-    CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO,
-    CMD_NODE_GRAPH_RESET_VIEW, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE,
-    CMD_NODE_GRAPH_UNDO, CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
+    CMD_NODE_GRAPH_NUDGE_DOWN, CMD_NODE_GRAPH_NUDGE_DOWN_FAST, CMD_NODE_GRAPH_NUDGE_LEFT,
+    CMD_NODE_GRAPH_NUDGE_LEFT_FAST, CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
+    CMD_NODE_GRAPH_NUDGE_UP, CMD_NODE_GRAPH_NUDGE_UP_FAST, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
+    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_RESET_VIEW,
+    CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
@@ -1213,15 +1216,20 @@ impl NodeGraphCanvas {
         host: &mut H,
         window: Option<AppWindowId>,
         selected_nodes: &[GraphNodeId],
+        selected_groups: &[crate::core::GroupId],
     ) {
-        if selected_nodes.is_empty() {
+        if selected_nodes.is_empty() && selected_groups.is_empty() {
             return;
         }
 
         let fragment = self
             .graph
             .read_ref(host, |graph| {
-                GraphFragment::from_nodes(graph, selected_nodes.to_vec())
+                GraphFragment::from_selection(
+                    graph,
+                    selected_nodes.to_vec(),
+                    selected_groups.to_vec(),
+                )
             })
             .ok()
             .unwrap_or_default();
@@ -1230,7 +1238,8 @@ impl NodeGraphCanvas {
             offset: CanvasPoint { x: 24.0, y: 24.0 },
         };
         let remapper = IdRemapper::new(IdRemapSeed::new_random());
-        let tx = fragment.to_paste_transaction(&remapper, tuning);
+        let mut tx = fragment.to_paste_transaction(&remapper, tuning);
+        tx.label = Some("Duplicate".to_string());
 
         let new_nodes: Vec<GraphNodeId> = tx
             .ops
@@ -1240,19 +1249,31 @@ impl NodeGraphCanvas {
                 _ => None,
             })
             .collect();
+        let new_groups: Vec<crate::core::GroupId> = tx
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                GraphOp::AddGroup { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
 
-        if !self.apply_ops_result(host, window, tx.ops) {
+        if !self.commit_transaction(host, window, &tx) {
             return;
         }
 
-        if !new_nodes.is_empty() {
+        if !new_nodes.is_empty() || !new_groups.is_empty() {
             self.update_view_state(host, |s| {
                 s.selected_edges.clear();
-                s.selected_groups.clear();
                 s.selected_nodes = new_nodes.clone();
+                s.selected_groups = new_groups.clone();
                 for id in &new_nodes {
                     s.draw_order.retain(|x| x != id);
                     s.draw_order.push(*id);
+                }
+                for id in &new_groups {
+                    s.group_draw_order.retain(|x| x != id);
+                    s.group_draw_order.push(*id);
                 }
             });
         }
@@ -1334,6 +1355,183 @@ impl NodeGraphCanvas {
         }
 
         ops
+    }
+
+    fn nudge_selection_by_screen_delta<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        delta_screen_px: CanvasPoint,
+    ) {
+        let selected_nodes = snapshot.selected_nodes.clone();
+        let selected_groups = snapshot.selected_groups.clone();
+        if selected_nodes.is_empty() && selected_groups.is_empty() {
+            return;
+        }
+
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+
+        let mut delta = CanvasPoint {
+            x: delta_screen_px.x / zoom,
+            y: delta_screen_px.y / zoom,
+        };
+        if !delta.x.is_finite() || !delta.y.is_finite() {
+            return;
+        }
+
+        if snapshot.interaction.snap_to_grid {
+            if let Some(primary) = selected_nodes.first().copied() {
+                let primary_start = self
+                    .graph
+                    .read_ref(host, |g| g.nodes.get(&primary).map(|n| n.pos))
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default();
+                let primary_target = CanvasPoint {
+                    x: primary_start.x + delta.x,
+                    y: primary_start.y + delta.y,
+                };
+                let snapped =
+                    Self::snap_canvas_point(primary_target, snapshot.interaction.snap_grid);
+                delta = CanvasPoint {
+                    x: snapped.x - primary_start.x,
+                    y: snapped.y - primary_start.y,
+                };
+            } else if let Some(primary) = selected_groups.first().copied() {
+                let primary_start = self
+                    .graph
+                    .read_ref(host, |g| g.groups.get(&primary).map(|gr| gr.rect.origin))
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default();
+                let primary_target = CanvasPoint {
+                    x: primary_start.x + delta.x,
+                    y: primary_start.y + delta.y,
+                };
+                let snapped =
+                    Self::snap_canvas_point(primary_target, snapshot.interaction.snap_grid);
+                delta = CanvasPoint {
+                    x: snapped.x - primary_start.x,
+                    y: snapped.y - primary_start.y,
+                };
+            }
+        }
+
+        if delta.x.abs() <= 1.0e-9 && delta.y.abs() <= 1.0e-9 {
+            return;
+        }
+
+        let geom_for_extent = self.canvas_geometry(&*host, snapshot);
+        let ops = self
+            .graph
+            .read_ref(host, |g| {
+                let mut ops: Vec<GraphOp> = Vec::new();
+
+                let selected_groups_set: std::collections::HashSet<crate::core::GroupId> =
+                    selected_groups.iter().copied().collect();
+
+                let mut moved_by_group: std::collections::HashSet<GraphNodeId> =
+                    std::collections::HashSet::new();
+                for (&node_id, node) in &g.nodes {
+                    if let Some(parent) = node.parent
+                        && selected_groups_set.contains(&parent)
+                    {
+                        moved_by_group.insert(node_id);
+                    }
+                }
+
+                let mut moved_nodes: std::collections::BTreeSet<GraphNodeId> =
+                    selected_nodes.iter().copied().collect();
+                for id in &moved_by_group {
+                    moved_nodes.insert(*id);
+                }
+
+                let mut groups_sorted = selected_groups.clone();
+                groups_sorted.sort();
+                for group_id in groups_sorted {
+                    let Some(group) = g.groups.get(&group_id) else {
+                        continue;
+                    };
+                    let from = group.rect;
+                    let to = crate::core::CanvasRect {
+                        origin: CanvasPoint {
+                            x: from.origin.x + delta.x,
+                            y: from.origin.y + delta.y,
+                        },
+                        size: from.size,
+                    };
+                    if from != to {
+                        ops.push(GraphOp::SetGroupRect {
+                            id: group_id,
+                            from,
+                            to,
+                        });
+                    }
+                }
+
+                for node_id in moved_nodes {
+                    let Some(node) = g.nodes.get(&node_id) else {
+                        continue;
+                    };
+                    let from = node.pos;
+                    let mut to = CanvasPoint {
+                        x: from.x + delta.x,
+                        y: from.y + delta.y,
+                    };
+
+                    if !moved_by_group.contains(&node_id) {
+                        let Some(node_geom) = geom_for_extent.nodes.get(&node_id) else {
+                            continue;
+                        };
+                        let node_w = node_geom.rect.size.width.0;
+                        let node_h = node_geom.rect.size.height.0;
+
+                        if let Some(extent) = snapshot.interaction.node_extent {
+                            let min_x = extent.origin.x;
+                            let min_y = extent.origin.y;
+                            let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
+                            let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+
+                        if let Some(parent) = node.parent
+                            && let Some(group) = g.groups.get(&parent)
+                        {
+                            let min_x = group.rect.origin.x;
+                            let min_y = group.rect.origin.y;
+                            let max_x =
+                                group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
+                            let max_y =
+                                group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
+                            to.x = to.x.clamp(min_x, max_x);
+                            to.y = to.y.clamp(min_y, max_y);
+                        }
+                    }
+
+                    if from != to {
+                        ops.push(GraphOp::SetNodePos {
+                            id: node_id,
+                            from,
+                            to,
+                        });
+                    }
+                }
+
+                ops
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if ops.is_empty() {
+            return;
+        }
+
+        let _ = self.commit_ops(host, window, Some("Nudge"), ops);
     }
 
     pub(super) fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
@@ -3952,7 +4150,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 true
             }
             CMD_NODE_GRAPH_DUPLICATE => {
-                self.duplicate_selection(cx.app, cx.window, &snapshot.selected_nodes);
+                self.duplicate_selection(
+                    cx.app,
+                    cx.window,
+                    &snapshot.selected_nodes,
+                    &snapshot.selected_groups,
+                );
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
                 true
@@ -3992,6 +4195,94 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     s.selected_groups.clear();
                 });
                 self.repair_focused_edge_after_graph_change(cx.app, preferred_focus);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_LEFT => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: -1.0, y: 0.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_RIGHT => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 1.0, y: 0.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_UP => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 0.0, y: -1.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_DOWN => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 0.0, y: 1.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_LEFT_FAST => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: -10.0, y: 0.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_RIGHT_FAST => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 10.0, y: 0.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_UP_FAST => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 0.0, y: -10.0 },
+                );
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_NUDGE_DOWN_FAST => {
+                self.nudge_selection_by_screen_delta(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    CanvasPoint { x: 0.0, y: 10.0 },
+                );
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
                 true
@@ -4281,6 +4572,37 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE
                     } else {
                         CMD_NODE_GRAPH_OPEN_INSERT_NODE
+                    };
+                    cx.dispatch_command(CommandId::from(cmd));
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if matches!(
+                    key,
+                    fret_core::KeyCode::ArrowLeft
+                        | fret_core::KeyCode::ArrowRight
+                        | fret_core::KeyCode::ArrowUp
+                        | fret_core::KeyCode::ArrowDown
+                ) && !modifiers.ctrl
+                    && !modifiers.meta
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                {
+                    if snapshot.selected_nodes.is_empty() && snapshot.selected_groups.is_empty() {
+                        return;
+                    }
+
+                    let cmd = match (*key, modifiers.shift) {
+                        (fret_core::KeyCode::ArrowLeft, false) => CMD_NODE_GRAPH_NUDGE_LEFT,
+                        (fret_core::KeyCode::ArrowRight, false) => CMD_NODE_GRAPH_NUDGE_RIGHT,
+                        (fret_core::KeyCode::ArrowUp, false) => CMD_NODE_GRAPH_NUDGE_UP,
+                        (fret_core::KeyCode::ArrowDown, false) => CMD_NODE_GRAPH_NUDGE_DOWN,
+                        (fret_core::KeyCode::ArrowLeft, true) => CMD_NODE_GRAPH_NUDGE_LEFT_FAST,
+                        (fret_core::KeyCode::ArrowRight, true) => CMD_NODE_GRAPH_NUDGE_RIGHT_FAST,
+                        (fret_core::KeyCode::ArrowUp, true) => CMD_NODE_GRAPH_NUDGE_UP_FAST,
+                        (fret_core::KeyCode::ArrowDown, true) => CMD_NODE_GRAPH_NUDGE_DOWN_FAST,
+                        _ => return,
                     };
                     cx.dispatch_command(CommandId::from(cmd));
                     cx.stop_propagation();
@@ -5822,11 +6144,13 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
 #[cfg(test)]
 mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size, TextBlobId};
+    use fret_runtime::CommandId;
     use fret_runtime::ui_host::{
         CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
     };
     use fret_runtime::{ClipboardToken, CommandRegistry, DragKind, DragSession, Effect, FrameId};
     use fret_runtime::{ModelHost, ModelStore, TickId, TimerToken};
+    use fret_ui::retained_bridge::Widget as _;
     use serde_json::Value;
     use std::any::{Any, TypeId};
     use std::collections::{HashMap, HashSet};
@@ -5836,6 +6160,7 @@ mod tests {
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
     use crate::rules::EdgeEndpoint;
+    use crate::ui::commands::CMD_NODE_GRAPH_NUDGE_RIGHT;
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
     use super::NodeGraphCanvas;
@@ -6054,6 +6379,25 @@ mod tests {
             requested_focus: None,
             requested_capture: None,
             requested_cursor: None,
+            stop_propagation: false,
+        }
+    }
+
+    fn command_cx<'a>(
+        host: &'a mut TestUiHostImpl,
+        services: &'a mut NullServices,
+        tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
+    ) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
+        fret_ui::retained_bridge::CommandCx {
+            app: host,
+            services,
+            tree,
+            node: fret_core::NodeId::default(),
+            window: None,
+            input_ctx: fret_runtime::InputContext::default(),
+            focus: None,
+            invalidations: Vec::new(),
+            requested_focus: None,
             stop_propagation: false,
         }
     }
@@ -6475,5 +6819,40 @@ mod tests {
             .read_ref(&mut host, |g| g.edges.len())
             .unwrap_or(0);
         assert_eq!(edges_len, 0);
+    }
+
+    #[test]
+    fn nudge_moves_selection_and_records_history_entry() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, a, b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT)));
+        assert_eq!(canvas.history.undo_len(), 1);
+        assert_eq!(read_node_pos(&mut host, &graph, a).x, 1.0);
+        assert_eq!(read_node_pos(&mut host, &graph, b).x, 11.0);
+
+        assert!(canvas.undo_last(&mut host, None));
+        assert_eq!(
+            read_node_pos(&mut host, &graph, a),
+            CanvasPoint { x: 0.0, y: 0.0 }
+        );
+        assert_eq!(
+            read_node_pos(&mut host, &graph, b),
+            CanvasPoint { x: 10.0, y: 0.0 }
+        );
     }
 }
