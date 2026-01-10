@@ -204,10 +204,10 @@ This section is intentionally lightweight and should be updated as work lands.
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
   - `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md` (v1 clip mask substrate)
 - **Implementation status (as of now):**
-  - M0: In progress (landed in `refactor/renderer-v3`):
+  - M0: Landed on `main` (prototype implemented):
     - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
     - Path MSAA multi-pass is represented as explicit plan passes (no ad-hoc drop/re-begin main pass).
-  - M1: In progress (landed in `refactor/renderer-v3`):
+  - M1: Landed on `main` (prototype implemented):
     - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
     - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
   - M2: In progress:
@@ -234,18 +234,11 @@ This section is intentionally lightweight and should be updated as work lands.
     - Region-scissored blur preserves outside pixels with GPU conformance tests (debug scissor + effect-bounds scissor).
   - M4: Deferred.
 
-Recent landing points (branch-local):
+Debugging aids (landed on `main`):
 
-- `f47f0ec`: minimal `RenderPlan` skeleton.
-- `045a69c`: Path MSAA is an explicit `RenderPlan` pass.
-- `f32a62f`: Offscreen target + fullscreen identity blit pass + GPU equality test.
-- `27891de`: Intermediate texture pooling for offscreen targets (acquire/release per frame).
-- `865d15d`: Debug-gated pixelate postprocess (downsample/upscale chain + blit).
-- `8ba9319`: Debug-gated separable blur postprocess (downsample -> blur H/V -> upscale -> blit).
-- `523d913`: Region-scissored fullscreen passes (required for bounded backdrop/glass).
-- `b64d623`: Pixelate effect step in `EffectChain` (+ conformance tests).
-- `2a2b962`: `effects_demo` for visual smoke checks.
-- `d4d0d7b`, `7dee14d`: ADR 0135 + mask semantics/budget clarifications.
+- Scriptable RenderDoc inspection tool: `apps/fret-renderdoc`
+- RenderDoc inspection workflow: `docs/renderdoc-inspection.md`
+- Practical debugging checklist: `docs/debugging-playbook.md`
 
 ## Work Breakdown (Actionable Checklist)
 
