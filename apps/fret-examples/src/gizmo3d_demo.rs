@@ -166,6 +166,7 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     targets: Vec<GizmoTarget3d>,
     selection: Vec<GizmoTargetId>,
+    marquee_preview: Vec<GizmoTargetId>,
     active_target: GizmoTargetId,
     drag_start_targets: Option<Vec<GizmoTarget3d>>,
     pending_selection: Option<PendingSelection>,
@@ -210,6 +211,7 @@ impl Default for Gizmo3dDemoModel {
             gizmo: Gizmo::new(gizmo_cfg),
             targets,
             selection: vec![GizmoTargetId(1)],
+            marquee_preview: Vec::new(),
             active_target: GizmoTargetId(1),
             drag_start_targets: None,
             pending_selection: None,
@@ -1497,6 +1499,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         if over_handle {
                             m.pending_selection = None;
                             m.marquee = None;
+                            m.marquee_preview.clear();
                             drag_started = true;
                             dragging = true;
                         } else {
@@ -1505,6 +1508,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 additive: modifiers.shift,
                             });
                             m.marquee = None;
+                            m.marquee_preview.clear();
                             drag_started = false;
                             dragging = false;
                         }
@@ -1532,6 +1536,33 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 m.marquee = Some(marquee);
                             }
 
+                            if let Some(marquee) = m.marquee {
+                                let (rect_min, rect_max) =
+                                    marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+                                let hits = marquee_hits(
+                                    view_projection,
+                                    viewport,
+                                    m.gizmo.config.depth_range,
+                                    &m.targets,
+                                    rect_min,
+                                    rect_max,
+                                );
+
+                                let mut preview: Vec<GizmoTargetId> = if marquee.additive {
+                                    m.selection.clone()
+                                } else {
+                                    Vec::new()
+                                };
+                                for (id, _z01) in hits {
+                                    if !preview.contains(&id) {
+                                        preview.push(id);
+                                    }
+                                }
+                                m.marquee_preview = preview;
+                            } else {
+                                m.marquee_preview.clear();
+                            }
+
                             if m.pending_selection.is_some() || m.marquee.is_some() {
                                 drag_started = false;
                                 dragging = false;
@@ -1546,6 +1577,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         if is_gizmo_dragging {
                             m.pending_selection = None;
                             m.marquee = None;
+                            m.marquee_preview.clear();
                         } else {
                             if let Some(marquee) = m.marquee.take() {
                                 let (rect_min, rect_max) =
@@ -1580,6 +1612,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 }
 
                                 m.pending_selection = None;
+                                m.marquee_preview.clear();
                             } else if let Some(pending) = m.pending_selection.take() {
                                 if let Some(ray) = fret_gizmo::ray_from_screen(
                                     view_projection,
@@ -1619,6 +1652,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 } else if !pending.additive {
                                     m.selection.clear();
                                 }
+                                m.marquee_preview.clear();
                             }
 
                             m.pending_selection = None;
@@ -1759,28 +1793,39 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .read(app, |_app, m| {
                 let view_proj = camera_view_projection(size, m.camera);
 
-                let selection = m.selection.clone();
+                let marquee = m.marquee;
+                let selection = if marquee.is_some() {
+                    if m.marquee_preview.is_empty() {
+                        m.selection.clone()
+                    } else {
+                        m.marquee_preview.clone()
+                    }
+                } else {
+                    m.selection.clone()
+                };
                 let active_target = if selection.contains(&m.active_target) {
                     m.active_target
                 } else {
                     selection.first().copied().unwrap_or(m.active_target)
                 };
 
-                let gizmo_targets: Vec<GizmoTarget3d> = m
-                    .targets
-                    .iter()
-                    .copied()
-                    .filter(|t| selection.contains(&t.id))
-                    .collect();
-
-                let draw = m.gizmo.draw(
-                    view_proj,
-                    ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                    active_target,
-                    &gizmo_targets,
-                );
+                let draw = if marquee.is_some() {
+                    GizmoDrawList3d::default()
+                } else {
+                    let gizmo_targets: Vec<GizmoTarget3d> = m
+                        .targets
+                        .iter()
+                        .copied()
+                        .filter(|t| selection.contains(&t.id))
+                        .collect();
+                    m.gizmo.draw(
+                        view_proj,
+                        ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
+                        active_target,
+                        &gizmo_targets,
+                    )
+                };
                 let thickness_px = m.gizmo.config.line_thickness_px;
-                let marquee = m.marquee;
                 let depth = m.gizmo.config.depth_range;
 
                 (
