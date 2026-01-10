@@ -296,6 +296,52 @@ fn install_callbacks_receives_graph_and_view_events() {
 }
 
 #[test]
+fn controlled_graph_can_apply_store_changes_via_callbacks() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[derive(Clone)]
+    struct ControlledApply {
+        graph: Rc<RefCell<Graph>>,
+    }
+
+    impl NodeGraphCallbacks for ControlledApply {
+        fn on_nodes_change(&mut self, changes: &[NodeChange]) {
+            apply_node_changes(&mut self.graph.borrow_mut(), changes);
+        }
+
+        fn on_edges_change(&mut self, changes: &[EdgeChange]) {
+            apply_edge_changes(&mut self.graph.borrow_mut(), changes);
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0.clone(), NodeGraphViewState::default());
+
+    let controlled = Rc::new(RefCell::new(g0));
+    let _token = install_callbacks(
+        &mut store,
+        ControlledApply {
+            graph: controlled.clone(),
+        },
+    );
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from: CanvasPoint { x: 0.0, y: 0.0 },
+            to: CanvasPoint { x: 123.0, y: 456.0 },
+        }],
+    };
+    let _ = store.dispatch_transaction(&tx).expect("dispatch");
+
+    let store_json = serde_json::to_value(store.graph()).expect("store json");
+    let controlled_json = serde_json::to_value(&*controlled.borrow()).expect("controlled json");
+    assert_eq!(store_json, controlled_json);
+}
+
+#[test]
 fn store_dispatch_changes_records_history_and_supports_undo() {
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
     let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
