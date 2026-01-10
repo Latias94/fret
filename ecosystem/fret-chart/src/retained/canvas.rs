@@ -2948,6 +2948,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         });
 
         let model = self.engine.model();
+        let brush = self.engine.state().brush_selection_2d;
 
         for cached in &self.cached_rects {
             let base_order = self
@@ -2960,6 +2961,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(brush) = brush
+                && let Some(series_id) = cached.source_series
+                && let Some(series) = model.series.get(&series_id)
+                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
+            {
+                fill_color.a *= 0.25;
             }
             if let Some(hover) = self.legend_hover
                 && cached.source_series.is_some()
@@ -2990,6 +2998,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             if let Some(series) = cached.source_series {
                 stroke_color = self.series_color(series);
                 stroke_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(brush) = brush
+                && let Some(series_id) = cached.source_series
+                && let Some(series) = model.series.get(&series_id)
+                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
+            {
+                stroke_color.a *= 0.25;
             }
             if let Some(hover) = self.legend_hover
                 && cached.source_series.is_some()
@@ -3041,6 +3056,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.scatter_fill_alpha;
+            }
+            if let Some(brush) = brush
+                && let Some(series_id) = cached.source_series
+                && let Some(series) = model.series.get(&series_id)
+                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
+            {
+                fill_color.a *= 0.25;
             }
             if let Some(hover) = self.legend_hover
                 && cached.source_series.is_some()
