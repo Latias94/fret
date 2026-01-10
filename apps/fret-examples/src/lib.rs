@@ -2,6 +2,8 @@
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod keymap_defaults;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(

@@ -10,14 +10,15 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
-    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
-    PlatformFilter, WhenExpr, keymap::Binding,
+    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter,
+    WhenExpr,
 };
 use fret_ui::Theme;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
 use serde_json::Value;
 
+use crate::keymap_defaults::install_default_keybindings_into_keymap;
 use crate::node_graph_tuning_overlay::NodeGraphTuningOverlay;
 
 use fret_node::Graph;
@@ -1313,31 +1314,6 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     run_app(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
-}
-
-fn install_default_keybindings_into_keymap(app: &mut App) {
-    let mut bindings: Vec<Binding> = Vec::new();
-
-    for (id, meta) in app.commands().iter() {
-        for kb in meta.default_keybindings.iter().cloned() {
-            bindings.push(Binding {
-                platform: kb.platform,
-                sequence: vec![kb.chord],
-                when: kb.when.clone().or_else(|| meta.when.clone()),
-                command: Some(id.clone()),
-            });
-        }
-    }
-
-    if bindings.is_empty() {
-        return;
-    }
-
-    app.with_global_mut(KeymapService::default, |svc, _app| {
-        for b in bindings {
-            svc.keymap.push_binding(b);
-        }
-    });
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {

@@ -19,11 +19,13 @@ use fret_node::types::TypeDesc;
 use fret_node::ui::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphCanvas,
     NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPresenter,
+    NodeGraphPresenter, register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
+
+use crate::keymap_defaults::install_default_keybindings_into_keymap;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -678,6 +680,8 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    register_node_graph_commands(app.commands_mut());
+    install_default_keybindings_into_keymap(&mut app);
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
