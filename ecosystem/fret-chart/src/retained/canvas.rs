@@ -15,12 +15,14 @@ use fret_core::{
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
     Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
+use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
+use crate::retained::{ChartCanvasOutput, ChartCanvasOutputSnapshot};
 
 #[derive(Debug, Default)]
 struct NullTextMeasurer;
@@ -155,6 +157,9 @@ pub struct ChartCanvas {
     brush_drag: Option<BoxZoomDrag>,
     slider_drag: Option<DataZoomSliderDrag>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
+    linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
+    output_model: Option<Model<ChartCanvasOutput>>,
+    output: ChartCanvasOutput,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -203,6 +208,9 @@ impl ChartCanvas {
             brush_drag: None,
             slider_drag: None,
             axis_extent_cache: BTreeMap::default(),
+            linked_brush_model: None,
+            output_model: None,
+            output: ChartCanvasOutput::default(),
         })
     }
 
@@ -225,6 +233,67 @@ impl ChartCanvas {
 
     pub fn set_input_map(&mut self, map: ChartInputMap) {
         self.input_map = map;
+    }
+
+    pub fn linked_brush(mut self, brush: Model<Option<BrushSelection2D>>) -> Self {
+        self.linked_brush_model = Some(brush);
+        self
+    }
+
+    pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
+        self.output_model = Some(output);
+        self
+    }
+
+    fn sync_linked_brush<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some(model) = &self.linked_brush_model else {
+            return;
+        };
+        cx.observe_model(model, Invalidation::Paint);
+
+        let Ok(selection) = model.read(cx.app, |_, s| *s) else {
+            return;
+        };
+        if selection == self.engine.state().brush_selection_2d {
+            return;
+        }
+
+        match selection {
+            Some(sel) => {
+                self.engine.apply_action(Action::SetBrushSelection2D {
+                    x_axis: sel.x_axis,
+                    y_axis: sel.y_axis,
+                    x: sel.x,
+                    y: sel.y,
+                });
+            }
+            None => {
+                self.engine.apply_action(Action::ClearBrushSelection);
+            }
+        }
+    }
+
+    fn publish_output<H: UiHost>(&mut self, app: &mut H) {
+        let link_events = self.engine.drain_link_events();
+        let snapshot = ChartCanvasOutputSnapshot {
+            brush_selection_2d: self.engine.state().brush_selection_2d,
+            brush_x_row_ranges_by_series: self.engine.output().brush_x_row_ranges_by_series.clone(),
+            link_events,
+        };
+
+        if self.output.snapshot == snapshot {
+            return;
+        }
+
+        self.output.revision = self.output.revision.wrapping_add(1);
+        self.output.snapshot = snapshot;
+
+        if let Some(model) = &self.output_model {
+            let next = self.output.clone();
+            let _ = model.update(app, |s, _cx| {
+                *s = next;
+            });
+        }
     }
 
     fn sync_style_from_theme(&mut self, theme: &Theme) -> bool {
@@ -2886,6 +2955,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.sync_viewport(self.last_layout.plot);
         }
 
+        self.sync_linked_brush(cx);
+
         if self.last_bounds != cx.bounds
             || self.last_layout.plot.size.width.0 <= 0.0
             || self.last_layout.plot.size.height.0 <= 0.0
@@ -2931,6 +3002,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         self.rebuild_paths_if_needed(cx);
         self.clear_tooltip_text_cache(cx.services);
         self.clear_legend_text_cache(cx.services);
+        self.publish_output(cx.app);
 
         if let Some(background) = self.style.background {
             cx.scene.push(SceneOp::Quad {
