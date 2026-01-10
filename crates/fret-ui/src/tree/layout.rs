@@ -63,6 +63,23 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "layout-engine-v2")]
         let mut viewport_cursor: usize = 0;
 
+        #[cfg(feature = "layout-engine-v2")]
+        if pass_kind == LayoutPassKind::Final {
+            // Precompute flow islands for the top-level layer roots up front so nested flow
+            // containers can consume engine rects instead of solving their own islands.
+            for &root in &roots {
+                if self.nodes.get(root).is_some_and(|n| n.element.is_some()) {
+                    self.precompute_flow_root_island_if_needed(
+                        app,
+                        services,
+                        root,
+                        bounds,
+                        scale_factor,
+                    );
+                }
+            }
+        }
+
         for root in roots {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
@@ -155,6 +172,15 @@ impl<H: UiHost> UiTree<H> {
             self.viewport_roots.clear();
 
             let mut viewport_cursor: usize = 0;
+            if self.nodes.get(root).is_some_and(|n| n.element.is_some()) {
+                self.precompute_flow_root_island_if_needed(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                );
+            }
             let size = self.layout_in_with_pass_kind(
                 app,
                 services,

@@ -313,22 +313,16 @@ fn build_flow_subtree_impl<H: UiHost>(
                 Display::Grid,
                 root_override_size,
             );
-            if matches!(&instance, ElementInstance::DismissibleLayer(_))
-                || wrapper_has_only_absolute_children(app, tree, window, node)
-            {
-                style.grid_template_columns = vec![GridTemplateComponent::Single(
-                    taffy::style_helpers::flex(1.0),
-                )];
-                style.grid_template_rows = vec![GridTemplateComponent::Single(
-                    taffy::style_helpers::flex(1.0),
-                )];
-            } else {
-                style.grid_template_columns =
-                    vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
-                style.grid_template_rows =
-                    vec![GridTemplateComponent::Single(taffy::style_helpers::auto())];
-            }
+            // Use `1fr` tracks so percent/fill sizing resolves against the wrapper's definite box
+            // when available, without forcing auto-sized children to stretch.
+            style.grid_template_columns = vec![GridTemplateComponent::Single(
+                taffy::style_helpers::flex(1.0),
+            )];
+            style.grid_template_rows = vec![GridTemplateComponent::Single(
+                taffy::style_helpers::flex(1.0),
+            )];
             style.align_items = Some(AlignItems::FlexStart);
+            style.justify_items = Some(AlignItems::FlexStart);
             style.justify_content = Some(JustifyContent::FlexStart);
 
             if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
@@ -386,18 +380,6 @@ fn hover_region_has_absolute_child<H: UiHost>(
     node: NodeId,
 ) -> bool {
     tree.children(node).iter().copied().any(|child| {
-        layout_style_for_node(app, window, child).position
-            == crate::element::PositionStyle::Absolute
-    })
-}
-
-fn wrapper_has_only_absolute_children<H: UiHost>(
-    app: &mut H,
-    tree: &UiTree<H>,
-    window: AppWindowId,
-    node: NodeId,
-) -> bool {
-    tree.children(node).iter().copied().all(|child| {
         layout_style_for_node(app, window, child).position
             == crate::element::PositionStyle::Absolute
     })
