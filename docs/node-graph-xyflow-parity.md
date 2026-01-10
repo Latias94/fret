@@ -190,6 +190,8 @@ High-level layering (ADR 0135):
     - `Alt+Arrow` moves port focus spatially across the graph (nearest port in direction).
     - `Enter` activates click-connect (start/commit) for the focused/hovered port.
     - Full semantics (per-element focus nodes, arrow-key navigation, screen reader roles) are still TBD.
+  - Notes:
+    - fret-node exposes a minimal canvas-level semantics node (role `Viewport`) with a dynamic value string summarizing focus/selection.
 
 ## 3.2 Marquee selection
 

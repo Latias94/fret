@@ -4494,14 +4494,17 @@ impl NodeGraphCanvas {
         true
     }
 
-    fn port_center_window<H: UiHost>(
+    fn port_center_canvas<H: UiHost>(
         &mut self,
         host: &mut H,
         snapshot: &ViewSnapshot,
         port: PortId,
-    ) -> Option<Point> {
+    ) -> Option<CanvasPoint> {
         let (geom, _) = self.canvas_derived(&*host, snapshot);
-        geom.ports.get(&port).map(|h| h.center)
+        geom.ports.get(&port).map(|h| CanvasPoint {
+            x: h.center.x.0,
+            y: h.center.y.0,
+        })
     }
 
     fn activate_focused_port<H: UiHost>(
@@ -4522,7 +4525,8 @@ impl NodeGraphCanvas {
         };
 
         let pos = self
-            .port_center_window(cx.app, snapshot, port)
+            .port_center_canvas(cx.app, snapshot, port)
+            .map(|p| Point::new(Px(p.x), Px(p.y)))
             .or(self.interaction.last_pos)
             .unwrap_or_else(|| {
                 let bounds = self.interaction.last_bounds.unwrap_or_default();
@@ -4590,10 +4594,7 @@ impl NodeGraphCanvas {
             return false;
         };
 
-        let Some(from_center) = self
-            .port_center_window(host, snapshot, from_port)
-            .map(|p| CanvasPoint { x: p.x.0, y: p.y.0 })
-        else {
+        let Some(from_center) = self.port_center_canvas(host, snapshot, from_port) else {
             return false;
         };
 
@@ -4731,15 +4732,8 @@ impl NodeGraphCanvas {
         });
 
         let snapshot = self.sync_view_state(host);
-        if let Some(center) = self.port_center_window(host, &snapshot, next) {
-            self.ensure_canvas_point_visible(
-                host,
-                &snapshot,
-                CanvasPoint {
-                    x: center.x.0,
-                    y: center.y.0,
-                },
-            );
+        if let Some(center) = self.port_center_canvas(host, &snapshot, next) {
+            self.ensure_canvas_point_visible(host, &snapshot, center);
         }
 
         true
@@ -5458,6 +5452,69 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
             _ => false,
         }
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        self.interaction.last_bounds = Some(cx.bounds);
+        let snapshot = self.sync_view_state(cx.app);
+
+        cx.set_role(fret_core::SemanticsRole::Viewport);
+        cx.set_focusable(true);
+        cx.set_label(self.presenter.a11y_canvas_label().as_ref());
+
+        let (focused_node, focused_port, focused_edge) = (
+            self.interaction.focused_node,
+            self.interaction.focused_port,
+            self.interaction.focused_edge,
+        );
+
+        let style = self.style.clone();
+        let value = self
+            .graph
+            .read_ref(cx.app, |graph| {
+                let mut parts: Vec<String> = Vec::new();
+                parts.push(format!("zoom {:.3}", snapshot.zoom));
+                parts.push(format!(
+                    "selected nodes {}, edges {}, groups {}",
+                    snapshot.selected_nodes.len(),
+                    snapshot.selected_edges.len(),
+                    snapshot.selected_groups.len(),
+                ));
+
+                if self.interaction.wire_drag.is_some() {
+                    parts.push("connecting".to_string());
+                }
+
+                if let Some(node) = focused_node {
+                    if let Some(label) = self.presenter.a11y_node_label(graph, node) {
+                        parts.push(format!("focused node {}", label));
+                    } else {
+                        parts.push(format!("focused node {:?}", node));
+                    }
+                }
+
+                if let Some(port) = focused_port {
+                    if let Some(label) = self.presenter.a11y_port_label(graph, port) {
+                        parts.push(format!("focused port {}", label));
+                    } else {
+                        parts.push(format!("focused port {:?}", port));
+                    }
+                }
+
+                if let Some(edge) = focused_edge {
+                    if let Some(label) = self.presenter.a11y_edge_label(graph, edge, &style) {
+                        parts.push(format!("focused edge {}", label));
+                    } else {
+                        parts.push(format!("focused edge {:?}", edge));
+                    }
+                }
+
+                parts.join("; ")
+            })
+            .ok()
+            .unwrap_or_else(|| format!("zoom {:.3}", snapshot.zoom));
+
+        cx.set_value(value);
     }
 
     fn render_transform(&self, bounds: Rect) -> Option<Transform2D> {

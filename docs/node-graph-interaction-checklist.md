@@ -178,6 +178,17 @@ Invariants:
   - zoom change,
   - presenter/template change.
 
+## L) Accessibility / Semantics (prototype)
+
+### Manual script
+
+- (prototype) Assistive tech sees the canvas as a `Viewport` with a stable label.
+- (prototype) The canvas exposes a value string that reflects:
+  - zoom,
+  - selection counts,
+  - focused node/port/edge (when present),
+  - whether a connection drag is active.
+
 ## G) Clipboard (prototype)
 
 ### Manual script

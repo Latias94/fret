@@ -250,6 +250,39 @@ pub trait NodeGraphPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str>;
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str>;
 
+    /// Accessible label for the node graph canvas root.
+    ///
+    /// This is used by `NodeGraphCanvas::semantics` as a baseline for assistive technologies.
+    fn a11y_canvas_label(&self) -> Arc<str> {
+        Arc::<str>::from("Node Graph Canvas")
+    }
+
+    /// Accessible label for a node.
+    ///
+    /// Defaults to `node_title(...)`.
+    fn a11y_node_label(&self, graph: &Graph, node: NodeId) -> Option<Arc<str>> {
+        Some(self.node_title(graph, node))
+    }
+
+    /// Accessible label for a port.
+    ///
+    /// Defaults to `port_label(...)`.
+    fn a11y_port_label(&self, graph: &Graph, port: PortId) -> Option<Arc<str>> {
+        Some(self.port_label(graph, port))
+    }
+
+    /// Accessible label for an edge.
+    ///
+    /// Defaults to `edge_render_hint(...).label` (when present).
+    fn a11y_edge_label(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+    ) -> Option<Arc<str>> {
+        self.edge_render_hint(graph, edge, style).label
+    }
+
     /// Optional node body label.
     ///
     /// This is a low-friction extensibility point for MVP editor UIs that want to show simple,

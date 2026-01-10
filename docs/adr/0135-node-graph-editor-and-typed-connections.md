@@ -878,6 +878,11 @@ Selection is editor-owned policy but must be exposed as data:
   - `node_graph.focus_port_left|right|up|down` (spatial port focus)
   - `node_graph.activate` (keyboard click-connect)
 
+Semantics baseline:
+
+- The canvas provides a minimal semantics node (`SemanticsRole::Viewport`) so assistive tech can identify the editor surface.
+- The presenter may override accessible labels via `NodeGraphPresenter::{a11y_canvas_label,a11y_node_label,a11y_port_label,a11y_edge_label}`.
+
 ### 17) Clipboard and drag payloads have stable formats
 
 The node graph editor must support:
