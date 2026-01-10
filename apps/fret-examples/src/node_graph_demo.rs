@@ -43,11 +43,11 @@ use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
     NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
     NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
-    RegistryNodeGraphPresenter, register_node_graph_commands,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost,
+    NodeGraphPortalNodeLayout, PortalNumberEditHandler, PortalNumberEditSpec,
+    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
 };
-use fret_ui::element::AnyElement;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -1116,23 +1116,11 @@ impl NodeGraphDemoDriver {
         let portal_editor = PortalNumberEditor::new(portal_root);
         let portal_graph_model = models.graph.clone();
 
-        let portal = NodeGraphPortalHost::new(
-            models.graph.clone(),
-            models.view.clone(),
-            measured.manual.clone(),
-            style.clone(),
-            portal_root,
+        let node_types = NodeGraphNodeTypes::new().register(
+            NodeKindKey::new("demo.float"),
             move |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
                   graph: &Graph,
-                  layout: NodeGraphPortalNodeLayout|
-                  -> Vec<AnyElement> {
-                let Some(node) = graph.nodes.get(&layout.node) else {
-                    return Vec::new();
-                };
-                if node.kind.0.as_str() != "demo.float" {
-                    return Vec::new();
-                }
-
+                  layout: NodeGraphPortalNodeLayout| {
                 portal_editor.render_number_input_for_node(
                     ecx,
                     portal_graph_model.clone(),
@@ -1143,6 +1131,15 @@ impl NodeGraphDemoDriver {
                     &DemoFloatPortalSpec,
                 )
             },
+        );
+
+        let portal = NodeGraphPortalHost::new(
+            models.graph.clone(),
+            models.view.clone(),
+            measured.manual.clone(),
+            style.clone(),
+            portal_root,
+            node_types.into_portal_renderer(),
         )
         .with_cull_margin_px(style.render_cull_margin_px)
         .with_edit_queue(models.edits.clone())
