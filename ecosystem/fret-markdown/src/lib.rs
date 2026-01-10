@@ -8,8 +8,6 @@ use fret_core::{
     Axis, Edges, FontId, FontWeight, Px, RichText, SemanticsRole, TextOverflow, TextRun, TextSlant,
     TextStyle, TextWrap,
 };
-use fret_runtime::Effect;
-use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PositionStyle, PressableProps, ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
@@ -19,6 +17,14 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
+
+mod mermaid;
+mod open_url;
+
+#[cfg(test)]
+use mermaid::MermaidDiagramType;
+use mermaid::{detect_mermaid_diagram_type, is_mermaid_language, render_mermaid_header_label};
+pub use open_url::{OnLinkActivate, is_safe_open_url, on_link_activate_open_url};
 
 #[cfg(feature = "mathjax-svg")]
 use fret_core::SvgFit;
@@ -453,183 +459,7 @@ pub type InlineMathRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, InlineMathInfo) -> AnyElement;
 pub type MathBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, MathBlockInfo) -> AnyElement;
-pub type OnLinkActivate =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, LinkInfo) + 'static>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MermaidDiagramType {
-    Flowchart,
-    Sequence,
-    Class,
-    State,
-    EntityRelationship,
-    UserJourney,
-    Gantt,
-    Pie,
-    Quadrant,
-    Requirement,
-    GitGraph,
-    C4,
-    Mindmap,
-    Timeline,
-    ZenUML,
-    Sankey,
-    XYChart,
-    Block,
-    Unknown,
-}
-
-impl MermaidDiagramType {
-    fn display_name(&self) -> &'static str {
-        match self {
-            Self::Flowchart => "Flowchart",
-            Self::Sequence => "Sequence Diagram",
-            Self::Class => "Class Diagram",
-            Self::State => "State Diagram",
-            Self::EntityRelationship => "Entity-Relationship Diagram",
-            Self::UserJourney => "User Journey",
-            Self::Gantt => "Gantt Chart",
-            Self::Pie => "Pie Chart",
-            Self::Quadrant => "Quadrant Chart",
-            Self::Requirement => "Requirement Diagram",
-            Self::GitGraph => "Git Graph",
-            Self::C4 => "C4 Diagram",
-            Self::Mindmap => "Mindmap",
-            Self::Timeline => "Timeline",
-            Self::ZenUML => "ZenUML Diagram",
-            Self::Sankey => "Sankey Diagram",
-            Self::XYChart => "XY Chart",
-            Self::Block => "Block Diagram",
-            Self::Unknown => "Diagram",
-        }
-    }
-}
-
-fn is_mermaid_language(language: Option<&str>) -> bool {
-    language
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .is_some_and(|s| s.eq_ignore_ascii_case("mermaid"))
-}
-
-fn detect_mermaid_diagram_type(source: &str) -> MermaidDiagramType {
-    // Find the first non-empty, non-comment line. Mermaid uses `%%` for comments.
-    let first_line = source
-        .lines()
-        .map(|line| line.trim())
-        .find(|line| !line.is_empty() && !line.starts_with("%%"))
-        .unwrap_or("");
-
-    let first_line_lower = first_line.to_ascii_lowercase();
-    if first_line_lower.starts_with("flowchart")
-        || first_line_lower.starts_with("graph")
-        || first_line_lower.starts_with("flowchart-v2")
-    {
-        MermaidDiagramType::Flowchart
-    } else if first_line_lower.starts_with("sequencediagram")
-        || first_line_lower.starts_with("sequence")
-    {
-        MermaidDiagramType::Sequence
-    } else if first_line_lower.starts_with("classdiagram") || first_line_lower.starts_with("class")
-    {
-        MermaidDiagramType::Class
-    } else if first_line_lower.starts_with("statediagram") || first_line_lower.starts_with("state")
-    {
-        MermaidDiagramType::State
-    } else if first_line_lower.starts_with("erdiagram") || first_line_lower == "er" {
-        MermaidDiagramType::EntityRelationship
-    } else if first_line_lower.starts_with("journey") {
-        MermaidDiagramType::UserJourney
-    } else if first_line_lower.starts_with("gantt") {
-        MermaidDiagramType::Gantt
-    } else if first_line_lower.starts_with("pie") {
-        MermaidDiagramType::Pie
-    } else if first_line_lower.starts_with("quadrantchart") {
-        MermaidDiagramType::Quadrant
-    } else if first_line_lower.starts_with("requirementdiagram")
-        || first_line_lower.starts_with("requirement")
-    {
-        MermaidDiagramType::Requirement
-    } else if first_line_lower.starts_with("gitgraph") {
-        MermaidDiagramType::GitGraph
-    } else if first_line_lower.starts_with("c4") {
-        MermaidDiagramType::C4
-    } else if first_line_lower.starts_with("mindmap") {
-        MermaidDiagramType::Mindmap
-    } else if first_line_lower.starts_with("timeline") {
-        MermaidDiagramType::Timeline
-    } else if first_line_lower.starts_with("zenuml") {
-        MermaidDiagramType::ZenUML
-    } else if first_line_lower.starts_with("sankey") {
-        MermaidDiagramType::Sankey
-    } else if first_line_lower.starts_with("xychart") {
-        MermaidDiagramType::XYChart
-    } else if first_line_lower.starts_with("block") {
-        MermaidDiagramType::Block
-    } else {
-        MermaidDiagramType::Unknown
-    }
-}
-
-fn render_mermaid_header_label<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    diagram_type: MermaidDiagramType,
-) -> AnyElement {
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text: Arc::<str>::from(format!("Mermaid · {}", diagram_type.display_name())),
-        style: Some(TextStyle {
-            font: FontId::monospace(),
-            size: theme.metric_required("metric.font.mono_size"),
-            weight: FontWeight::SEMIBOLD,
-            slant: Default::default(),
-            line_height: Some(theme.metric_required("metric.font.mono_line_height")),
-            letter_spacing_em: None,
-        }),
-        color: Some(theme.color_required("muted-foreground")),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-    })
-}
-
-/// A conservative allowlist for `Effect::OpenUrl` to avoid surprising/suspicious schemes in UI.
-///
-/// This is intentionally strict:
-/// - allow: `http://`, `https://`, `mailto:`
-/// - deny: `javascript:`, `data:`, `file:`, empty, whitespace-only
-pub fn is_safe_open_url(url: &str) -> bool {
-    let url = url.trim();
-    if url.is_empty() {
-        return false;
-    }
-
-    let lower = url.to_ascii_lowercase();
-    if lower.starts_with("javascript:")
-        || lower.starts_with("data:")
-        || lower.starts_with("file:")
-        || lower.starts_with("vbscript:")
-    {
-        return false;
-    }
-
-    lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:")
-}
-
-/// Convenience: open links via the runner's `Effect::OpenUrl` plumbing (desktop/web).
-///
-/// Usage:
-/// - `components.on_link_activate = Some(fret_markdown::on_link_activate_open_url());`
-pub fn on_link_activate_open_url() -> OnLinkActivate {
-    Arc::new(|host, _cx, _reason, link| {
-        if !is_safe_open_url(&link.href) {
-            return;
-        }
-        host.push_effect(Effect::OpenUrl {
-            url: link.href.to_string(),
-        });
-    })
-}
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
     pub heading: Option<Arc<HeadingRenderer<H>>>,
