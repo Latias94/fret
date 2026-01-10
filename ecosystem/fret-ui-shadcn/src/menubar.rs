@@ -15,7 +15,7 @@ use fret_ui::element::{
     ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -24,6 +24,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
@@ -1100,13 +1101,14 @@ impl MenubarMenuEntries {
                         let font_line_height = theme.metric_required("font.line_height");
                         let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
                         desired.width.0 = desired.width.0.max(anchor.size.width.0);
+                        let direction = direction_prim::use_direction_in_scope(cx, None);
 
                         let layout = popper::popper_content_layout_sized(
                             outer,
                             anchor,
                             desired,
                             popper::PopperContentPlacement::new(
-                                LayoutDirection::Ltr,
+                                direction,
                                 Side::Bottom,
                                 Align::Start,
                                 side_offset,

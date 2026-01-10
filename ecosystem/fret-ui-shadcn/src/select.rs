@@ -12,7 +12,7 @@ use fret_ui::element::{
     ScrollProps, SizeStyle, StackProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
@@ -24,6 +24,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -1033,7 +1034,7 @@ fn select_impl<H: UiHost>(
                         ) {
                             Some((
                                 radix_select::SelectItemAlignedElementInputs {
-                                    direction: LayoutDirection::Ltr,
+                                    direction: direction_prim::use_direction_in_scope(cx, None),
                                     window: cx.bounds,
                                     trigger: anchor,
                                     content_border_top: border_width,
@@ -1066,7 +1067,7 @@ fn select_impl<H: UiHost>(
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
                     let popper_placement = popper::PopperContentPlacement::new(
-                        LayoutDirection::Ltr,
+                        direction_prim::use_direction_in_scope(cx, None),
                         side.into(),
                         align.into(),
                         side_offset,

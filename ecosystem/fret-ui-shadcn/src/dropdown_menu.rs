@@ -14,7 +14,7 @@ use fret_ui::element::{
     ScrollProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -991,18 +992,14 @@ impl DropdownMenu {
 
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let layout = popper::popper_content_layout_sized(
                         outer,
                         anchor,
                         desired,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
                     );
 
                     let placed = layout.rect;

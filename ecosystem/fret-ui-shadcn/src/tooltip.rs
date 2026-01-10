@@ -4,6 +4,7 @@ use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as radix_dismissable_layer;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -22,7 +23,7 @@ use fret_ui::element::{
     PointerRegionProps, SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps, TextProps,
     VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
@@ -459,13 +460,14 @@ impl Tooltip {
 
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,
                     anchor,
                     content_size,
                     popper::PopperContentPlacement::new(
-                        LayoutDirection::Ltr,
+                        direction,
                         side,
                         align,
                         side_offset,
@@ -660,13 +662,14 @@ impl Tooltip {
 
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,
                     anchor,
                     content_size,
                     popper::PopperContentPlacement::new(
-                        LayoutDirection::Ltr,
+                        direction,
                         side,
                         align,
                         side_offset,

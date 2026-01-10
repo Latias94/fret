@@ -8,10 +8,11 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, StackProps, TextProps,
     VisualTransformProps,
 };
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::{
@@ -867,7 +868,7 @@ impl NavigationMenu {
                 };
 
                 let placement = popper::PopperContentPlacement::new(
-                    LayoutDirection::Ltr,
+                    direction_prim::use_direction_in_scope(cx, None),
                     Side::Bottom,
                     Align::Start,
                     side_offset,
