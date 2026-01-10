@@ -56,6 +56,7 @@ pub struct Popover {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    hide_when_detached: bool,
     consume_outside_pointer_events: bool,
     modal: bool,
     auto_focus: bool,
@@ -93,6 +94,7 @@ impl Popover {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            hide_when_detached: false,
             consume_outside_pointer_events: false,
             modal: false,
             auto_focus: false,
@@ -158,6 +160,15 @@ impl Popover {
 
     pub fn arrow_padding(mut self, padding: Px) -> Self {
         self.arrow_padding_override = Some(padding);
+        self
+    }
+
+    /// When `true`, the popover content becomes hidden and non-interactive if the anchor is fully
+    /// clipped by the collision boundary (Radix `hideWhenDetached`).
+    ///
+    /// Default: `false`.
+    pub fn hide_when_detached(mut self, hide: bool) -> Self {
+        self.hide_when_detached = hide;
         self
     }
 
@@ -289,6 +300,7 @@ impl Popover {
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
                 let open_for_barrier = self.open.clone();
+                let hide_when_detached = self.hide_when_detached;
                 let direction = direction_prim::use_direction_in_scope(cx, None);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -337,14 +349,16 @@ impl Popover {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let layout = popper::popper_content_layout_sized(
-                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
-                        anchor,
-                        content_size,
+                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_align_offset(align_offset)
-                            .with_arrow(arrow_options, arrow_protrusion),
-                    );
+                            .with_arrow(arrow_options, arrow_protrusion)
+                            .with_hide_when_detached(hide_when_detached);
+                    let reference_hidden = placement.reference_hidden(outer, anchor);
+
+                    let layout =
+                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
@@ -353,6 +367,7 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
+                    let opacity = if reference_hidden { 0.0 } else { opacity };
                     let transform = overlay_motion::shadcn_popper_presence_transform(
                         layout.side,
                         origin,
@@ -400,10 +415,11 @@ impl Popover {
                         },
                     );
 
-                    let overlay_content = overlay_motion::wrap_opacity_and_render_transform(
+                    let overlay_content = overlay_motion::wrap_opacity_and_render_transform_gated(
                         cx,
                         opacity,
                         transform,
+                        !reference_hidden,
                         vec![wrapper],
                     );
 

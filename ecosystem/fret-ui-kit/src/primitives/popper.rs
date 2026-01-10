@@ -49,6 +49,7 @@ pub struct PopperContentPlacement {
     pub arrow_protrusion: Px,
     pub collision_padding: Edges,
     pub collision_boundary: Option<Rect>,
+    pub hide_when_detached: bool,
 }
 
 impl PopperContentPlacement {
@@ -63,6 +64,7 @@ impl PopperContentPlacement {
             arrow_protrusion: Px(0.0),
             collision_padding: Edges::all(Px(0.0)),
             collision_boundary: None,
+            hide_when_detached: false,
         }
     }
 
@@ -85,6 +87,30 @@ impl PopperContentPlacement {
     pub fn with_collision_boundary(mut self, collision_boundary: Option<Rect>) -> Self {
         self.collision_boundary = collision_boundary;
         self
+    }
+
+    pub fn with_hide_when_detached(mut self, hide_when_detached: bool) -> Self {
+        self.hide_when_detached = hide_when_detached;
+        self
+    }
+
+    /// Returns `true` when the anchor is fully clipped by the effective collision boundary.
+    ///
+    /// This approximates Floating UI's `hide({ strategy: 'referenceHidden' })` middleware as used by
+    /// Radix (`hideWhenDetached`).
+    pub fn reference_hidden(self, outer: Rect, anchor: Rect) -> bool {
+        if !self.hide_when_detached {
+            return false;
+        }
+
+        let mut boundary = outer;
+        if let Some(extra_boundary) = self.collision_boundary {
+            boundary = fret_ui::overlay_placement::intersect_rect(boundary, extra_boundary);
+        }
+        boundary = fret_ui::overlay_placement::inset_rect(boundary, self.collision_padding);
+
+        let intersection = fret_ui::overlay_placement::intersect_rect(boundary, anchor);
+        intersection.size.width.0 <= 0.0 || intersection.size.height.0 <= 0.0
     }
 
     pub fn options(self) -> AnchoredPanelOptions {
@@ -428,5 +454,38 @@ mod tests {
         );
 
         assert_eq!(layout.side, Side::Top);
+    }
+
+    #[test]
+    fn popper_content_reference_hidden_false_when_disabled() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor_outside = Rect::new(
+            Point::new(Px(200.0), Px(200.0)),
+            Size::new(Px(10.0), Px(10.0)),
+        );
+        let placement =
+            PopperContentPlacement::new(LayoutDirection::Ltr, Side::Bottom, Align::Start, Px(0.0));
+
+        assert!(!placement.reference_hidden(outer, anchor_outside));
+    }
+
+    #[test]
+    fn popper_content_reference_hidden_true_when_anchor_outside_boundary() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor_outside = Rect::new(
+            Point::new(Px(200.0), Px(200.0)),
+            Size::new(Px(10.0), Px(10.0)),
+        );
+        let placement =
+            PopperContentPlacement::new(LayoutDirection::Ltr, Side::Bottom, Align::Start, Px(0.0))
+                .with_hide_when_detached(true);
+
+        assert!(placement.reference_hidden(outer, anchor_outside));
     }
 }

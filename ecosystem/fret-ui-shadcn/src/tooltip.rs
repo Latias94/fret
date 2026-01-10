@@ -222,6 +222,7 @@ pub struct Tooltip {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    hide_when_detached: bool,
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
@@ -241,6 +242,7 @@ impl Tooltip {
             arrow: true,
             arrow_size_override: None,
             arrow_padding_override: None,
+            hide_when_detached: false,
             open_delay_frames_override: None,
             close_delay_frames_override: None,
             disable_hoverable_content_override: None,
@@ -305,6 +307,15 @@ impl Tooltip {
         self
     }
 
+    /// When `true`, the tooltip content becomes hidden and non-interactive if the anchor is fully
+    /// clipped by the collision boundary (Radix `hideWhenDetached`).
+    ///
+    /// Default: `false`.
+    pub fn hide_when_detached(mut self, hide: bool) -> Self {
+        self.hide_when_detached = hide;
+        self
+    }
+
     /// Override the element used as the placement anchor.
     ///
     /// Notes:
@@ -348,6 +359,7 @@ impl Tooltip {
                 .unwrap_or_else(|| MetricRef::radius(Radius::Sm).resolve(&theme))
         });
         let arrow_bg = theme.color_required("foreground");
+        let hide_when_detached = self.hide_when_detached;
 
         let align = self.align;
         let side = self.side;
@@ -658,13 +670,14 @@ impl Tooltip {
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                let layout = popper::popper_content_layout_sized(
-                    outer,
-                    anchor,
-                    content_size,
+                let placement =
                     popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                        .with_arrow(arrow_options, arrow_protrusion),
-                );
+                        .with_arrow(arrow_options, arrow_protrusion)
+                        .with_hide_when_detached(hide_when_detached);
+                let reference_hidden = placement.reference_hidden(outer, anchor);
+
+                let layout =
+                    popper::popper_content_layout_sized(outer, anchor, content_size, placement);
 
                 let placed = layout.rect;
                 let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
@@ -710,6 +723,7 @@ impl Tooltip {
                     anchor,
                     arrow.then_some(arrow_size),
                 );
+                let opacity = if reference_hidden { 0.0 } else { opacity };
                 let transform = overlay_motion::shadcn_popper_presence_transform(
                     layout.side,
                     origin,
@@ -718,10 +732,11 @@ impl Tooltip {
                     opening,
                 );
 
-                vec![overlay_motion::wrap_opacity_and_render_transform(
+                vec![overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,
                     opacity,
                     transform,
+                    !reference_hidden,
                     vec![wrapper],
                 )]
             });
