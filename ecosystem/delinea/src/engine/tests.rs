@@ -1210,7 +1210,8 @@ fn brush_selection_emits_link_event_when_link_group_is_set() {
         .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
         .unwrap();
 
-    assert!(engine.output().link_events.iter().any(|e| {
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
         matches!(
             e,
             crate::link::LinkEvent::BrushSelectionChanged { selection }
@@ -1222,20 +1223,15 @@ fn brush_selection_emits_link_event_when_link_group_is_set() {
     let _step = engine
         .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
         .unwrap();
-    assert!(
-        !engine
-            .output()
-            .link_events
-            .iter()
-            .any(|e| matches!(e, crate::link::LinkEvent::BrushSelectionChanged { .. }))
-    );
+    assert!(engine.drain_link_events().is_empty());
 
     // Clearing selection should emit exactly once.
     engine.apply_action(Action::ClearBrushSelection);
     let _step = engine
         .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
         .unwrap();
-    assert!(engine.output().link_events.iter().any(|e| {
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
         matches!(
             e,
             crate::link::LinkEvent::BrushSelectionChanged { selection: None }

@@ -205,6 +205,10 @@ impl ChartEngine {
         &self.output
     }
 
+    pub fn drain_link_events(&mut self) -> Vec<LinkEvent> {
+        std::mem::take(&mut self.output.link_events)
+    }
+
     pub fn view(&self) -> &ViewState {
         &self.view
     }
@@ -803,7 +807,6 @@ impl ChartEngine {
             return Err(EngineError::MissingViewport);
         }
 
-        self.output.link_events.clear();
         self.output.brush_selection_2d = self.state.brush_selection_2d;
         self.output.brush_x_row_ranges_by_series.clear();
 

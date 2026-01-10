@@ -35,6 +35,10 @@ The engine must not emit brush events every frame. Emission is gated by a cached
 
 This keeps the channel suitable for high-frequency pointer drags without introducing event spam.
 
+Additionally, the engine may be stepped multiple times per frame (progressive rendering). Link events
+must not be lost in that scenario: events accumulate in `ChartOutput.link_events` until drained by
+the consumer.
+
 ### 3) Link events are a propagation mechanism, not the source of truth
 
 Brush selection remains available as stable output fields (ADR 0144/0145). Link events are:
@@ -48,4 +52,3 @@ Brush selection remains available as stable output fields (ADR 0144/0145). Link 
 - Hosts can implement ECharts-like `brushLink` by routing `BrushSelectionChanged` events to other charts in the
   same group.
 - The semantics remain deterministic and cheap under large-data workloads.
-

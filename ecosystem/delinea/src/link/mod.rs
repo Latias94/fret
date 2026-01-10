@@ -6,7 +6,7 @@ use crate::selection::BrushSelection2D;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LinkEvent {
     CursorMoved { point: Point },

@@ -30,6 +30,7 @@ pub mod view;
 pub use action::*;
 pub use engine::*;
 pub use ids::*;
+pub use link::*;
 pub use marks::*;
 pub use paint::*;
 pub use scale::*;
