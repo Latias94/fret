@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::core::{CanvasPoint, NodeId, PortId};
+use crate::core::{CanvasPoint, EdgeId, NodeId, PortId};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NodeGraphCanvasTransform {
@@ -63,6 +63,14 @@ pub struct NodeGraphInternalsSnapshot {
     pub nodes_window: BTreeMap<NodeId, Rect>,
     pub ports_window: BTreeMap<PortId, Rect>,
     pub port_centers_window: BTreeMap<PortId, Point>,
+    /// Optional human-readable label for the currently active descendant (a11y support).
+    ///
+    /// This is an editor-derived surface and must not be serialized into graph assets.
+    pub a11y_active_descendant_label: Option<String>,
+    pub focused_node: Option<NodeId>,
+    pub focused_port: Option<PortId>,
+    pub focused_edge: Option<EdgeId>,
+    pub connecting: bool,
 }
 
 #[derive(Debug, Default)]

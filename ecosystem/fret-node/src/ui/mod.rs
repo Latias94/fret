@@ -2,6 +2,7 @@
 //!
 //! This module is behind the default `fret-ui` feature.
 
+pub mod a11y;
 pub mod canvas;
 pub mod commands;
 pub mod edit_queue;
@@ -14,6 +15,7 @@ pub mod portal;
 pub mod presenter;
 pub mod style;
 
+pub use a11y::NodeGraphA11yActiveDescendant;
 pub use canvas::NodeGraphCanvas;
 pub use canvas::NodeResizeHandle;
 pub use commands::register_node_graph_commands;

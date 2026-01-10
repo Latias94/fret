@@ -192,6 +192,8 @@ High-level layering (ADR 0135):
     - Full semantics (per-element focus nodes, arrow-key navigation, screen reader roles) are still TBD.
   - Notes:
     - fret-node exposes a minimal canvas-level semantics node (role `Viewport`) with a dynamic value string summarizing focus/selection.
+    - When `NodeGraphA11yActiveDescendant` is mounted as a child of the canvas, the canvas sets
+      `active_descendant` to that node and publishes a label via `NodeGraphInternalsStore`.
 
 ## 3.2 Marquee selection
 

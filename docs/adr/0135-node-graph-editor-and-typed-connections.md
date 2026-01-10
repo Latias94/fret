@@ -882,6 +882,7 @@ Semantics baseline:
 
 - The canvas provides a minimal semantics node (`SemanticsRole::Viewport`) so assistive tech can identify the editor surface.
 - The presenter may override accessible labels via `NodeGraphPresenter::{a11y_canvas_label,a11y_node_label,a11y_port_label,a11y_edge_label}`.
+- The editor may optionally mount a semantics-only child node (e.g. `NodeGraphA11yActiveDescendant`) so the canvas can set `active_descendant` to a real semantics node.
 
 ### 17) Clipboard and drag payloads have stable formats
 

@@ -21,9 +21,9 @@ use fret_node::rules::{
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{
-    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphCanvas,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPresenter, register_node_graph_commands,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphA11yActiveDescendant,
+    NodeGraphCanvas, NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPresenter, register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
@@ -553,6 +553,10 @@ impl NodeGraphDomainDemoDriver {
             .global::<NodeGraphDemoModels>()
             .expect("NodeGraphDemoModels global must exist")
             .clone();
+        let internals = app
+            .global::<Arc<NodeGraphInternalsStore>>()
+            .expect("NodeGraphInternalsStore global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -568,8 +572,12 @@ impl NodeGraphDomainDemoDriver {
             .with_presenter(presenter)
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
+            .with_internals_store(internals.clone())
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
         let canvas_node = ui.create_node_retained(canvas);
+
+        let a11y_node = ui.create_node_retained(NodeGraphA11yActiveDescendant::new(internals));
+        ui.set_children(canvas_node, vec![a11y_node]);
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,
@@ -768,6 +776,7 @@ pub fn run() -> anyhow::Result<()> {
         graph_id,
         path: view_state_path,
     });
+    app.set_global(Arc::new(NodeGraphInternalsStore::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_domain_demo".to_string(),

@@ -747,6 +747,44 @@ impl NodeGraphCanvas {
                 .insert(port, transform.canvas_point_to_window(handle.center));
         }
 
+        next.focused_node = self.interaction.focused_node;
+        next.focused_port = self.interaction.focused_port;
+        next.focused_edge = self.interaction.focused_edge;
+        next.connecting = self.interaction.wire_drag.is_some();
+
+        let style = self.style.clone();
+        let focused_node = self.interaction.focused_node;
+        let focused_port = self.interaction.focused_port;
+        let focused_edge = self.interaction.focused_edge;
+        next.a11y_active_descendant_label = self
+            .graph
+            .read_ref(host, |graph| {
+                if let Some(port) = focused_port {
+                    if let Some(label) = self.presenter.a11y_port_label(graph, port) {
+                        return Some(format!("Port {}", label));
+                    }
+                    return Some(format!("Port {:?}", port));
+                }
+
+                if let Some(edge) = focused_edge {
+                    if let Some(label) = self.presenter.a11y_edge_label(graph, edge, &style) {
+                        return Some(format!("Edge {}", label));
+                    }
+                    return Some(format!("Edge {:?}", edge));
+                }
+
+                if let Some(node) = focused_node {
+                    if let Some(label) = self.presenter.a11y_node_label(graph, node) {
+                        return Some(format!("Node {}", label));
+                    }
+                    return Some(format!("Node {:?}", node));
+                }
+
+                None
+            })
+            .ok()
+            .flatten();
+
         store.update(next);
     }
 
@@ -5462,6 +5500,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         cx.set_focusable(true);
         cx.set_label(self.presenter.a11y_canvas_label().as_ref());
 
+        if let Some(child) = cx.children.first().copied() {
+            let has_active = self
+                .internals
+                .as_ref()
+                .map(|s| s.snapshot().a11y_active_descendant_label.is_some())
+                .unwrap_or(false);
+            cx.set_active_descendant(has_active.then_some(child));
+        } else {
+            cx.set_active_descendant(None);
+        }
+
         let (focused_node, focused_port, focused_edge) = (
             self.interaction.focused_node,
             self.interaction.focused_port,
@@ -5535,6 +5584,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         cx.observe_model(&self.view_state, Invalidation::Layout);
         if let Some(queue) = self.edit_queue.as_ref() {
             cx.observe_model(queue, Invalidation::Layout);
+        }
+        for &child in cx.children {
+            cx.layout_in(child, cx.bounds);
         }
         self.interaction.last_bounds = Some(cx.bounds);
         self.sync_view_state(cx.app);
