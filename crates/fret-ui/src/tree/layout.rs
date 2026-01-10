@@ -124,7 +124,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         #[cfg(feature = "layout-engine-v2")]
-        self.layout_engine.end_frame();
+        if pass_kind == LayoutPassKind::Final {
+            self.layout_engine.end_frame();
+        }
 
         if self.debug_enabled {
             #[cfg(feature = "layout-engine-v2")]

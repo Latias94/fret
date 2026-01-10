@@ -620,6 +620,52 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn probe_layout_does_not_prune_layout_engine_nodes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "probe-layout-does-not-prune-engine-nodes",
+        |cx| vec![cx.container(Default::default(), |cx| vec![cx.text("hello")])],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let container_node = ui.children(root)[0];
+    let text_node = ui.children(container_node)[0];
+    assert!(
+        ui.layout_engine_has_node(text_node),
+        "expected a final layout to register nodes in the layout engine"
+    );
+
+    ui.layout_all_with_pass_kind(
+        &mut app,
+        &mut text,
+        bounds,
+        1.0,
+        crate::layout_pass::LayoutPassKind::Probe,
+    );
+    assert!(
+        ui.layout_engine_has_node(text_node),
+        "expected probe layouts to avoid pruning layout engine nodes"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_root_flush_only_lays_out_invalidated_roots() {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
