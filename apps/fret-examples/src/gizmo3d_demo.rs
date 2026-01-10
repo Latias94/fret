@@ -949,6 +949,54 @@ fn ndc_z_to_z01(depth: DepthRange, ndc_z: f32) -> f32 {
     .clamp(0.0, 1.0)
 }
 
+fn project_target_screen_aabb(
+    view_projection: Mat4,
+    viewport: ViewportRect,
+    depth: DepthRange,
+    target: GizmoTarget3d,
+) -> Option<(Vec2, Vec2, f32)> {
+    let transform = target.transform;
+    if !transform.translation.is_finite()
+        || !transform.rotation.is_finite()
+        || !transform.scale.is_finite()
+    {
+        return None;
+    }
+
+    let half = 0.4;
+    let corners = [
+        Vec3::new(-half, -half, -half),
+        Vec3::new(half, -half, -half),
+        Vec3::new(-half, half, -half),
+        Vec3::new(half, half, -half),
+        Vec3::new(-half, -half, half),
+        Vec3::new(half, -half, half),
+        Vec3::new(-half, half, half),
+        Vec3::new(half, half, half),
+    ];
+
+    let mut any = false;
+    let mut min = Vec2::splat(f32::INFINITY);
+    let mut max = Vec2::splat(f32::NEG_INFINITY);
+    let mut best_z01 = f32::INFINITY;
+
+    for local in corners {
+        let world = transform.rotation * (local * transform.scale) + transform.translation;
+        let Some(p) = fret_gizmo::project_point(view_projection, viewport, world, depth) else {
+            continue;
+        };
+        if !p.screen.is_finite() || !p.w.is_finite() || p.w <= 0.0 {
+            continue;
+        }
+        any = true;
+        min = min.min(p.screen);
+        max = max.max(p.screen);
+        best_z01 = best_z01.min(ndc_z_to_z01(depth, p.ndc_z));
+    }
+
+    any.then_some((min, max, best_z01))
+}
+
 fn marquee_hits(
     view_projection: Mat4,
     viewport: ViewportRect,
@@ -959,18 +1007,17 @@ fn marquee_hits(
 ) -> Vec<(GizmoTargetId, f32)> {
     let mut hits: Vec<(GizmoTargetId, f32)> = Vec::new();
     for t in targets {
-        let Some(p) =
-            fret_gizmo::project_point(view_projection, viewport, t.transform.translation, depth)
+        let Some((min, max, best_z01)) =
+            project_target_screen_aabb(view_projection, viewport, depth, *t)
         else {
             continue;
         };
-        if !p.inside_clip {
+
+        if max.x < rect_min.x || min.x > rect_max.x || max.y < rect_min.y || min.y > rect_max.y {
             continue;
         }
-        let s = p.screen;
-        if s.x >= rect_min.x && s.x <= rect_max.x && s.y >= rect_min.y && s.y <= rect_max.y {
-            hits.push((t.id, ndc_z_to_z01(depth, p.ndc_z)));
-        }
+
+        hits.push((t.id, best_z01));
     }
     hits
 }
