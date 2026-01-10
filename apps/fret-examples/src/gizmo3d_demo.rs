@@ -4,7 +4,7 @@ use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
-    DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
+    Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d,
     ViewportRect,
 };
@@ -505,6 +505,10 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
             GizmoTarget3d {
                 id: GizmoTargetId(2),
@@ -513,6 +517,10 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
             GizmoTarget3d {
                 id: GizmoTargetId(3),
@@ -521,6 +529,10 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
         ];
         Self {

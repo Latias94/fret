@@ -56,6 +56,36 @@ pub struct Transform3d {
     pub scale: Vec3,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Aabb3 {
+    pub min: Vec3,
+    pub max: Vec3,
+}
+
+impl Aabb3 {
+    pub fn normalized(self) -> Self {
+        let min = self.min.min(self.max);
+        let max = self.min.max(self.max);
+        Self { min, max }
+    }
+
+    pub fn corners(self) -> [Vec3; 8] {
+        let a = self.normalized();
+        let min = a.min;
+        let max = a.max;
+        [
+            Vec3::new(min.x, min.y, min.z),
+            Vec3::new(max.x, min.y, min.z),
+            Vec3::new(max.x, max.y, min.z),
+            Vec3::new(min.x, max.y, min.z),
+            Vec3::new(min.x, min.y, max.z),
+            Vec3::new(max.x, min.y, max.z),
+            Vec3::new(max.x, max.y, max.z),
+            Vec3::new(min.x, max.y, max.z),
+        ]
+    }
+}
+
 impl Default for Transform3d {
     fn default() -> Self {
         Self {
@@ -76,6 +106,11 @@ impl Transform3d {
 pub struct GizmoTarget3d {
     pub id: GizmoTargetId,
     pub transform: Transform3d,
+    /// Optional local-space AABB (model-space bounds before TRS).
+    ///
+    /// When provided, bounds/box scaling uses these corners transformed by the target's TRS to
+    /// compute the selection bounds (ImGuizmo `localBounds` equivalent surface).
+    pub local_bounds: Option<Aabb3>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -932,6 +967,7 @@ impl Gizmo {
                                 translation: t.transform.translation + delta,
                                 ..t.transform
                             },
+                            local_bounds: t.local_bounds,
                         })
                         .collect::<Vec<_>>();
                     return Some(GizmoUpdate {
@@ -1052,6 +1088,7 @@ impl Gizmo {
                                     rotation: (delta_apply * t.transform.rotation).normalize(),
                                     ..t.transform
                                 },
+                                local_bounds: t.local_bounds,
                             })
                             .collect::<Vec<_>>();
                         return Some(GizmoUpdate {
@@ -1178,6 +1215,7 @@ impl Gizmo {
                                     rotation: (delta_q * t.transform.rotation).normalize(),
                                     ..t.transform
                                 },
+                                local_bounds: t.local_bounds,
                             })
                             .collect::<Vec<_>>();
                         return Some(GizmoUpdate {
@@ -1381,6 +1419,7 @@ impl Gizmo {
                                         scale,
                                         ..t.transform
                                     },
+                                    local_bounds: t.local_bounds,
                                 }
                             })
                             .collect::<Vec<_>>();
@@ -1483,6 +1522,7 @@ impl Gizmo {
                                         scale,
                                         ..t.transform
                                     },
+                                    local_bounds: t.local_bounds,
                                 }
                             })
                             .collect::<Vec<_>>();
@@ -1559,6 +1599,7 @@ impl Gizmo {
                                     scale,
                                     ..t.transform
                                 },
+                                local_bounds: t.local_bounds,
                             }
                         })
                         .collect::<Vec<_>>();
@@ -1990,10 +2031,25 @@ impl Gizmo {
         let mut max_v = Vec3::splat(f32::NEG_INFINITY);
 
         for t in targets {
-            let p = t.transform.translation - origin;
-            let v = Vec3::new(p.dot(basis[0]), p.dot(basis[1]), p.dot(basis[2]));
-            min_v = min_v.min(v);
-            max_v = max_v.max(v);
+            if let Some(aabb) = t.local_bounds {
+                let aabb = aabb.normalized();
+                let m = t.transform.to_mat4();
+                for c in aabb.corners() {
+                    let world = m.transform_point3(c);
+                    if !world.is_finite() {
+                        continue;
+                    }
+                    let p = world - origin;
+                    let v = Vec3::new(p.dot(basis[0]), p.dot(basis[1]), p.dot(basis[2]));
+                    min_v = min_v.min(v);
+                    max_v = max_v.max(v);
+                }
+            } else {
+                let p = t.transform.translation - origin;
+                let v = Vec3::new(p.dot(basis[0]), p.dot(basis[1]), p.dot(basis[2]));
+                min_v = min_v.min(v);
+                max_v = max_v.max(v);
+            }
         }
 
         let min_extent = axis_length_world(
@@ -2006,6 +2062,11 @@ impl Gizmo {
         .unwrap_or(1.0)
         .max(1e-6)
             * 0.25;
+
+        if !min_v.is_finite() || !max_v.is_finite() {
+            let half = Vec3::splat(min_extent.max(1e-6) * 0.5);
+            return (-half, half);
+        }
 
         let center = (min_v + max_v) * 0.5;
         let extent = (max_v - min_v).max(Vec3::splat(min_extent));
@@ -4679,6 +4740,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -4761,6 +4823,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -4834,6 +4897,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -4907,6 +4971,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5230,6 +5295,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5308,6 +5374,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5375,6 +5442,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5462,6 +5530,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5542,6 +5611,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {
@@ -5621,6 +5691,7 @@ mod tests {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: None,
             },
             GizmoTarget3d {
                 id: GizmoTargetId(2),
@@ -5629,6 +5700,7 @@ mod tests {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: None,
             },
         ];
 
@@ -5727,6 +5799,36 @@ mod tests {
     }
 
     #[test]
+    fn bounds_uses_local_bounds_when_provided() {
+        let gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let basis = [Vec3::X, Vec3::Y, Vec3::Z];
+
+        let aabb = Aabb3 {
+            min: Vec3::new(-2.0, -1.0, -3.0),
+            max: Vec3::new(2.0, 1.0, 3.0),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(aabb),
+        }];
+
+        let (min_local, max_local) =
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+
+        assert!((min_local.x + 2.0).abs() < 1e-3, "min_local={min_local:?}");
+        assert!((min_local.y + 1.0).abs() < 1e-3, "min_local={min_local:?}");
+        assert!((min_local.z + 3.0).abs() < 1e-3, "min_local={min_local:?}");
+        assert!((max_local.x - 2.0).abs() < 1e-3, "max_local={max_local:?}");
+        assert!((max_local.y - 1.0).abs() < 1e-3, "max_local={max_local:?}");
+        assert!((max_local.z - 3.0).abs() < 1e-3, "max_local={max_local:?}");
+    }
+
+    #[test]
     fn scale_uniform_drag_returns_to_one_when_cursor_returns() {
         let mut gizmo = base_gizmo(GizmoMode::Scale);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -5753,6 +5855,7 @@ mod tests {
         let targets = [GizmoTarget3d {
             id: GizmoTargetId(1),
             transform: Transform3d::default(),
+            local_bounds: None,
         }];
 
         let input_down = GizmoInput {

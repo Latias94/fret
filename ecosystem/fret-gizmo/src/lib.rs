@@ -10,7 +10,7 @@ mod gizmo;
 mod math;
 
 pub use gizmo::{
-    DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
+    Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
     GizmoPhase, GizmoPivotMode, GizmoResult, GizmoState, GizmoTarget3d, GizmoTargetId, GizmoUpdate,
     HandleId, Line3d, Transform3d, Triangle3d,
 };

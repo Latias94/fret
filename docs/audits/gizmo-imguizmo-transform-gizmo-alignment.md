@@ -129,7 +129,7 @@ Fret's current contract:
 | Scale axis X/Y/Z | Yes | Yes | **Aligned** | Axis scaling is supported and axis picking matches the rendered end boxes (not the whole shaft). `pick_scale_handle`, `begin_scale_drag`. |
 | Scale uniform (center handle) | Partial (via `SCALEU`/center) | Yes (`ScaleUniform`) | **Aligned** | Center uniform handle id 7, with pivot-respecting translation compensation. |
 | Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Aligned** | Plane scale handles (XY/XZ/YZ) are supported in `Scale` mode. `pick_scale_handle` + `begin_scale_drag` + scale update path. |
-| Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Partially aligned** | Fret supports a bounds-style box in `GizmoMode::Scale` gated by `GizmoConfig::show_bounds`, with corner + face handles derived from selected target translations (`ecosystem/fret-gizmo/src/gizmo.rs`). Gaps: no `localBounds` input (mesh/AABB) yet; no dedicated bounds snap (`boundsSnap`); multi-selection scaling semantics are TRS-only (no shear). |
+| Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Aligned (basic)** | Fret supports a bounds-style box in `GizmoMode::Scale` gated by `GizmoConfig::show_bounds`, with corner + face handles. Selection bounds can be derived from `GizmoTarget3d::local_bounds` (local AABB) when provided, otherwise it falls back to translations (`ecosystem/fret-gizmo/src/gizmo.rs`). Gaps: no dedicated bounds snap (`boundsSnap`); multi-selection scaling semantics are TRS-only (no shear). |
 
 ### B) "Universal" / multi-mode behavior
 
@@ -240,8 +240,11 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 
 ### P2 (ImGuizmo-specific extras)
 
-1. **Bounds / box scaling**
-   - Useful but a larger design surface (handles, snapping, selection bounds, visuals).
+1. **Bounds / box scaling (basic in place)**
+   - Fret already implements a bounds-style box with corner + face handles, and supports `GizmoTarget3d::local_bounds`
+     as the ImGuizmo `localBounds` equivalent input surface.
+   - Next alignment targets: `boundsSnap`, tighter multi-selection scaling semantics (pivot/anchor/axis constraints), and
+     more mature visuals (thickness/AA/consistent occlusion feedback).
 2. **View gizmo (camera cube)**
    - A separate tool; can be layered on the same math/picking substrate.
 
