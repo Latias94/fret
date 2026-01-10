@@ -253,12 +253,14 @@ Debug surfaces:
   0011); add per-viewport overlay roots only for concrete perf/correctness needs.
 - Root solve order: solve roots in window root z-order, but viewport roots never participate in a
   shared solve; each viewport root is solved independently against its own definite available space.
-- Pixel rounding: optional; if enabled, apply rounding at the layout-engine boundary (apply/writeback)
+- Pixel rounding: optional; if enabled, snap layout outputs at the layout-engine boundary (apply/writeback)
   using the same `snap_rect` policy as ADR 0035 so hit-testing and paint share stable bounds.
-  - Implementation option A (GPUI-aligned): solve in device-pixel space (`* scale_factor`) with Taffy
-    rounding enabled, then convert results back to logical pixels (`/ scale_factor`).
-  - Requirement: the rounding policy must not change the core coordinate space (still logical
-    pixels) and must be idempotent with renderer snapping (avoid double-rounding drift).
+  - Implementation option A (simple): solve in logical pixels, then apply `snap_rect` on writeback.
+  - Implementation option B (GPUI-aligned, implementation detail): internally solve in device-pixel space
+    (`* scale_factor`) with Taffy rounding enabled, then convert results back to logical pixels
+    (`/ scale_factor`). This must be semantically equivalent to applying `snap_rect` on writeback and must
+    not change the core coordinate space (still logical pixels).
+  - Requirement: snapping must be idempotent with renderer snapping (avoid double-rounding drift).
 
 ## References
 
