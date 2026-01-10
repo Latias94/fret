@@ -4,9 +4,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
-    PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
-    TextConstraints, TextOverflow, TextWrap, Transform2D,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
+    Size, TextBlobId, TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::{UiHost, retained_bridge::*};
@@ -85,6 +84,10 @@ mod wire_drag;
 use super::conversion;
 use super::geometry::group_order;
 use super::geometry::{CanvasGeometry, node_ports};
+use super::route_math::{
+    cubic_bezier, cubic_bezier_derivative, edge_route_end_tangent, edge_route_start_tangent,
+    normal_from_tangent, wire_ctrl_points,
+};
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
@@ -148,7 +151,6 @@ pub struct NodeGraphCanvas {
     geometry: GeometryCache,
 
     paint_cache: CanvasPaintCache,
-    wire_paths: Vec<fret_core::PathId>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
 }
@@ -379,7 +381,6 @@ impl NodeGraphCanvas {
             history: GraphHistory::default(),
             geometry: GeometryCache::default(),
             paint_cache: CanvasPaintCache::default(),
-            wire_paths: Vec::new(),
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
@@ -3804,162 +3805,6 @@ impl NodeGraphCanvas {
         }
     }
 
-    fn prepare_wire_path(
-        services: &mut dyn fret_core::UiServices,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        scale_factor: f32,
-        width_px: f32,
-    ) -> Option<fret_core::PathId> {
-        let dx = to.x.0 - from.x.0;
-        let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
-        let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
-        let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
-        let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
-
-        let commands = [
-            PathCommand::MoveTo(from),
-            PathCommand::CubicTo {
-                ctrl1: c1,
-                ctrl2: c2,
-                to,
-            },
-        ];
-
-        let (id, _metrics) = services.path().prepare(
-            &commands,
-            PathStyle::Stroke(StrokeStyle {
-                width: Px(width_px / zoom),
-            }),
-            PathConstraints {
-                scale_factor: scale_factor * zoom,
-            },
-        );
-
-        Some(id)
-    }
-
-    fn prepare_edge_end_marker_path(
-        services: &mut dyn fret_core::UiServices,
-        route: EdgeRouteKind,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        scale_factor: f32,
-        marker: &crate::ui::presenter::EdgeMarker,
-        pin_radius_screen: f32,
-    ) -> Option<fret_core::PathId> {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-
-        let dir = edge_route_end_tangent(route, from, to, zoom);
-
-        let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
-        if !len.is_finite() || len <= 1.0e-6 {
-            return None;
-        }
-        let ux = dir.x.0 / len;
-        let uy = dir.y.0 / len;
-        let nx = -uy;
-        let ny = ux;
-
-        let size_screen = marker.size.max(1.0);
-        let size = size_screen / zoom;
-
-        let pin_r = pin_radius_screen.max(0.0) / zoom;
-        let tip = Point::new(Px(to.x.0 - ux * pin_r), Px(to.y.0 - uy * pin_r));
-
-        match marker.kind {
-            crate::ui::presenter::EdgeMarkerKind::Arrow => {
-                let arrow_len = size;
-                let half_w = (0.65 * size).max(0.5 / zoom);
-                let base = Point::new(Px(tip.x.0 - ux * arrow_len), Px(tip.y.0 - uy * arrow_len));
-                let p1 = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
-                let p2 = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
-
-                let commands = [
-                    PathCommand::MoveTo(tip),
-                    PathCommand::LineTo(p1),
-                    PathCommand::LineTo(p2),
-                    PathCommand::Close,
-                ];
-
-                let (id, _metrics) = services.path().prepare(
-                    &commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    PathConstraints {
-                        scale_factor: scale_factor * zoom,
-                    },
-                );
-                Some(id)
-            }
-        }
-    }
-
-    fn prepare_edge_start_marker_path(
-        services: &mut dyn fret_core::UiServices,
-        route: EdgeRouteKind,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        scale_factor: f32,
-        marker: &crate::ui::presenter::EdgeMarker,
-        pin_radius_screen: f32,
-    ) -> Option<fret_core::PathId> {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
-        };
-
-        let dir = edge_route_start_tangent(route, from, to, zoom);
-
-        let len = (dir.x.0 * dir.x.0 + dir.y.0 * dir.y.0).sqrt();
-        if !len.is_finite() || len <= 1.0e-6 {
-            return None;
-        }
-        let ux = dir.x.0 / len;
-        let uy = dir.y.0 / len;
-        let nx = -uy;
-        let ny = ux;
-
-        let size_screen = marker.size.max(1.0);
-        let size = size_screen / zoom;
-
-        let pin_r = pin_radius_screen.max(0.0) / zoom;
-        let tip = Point::new(Px(from.x.0 + ux * pin_r), Px(from.y.0 + uy * pin_r));
-
-        match marker.kind {
-            crate::ui::presenter::EdgeMarkerKind::Arrow => {
-                let arrow_len = size;
-                let half_w = (0.65 * size).max(0.5 / zoom);
-                let base = Point::new(Px(tip.x.0 + ux * arrow_len), Px(tip.y.0 + uy * arrow_len));
-                let p1 = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
-                let p2 = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
-
-                let commands = [
-                    PathCommand::MoveTo(tip),
-                    PathCommand::LineTo(p1),
-                    PathCommand::LineTo(p2),
-                    PathCommand::Close,
-                ];
-
-                let (id, _metrics) = services.path().prepare(
-                    &commands,
-                    PathStyle::Fill(fret_core::FillStyle::default()),
-                    PathConstraints {
-                        scale_factor: scale_factor * zoom,
-                    },
-                );
-                Some(id)
-            }
-        }
-    }
-
     fn zoom_about_center(&mut self, bounds: Rect, delta_y: f32) {
         let zoom = self.cached_zoom;
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -4736,9 +4581,6 @@ impl NodeGraphCanvas {
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.paint_cache.clear(services);
-        for id in self.wire_paths.drain(..) {
-            services.path().release(id);
-        }
         for id in self.text_blobs.drain(..) {
             services.text().release(id);
         }
@@ -6107,9 +5949,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let snapshot = self.sync_view_state(cx.app);
 
         self.paint_cache.begin_frame();
-        for id in self.wire_paths.drain(..) {
-            cx.services.path().release(id);
-        }
         for id in self.text_blobs.drain(..) {
             cx.services.text().release(id);
         }
@@ -6570,7 +6409,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
 
             if let Some(marker) = edge.end_marker.as_ref() {
-                if let Some(path) = Self::prepare_edge_end_marker_path(
+                if let Some(path) = self.paint_cache.edge_end_marker_path(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -6580,7 +6419,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     marker,
                     self.style.pin_radius,
                 ) {
-                    self.wire_paths.push(path);
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -6591,7 +6429,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
 
             if let Some(marker) = edge.start_marker.as_ref() {
-                if let Some(path) = Self::prepare_edge_start_marker_path(
+                if let Some(path) = self.paint_cache.edge_start_marker_path(
                     cx.services,
                     edge.route,
                     edge.from,
@@ -6601,7 +6439,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     marker,
                     self.style.pin_radius,
                 ) {
-                    self.wire_paths.push(path);
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -6750,15 +6587,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 };
 
             let mut draw_preview = |from: Point| {
-                if let Some(path) = Self::prepare_wire_path(
+                if let Some(path) = self.paint_cache.wire_path(
                     cx.services,
+                    EdgeRouteKind::Bezier,
                     from,
                     to,
                     zoom,
                     cx.scale_factor,
                     self.style.wire_width,
                 ) {
-                    self.wire_paths.push(path);
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
@@ -7424,106 +7261,6 @@ fn step_wire_distance2(p: Point, from: Point, to: Point) -> f32 {
     let d1 = dist2_point_to_segment(p, p1, p2);
     let d2 = dist2_point_to_segment(p, p2, to);
     d0.min(d1).min(d2)
-}
-
-fn wire_ctrl_points(from: Point, to: Point, zoom: f32) -> (Point, Point) {
-    let dx = to.x.0 - from.x.0;
-    let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
-    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
-    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
-    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
-    (c1, c2)
-}
-
-fn cubic_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
-    let t = t.clamp(0.0, 1.0);
-    let mt = 1.0 - t;
-    let mt2 = mt * mt;
-    let t2 = t * t;
-
-    let w0 = mt2 * mt;
-    let w1 = 3.0 * mt2 * t;
-    let w2 = 3.0 * mt * t2;
-    let w3 = t2 * t;
-
-    Point::new(
-        Px(w0 * p0.x.0 + w1 * p1.x.0 + w2 * p2.x.0 + w3 * p3.x.0),
-        Px(w0 * p0.y.0 + w1 * p1.y.0 + w2 * p2.y.0 + w3 * p3.y.0),
-    )
-}
-
-fn cubic_bezier_derivative(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
-    let t = t.clamp(0.0, 1.0);
-    let mt = 1.0 - t;
-
-    let w0 = 3.0 * mt * mt;
-    let w1 = 6.0 * mt * t;
-    let w2 = 3.0 * t * t;
-
-    Point::new(
-        Px(w0 * (p1.x.0 - p0.x.0) + w1 * (p2.x.0 - p1.x.0) + w2 * (p3.x.0 - p2.x.0)),
-        Px(w0 * (p1.y.0 - p0.y.0) + w1 * (p2.y.0 - p1.y.0) + w2 * (p3.y.0 - p2.y.0)),
-    )
-}
-
-fn edge_route_start_tangent(route: EdgeRouteKind, from: Point, to: Point, zoom: f32) -> Point {
-    match route {
-        EdgeRouteKind::Bezier => {
-            let (c1, c2) = wire_ctrl_points(from, to, zoom);
-            cubic_bezier_derivative(from, c1, c2, to, 0.0)
-        }
-        EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
-        EdgeRouteKind::Step => {
-            let mx = 0.5 * (from.x.0 + to.x.0);
-            let p1 = Point::new(Px(mx), from.y);
-            let p2 = Point::new(Px(mx), to.y);
-            let d0 = Point::new(Px(p1.x.0 - from.x.0), Px(p1.y.0 - from.y.0));
-            if (d0.x.0 * d0.x.0 + d0.y.0 * d0.y.0) > 1.0e-12 {
-                return d0;
-            }
-            let d1 = Point::new(Px(p2.x.0 - p1.x.0), Px(p2.y.0 - p1.y.0));
-            if (d1.x.0 * d1.x.0 + d1.y.0 * d1.y.0) > 1.0e-12 {
-                return d1;
-            }
-            Point::new(Px(to.x.0 - p2.x.0), Px(to.y.0 - p2.y.0))
-        }
-    }
-}
-
-fn edge_route_end_tangent(route: EdgeRouteKind, from: Point, to: Point, zoom: f32) -> Point {
-    match route {
-        EdgeRouteKind::Bezier => {
-            let (c1, c2) = wire_ctrl_points(from, to, zoom);
-            cubic_bezier_derivative(from, c1, c2, to, 1.0)
-        }
-        EdgeRouteKind::Straight => Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0)),
-        EdgeRouteKind::Step => {
-            let mx = 0.5 * (from.x.0 + to.x.0);
-            let p1 = Point::new(Px(mx), from.y);
-            let p2 = Point::new(Px(mx), to.y);
-            let d2 = Point::new(Px(to.x.0 - p2.x.0), Px(to.y.0 - p2.y.0));
-            if (d2.x.0 * d2.x.0 + d2.y.0 * d2.y.0) > 1.0e-12 {
-                return d2;
-            }
-            let d1 = Point::new(Px(p2.x.0 - p1.x.0), Px(p2.y.0 - p1.y.0));
-            if (d1.x.0 * d1.x.0 + d1.y.0 * d1.y.0) > 1.0e-12 {
-                return d1;
-            }
-            Point::new(Px(p1.x.0 - from.x.0), Px(p1.y.0 - from.y.0))
-        }
-    }
-}
-
-fn normal_from_tangent(tangent: Point) -> Point {
-    let dx = tangent.x.0;
-    let dy = tangent.y.0;
-    let len = (dx * dx + dy * dy).sqrt();
-    if !len.is_finite() || len <= 1.0e-6 {
-        return Point::new(Px(0.0), Px(-1.0));
-    }
-    let nx = -dy / len;
-    let ny = dx / len;
-    Point::new(Px(nx), Px(ny))
 }
 
 fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {

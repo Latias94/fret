@@ -8,6 +8,7 @@ mod conversion;
 mod event;
 mod geometry;
 mod paint;
+mod route_math;
 mod searcher;
 mod snaplines;
 mod spatial;
