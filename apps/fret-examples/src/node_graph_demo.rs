@@ -1,5 +1,7 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
@@ -22,10 +24,12 @@ use crate::keymap_defaults::install_default_keybindings_into_keymap;
 use crate::node_graph_tuning_overlay::NodeGraphTuningOverlay;
 
 use fret_node::Graph;
+use fret_node::GraphId;
 use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
+use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
@@ -50,6 +54,12 @@ struct NodeGraphDemoModels {
     edits: fret_runtime::Model<NodeGraphEditQueue>,
     overlays: fret_runtime::Model<NodeGraphOverlayState>,
     group_rename_text: fret_runtime::Model<String>,
+}
+
+#[derive(Clone)]
+struct NodeGraphDemoViewStatePersistence {
+    graph_id: GraphId,
+    path: PathBuf,
 }
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
@@ -436,8 +446,8 @@ fn build_demo_registry() -> NodeRegistry {
     reg
 }
 
-fn build_demo_graph() -> Graph {
-    let mut graph = Graph::default();
+fn build_demo_graph(graph_id: GraphId) -> Graph {
+    let mut graph = Graph::new(graph_id);
 
     let node_value_a = NodeId::new();
     let node_value_b = NodeId::new();
@@ -858,9 +868,32 @@ impl PortalNumberEditSpec for DemoFloatPortalSpec {
 }
 
 #[derive(Default)]
-struct NodeGraphDemoDriver;
+struct NodeGraphDemoDriver {
+    pending_view_state_save: bool,
+    last_view_state_save_at: Option<Instant>,
+}
 
 impl NodeGraphDemoDriver {
+    const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
+
+    fn save_view_state(&mut self, app: &mut App) {
+        let Some(models) = app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>() else {
+            return;
+        };
+
+        let Ok(state) = models.view.read_ref(app, |v| v.clone()) else {
+            return;
+        };
+
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state);
+        if let Err(err) = file.save_json(&persist.path) {
+            tracing::warn!(?err, "failed to save node graph view state");
+        }
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> NodeGraphDemoWindowState {
         let models = app
             .global::<NodeGraphDemoModels>()
@@ -1005,6 +1038,24 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             .state
             .ui
             .propagate_model_changes(context.app, changed);
+
+        let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        if changed.contains(&models.view.id()) {
+            self.pending_view_state_save = true;
+        }
+        if self.pending_view_state_save {
+            let now = Instant::now();
+            let due = self.last_view_state_save_at.map_or(true, |t| {
+                now.duration_since(t) >= Self::VIEW_STATE_SAVE_DEBOUNCE
+            });
+            if due {
+                self.pending_view_state_save = false;
+                self.last_view_state_save_at = Some(now);
+                self.save_view_state(context.app);
+            }
+        }
     }
 
     fn handle_global_changes(
@@ -1027,6 +1078,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         } = context;
 
         if matches!(event, Event::WindowCloseRequested) {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
@@ -1051,6 +1103,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         }
 
         if command.as_str() == "node_graph_demo.close" {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
@@ -1278,7 +1331,8 @@ pub fn run() -> anyhow::Result<()> {
     register_demo_commands(app.commands_mut());
     install_default_keybindings_into_keymap(&mut app);
 
-    let mut graph_value = build_demo_graph();
+    let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A1);
+    let mut graph_value = build_demo_graph(graph_id);
     // Concretize once at startup so dynamic ports (e.g. `fret.variadic_merge`) don't "surprise"
     // the user on the first unrelated edit.
     let _ = apply_transaction_with_profile(
@@ -1287,8 +1341,20 @@ pub fn run() -> anyhow::Result<()> {
         &GraphTransaction::new(),
     );
 
+    let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
+    let view_value =
+        match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
+        {
+            Ok(Some(file)) => file.state,
+            Ok(None) => NodeGraphViewState::default(),
+            Err(err) => {
+                tracing::warn!(?err, "failed to load node graph view state; using defaults");
+                NodeGraphViewState::default()
+            }
+        };
+
     let graph = app.models_mut().insert(graph_value);
-    let view = app.models_mut().insert(NodeGraphViewState::default());
+    let view = app.models_mut().insert(view_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
@@ -1298,6 +1364,10 @@ pub fn run() -> anyhow::Result<()> {
         edits,
         overlays,
         group_rename_text,
+    });
+    app.set_global(NodeGraphDemoViewStatePersistence {
+        graph_id,
+        path: view_state_path,
     });
     app.set_global(build_demo_registry());
     app.set_global(NodeGraphDemoMeasuredStores {
