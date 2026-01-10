@@ -47,9 +47,7 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
-            self.layout_engine.begin_frame(app.frame_id());
-            self.viewport_roots.clear();
-
+            self.begin_layout_engine_frame(app);
             if self.debug_enabled {
                 (
                     self.layout_engine.solve_count(),
@@ -64,77 +62,27 @@ impl<H: UiHost> UiTree<H> {
         let mut viewport_cursor: usize = 0;
 
         #[cfg(feature = "layout-engine-v2")]
-        if pass_kind == LayoutPassKind::Final {
-            self.request_flow_subtrees(
-                app,
-                roots.iter().copied().map(|root| (root, bounds.size)),
-                scale_factor,
-            );
-            self.precompute_layer_root_flow_islands(app, services, &roots, bounds, scale_factor);
-        }
+        self.request_build_window_roots_if_final(
+            app,
+            services,
+            &roots,
+            bounds,
+            scale_factor,
+            pass_kind,
+        );
 
         for root in roots {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
             #[cfg(feature = "layout-engine-v2")]
-            while viewport_cursor < self.viewport_roots.len() {
-                // Phase 1: request/build any newly-registered viewport roots so the engine retains
-                // stable identity even if we skip compute/apply for clean roots.
-                if pass_kind == LayoutPassKind::Final {
-                    self.request_viewport_root_flow_subtrees_from_index(
-                        app,
-                        viewport_cursor,
-                        scale_factor,
-                    );
-                }
-
-                // Phase 2: compute/apply only the viewport roots that actually need layout.
-                while viewport_cursor < self.viewport_roots.len() {
-                    let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
-                    viewport_cursor += 1;
-
-                    let Some((prev_bounds, invalidated, measured)) = self
-                        .nodes
-                        .get(viewport_root)
-                        .map(|n| (n.bounds, n.invalidation.layout, n.measured_size))
-                    else {
-                        continue;
-                    };
-
-                    // Only flush viewport roots when required. This prevents barriers that register
-                    // many viewport roots (e.g. docking) from forcing unnecessary layout work for
-                    // roots that did not change, while still allowing the request/build phase to keep
-                    // stable identity across frames.
-                    let needs_layout = invalidated || prev_bounds != viewport_bounds;
-                    if !needs_layout {
-                        continue;
-                    }
-
-                    let is_translation_only = !invalidated
-                        && prev_bounds.size == viewport_bounds.size
-                        && prev_bounds.origin != viewport_bounds.origin
-                        && measured != Size::default();
-                    if !is_translation_only {
-                        self.compute_flow_root_island_if_requested(
-                            app,
-                            services,
-                            viewport_root,
-                            viewport_bounds,
-                            scale_factor,
-                        );
-                    }
-
-                    let _ = self.layout_in_with_pass_kind(
-                        app,
-                        services,
-                        viewport_root,
-                        viewport_bounds,
-                        scale_factor,
-                        LayoutPassKind::Final,
-                    );
-                }
-            }
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
         }
 
         if self.semantics_requested {
@@ -183,17 +131,15 @@ impl<H: UiHost> UiTree<H> {
 
         #[cfg(feature = "layout-engine-v2")]
         {
-            self.layout_engine.begin_frame(app.frame_id());
-            self.viewport_roots.clear();
-
             let mut viewport_cursor: usize = 0;
-            self.request_flow_subtrees(app, std::iter::once((root, bounds.size)), scale_factor);
-            self.precompute_single_layer_root_flow_island_if_needed(
+            self.begin_layout_engine_frame(app);
+            self.request_build_window_roots_if_final(
                 app,
                 services,
-                root,
+                std::slice::from_ref(&root),
                 bounds,
                 scale_factor,
+                LayoutPassKind::Final,
             );
             let size = self.layout_in_with_pass_kind(
                 app,
@@ -203,57 +149,13 @@ impl<H: UiHost> UiTree<H> {
                 scale_factor,
                 LayoutPassKind::Final,
             );
-            while viewport_cursor < self.viewport_roots.len() {
-                // Phase 1: request/build any newly-registered viewport roots so the engine retains
-                // stable identity even if we skip compute/apply for clean roots.
-                self.request_viewport_root_flow_subtrees_from_index(
-                    app,
-                    viewport_cursor,
-                    scale_factor,
-                );
-
-                // Phase 2: compute/apply only the viewport roots that actually need layout.
-                while viewport_cursor < self.viewport_roots.len() {
-                    let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
-                    viewport_cursor += 1;
-
-                    let Some((prev_bounds, invalidated, measured)) = self
-                        .nodes
-                        .get(viewport_root)
-                        .map(|n| (n.bounds, n.invalidation.layout, n.measured_size))
-                    else {
-                        continue;
-                    };
-
-                    let needs_layout = invalidated || prev_bounds != viewport_bounds;
-                    if !needs_layout {
-                        continue;
-                    }
-
-                    let is_translation_only = !invalidated
-                        && prev_bounds.size == viewport_bounds.size
-                        && prev_bounds.origin != viewport_bounds.origin
-                        && measured != Size::default();
-                    if !is_translation_only {
-                        self.compute_flow_root_island_if_requested(
-                            app,
-                            services,
-                            viewport_root,
-                            viewport_bounds,
-                            scale_factor,
-                        );
-                    }
-
-                    let _ = self.layout_in_with_pass_kind(
-                        app,
-                        services,
-                        viewport_root,
-                        viewport_bounds,
-                        scale_factor,
-                        LayoutPassKind::Final,
-                    );
-                }
-            }
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                LayoutPassKind::Final,
+                &mut viewport_cursor,
+            );
 
             self.layout_engine.end_frame();
             size
@@ -331,6 +233,102 @@ impl<H: UiHost> UiTree<H> {
             build_viewport_flow_subtree(&mut engine, app, &*self, window, sf, root, size);
         }
         self.put_layout_engine(engine);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn begin_layout_engine_frame(&mut self, app: &mut H) {
+        self.layout_engine.begin_frame(app.frame_id());
+        self.viewport_roots.clear();
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn request_build_window_roots_if_final(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        roots: &[NodeId],
+        bounds: Rect,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        self.request_flow_subtrees(
+            app,
+            roots.iter().copied().map(|root| (root, bounds.size)),
+            scale_factor,
+        );
+        self.precompute_layer_root_flow_islands(app, services, roots, bounds, scale_factor);
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    fn flush_viewport_roots_after_root(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        while *viewport_cursor < self.viewport_roots.len() {
+            // Phase 1: request/build any newly-registered viewport roots so the engine retains
+            // stable identity even if we skip compute/apply for clean roots.
+            if pass_kind == LayoutPassKind::Final {
+                self.request_viewport_root_flow_subtrees_from_index(
+                    app,
+                    *viewport_cursor,
+                    scale_factor,
+                );
+            }
+
+            // Phase 2: compute/apply only the viewport roots that actually need layout.
+            while *viewport_cursor < self.viewport_roots.len() {
+                let (viewport_root, viewport_bounds) = self.viewport_roots[*viewport_cursor];
+                *viewport_cursor += 1;
+
+                let Some((prev_bounds, invalidated, measured)) = self
+                    .nodes
+                    .get(viewport_root)
+                    .map(|n| (n.bounds, n.invalidation.layout, n.measured_size))
+                else {
+                    continue;
+                };
+
+                // Only flush viewport roots when required. This prevents barriers that register
+                // many viewport roots (e.g. docking) from forcing unnecessary layout work for
+                // roots that did not change, while still allowing the request/build phase to keep
+                // stable identity across frames.
+                let needs_layout = invalidated || prev_bounds != viewport_bounds;
+                if !needs_layout {
+                    continue;
+                }
+
+                let is_translation_only = !invalidated
+                    && prev_bounds.size == viewport_bounds.size
+                    && prev_bounds.origin != viewport_bounds.origin
+                    && measured != Size::default();
+                if !is_translation_only {
+                    self.compute_flow_root_island_if_requested(
+                        app,
+                        services,
+                        viewport_root,
+                        viewport_bounds,
+                        scale_factor,
+                    );
+                }
+
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                    LayoutPassKind::Final,
+                );
+            }
+        }
     }
 
     #[cfg(feature = "layout-engine-v2")]
@@ -429,54 +427,6 @@ impl<H: UiHost> UiTree<H> {
                 engine.compute_root_for_node_with_measure_if_needed(root, available, sf, |n, c| {
                     self.measure_in(app, services, n, c, sf)
                 });
-        }
-
-        self.put_layout_engine(engine);
-    }
-
-    #[cfg(feature = "layout-engine-v2")]
-    fn precompute_single_layer_root_flow_island_if_needed(
-        &mut self,
-        app: &mut H,
-        services: &mut dyn UiServices,
-        root: NodeId,
-        bounds: Rect,
-        scale_factor: f32,
-    ) {
-        let (has_element, needs_layout, is_translation_only) = match self.nodes.get(root) {
-            Some(node) => {
-                let has_element = node.element.is_some();
-                let needs_layout = node.invalidation.layout || node.bounds != bounds;
-                let is_translation_only = !node.invalidation.layout
-                    && node.bounds.size == bounds.size
-                    && node.bounds.origin != bounds.origin
-                    && node.measured_size != Size::default();
-                (has_element, needs_layout, is_translation_only)
-            }
-            None => return,
-        };
-
-        if !has_element {
-            return;
-        }
-
-        let sf = scale_factor;
-        let available = LayoutSize::new(
-            AvailableSpace::Definite(bounds.size.width),
-            AvailableSpace::Definite(bounds.size.height),
-        );
-
-        let mut engine = self.take_layout_engine();
-
-        if needs_layout {
-            if !is_translation_only {
-                let _ = engine.compute_root_for_node_with_measure_if_needed(
-                    root,
-                    available,
-                    sf,
-                    |n, c| self.measure_in(app, services, n, c, sf),
-                );
-            }
         }
 
         self.put_layout_engine(engine);
