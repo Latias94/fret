@@ -9,6 +9,7 @@ use fret_node::io::{
     NodeGraphConnectionMode, NodeGraphDragHandleMode, NodeGraphViewState,
     NodeGraphZoomActivationKey,
 };
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::ui::style::NodeGraphStyle;
 
 #[derive(Debug, Clone)]
@@ -64,6 +65,7 @@ struct TuningLayout {
 pub struct NodeGraphTuningOverlay {
     canvas_node: fret_core::NodeId,
     view_state: Model<NodeGraphViewState>,
+    store: Option<Model<NodeGraphStore>>,
     style: NodeGraphStyle,
     commands: Option<NodeGraphTuningCommands>,
 
@@ -81,12 +83,18 @@ impl NodeGraphTuningOverlay {
         Self {
             canvas_node,
             view_state,
+            store: None,
             style,
             commands: None,
             hovered: None,
             pressed: None,
             text_blobs: Vec::new(),
         }
+    }
+
+    pub fn with_store(mut self, store: Model<NodeGraphStore>) -> Self {
+        self.store = Some(store);
+        self
     }
 
     pub fn with_commands(mut self, commands: NodeGraphTuningCommands) -> Self {
@@ -470,7 +478,7 @@ impl NodeGraphTuningOverlay {
             }
         }
 
-        let _ = self.view_state.update(host, |s, _cx| match hit {
+        let apply = |s: &mut NodeGraphViewState| match hit {
             TuningHit::ToggleMode => {
                 s.interaction.connection_mode = match s.interaction.connection_mode {
                     NodeGraphConnectionMode::Strict => NodeGraphConnectionMode::Loose,
@@ -612,7 +620,15 @@ impl NodeGraphTuningOverlay {
             | TuningHit::SpawnStress1k
             | TuningHit::SpawnStress5k
             | TuningHit::SpawnStress10k => {}
-        });
+        };
+
+        if let Some(store) = self.store.as_ref() {
+            let _ = store.update(host, |store, _cx| {
+                store.update_view_state(apply);
+            });
+        } else {
+            let _ = self.view_state.update(host, |s, _cx| apply(s));
+        }
     }
 
     fn command_for_hit(&self, hit: TuningHit) -> Option<CommandId> {

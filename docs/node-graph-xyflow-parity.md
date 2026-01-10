@@ -120,7 +120,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - controlled helpers: `ecosystem/fret-node/src/runtime/store.rs` (`replace_graph`, `replace_view_state`, `update_view_state`)
   - Notes:
     - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
-    - still missing a store-facing `apply_*_changes` convenience API for app-owned state and selector-based subscriptions.
+    - still missing a store-facing `apply_*_changes` convenience API for app-owned state (like `applyNodeChanges`, `applyEdgeChanges`).
 
 - [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions

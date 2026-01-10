@@ -19,6 +19,7 @@ use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
     PortTemplate,
 };
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
 use fret_node::ui::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphA11yFocusedEdge,
@@ -34,6 +35,7 @@ use crate::keymap_defaults::install_default_keybindings_into_keymap;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
+    store: fret_runtime::Model<NodeGraphStore>,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
@@ -539,7 +541,7 @@ impl NodeGraphDomainDemoDriver {
             return;
         };
 
-        let Ok(state) = models.view.read_ref(app, |v| v.clone()) else {
+        let Ok(state) = models.store.read_ref(app, |s| s.view_state().clone()) else {
             return;
         };
 
@@ -567,9 +569,11 @@ impl NodeGraphDomainDemoDriver {
         let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
+        let store = models.store.clone();
 
         let presenter = DemoTypedPresenter::default();
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
+            .with_store(store)
             .with_presenter(presenter)
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
@@ -763,12 +767,15 @@ pub fn run() -> anyhow::Result<()> {
         };
     view_value.sanitize_for_graph(&graph_value);
 
-    let graph = app.models_mut().insert(graph_value);
-    let view = app.models_mut().insert(view_value);
+    let store_value = NodeGraphStore::new(graph_value, view_value);
+    let graph = app.models_mut().insert(store_value.graph().clone());
+    let view = app.models_mut().insert(store_value.view_state().clone());
+    let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
+        store,
         graph,
         view,
         edits,

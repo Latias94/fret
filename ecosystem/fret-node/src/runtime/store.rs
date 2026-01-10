@@ -369,6 +369,11 @@ impl NodeGraphStore {
         &self.history
     }
 
+    pub fn clear_history(&mut self) {
+        self.history = GraphHistory::default();
+        self.notify_selectors();
+    }
+
     pub fn can_undo(&self) -> bool {
         self.history.can_undo()
     }

@@ -32,6 +32,7 @@ use fret_node::io::NodeGraphViewState;
 use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
@@ -50,6 +51,7 @@ use fret_ui::element::AnyElement;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
+    store: fret_runtime::Model<NodeGraphStore>,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
@@ -1036,7 +1038,7 @@ impl NodeGraphDemoDriver {
             return;
         };
 
-        let Ok(state) = models.view.read_ref(app, |v| v.clone()) else {
+        let Ok(state) = models.store.read_ref(app, |s| s.view_state().clone()) else {
             return;
         };
 
@@ -1073,11 +1075,13 @@ impl NodeGraphDemoDriver {
         let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
+        let store = models.store.clone();
         let style = NodeGraphStyle::from_theme(Theme::global(app));
 
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
+            .with_store(store.clone())
             .with_presenter(presenter)
             .with_style(style.clone())
             .with_edit_queue(edits.clone())
@@ -1154,6 +1158,7 @@ impl NodeGraphDemoDriver {
         let controls_node = ui.create_node_retained(controls);
 
         let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone())
+            .with_store(store.clone())
             .with_commands(NodeGraphTuningCommands {
                 reset_graph: CommandId::new(CMD_RESET_GRAPH),
                 spawn_stress_1k: CommandId::new(CMD_SPAWN_STRESS_1K),
@@ -1168,7 +1173,8 @@ impl NodeGraphDemoDriver {
             models.view.clone(),
             internals_overlay,
             style.clone(),
-        );
+        )
+        .with_store(store);
         let minimap_node = ui.create_node_retained(minimap);
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
@@ -1472,8 +1478,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let mut next_view = NodeGraphViewState::default();
             next_view.sanitize_for_graph(&next_graph);
 
-            let _ = models.graph.update(app, |g, _cx| *g = next_graph);
-            let _ = models.view.update(app, |v, _cx| *v = next_view);
+            let _ = models.store.update(app, |store, _cx| {
+                store.replace_graph(next_graph);
+                store.replace_view_state(next_view);
+                store.clear_history();
+            });
 
             app.request_redraw(window);
             return;
@@ -1570,12 +1579,16 @@ pub fn run() -> anyhow::Result<()> {
         };
     view_value.sanitize_for_graph(&graph_value);
 
-    let graph = app.models_mut().insert(graph_value);
-    let view = app.models_mut().insert(view_value);
+    let store_value =
+        NodeGraphStore::with_profile(graph_value, view_value, Box::new(DataflowProfile::new()));
+    let graph = app.models_mut().insert(store_value.graph().clone());
+    let view = app.models_mut().insert(store_value.view_state().clone());
+    let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
+        store,
         graph,
         view,
         edits,

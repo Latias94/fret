@@ -77,6 +77,13 @@ Design constraints:
   - typed ports/wires + connect/reconnect,
   - conversion picker insertion flow,
   - portal number editing (stepper + drag threshold).
+- The demo is now **store-driven** (B-layer): `NodeGraphStore` is the source of truth; `Graph` and `NodeGraphViewState` models are kept in sync by the canvas.
+
+To run:
+
+- `cargo run -p fret-demo --bin node_graph_demo`
+- `cargo run -p fret-demo --bin node_graph_domain_demo`
+- preferred runner: `cargo run -p fretboard -- dev native --bin node_graph_demo`
 
 ## Missing Pieces (Gap Analysis)
 
