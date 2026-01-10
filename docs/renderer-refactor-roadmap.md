@@ -217,6 +217,7 @@ This section is intentionally lightweight and should be updated as work lands.
       `RenderPlan` as bounded, scissored `Backdrop` + `FilterContent` blur (ordering preserved).
     - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
+    - `ScaleNearest` is origin-aware (per-pass params via dynamic offsets), so pixelation is anchored to the effect bounds (not the window origin).
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
