@@ -2258,6 +2258,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             let tool = match update.result {
                                 fret_gizmo::GizmoResult::Translation { .. } => "gizmo.translate",
                                 fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
                                 fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
                             };
 

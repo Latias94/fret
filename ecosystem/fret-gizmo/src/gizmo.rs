@@ -123,6 +123,15 @@ pub struct GizmoConfig {
     pub show_view_axis_ring: bool,
     /// Radius multiplier for the view-axis ring (outer ring).
     pub view_axis_ring_radius_scale: f32,
+    /// When `true`, includes a free-rotation arcball (trackball) in `Rotate`/`Universal`.
+    ///
+    /// This is intended to match transform-gizmo's `Arcball` affordance: click/drag inside the
+    /// arcball circle to perform unconstrained rotation.
+    pub show_arcball: bool,
+    /// Radius multiplier (relative to `size_px`) for the arcball circle.
+    pub arcball_radius_scale: f32,
+    /// Rotation speed multiplier for arcball drags.
+    pub arcball_rotation_speed: f32,
     /// When `true`, `GizmoMode::Universal` includes scale interaction (axis scaling).
     ///
     /// Note: uniform scaling (handle id 7) remains exclusive to `GizmoMode::Scale` to avoid
@@ -175,6 +184,9 @@ impl Default for GizmoConfig {
             occluded_alpha: 0.25,
             show_view_axis_ring: true,
             view_axis_ring_radius_scale: 1.2,
+            show_arcball: true,
+            arcball_radius_scale: 0.85,
+            arcball_rotation_speed: 1.0,
             universal_includes_scale: true,
             allow_axis_flip: true,
             axis_fade_px: (4.0, 18.0),
@@ -309,6 +321,12 @@ pub struct GizmoState {
     drag_prev_angle: f32,
     drag_total_angle_raw: f32,
     drag_total_angle_applied: f32,
+    drag_rotate_is_arcball: bool,
+    drag_arcball_center_px: Vec2,
+    drag_arcball_radius_px: f32,
+    drag_arcball_prev_vec: Vec3,
+    drag_total_arcball_raw: Quat,
+    drag_total_arcball_applied: Quat,
     drag_scale_axis: Option<usize>,
     drag_scale_plane_axes: Option<(usize, usize)>,
     drag_scale_plane_u: Vec3,
@@ -348,6 +366,12 @@ impl Default for GizmoState {
             drag_prev_angle: 0.0,
             drag_total_angle_raw: 0.0,
             drag_total_angle_applied: 0.0,
+            drag_rotate_is_arcball: false,
+            drag_arcball_center_px: Vec2::ZERO,
+            drag_arcball_radius_px: 0.0,
+            drag_arcball_prev_vec: Vec3::Z,
+            drag_total_arcball_raw: Quat::IDENTITY,
+            drag_total_arcball_applied: Quat::IDENTITY,
             drag_scale_axis: None,
             drag_scale_plane_axes: None,
             drag_scale_plane_u: Vec3::X,
@@ -380,6 +404,10 @@ pub enum GizmoResult {
         delta_radians: f32,
         total_radians: f32,
     },
+    Arcball {
+        delta: Quat,
+        total: Quat,
+    },
     Scale {
         delta: Vec3,
         total: Vec3,
@@ -402,6 +430,8 @@ pub struct Gizmo {
 
 impl Gizmo {
     const UNIVERSAL_TRANSLATE_TIP_SCALE: f32 = 1.25;
+    const ROTATE_VIEW_HANDLE: HandleId = HandleId(8);
+    const ROTATE_ARCBALL_HANDLE: HandleId = HandleId(9);
 
     fn translate_axis_tip_scale(&self) -> f32 {
         if self.config.mode == GizmoMode::Universal && self.config.universal_includes_scale {
@@ -861,17 +891,241 @@ impl Gizmo {
                 })
             }
             GizmoMode::Rotate => {
-                let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
-                if axis_dir.length_squared() == 0.0 {
-                    self.state.active = None;
-                    return None;
-                }
+                if self.state.drag_rotate_is_arcball {
+                    let total = self.state.drag_total_arcball_applied;
+                    if input.cancel {
+                        self.state.active = None;
+                        self.state.drag_rotate_is_arcball = false;
+                        return Some(GizmoUpdate {
+                            phase: GizmoPhase::Cancel,
+                            active,
+                            result: GizmoResult::Arcball {
+                                delta: Quat::IDENTITY,
+                                total,
+                            },
+                            updated_targets: targets.to_vec(),
+                        });
+                    }
 
-                if input.cancel {
+                    if input.dragging {
+                        self.state.drag_snap = input.snap;
+                        let started_this_call = if !self.state.drag_has_started {
+                            let threshold = self.config.drag_start_threshold_px.max(0.0);
+                            if threshold > 0.0
+                                && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                    < threshold
+                            {
+                                return None;
+                            }
+                            self.state.drag_has_started = true;
+                            true
+                        } else {
+                            false
+                        };
+
+                        let current = self.arcball_vector_world(input.cursor_px)?;
+                        let prev = self.state.drag_arcball_prev_vec.normalize_or_zero();
+                        self.state.drag_arcball_prev_vec = current;
+                        if prev.length_squared() == 0.0 {
+                            return None;
+                        }
+
+                        let mut delta_q = Quat::from_rotation_arc(prev, current);
+                        if let Some(speed) = self
+                            .config
+                            .arcball_rotation_speed
+                            .is_finite()
+                            .then_some(self.config.arcball_rotation_speed)
+                            .filter(|s| *s > 0.0 && (*s - 1.0).abs() > 1e-3)
+                        {
+                            let (axis, angle) = quat_axis_angle(delta_q);
+                            delta_q = Quat::from_axis_angle(axis, angle * speed);
+                        }
+
+                        self.state.drag_total_arcball_raw =
+                            (delta_q * self.state.drag_total_arcball_raw).normalize();
+
+                        let desired_total = if input.snap {
+                            self.config
+                                .rotate_snap_step_radians
+                                .filter(|s| s.is_finite() && *s > 0.0)
+                                .map(|step| {
+                                    snap_quat_to_angle_step(self.state.drag_total_arcball_raw, step)
+                                })
+                                .unwrap_or(self.state.drag_total_arcball_raw)
+                        } else {
+                            self.state.drag_total_arcball_raw
+                        };
+
+                        let delta_apply = (desired_total
+                            * self.state.drag_total_arcball_applied.inverse())
+                        .normalize();
+                        self.state.drag_total_arcball_applied = desired_total;
+
+                        let updated_targets = targets
+                            .iter()
+                            .map(|t| GizmoTarget3d {
+                                id: t.id,
+                                transform: Transform3d {
+                                    translation: self.state.drag_origin
+                                        + delta_apply
+                                            * (t.transform.translation - self.state.drag_origin),
+                                    rotation: (delta_apply * t.transform.rotation).normalize(),
+                                    ..t.transform
+                                },
+                            })
+                            .collect::<Vec<_>>();
+                        return Some(GizmoUpdate {
+                            phase: if started_this_call {
+                                GizmoPhase::Begin
+                            } else {
+                                GizmoPhase::Update
+                            },
+                            active,
+                            result: GizmoResult::Arcball {
+                                delta: delta_apply,
+                                total: desired_total,
+                            },
+                            updated_targets,
+                        });
+                    }
+
+                    if !self.state.drag_has_started {
+                        self.state.active = None;
+                        self.state.drag_rotate_is_arcball = false;
+                        return None;
+                    }
+
+                    self.state.active = None;
+                    self.state.drag_rotate_is_arcball = false;
+                    Some(GizmoUpdate {
+                        phase: GizmoPhase::Commit,
+                        active,
+                        result: GizmoResult::Arcball {
+                            delta: Quat::IDENTITY,
+                            total,
+                        },
+                        updated_targets: targets.to_vec(),
+                    })
+                } else {
+                    let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+                    if axis_dir.length_squared() == 0.0 {
+                        self.state.active = None;
+                        return None;
+                    }
+
+                    if input.cancel {
+                        let total = self.state.drag_total_angle_applied;
+                        self.state.active = None;
+                        return Some(GizmoUpdate {
+                            phase: GizmoPhase::Cancel,
+                            active,
+                            result: GizmoResult::Rotation {
+                                axis: axis_dir,
+                                delta_radians: 0.0,
+                                total_radians: total,
+                            },
+                            updated_targets: targets.to_vec(),
+                        });
+                    }
+
+                    if input.dragging {
+                        self.state.drag_snap = input.snap;
+                        let started_this_call = if !self.state.drag_has_started {
+                            let threshold = self.config.drag_start_threshold_px.max(0.0);
+                            if threshold > 0.0
+                                && (input.cursor_px - self.state.drag_start_cursor_px).length()
+                                    < threshold
+                            {
+                                return None;
+                            }
+                            self.state.drag_has_started = true;
+                            true
+                        } else {
+                            false
+                        };
+                        let hit_world = ray_plane_intersect(
+                            cursor_ray,
+                            self.state.drag_origin,
+                            self.state.drag_plane_normal,
+                        )
+                        .filter(|p| p.is_finite())
+                        .unwrap_or_else(|| {
+                            unproject_point(
+                                view_projection,
+                                viewport,
+                                input.cursor_px,
+                                self.config.depth_range,
+                                self.state.drag_origin_z01,
+                            )
+                            .unwrap_or(self.state.drag_origin)
+                        });
+
+                        let Some(angle) = angle_on_plane(
+                            self.state.drag_origin,
+                            hit_world,
+                            axis_dir,
+                            self.state.drag_basis_u,
+                            self.state.drag_basis_v,
+                        ) else {
+                            return None;
+                        };
+
+                        let delta_angle = wrap_angle(angle - self.state.drag_prev_angle);
+                        self.state.drag_prev_angle = angle;
+                        self.state.drag_total_angle_raw += delta_angle;
+
+                        let desired_total = if input.snap {
+                            self.config
+                                .rotate_snap_step_radians
+                                .filter(|s| s.is_finite() && *s > 0.0)
+                                .map(|step| (self.state.drag_total_angle_raw / step).round() * step)
+                                .unwrap_or(self.state.drag_total_angle_raw)
+                        } else {
+                            self.state.drag_total_angle_raw
+                        };
+                        let delta_apply = desired_total - self.state.drag_total_angle_applied;
+                        self.state.drag_total_angle_applied = desired_total;
+
+                        let delta_q = Quat::from_axis_angle(axis_dir, delta_apply);
+                        let updated_targets = targets
+                            .iter()
+                            .map(|t| GizmoTarget3d {
+                                id: t.id,
+                                transform: Transform3d {
+                                    translation: self.state.drag_origin
+                                        + delta_q
+                                            * (t.transform.translation - self.state.drag_origin),
+                                    rotation: (delta_q * t.transform.rotation).normalize(),
+                                    ..t.transform
+                                },
+                            })
+                            .collect::<Vec<_>>();
+                        return Some(GizmoUpdate {
+                            phase: if started_this_call {
+                                GizmoPhase::Begin
+                            } else {
+                                GizmoPhase::Update
+                            },
+                            active,
+                            result: GizmoResult::Rotation {
+                                axis: axis_dir,
+                                delta_radians: delta_apply,
+                                total_radians: desired_total,
+                            },
+                            updated_targets,
+                        });
+                    }
+
+                    if !self.state.drag_has_started {
+                        self.state.active = None;
+                        return None;
+                    }
+
                     let total = self.state.drag_total_angle_applied;
                     self.state.active = None;
-                    return Some(GizmoUpdate {
-                        phase: GizmoPhase::Cancel,
+                    Some(GizmoUpdate {
+                        phase: GizmoPhase::Commit,
                         active,
                         result: GizmoResult::Rotation {
                             axis: axis_dir,
@@ -879,113 +1133,8 @@ impl Gizmo {
                             total_radians: total,
                         },
                         updated_targets: targets.to_vec(),
-                    });
+                    })
                 }
-
-                if input.dragging {
-                    self.state.drag_snap = input.snap;
-                    let started_this_call = if !self.state.drag_has_started {
-                        let threshold = self.config.drag_start_threshold_px.max(0.0);
-                        if threshold > 0.0
-                            && (input.cursor_px - self.state.drag_start_cursor_px).length()
-                                < threshold
-                        {
-                            return None;
-                        }
-                        self.state.drag_has_started = true;
-                        true
-                    } else {
-                        false
-                    };
-                    let hit_world = ray_plane_intersect(
-                        cursor_ray,
-                        self.state.drag_origin,
-                        self.state.drag_plane_normal,
-                    )
-                    .filter(|p| p.is_finite())
-                    .unwrap_or_else(|| {
-                        unproject_point(
-                            view_projection,
-                            viewport,
-                            input.cursor_px,
-                            self.config.depth_range,
-                            self.state.drag_origin_z01,
-                        )
-                        .unwrap_or(self.state.drag_origin)
-                    });
-
-                    let Some(angle) = angle_on_plane(
-                        self.state.drag_origin,
-                        hit_world,
-                        axis_dir,
-                        self.state.drag_basis_u,
-                        self.state.drag_basis_v,
-                    ) else {
-                        return None;
-                    };
-
-                    let delta_angle = wrap_angle(angle - self.state.drag_prev_angle);
-                    self.state.drag_prev_angle = angle;
-                    self.state.drag_total_angle_raw += delta_angle;
-
-                    let desired_total = if input.snap {
-                        self.config
-                            .rotate_snap_step_radians
-                            .filter(|s| s.is_finite() && *s > 0.0)
-                            .map(|step| (self.state.drag_total_angle_raw / step).round() * step)
-                            .unwrap_or(self.state.drag_total_angle_raw)
-                    } else {
-                        self.state.drag_total_angle_raw
-                    };
-                    let delta_apply = desired_total - self.state.drag_total_angle_applied;
-                    self.state.drag_total_angle_applied = desired_total;
-
-                    let delta_q = Quat::from_axis_angle(axis_dir, delta_apply);
-                    let updated_targets = targets
-                        .iter()
-                        .map(|t| GizmoTarget3d {
-                            id: t.id,
-                            transform: Transform3d {
-                                translation: self.state.drag_origin
-                                    + delta_q * (t.transform.translation - self.state.drag_origin),
-                                rotation: (delta_q * t.transform.rotation).normalize(),
-                                ..t.transform
-                            },
-                        })
-                        .collect::<Vec<_>>();
-                    return Some(GizmoUpdate {
-                        phase: if started_this_call {
-                            GizmoPhase::Begin
-                        } else {
-                            GizmoPhase::Update
-                        },
-                        active,
-                        result: GizmoResult::Rotation {
-                            axis: axis_dir,
-                            delta_radians: delta_apply,
-                            total_radians: desired_total,
-                        },
-                        updated_targets,
-                    });
-                }
-
-                if !self.state.drag_has_started {
-                    self.state.active = None;
-                    return None;
-                }
-
-                let total = self.state.drag_total_angle_applied;
-                self.state.active = None;
-                Some(GizmoUpdate {
-                    phase: GizmoPhase::Commit,
-                    active,
-                    result: GizmoResult::Rotation {
-                        axis: axis_dir,
-                        delta_radians: 0.0,
-                        total_radians: total,
-                    },
-                    updated_targets: targets.to_vec(),
-                })
             }
             GizmoMode::Scale => {
                 let length_world = axis_length_world(
@@ -1533,8 +1682,19 @@ impl Gizmo {
         active: HandleId,
         axes: [Vec3; 3],
     ) -> Option<GizmoUpdate> {
+        if active == Self::ROTATE_ARCBALL_HANDLE {
+            return self.begin_arcball_drag(
+                view_projection,
+                viewport,
+                input,
+                targets,
+                origin,
+                active,
+            );
+        }
+
         let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
-        let axis_dir = if active.0 == 8 {
+        let axis_dir = if active == Self::ROTATE_VIEW_HANDLE {
             view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?
         } else {
             let (_, axis_index) = axis_for_handle(active);
@@ -1560,6 +1720,9 @@ impl Gizmo {
         self.state.drag_basis_v = v;
         self.state.drag_total_angle_raw = 0.0;
         self.state.drag_total_angle_applied = 0.0;
+        self.state.drag_rotate_is_arcball = false;
+        self.state.drag_total_arcball_raw = Quat::IDENTITY;
+        self.state.drag_total_arcball_applied = Quat::IDENTITY;
 
         let start_hit_world = ray_plane_intersect(cursor_ray, origin, axis_dir)
             .filter(|p| p.is_finite())
@@ -1588,6 +1751,94 @@ impl Gizmo {
             },
             updated_targets: targets.to_vec(),
         })
+    }
+
+    fn begin_arcball_drag(
+        &mut self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        input: GizmoInput,
+        targets: &[GizmoTarget3d],
+        origin: Vec3,
+        active: HandleId,
+    ) -> Option<GizmoUpdate> {
+        let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
+        let view_dir =
+            view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?;
+        let n = (-view_dir).normalize_or_zero();
+        if n.length_squared() == 0.0 {
+            return None;
+        }
+        let (u, v) = plane_basis(n);
+
+        let center_px =
+            project_point(view_projection, viewport, origin, self.config.depth_range)?.screen;
+        let radius_px = (self.config.size_px * self.config.arcball_radius_scale)
+            .max(self.config.pick_radius_px.max(6.0));
+
+        self.state.active = Some(active);
+        self.state.drag_mode = GizmoMode::Rotate;
+        self.state.drag_snap = input.snap;
+        self.state.drag_has_started = false;
+        self.state.drag_start_cursor_px = input.cursor_px;
+        self.state.drag_axis_dir = n;
+        self.state.drag_origin = origin;
+        self.state.drag_origin_z01 = origin_z01;
+        self.state.drag_plane_normal = n;
+        self.state.drag_basis_u = u;
+        self.state.drag_basis_v = v;
+        self.state.drag_rotate_is_arcball = true;
+        self.state.drag_arcball_center_px = center_px;
+        self.state.drag_arcball_radius_px = radius_px;
+        self.state.drag_arcball_prev_vec = self.arcball_vector_world(input.cursor_px)?;
+        self.state.drag_total_arcball_raw = Quat::IDENTITY;
+        self.state.drag_total_arcball_applied = Quat::IDENTITY;
+        self.state.drag_total_angle_raw = 0.0;
+        self.state.drag_total_angle_applied = 0.0;
+
+        Some(GizmoUpdate {
+            phase: GizmoPhase::Begin,
+            active,
+            result: GizmoResult::Arcball {
+                delta: Quat::IDENTITY,
+                total: Quat::IDENTITY,
+            },
+            updated_targets: targets.to_vec(),
+        })
+    }
+
+    fn arcball_vector_world(&self, cursor_px: Vec2) -> Option<Vec3> {
+        let r = self.state.drag_arcball_radius_px;
+        if !r.is_finite() || r <= 1e-3 {
+            return None;
+        }
+        let p = (cursor_px - self.state.drag_arcball_center_px) / r;
+        if !p.x.is_finite() || !p.y.is_finite() {
+            return None;
+        }
+
+        // Note: screen Y is down, but arcball math expects Y up.
+        let mut x = p.x;
+        let mut y = -p.y;
+        let d2 = x * x + y * y;
+        let z = if d2 <= 1.0 {
+            (1.0 - d2).sqrt()
+        } else {
+            let inv = d2.sqrt().recip();
+            x *= inv;
+            y *= inv;
+            0.0
+        };
+
+        let u = self.state.drag_basis_u.normalize_or_zero();
+        let v = self.state.drag_basis_v.normalize_or_zero();
+        let n = self.state.drag_plane_normal.normalize_or_zero();
+        if u.length_squared() == 0.0 || v.length_squared() == 0.0 || n.length_squared() == 0.0 {
+            return None;
+        }
+
+        let w = (u * x + v * y + n * z).normalize_or_zero();
+        (w.length_squared() > 0.0).then_some(w)
     }
 
     fn begin_scale_drag(
@@ -2090,7 +2341,7 @@ impl Gizmo {
                 let axis_dir = view_dir.normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let handle = HandleId(8);
+                    let handle = Self::ROTATE_VIEW_HANDLE;
                     let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
                     let base = Color {
                         r: 0.9,
@@ -2100,6 +2351,47 @@ impl Gizmo {
                     };
                     let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
                         self.config.hover_color
+                    } else {
+                        base
+                    };
+
+                    let mut prev = origin + u * r;
+                    for i in 1..=segments {
+                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                        let p = origin + (u * t.cos() + v * t.sin()) * r;
+                        self.push_line(&mut out, prev, p, c, DepthMode::Always);
+                        prev = p;
+                    }
+                }
+            }
+        }
+
+        if self.config.show_arcball {
+            if let Some(view_dir) =
+                view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
+            {
+                let axis_dir = (-view_dir).normalize_or_zero();
+                if axis_dir.length_squared() > 0.0 {
+                    let (u, v) = plane_basis(axis_dir);
+                    let r = axis_length_world(
+                        view_projection,
+                        viewport,
+                        origin,
+                        self.config.depth_range,
+                        self.config.size_px * self.config.arcball_radius_scale,
+                    )
+                    .unwrap_or(radius_world * self.config.arcball_radius_scale)
+                    .max(1e-6);
+
+                    let handle = Self::ROTATE_ARCBALL_HANDLE;
+                    let base = Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 0.12,
+                    };
+                    let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
+                        mix_alpha(self.config.hover_color, 0.55)
                     } else {
                         base
                     };
@@ -2134,6 +2426,39 @@ impl Gizmo {
             return GizmoDrawList3d::default();
         }
 
+        if self.state.drag_rotate_is_arcball {
+            let u = self.state.drag_basis_u.normalize_or_zero();
+            let v = self.state.drag_basis_v.normalize_or_zero();
+            if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+
+            let radius_world = axis_length_world(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                self.config.size_px * self.config.arcball_radius_scale,
+            )
+            .unwrap_or(1.0)
+            .max(1e-6);
+
+            let outline = mix_alpha(self.config.hover_color, 0.65);
+            let fill = mix_alpha(self.config.hover_color, 0.10);
+            let segments: usize = 48;
+            let mut out = GizmoDrawList3d::default();
+
+            let mut prev = origin + u * radius_world;
+            for i in 1..=segments {
+                let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
+                self.push_line(&mut out.lines, prev, p, outline, DepthMode::Always);
+                self.push_tri(&mut out.triangles, origin, prev, p, fill, DepthMode::Always);
+                prev = p;
+            }
+            return out;
+        }
+
         let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
         if axis_dir.length_squared() == 0.0 {
             return GizmoDrawList3d::default();
@@ -2148,7 +2473,7 @@ impl Gizmo {
         )
         .unwrap_or(1.0)
         .max(1e-6);
-        let radius_world = if active.0 == 8 {
+        let radius_world = if active == Self::ROTATE_VIEW_HANDLE {
             (base_radius_world * self.config.view_axis_ring_radius_scale).max(1e-6)
         } else {
             base_radius_world
@@ -2178,6 +2503,12 @@ impl Gizmo {
                 g: 0.9,
                 b: 0.9,
                 a: 0.8,
+            },
+            9 => Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.25,
             },
             _ => self.config.hover_color,
         };
@@ -3050,7 +3381,7 @@ impl Gizmo {
                 let axis_dir = view_dir.normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let handle = HandleId(8);
+                    let handle = Self::ROTATE_VIEW_HANDLE;
                     let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
 
                     let mut prev = match project_point(
@@ -3090,7 +3421,7 @@ impl Gizmo {
             }
         }
 
-        match (best_axis, view_hit) {
+        let ring_hit = match (best_axis, view_hit) {
             (Some(axis), Some(view)) => {
                 // View ring is an outer, always-on-top affordance. Make it slightly easier to hit
                 // without stealing clearly-intended axis ring drags.
@@ -3107,7 +3438,25 @@ impl Gizmo {
             (Some(axis), None) => Some(axis),
             (None, Some(view)) => Some(view),
             (None, None) => None,
+        };
+        if ring_hit.is_some() {
+            return ring_hit;
         }
+
+        if self.config.show_arcball {
+            let center = project_point(view_projection, viewport, origin, self.config.depth_range)?;
+            let r = (self.config.size_px * self.config.arcball_radius_scale)
+                .max(self.config.pick_radius_px.max(6.0));
+            let d = (cursor - center.screen).length();
+            if d.is_finite() && d <= r {
+                return Some(PickHit {
+                    handle: Self::ROTATE_ARCBALL_HANDLE,
+                    score: 10.0 + (d / r.max(1.0)),
+                });
+            }
+        }
+
+        None
     }
 }
 
@@ -3154,6 +3503,31 @@ fn wrap_angle(mut a: f32) -> f32 {
         a += std::f32::consts::TAU;
     }
     a
+}
+
+fn quat_axis_angle(q: Quat) -> (Vec3, f32) {
+    let q = q.normalize();
+    let (axis, angle) = q.to_axis_angle();
+    let axis = axis.normalize_or_zero();
+    if axis.length_squared() == 0.0 || !angle.is_finite() {
+        (Vec3::Z, 0.0)
+    } else {
+        (axis, angle)
+    }
+}
+
+fn snap_quat_to_angle_step(total: Quat, step: f32) -> Quat {
+    let step = step.max(1e-6);
+    let (axis, angle) = quat_axis_angle(total);
+    if angle.abs() < 1e-6 {
+        return Quat::IDENTITY;
+    }
+    let snapped = (angle / step).round() * step;
+    if snapped.abs() < 1e-6 {
+        Quat::IDENTITY
+    } else {
+        Quat::from_axis_angle(axis, snapped).normalize()
+    }
 }
 
 fn ray_plane_intersect(ray: Ray3d, plane_point: Vec3, plane_normal: Vec3) -> Option<Vec3> {
@@ -4176,6 +4550,83 @@ mod tests {
             _ => panic!("expected rotation"),
         };
         assert!(back_total.abs() < 1e-3, "total={back_total}");
+    }
+
+    #[test]
+    fn arcball_drag_returns_to_identity_when_cursor_returns() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        gizmo.config.show_arcball = true;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+
+        let center = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let r = gizmo.config.size_px * gizmo.config.arcball_radius_scale;
+        assert!(r > 10.0);
+
+        let cursor_start = center.screen + Vec2::new(r * 0.25, 0.0);
+        let cursor_moved = center.screen + Vec2::new(0.0, r * 0.25);
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Arcball { total, .. } => total,
+            _ => panic!("expected arcball"),
+        };
+        let moved_angle = 2.0
+            * moved_total
+                .dot(Quat::IDENTITY)
+                .abs()
+                .clamp(-1.0, 1.0)
+                .acos();
+        assert!(moved_angle.is_finite());
+        assert!(moved_angle > 1e-5);
+
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Arcball { total, .. } => total,
+            _ => panic!("expected arcball"),
+        };
+        let back_angle = 2.0 * back_total.dot(Quat::IDENTITY).abs().clamp(-1.0, 1.0).acos();
+        assert!(
+            back_angle.abs() < 5e-3,
+            "angle={back_angle} total={back_total:?}"
+        );
     }
 
     #[test]
