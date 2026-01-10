@@ -156,6 +156,13 @@ impl<H: UiHost> UiTree<H> {
             self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
         }
 
+        // Clear the "dirty" flag before invoking widget paint so that paint-triggered invalidations
+        // (e.g. `request_animation_frame()`) can be recorded for the next frame even when paint
+        // caching is enabled.
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.invalidation.paint = false;
+        }
+
         let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();
         let mut observe_model = |model: ModelId, inv: Invalidation| {
             observations.push((model, inv));
@@ -216,7 +223,6 @@ impl<H: UiHost> UiTree<H> {
         self.observed_globals_in_paint
             .record(node, global_observations.as_slice());
         if let Some(n) = self.nodes.get_mut(node) {
-            n.invalidation.paint = false;
             if cache_enabled {
                 n.paint_cache = Some(PaintCacheEntry {
                     generation: self.paint_cache.target_generation,

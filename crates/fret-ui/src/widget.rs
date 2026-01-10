@@ -155,6 +155,8 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
@@ -250,6 +252,8 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
@@ -305,6 +309,8 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate(self.node, Invalidation::Paint);
         let Some(window) = self.window else {
             return;
         };
