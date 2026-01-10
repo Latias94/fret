@@ -168,6 +168,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::Pressable(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
+            | ElementInstance::RenderTransform(_)
             | ElementInstance::Semantics(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
@@ -343,6 +344,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::Pressable(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
+            | ElementInstance::RenderTransform(_)
             | ElementInstance::Semantics(_)
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
@@ -618,6 +620,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::Pressable(_)
         | ElementInstance::Opacity(_)
         | ElementInstance::VisualTransform(_)
+        | ElementInstance::RenderTransform(_)
         | ElementInstance::Semantics(_)
         | ElementInstance::FocusScope(_) => Some(child),
         _ => None,

@@ -355,16 +355,31 @@ impl ElementHostWidget {
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with an explicit
                 // render transform that affects hit-testing and pointer coordinate mapping.
 
+                #[cfg(feature = "layout-engine-v2")]
+                {
+                    if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                        cx,
+                        window,
+                        Rect::new(cx.bounds.origin, cx.available),
+                    ) {
+                        self.render_transform = Some(props.transform);
+                        return size;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
-                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let probe_available =
+                    clamp_to_constraints(cx.available, props.layout, cx.available);
+                let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
+                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
                     if layout_style.position == crate::element::PositionStyle::Absolute {
                         continue;
                     }
-                    let child_size = cx.layout_in(child, probe_bounds);
+                    let child_size = cx.measure_in(child, probe_constraints);
                     max_child.width = Px(max_child.width.0.max(child_size.width.0));
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
