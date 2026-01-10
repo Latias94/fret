@@ -5,7 +5,7 @@
 
 use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
-    AnchoredPanelLayout, AnchoredPanelOptions, anchored_panel_layout_sized_ex,
+    AnchoredPanelLayout, AnchoredPanelOptions, CollisionOptions, anchored_panel_layout_sized_ex,
 };
 
 pub use fret_ui::overlay_placement::{
@@ -47,6 +47,8 @@ pub struct PopperContentPlacement {
     pub align_offset: Px,
     pub arrow: Option<ArrowOptions>,
     pub arrow_protrusion: Px,
+    pub collision_padding: Edges,
+    pub collision_boundary: Option<Rect>,
 }
 
 impl PopperContentPlacement {
@@ -59,6 +61,8 @@ impl PopperContentPlacement {
             align_offset: Px(0.0),
             arrow: None,
             arrow_protrusion: Px(0.0),
+            collision_padding: Edges::all(Px(0.0)),
+            collision_boundary: None,
         }
     }
 
@@ -73,13 +77,28 @@ impl PopperContentPlacement {
         self
     }
 
+    pub fn with_collision_padding(mut self, collision_padding: Edges) -> Self {
+        self.collision_padding = collision_padding;
+        self
+    }
+
+    pub fn with_collision_boundary(mut self, collision_boundary: Option<Rect>) -> Self {
+        self.collision_boundary = collision_boundary;
+        self
+    }
+
     pub fn options(self) -> AnchoredPanelOptions {
-        anchored_panel_options_for_popper_content(
+        let mut options = anchored_panel_options_for_popper_content(
             self.direction,
             self.arrow_protrusion,
             self.align_offset,
             self.arrow,
-        )
+        );
+        options.collision = CollisionOptions {
+            padding: self.collision_padding,
+            boundary: self.collision_boundary,
+        };
+        options
     }
 }
 
@@ -383,5 +402,31 @@ mod tests {
         let x_in_panel =
             (anchor_center_x - layout.rect.origin.x.0).clamp(0.0, layout.rect.size.width.0);
         assert_eq!(origin.x, Px(layout.rect.origin.x.0 + x_in_panel));
+    }
+
+    #[test]
+    fn popper_content_placement_passes_collision_padding_to_solver() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(40.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+        let desired = Size::new(Px(120.0), Px(40.0));
+
+        let layout = popper_content_layout_sized(
+            outer,
+            anchor,
+            desired,
+            PopperContentPlacement::new(LayoutDirection::Ltr, Side::Bottom, Align::Start, Px(0.0))
+                .with_collision_padding(Edges {
+                    bottom: Px(20.0),
+                    ..Edges::all(Px(0.0))
+                }),
+        );
+
+        assert_eq!(layout.side, Side::Top);
     }
 }
