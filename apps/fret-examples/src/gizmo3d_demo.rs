@@ -362,6 +362,8 @@ struct Gizmo3dDemoModel {
     selection: Vec<GizmoTargetId>,
     marquee_preview: Vec<GizmoTargetId>,
     active_target: GizmoTargetId,
+    selection_before_select: Option<Vec<GizmoTargetId>>,
+    active_before_select: Option<GizmoTargetId>,
     drag_start_targets: Option<Vec<GizmoTarget3d>>,
     pending_selection: Option<PendingSelection>,
     marquee: Option<MarqueeSelection>,
@@ -407,6 +409,8 @@ impl Default for Gizmo3dDemoModel {
             selection: vec![GizmoTargetId(1)],
             marquee_preview: Vec::new(),
             active_target: GizmoTargetId(1),
+            selection_before_select: None,
+            active_before_select: None,
             drag_start_targets: None,
             pending_selection: None,
             marquee: None,
@@ -1294,8 +1298,24 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             } => {
                 let mut did_cancel = false;
                 let _ = state.demo.update(app, |m, _cx| {
-                    let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
-                    if !is_dragging {
+                    let is_gizmo_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+                    let is_selecting = m.pending_selection.is_some() || m.marquee.is_some();
+
+                    if !is_gizmo_dragging && !is_selecting {
+                        return;
+                    }
+
+                    if is_selecting {
+                        m.pending_selection = None;
+                        m.marquee = None;
+                        m.marquee_preview.clear();
+                        if let Some(sel) = m.selection_before_select.take() {
+                            m.selection = sel;
+                        }
+                        if let Some(active) = m.active_before_select.take() {
+                            m.active_target = active;
+                        }
+                        did_cancel = true;
                         return;
                     }
 
@@ -1338,6 +1358,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.input.cancel = false;
                     m.input.dragging = false;
                     m.input.drag_started = false;
+                    m.selection_before_select = None;
+                    m.active_before_select = None;
                 });
 
                 if did_cancel {
@@ -1479,6 +1501,35 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         return;
                     };
                     frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyA,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let clear = modifiers.shift;
+                let _ = state.demo.update(app, |m, _cx| {
+                    let is_busy = m.input.dragging
+                        || m.gizmo.state.active.is_some()
+                        || m.pending_selection.is_some()
+                        || m.marquee.is_some();
+                    if is_busy {
+                        return;
+                    }
+
+                    if clear {
+                        m.selection.clear();
+                        m.marquee_preview.clear();
+                    } else {
+                        m.selection = m.targets.iter().map(|t| t.id).collect();
+                        if !m.selection.contains(&m.active_target) {
+                            if let Some(id) = m.selection.first().copied() {
+                                m.active_target = id;
+                            }
+                        }
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1705,9 +1756,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             m.pending_selection = None;
                             m.marquee = None;
                             m.marquee_preview.clear();
+                            m.selection_before_select = None;
+                            m.active_before_select = None;
                             drag_started = true;
                             dragging = true;
                         } else {
+                            m.selection_before_select = Some(m.selection.clone());
+                            m.active_before_select = Some(m.active_target);
                             m.pending_selection = Some(PendingSelection {
                                 start_cursor_px: cursor_px,
                                 click_count,
@@ -1778,6 +1833,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             m.pending_selection = None;
                             m.marquee = None;
                             m.marquee_preview.clear();
+                            m.selection_before_select = None;
+                            m.active_before_select = None;
                         } else {
                             if let Some(marquee) = m.marquee.take() {
                                 let op = selection_op(&modifiers);
@@ -1806,6 +1863,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
                                 m.pending_selection = None;
                                 m.marquee_preview.clear();
+                                m.selection_before_select = None;
+                                m.active_before_select = None;
                             } else if let Some(pending) = m.pending_selection.take() {
                                 let op = selection_op(&modifiers);
                                 if let Some(ray) = fret_gizmo::ray_from_screen(
@@ -1837,6 +1896,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     m.selection.clear();
                                 }
                                 m.marquee_preview.clear();
+                                m.selection_before_select = None;
+                                m.active_before_select = None;
                             }
 
                             m.pending_selection = None;
