@@ -441,7 +441,8 @@ High-level layering (ADR 0135):
   - fret-node:
     - stable command IDs + registration: `ecosystem/fret-node/src/ui/commands.rs`
     - canvas behavior: `ecosystem/fret-node/src/ui/canvas/widget.rs` (copy/cut/paste/duplicate/delete/select-all + arrow-key nudge)
-    - TODO: align/distribute and configurable nudge step
+    - selection align/distribute commands: `node_graph.align_*`, `node_graph.distribute_{x,y}`
+    - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
 
 - [ ] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`

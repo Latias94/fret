@@ -138,7 +138,7 @@ Legend:
 - [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
 - [ ] Reroute node + edge split UX.
 - [x] Keyboard nudge ops.
-- [ ] Selection align/distribute ops.
+- [x] Selection align/distribute ops.
 
 ### Long-term
 

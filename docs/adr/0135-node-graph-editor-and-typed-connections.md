@@ -870,6 +870,8 @@ Selection is editor-owned policy but must be exposed as data:
   - `node_graph.select_all`
   - `node_graph.nudge_left|right|up|down` (repeatable)
   - `node_graph.nudge_left_fast|right_fast|up_fast|down_fast` (repeatable)
+  - `node_graph.align_left|right|top|bottom|center_x|center_y`
+  - `node_graph.distribute_x|distribute_y`
 
 ### 17) Clipboard and drag payloads have stable formats
 

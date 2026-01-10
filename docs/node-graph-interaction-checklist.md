@@ -221,6 +221,7 @@ Invariants:
 
 - (todo) `Frame all` frames all nodes with padding (same view op as “Fit view”).
 - (done) Keyboard nudge moves selection by a fixed screen-space step (Shift = fast) and optionally snaps to grid.
+- (done) Selection align/distribute commands exist and commit a single undo step per invocation.
 - (todo) Align/distribute commands operate on selection deterministically.
 
 ### Invariants
