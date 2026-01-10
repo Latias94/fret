@@ -471,6 +471,106 @@ fn default_keymap_service() -> KeymapService {
                         key: "KeyA".into(),
                     },
                 },
+                // Document/window-level undo/redo (ADR 0136).
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyY".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("windows".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyY".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("linux".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into()],
+                        key: "KeyY".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("web".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["ctrl".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.undo".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
+                BindingV1 {
+                    command: Some("edit.redo".into()),
+                    platform: Some("macos".into()),
+                    when: None,
+                    keys: KeySpecV1 {
+                        mods: vec!["cmd".into(), "shift".into()],
+                        key: "KeyZ".into(),
+                    },
+                },
             ],
         })
         .expect("default keymap must be valid"),
@@ -493,7 +593,9 @@ pub struct Focus {
 
 #[cfg(test)]
 mod tests {
-    use super::App;
+    use super::{App, default_keymap_service};
+    use fret_core::{KeyCode, Modifiers};
+    use fret_runtime::{CommandId, InputContext, InputDispatchPhase, KeyChord, Platform};
     use std::any::TypeId;
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -570,5 +672,79 @@ mod tests {
         );
         let changed = app.take_changed_globals();
         assert_eq!(changed, vec![TypeId::of::<u32>()]);
+    }
+
+    #[test]
+    fn default_keymap_includes_undo_redo() {
+        let service = default_keymap_service();
+        let ctx = |platform: Platform| InputContext {
+            platform,
+            caps: Default::default(),
+            ui_has_modal: false,
+            focus_is_text_input: false,
+            dispatch_phase: InputDispatchPhase::Normal,
+        };
+
+        let ctrl_z = KeyChord::new(
+            KeyCode::KeyZ,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let ctrl_y = KeyChord::new(
+            KeyCode::KeyY,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let ctrl_shift_z = KeyChord::new(
+            KeyCode::KeyZ,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+        let cmd_z = KeyChord::new(
+            KeyCode::KeyZ,
+            Modifiers {
+                meta: true,
+                ..Default::default()
+            },
+        );
+        let cmd_shift_z = KeyChord::new(
+            KeyCode::KeyZ,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+
+        for platform in [Platform::Windows, Platform::Linux, Platform::Web] {
+            assert_eq!(
+                service.keymap.resolve(&ctx(platform), ctrl_z),
+                Some(CommandId::from("edit.undo"))
+            );
+            assert_eq!(
+                service.keymap.resolve(&ctx(platform), ctrl_y),
+                Some(CommandId::from("edit.redo"))
+            );
+            assert_eq!(
+                service.keymap.resolve(&ctx(platform), ctrl_shift_z),
+                Some(CommandId::from("edit.redo"))
+            );
+        }
+
+        assert_eq!(
+            service.keymap.resolve(&ctx(Platform::Macos), cmd_z),
+            Some(CommandId::from("edit.undo"))
+        );
+        assert_eq!(
+            service.keymap.resolve(&ctx(Platform::Macos), cmd_shift_z),
+            Some(CommandId::from("edit.redo"))
+        );
     }
 }
