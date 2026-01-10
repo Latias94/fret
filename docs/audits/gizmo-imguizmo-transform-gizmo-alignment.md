@@ -1,6 +1,6 @@
 # Audit: 3D Transform Gizmo Alignment (ImGuizmo + transform-gizmo)
 
-This audit compares Fret’s `ecosystem/fret-gizmo` against two widely used reference implementations:
+This audit compares Fret's `ecosystem/fret-gizmo` against two widely used reference implementations:
 
 - **ImGuizmo** (Dear ImGui overlay gizmo): `repo-ref/ImGuizmo`
 - **transform-gizmo** (Rust gizmo with sub-gizmos): `repo-ref/transform-gizmo`
@@ -9,7 +9,7 @@ Goal: enumerate **feature-level parity** (what users can do + how it feels), mar
 status** per item, and provide an ordered list of **next alignment targets**.
 
 Note: Fret intentionally renders gizmos as **engine-pass 3D geometry** (depth-tested) rather than a pure
-UI overlay, per ADR 0139. That means some “rendering topology” items will be *intentionally different*
+UI overlay, per ADR 0139. That means some "rendering topology" items will be *intentionally different*
 while still aiming for equivalent UX outcomes.
 
 ## References (source of truth)
@@ -59,7 +59,7 @@ Key surfaces:
 - Engine-pass overlay hook substrate (runner boundary): ADR 0038 direction
   - `crates/fret-launch/src/runner/common.rs` (`ViewportOverlay3dHooksService`, `record_viewport_overlay_3d`)
 
-Fret’s current contract:
+Fret's current contract:
 
 - **Update/draw split**:
   - `Gizmo::update(view_proj, viewport, input, active_target, targets) -> Option<GizmoUpdate>`
@@ -88,7 +88,7 @@ Fret’s current contract:
 | Translate | `TRANSLATE_*` (bitmask) | `Translate*` modes | `GizmoMode::Translate` |
 | Rotate | `ROTATE_*`, `ROTATE_SCREEN` | `Rotate*`, `RotateView`, `Arcball` | `GizmoMode::Rotate` |
 | Scale | `SCALE_*`, `SCALEU`, `BOUNDS` | `Scale*` + plane scale | `GizmoMode::Scale` |
-| “Universal” (combo) | `UNIVERSAL` | `EnumSet<GizmoMode>` (multi-mode) | `GizmoMode::Universal` (currently translate+rotate) |
+| "Universal" (combo) | `UNIVERSAL` | `EnumSet<GizmoMode>` (multi-mode) | `GizmoMode::Universal` (currently translate+rotate) |
 | World vs local | `MODE::{WORLD,LOCAL}` | `GizmoOrientation` | `GizmoOrientation::{World,Local}` |
 | Pivot | (external; matrix origin) | `TransformPivotPoint` | `GizmoPivotMode::{Active,Center}` |
 
@@ -108,11 +108,11 @@ Fret’s current contract:
 | --- | --- | --- | --- | --- |
 | Target representation | 4x4 matrix | TRS (`Transform`) | **Aligned (by intent)** | Fret uses TRS (`Transform3d`) to avoid decomposing matrices. `ecosystem/fret-gizmo/src/gizmo.rs` (`Transform3d`). |
 | Decompose/recompose helpers | Yes (`DecomposeMatrixToComponents`, `Recompose...`) | N/A | **Not implemented** | Fret does not provide matrix decomposition utilities; editor apps can add them if needed. |
-| “Delta matrix” output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Not implemented** | Fret returns semantic deltas (`GizmoResult`) and updated targets, not a 4x4 delta matrix. |
+| "Delta matrix" output | Yes (`deltaMatrix`) | No (returns result + updated transforms) | **Not implemented** | Fret returns semantic deltas (`GizmoResult`) and updated targets, not a 4x4 delta matrix. |
 | Semantic delta output | Partial | Yes (`GizmoResult`) | **Aligned** | `GizmoResult::{Translation,Rotation,Scale}` includes `delta` + `total`. |
 | Multi-target update in one call | External | Yes | **Aligned** | `GizmoUpdate.updated_targets: Vec<GizmoTarget3d>`. |
 | Begin/update/commit/cancel phases | No | Partial (implicit) | **Aligned (Fret-specific)** | `GizmoPhase` enables clean undo grouping; host decides persistence. |
-| “IsOver / IsUsing” queries | Yes (`IsOver`, `IsUsing`) | Yes (`is_focused`, active subgizmo) | **Partially aligned** | Fret exposes `GizmoState { hovered, active }` but no dedicated helper methods yet. |
+| "IsOver / IsUsing" queries | Yes (`IsOver`, `IsUsing`) | Yes (`is_focused`, active subgizmo) | **Partially aligned** | Fret exposes `GizmoState { hovered, active }` but no dedicated helper methods yet. |
 | Fine-grained operation selection | Yes (bitmask) | Yes (`EnumSet`) | **Not implemented** | Fret currently selects a single coarse mode. |
 
 ### A) Core transform handles
@@ -121,8 +121,8 @@ Fret’s current contract:
 | --- | --- | --- | --- | --- |
 | Translate axis X/Y/Z | Yes | Yes | **Aligned** | Axis handles exist + picking + axis constraint. `ecosystem/fret-gizmo/src/gizmo.rs` (`pick_translate_handle`, `begin_translate_drag`). |
 | Translate plane XY/XZ/YZ | Yes | Yes | **Aligned** | Plane quads + picking. `pick_translate_handle` + `translate_plane_quad_world`. |
-| Translate “screen-plane” (center handle) | Yes (screen component) | Yes (`TranslateView` uses view-plane) | **Aligned** | Fret’s center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
-| Translate “depth” (move toward/away camera) | No (not explicit) | No (not in core modes) | **Not implemented** | Optional future feature (sometimes called “dolly” translation). Not required for parity with these two references. |
+| Translate "screen-plane" (center handle) | Yes (screen component) | Yes (`TranslateView`, but implemented as a view-plane in code) | **Aligned** | Fret's center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
+| Translate "depth" (move toward/away camera) | No (not explicit) | No (not in core modes) | **Not implemented** | Optional future feature (sometimes called "dolly" translation). Not required for parity with these two references. |
 | Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Ring drawing + pick based on distance-to-segment. `draw_rotate_rings`, `pick_rotate_axis`. |
 | Rotate around view axis (screen ring) | Yes (`ROTATE_SCREEN`) | Yes (`RotateView`) | **Aligned** | `show_view_axis_ring` + handle id 8. `pick_rotate_axis` view ring path, `begin_rotate_drag` view-axis mode. |
 | Arcball rotation | No | Yes (`Arcball`) | **Not implemented** | transform-gizmo supports trackball rotation; Fret does not. |
@@ -131,7 +131,7 @@ Fret’s current contract:
 | Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Not implemented** | transform-gizmo has plane scale subgizmos. |
 | Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Not implemented** | No bounds gizmo surface in Fret; would require a new handle set + snapping. |
 
-### B) “Universal” / multi-mode behavior
+### B) "Universal" / multi-mode behavior
 
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
@@ -148,7 +148,7 @@ Fret’s current contract:
 | Pivot at selection center | External | Yes | **Aligned** | `GizmoPivotMode::Center`. |
 | Multiple targets updated per drag | External | Yes | **Aligned** | `GizmoUpdate.updated_targets` returns all updated targets each frame. |
 | Rotation of multiple targets around pivot | External | Yes | **Aligned** | Rotation updates translate+rotate around pivot. `GizmoMode::Rotate` update path. |
-| Scale of multiple targets around pivot | External | Yes | **Partially aligned** | Supported, but the exact policy differs from transform-gizmo’s per-mode semantics (no plane scale, no view-axis translate). Needs behavior audit tests. |
+| Scale of multiple targets around pivot | External | Yes | **Partially aligned** | Supported, but the exact policy differs from transform-gizmo's per-mode semantics (no plane scale, no view-axis translate). Needs behavior audit tests. |
 
 ### D) Snapping and precision controls
 
@@ -161,7 +161,7 @@ Fret’s current contract:
 | Snap visualization (rotation ticks) | No (varies) | Yes (visuals) | **Partially aligned** | Fret renders rotate tick marks when snapping is active. `draw_rotate_feedback`. Translation/scale snap visuals are not implemented. |
 | Bounds snap | Yes (`boundsSnap`) | No | **Not implemented** | Requires bounds gizmo. |
 
-### E) Interaction lifecycle and “editor feel”
+### E) Interaction lifecycle and "editor feel"
 
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
@@ -170,7 +170,24 @@ Fret’s current contract:
 | Drag start threshold | Partial | Yes (subgizmo pick gating) | **Aligned** | `drag_start_threshold_px` arms drag and emits `Begin` after movement. |
 | Begin/Update/Commit phases | No (implicit) | Partial | **Aligned (Fret-specific)** | `GizmoPhase::{Begin,Update,Commit,Cancel}` enables undo boundaries cleanly. |
 | Cancel interaction (Escape) | External | External | **Aligned (Fret-specific)** | `GizmoInput.cancel` → `GizmoPhase::Cancel`, restore is host-owned. |
-| Picking priority heuristics (avoid mis-click) | Yes (tuned) | Yes (subgizmo ordering) | **Partially aligned** | Fret has initial bias logic in Universal (`pick_universal_handle`) but lacks a general “priority ladder” and per-handle UX tuning. |
+| Picking priority heuristics (avoid mis-click) | Yes (tuned) | Yes (subgizmo ordering) | **Partially aligned** | Fret has a translate picking ladder (`pick_translate_handle`) and Universal bias (`pick_universal_handle`), but still lacks a unified, configurable priority policy across translate/rotate/scale. |
+
+#### Picking priority ladders (explicit per-mode audit)
+
+| Mode | Reference behavior (high level) | Fret status | Evidence / notes |
+| --- | --- | --- | --- |
+| Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Partially aligned** | Center handle early-out exists in `pick_translate_handle`; plane-vs-axis priority is still heuristic-based. |
+| Rotate | Prefer the ring the user aims at; disambiguate view ring vs axis rings; avoid "wrong ring" when rings overlap in screen space. | **Partially aligned** | `pick_rotate_axis` exists, but there is no explicit priority ladder across view/axis rings and no per-ring bias knobs. |
+| Scale | Prefer axis end boxes when cursor is on the shaft; prefer center uniform only when close to origin; avoid fighting Universal overlays. | **Partially aligned** | `pick_scale_handle` has a center radius and an axis bias, but no plane scale and no unified policy with other modes. |
+| Universal | Prefer rotate when the cursor is near rings; prefer translate when cursor is inside plane handles / near center. | **Partially aligned** | `pick_universal_handle` applies a translate bias for planes/center, but rules are not yet systematic. |
+
+#### Drag stability invariants (what we must lock down)
+
+These are the editor-feel invariants that the audit treats as P0 correctness requirements:
+
+- Returning the cursor to the start position returns the total delta close to zero (no drift / no integration error).
+- Moving the cursor forward then backward produces symmetric deltas (no "runaway" when reversing direction).
+- Active handle never changes mid-drag (no retargeting).
 
 ### F) Camera/projection and robustness
 
@@ -193,20 +210,20 @@ Fret’s current contract:
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
 | Axis flip, axis masking, axis/plane hide limits | Yes | Partial | **Not implemented** | ImGuizmo has `AllowAxisFlip`, `SetAxisMask`, `SetAxisLimit`, `SetPlaneLimit`. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Not implemented** | Separate feature; can be built as another tool using similar math. |
-| Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate “debug draw” tool (not necessarily in `fret-gizmo`). |
+| Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
 
 ## What to align next (recommended order)
 
-This is a suggested sequence for reaching “mature editor” parity without over-design.
+This is a suggested sequence for reaching "mature editor" parity without over-design.
 
 ### P0 (correctness + UX baseline)
 
-1. **Stability + picking UX audit (lock-in “editor feel”)**
+1. **Stability + picking UX audit (lock-in editor feel)**
    - Motivation: most user pain comes from drift/overshoot/mispicks, not missing modes.
    - Outcome: add targeted tests for translate/rotate/scale drag stability + explicit picking priority ladder.
 2. **Universal + scale (or explicitly decide against it)**
    - If we keep `Universal`, decide whether it should include scale.
-   - If yes: add scale picking rules that don’t fight translate planes / rotate rings.
+   - If yes: add scale picking rules that don't fight translate planes / rotate rings.
 3. **Picking priority ladder**
    - Explicit priority ordering (e.g. active > hovered; center/plane/axis; rotate view ring) with tunable bias.
 4. **Projection edge-case audit**
@@ -215,11 +232,11 @@ This is a suggested sequence for reaching “mature editor” parity without ove
 ### P1 (feature breadth parity)
 
 1. **Arcball rotation**
-   - Bring parity with transform-gizmo’s `Arcball` (trackball) option.
+   - Bring parity with transform-gizmo's `Arcball` (trackball) option.
 2. **Plane scaling (XY/XZ/YZ)**
    - Parity with transform-gizmo; useful for non-uniform edits without axis-only drags.
 3. **ImGuizmo-style behavior knobs**
-   - Axis flip, axis mask, axis/plane hide limits (these are “feel” multipliers in dense scenes).
+   - Axis flip, axis mask, axis/plane hide limits (these are feel multipliers in dense scenes).
 
 ### P2 (ImGuizmo-specific extras)
 
@@ -231,7 +248,30 @@ This is a suggested sequence for reaching “mature editor” parity without ove
 ## Notes / open design questions
 
 - **Mode taxonomy**: ImGuizmo and transform-gizmo both expose a *fine-grained* operation set. Fret currently exposes
-  coarse `GizmoMode`. If we want long-term parity, consider evolving `GizmoConfig` from “one mode enum” into a
+  coarse `GizmoMode`. If we want long-term parity, consider evolving `GizmoConfig` from "one mode enum" into a
   bitmask/flags set (while keeping a simple default constructor), and keep policy in ecosystem/app code.
 - **Float precision**: transform-gizmo uses f64 for math; Fret uses f32. For editor workflows with huge worlds,
-  we may need an internal f64 path (even if the public API stays f32) or a “scene units” policy.
+  we may need an internal f64 path (even if the public API stays f32) or a "scene units" policy.
+
+## Godot lens (editor extensibility + picking topology)
+
+This audit is scoped to ImGuizmo + transform-gizmo for parity, but Godot is a useful third reference for
+how "real" game editors scale gizmos beyond the core transform manipulator.
+
+Key Godot implementation traits (source anchors):
+
+- **Plugin-based extensibility**: `EditorNode3DGizmoPlugin` provides callbacks for draw + interaction
+  (`repo-ref/godot/editor/scene/3d/node_3d_editor_gizmos.h`).
+- **Explicit begin/set/commit lifecycle**: `begin_handle_action`, `set_handle`, `commit_handle` mirror
+  the "Begin/Update/Commit/Cancel" phases we already model in Fret (`GizmoPhase`).
+- **Picking via collision geometry + BVH**: gizmos register collision segments/meshes and maintain an
+  internal BVH (`collision_segments`, `collision_meshes`, `_update_bvh`) rather than relying on draw
+  topology alone.
+- **Rendering as 3D instances/layers**: gizmo meshes are real render instances on a dedicated layer,
+  with optional "on top" state (`VISIBLE/HIDDEN/ON_TOP`) rather than a pure UI overlay.
+
+Implication for Fret:
+
+- Fret's engine-pass 3D draw lists + explicit interaction phases are compatible with the Godot-style
+  approach, but a future "custom gizmo/plugin" surface likely needs an explicit **picking primitive**
+  contract (segments/triangles or analytic shapes) in addition to "draw triangles/lines".
