@@ -1,6 +1,7 @@
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port};
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::store::NodeGraphStore;
@@ -149,6 +150,43 @@ fn changes_to_transaction_is_reversible_and_applicable() {
     );
     assert_eq!(g1.edges.get(&eid).unwrap().from, out_port);
     assert_eq!(g1.edges.get(&eid).unwrap().to, in_port);
+}
+
+#[test]
+fn apply_node_changes_removes_ports_and_incident_edges() {
+    let (mut g0, a, b, out_port, in_port, eid) = make_graph();
+
+    let report = apply_node_changes(&mut g0, &[NodeChange::Remove { id: a }]);
+    assert!(report.did_change());
+    assert_eq!(report.ignored, 0);
+
+    assert!(!g0.nodes.contains_key(&a));
+    assert!(g0.nodes.contains_key(&b));
+
+    assert!(!g0.ports.contains_key(&out_port));
+    assert!(g0.ports.contains_key(&in_port));
+
+    assert!(!g0.edges.contains_key(&eid));
+}
+
+#[test]
+fn apply_edge_changes_updates_kind_and_ignores_missing() {
+    let (mut g0, _a, _b, _out_port, _in_port, eid) = make_graph();
+    let missing = EdgeId::new();
+
+    let report = apply_edge_changes(
+        &mut g0,
+        &[
+            EdgeChange::Kind {
+                id: eid,
+                kind: EdgeKind::Exec,
+            },
+            EdgeChange::Remove { id: missing },
+        ],
+    );
+    assert!(report.did_change());
+    assert_eq!(report.ignored, 1);
+    assert_eq!(g0.edges.get(&eid).unwrap().kind, EdgeKind::Exec);
 }
 
 #[test]

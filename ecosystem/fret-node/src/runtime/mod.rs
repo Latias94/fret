@@ -4,6 +4,7 @@
 //! The goal is to provide a stable, ergonomic "runtime/store" surface without coupling to
 //! a specific rendering or widget layer.
 
+pub mod apply;
 pub mod changes;
 pub mod events;
 pub mod store;

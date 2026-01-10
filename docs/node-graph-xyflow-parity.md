@@ -111,16 +111,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.2 Change pipeline (callbacks + diffs + apply)
 
-- [~] **NodeChange / EdgeChange model + apply helpers**
+- [x] **NodeChange / EdgeChange model + apply helpers**
   - XyFlow: `repo-ref/xyflow/packages/react/src/utils/changes.ts` (`applyNodeChanges`, `applyEdgeChanges`)
   - fret-node:
     - reversible edit source-of-truth: `ecosystem/fret-node/src/ops/mod.rs` (`GraphOp`, `GraphTransaction`)
     - change events + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+    - apply helpers (controlled mode): `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
     - store dispatch emits changes: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::dispatch_*`)
     - controlled helpers: `ecosystem/fret-node/src/runtime/store.rs` (`replace_graph`, `replace_view_state`, `update_view_state`)
   - Notes:
     - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
-    - still missing a store-facing `apply_*_changes` convenience API for app-owned state (like `applyNodeChanges`, `applyEdgeChanges`).
+    - for full-fidelity controlled updates, consumers can also apply `GraphCommitted.committed` via `ops::apply_transaction`.
 
 - [ ] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
