@@ -128,7 +128,7 @@ Fret's current contract:
 | Arcball rotation | No | Yes (`Arcball`) | **Not implemented** | transform-gizmo supports trackball rotation; Fret does not. |
 | Scale axis X/Y/Z | Yes | Yes | **Aligned** | Axis scaling is supported and axis picking matches the rendered end boxes (not the whole shaft). `pick_scale_handle`, `begin_scale_drag`. |
 | Scale uniform (center handle) | Partial (via `SCALEU`/center) | Yes (`ScaleUniform`) | **Aligned** | Center uniform handle id 7, with pivot-respecting translation compensation. |
-| Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Not implemented** | transform-gizmo has plane scale subgizmos. |
+| Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Aligned** | Plane scale handles (XY/XZ/YZ) are supported in `Scale` mode. `pick_scale_handle` + `begin_scale_drag` + scale update path. |
 | Bounds / box scaling | Yes (`BOUNDS`, `localBounds`, `boundsSnap`) | No | **Not implemented** | No bounds gizmo surface in Fret; would require a new handle set + snapping. |
 
 ### B) "Universal" / multi-mode behavior

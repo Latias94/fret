@@ -217,6 +217,33 @@ impl TranslateHandle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScaleHandle {
+    AxisX,
+    AxisY,
+    AxisZ,
+    PlaneXY,
+    PlaneXZ,
+    PlaneYZ,
+    Uniform,
+}
+
+impl ScaleHandle {
+    fn id(self) -> HandleId {
+        HandleId(match self {
+            ScaleHandle::AxisX => 1,
+            ScaleHandle::AxisY => 2,
+            ScaleHandle::AxisZ => 3,
+            ScaleHandle::Uniform => 7,
+            // Keep plane-scale handle IDs disjoint from translation plane IDs (4/5/6) so Universal
+            // can include axis scale without fighting translate planes.
+            ScaleHandle::PlaneXY => 14,
+            ScaleHandle::PlaneXZ => 15,
+            ScaleHandle::PlaneYZ => 16,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum TranslateConstraint {
     Axis { axis_dir: Vec3 },
@@ -257,9 +284,14 @@ pub struct GizmoState {
     drag_total_angle_raw: f32,
     drag_total_angle_applied: f32,
     drag_scale_axis: Option<usize>,
+    drag_scale_plane_axes: Option<(usize, usize)>,
+    drag_scale_plane_u: Vec3,
+    drag_scale_plane_v: Vec3,
     drag_scale_is_uniform: bool,
     drag_total_scale_raw: f32,
     drag_total_scale_applied: f32,
+    drag_total_scale_plane_raw: Vec2,
+    drag_total_scale_plane_applied: Vec2,
 }
 
 impl Default for GizmoState {
@@ -291,9 +323,14 @@ impl Default for GizmoState {
             drag_total_angle_raw: 0.0,
             drag_total_angle_applied: 0.0,
             drag_scale_axis: None,
+            drag_scale_plane_axes: None,
+            drag_scale_plane_u: Vec3::X,
+            drag_scale_plane_v: Vec3::Y,
             drag_scale_is_uniform: false,
             drag_total_scale_raw: 0.0,
             drag_total_scale_applied: 1.0,
+            drag_total_scale_plane_raw: Vec2::ZERO,
+            drag_total_scale_plane_applied: Vec2::ONE,
         }
     }
 }
@@ -414,6 +451,7 @@ impl Gizmo {
                         origin,
                         input.cursor_px,
                         axes,
+                        true,
                         true,
                     )
                     .map(|h| (h, GizmoMode::Scale)),
@@ -807,9 +845,22 @@ impl Gizmo {
                         Vec3::ONE
                     }
                 };
+                let total_plane_vec = |total_factors: Vec2| -> Vec3 {
+                    let Some((a, b)) = self.state.drag_scale_plane_axes else {
+                        return Vec3::ONE;
+                    };
+                    let mut v = Vec3::ONE;
+                    v[a] = total_factors.x;
+                    v[b] = total_factors.y;
+                    v
+                };
 
                 if input.cancel {
-                    let total = total_vec(self.state.drag_total_scale_applied);
+                    let total = if self.state.drag_scale_plane_axes.is_some() {
+                        total_plane_vec(self.state.drag_total_scale_plane_applied)
+                    } else {
+                        total_vec(self.state.drag_total_scale_applied)
+                    };
                     self.state.active = None;
                     return Some(GizmoUpdate {
                         phase: GizmoPhase::Cancel,
@@ -856,6 +907,85 @@ impl Gizmo {
 
                     let delta_world = hit_world - self.state.drag_prev_hit_world;
                     self.state.drag_prev_hit_world = hit_world;
+
+                    if let Some((a, b)) = self.state.drag_scale_plane_axes {
+                        let u_dir = self.state.drag_scale_plane_u.normalize_or_zero();
+                        let v_dir = self.state.drag_scale_plane_v.normalize_or_zero();
+                        if u_dir.length_squared() == 0.0 || v_dir.length_squared() == 0.0 {
+                            return None;
+                        }
+
+                        self.state.drag_total_scale_plane_raw +=
+                            Vec2::new(delta_world.dot(u_dir), delta_world.dot(v_dir));
+
+                        let delta_norm = self.state.drag_total_scale_plane_raw / length_world;
+                        let mut desired = if input.snap {
+                            self.config
+                                .scale_snap_step
+                                .filter(|s| s.is_finite() && *s > 0.0)
+                                .map(|step| {
+                                    Vec2::new(
+                                        1.0 + (delta_norm.x / step).round() * step,
+                                        1.0 + (delta_norm.y / step).round() * step,
+                                    )
+                                })
+                                .unwrap_or(Vec2::ONE + delta_norm)
+                        } else {
+                            Vec2::ONE + delta_norm
+                        };
+                        desired.x = desired.x.max(0.01);
+                        desired.y = desired.y.max(0.01);
+
+                        let delta_factors = Vec2::new(
+                            desired.x / self.state.drag_total_scale_plane_applied.x,
+                            desired.y / self.state.drag_total_scale_plane_applied.y,
+                        );
+                        self.state.drag_total_scale_plane_applied = desired;
+
+                        let mut delta = Vec3::ONE;
+                        delta[a] = delta_factors.x;
+                        delta[b] = delta_factors.y;
+
+                        let total = total_plane_vec(desired);
+
+                        let updated_targets = targets
+                            .iter()
+                            .map(|t| {
+                                let origin = self.state.drag_origin;
+                                let offset = t.transform.translation - origin;
+                                let comp_u = u_dir * offset.dot(u_dir);
+                                let comp_v = v_dir * offset.dot(v_dir);
+                                let translation = origin
+                                    + (offset
+                                        + comp_u * (delta_factors.x - 1.0)
+                                        + comp_v * (delta_factors.y - 1.0));
+
+                                let mut scale = t.transform.scale;
+                                scale[a] = (scale[a] * delta_factors.x).max(1e-4);
+                                scale[b] = (scale[b] * delta_factors.y).max(1e-4);
+
+                                GizmoTarget3d {
+                                    id: t.id,
+                                    transform: Transform3d {
+                                        translation,
+                                        scale,
+                                        ..t.transform
+                                    },
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        return Some(GizmoUpdate {
+                            phase: if started_this_call {
+                                GizmoPhase::Begin
+                            } else {
+                                GizmoPhase::Update
+                            },
+                            active,
+                            result: GizmoResult::Scale { delta, total },
+                            updated_targets,
+                        });
+                    }
 
                     let scale_dir = self.state.drag_axis_dir.normalize_or_zero();
                     if scale_dir.length_squared() == 0.0 {
@@ -938,7 +1068,11 @@ impl Gizmo {
                     return None;
                 }
 
-                let total = total_vec(self.state.drag_total_scale_applied);
+                let total = if self.state.drag_scale_plane_axes.is_some() {
+                    total_plane_vec(self.state.drag_total_scale_plane_applied)
+                } else {
+                    total_vec(self.state.drag_total_scale_applied)
+                };
                 self.state.active = None;
                 Some(GizmoUpdate {
                     phase: GizmoPhase::Commit,
@@ -1018,8 +1152,15 @@ impl Gizmo {
                 out
             }
             GizmoMode::Scale => GizmoDrawList3d {
-                lines: self.draw_scale_handles(view_projection, viewport, origin, axes, true),
-                triangles: self.draw_scale_solids(view_projection, viewport, origin, axes, true),
+                lines: self.draw_scale_handles(view_projection, viewport, origin, axes, true, true),
+                triangles: self.draw_scale_solids(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    true,
+                    true,
+                ),
             },
             GizmoMode::Universal => {
                 let mut out = GizmoDrawList3d::default();
@@ -1048,6 +1189,7 @@ impl Gizmo {
                         origin,
                         axes,
                         false,
+                        false,
                     ));
                 }
                 let rotate_feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
@@ -1064,6 +1206,7 @@ impl Gizmo {
                         viewport,
                         origin,
                         axes,
+                        false,
                         false,
                     ));
                 }
@@ -1291,7 +1434,7 @@ impl Gizmo {
     ) -> Option<GizmoUpdate> {
         let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
 
-        let (scale_dir, plane_normal, axis) = match active.0 {
+        let (scale_dir, plane_normal, axis, plane_axes, plane_u, plane_v) = match active.0 {
             1 | 2 | 3 => {
                 let (_, axis_index) = axis_for_handle(active);
                 let axis_dir = axes[axis_index].normalize_or_zero();
@@ -1305,18 +1448,43 @@ impl Gizmo {
                     origin,
                     axis_dir,
                 )?;
-                (axis_dir, plane_normal, Some(axis_index))
+                (
+                    axis_dir,
+                    plane_normal,
+                    Some(axis_index),
+                    None,
+                    Vec3::X,
+                    Vec3::Y,
+                )
             }
             7 => {
                 let view_dir =
                     view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)?;
                 let (u, v) = plane_basis(view_dir);
                 let dir = (u + v).normalize_or_zero();
-                let plane_normal = view_dir.normalize_or_zero();
-                if dir.length_squared() == 0.0 || plane_normal.length_squared() == 0.0 {
+                let n = view_dir.normalize_or_zero();
+                if dir.length_squared() == 0.0 || n.length_squared() == 0.0 {
                     return None;
                 }
-                (dir, plane_normal, None)
+                (dir, n, None, None, Vec3::X, Vec3::Y)
+            }
+            14 | 15 | 16 => {
+                let (a, b) = match active.0 {
+                    14 => (0, 1),
+                    15 => (0, 2),
+                    16 => (1, 2),
+                    _ => unreachable!(),
+                };
+                let u = axes[a].normalize_or_zero();
+                let v = axes[b].normalize_or_zero();
+                if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+                    return None;
+                }
+                let n = u.cross(v).normalize_or_zero();
+                if n.length_squared() == 0.0 {
+                    return None;
+                }
+                (Vec3::ZERO, n, None, Some((a, b)), u, v)
             }
             _ => return None,
         };
@@ -1330,6 +1498,10 @@ impl Gizmo {
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_plane_normal = plane_normal;
         self.state.drag_axis_dir = scale_dir;
+        self.state.drag_scale_axis = axis;
+        self.state.drag_scale_plane_axes = plane_axes;
+        self.state.drag_scale_plane_u = plane_u;
+        self.state.drag_scale_plane_v = plane_v;
         self.state.drag_prev_hit_world = ray_plane_intersect(cursor_ray, origin, plane_normal)
             .filter(|p| p.is_finite())
             .unwrap_or_else(|| {
@@ -1344,8 +1516,9 @@ impl Gizmo {
             });
         self.state.drag_total_scale_raw = 0.0;
         self.state.drag_total_scale_applied = 1.0;
-        self.state.drag_scale_axis = axis;
-        self.state.drag_scale_is_uniform = axis.is_none();
+        self.state.drag_total_scale_plane_raw = Vec2::ZERO;
+        self.state.drag_total_scale_plane_applied = Vec2::ONE;
+        self.state.drag_scale_is_uniform = axis.is_none() && plane_axes.is_none();
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
@@ -1889,6 +2062,7 @@ impl Gizmo {
         origin: Vec3,
         axes: [Vec3; 3],
         include_uniform: bool,
+        include_planes: bool,
     ) -> Vec<Line3d> {
         let length_world = axis_length_world(
             view_projection,
@@ -1906,9 +2080,9 @@ impl Gizmo {
         let mut out = Vec::new();
 
         for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), HandleId(1)),
-            ((axes[1], self.config.y_color), HandleId(2)),
-            ((axes[2], self.config.z_color), HandleId(3)),
+            ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
+            ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
+            ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
         ] {
             let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
@@ -1930,9 +2104,51 @@ impl Gizmo {
             }
         }
 
+        if include_planes {
+            let off = length_world * 0.15;
+            let size = length_world * 0.25;
+            for &(u, v, base_color, handle) in &[
+                (
+                    axes[0],
+                    axes[1],
+                    mix_alpha(self.config.z_color, 0.55),
+                    ScaleHandle::PlaneXY,
+                ), // XY
+                (
+                    axes[0],
+                    axes[2],
+                    mix_alpha(self.config.y_color, 0.55),
+                    ScaleHandle::PlaneXZ,
+                ), // XZ
+                (
+                    axes[1],
+                    axes[2],
+                    mix_alpha(self.config.x_color, 0.55),
+                    ScaleHandle::PlaneYZ,
+                ), // YZ
+            ] {
+                let handle_id = handle.id();
+                let color = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
+                    mix_alpha(self.config.hover_color, 0.85)
+                } else {
+                    base_color
+                };
+
+                let quad = translate_plane_quad_world(origin, u, v, off, size);
+                for (a, b) in [
+                    (quad[0], quad[1]),
+                    (quad[1], quad[2]),
+                    (quad[2], quad[3]),
+                    (quad[3], quad[0]),
+                ] {
+                    self.push_line(&mut out, a, b, color, self.config.depth_mode);
+                }
+            }
+        }
+
         if include_uniform {
             // Uniform scale box at the origin (screen-facing).
-            let handle = HandleId(7);
+            let handle = ScaleHandle::Uniform.id();
             let base = mix_alpha(self.config.hover_color, 0.65);
             let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
@@ -1959,6 +2175,7 @@ impl Gizmo {
         origin: Vec3,
         axes: [Vec3; 3],
         include_uniform: bool,
+        include_planes: bool,
     ) -> Vec<Triangle3d> {
         let length_world = axis_length_world(
             view_projection,
@@ -1977,9 +2194,9 @@ impl Gizmo {
 
         // Axis end boxes (screen-facing filled quads).
         for &((axis_dir, color), handle) in &[
-            ((axes[0], self.config.x_color), HandleId(1)),
-            ((axes[1], self.config.y_color), HandleId(2)),
-            ((axes[2], self.config.z_color), HandleId(3)),
+            ((axes[0], self.config.x_color), ScaleHandle::AxisX.id()),
+            ((axes[1], self.config.y_color), ScaleHandle::AxisY.id()),
+            ((axes[2], self.config.z_color), ScaleHandle::AxisZ.id()),
         ] {
             let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
@@ -2002,9 +2219,63 @@ impl Gizmo {
             self.push_tri(&mut out, p0, p2, p3, fill, self.config.depth_mode);
         }
 
+        if include_planes {
+            let off = length_world * 0.15;
+            let size = length_world * 0.25;
+            for &(u, v, base_color, handle) in &[
+                (
+                    axes[0],
+                    axes[1],
+                    mix_alpha(self.config.z_color, 0.55),
+                    ScaleHandle::PlaneXY,
+                ), // XY
+                (
+                    axes[0],
+                    axes[2],
+                    mix_alpha(self.config.y_color, 0.55),
+                    ScaleHandle::PlaneXZ,
+                ), // XZ
+                (
+                    axes[1],
+                    axes[2],
+                    mix_alpha(self.config.x_color, 0.55),
+                    ScaleHandle::PlaneYZ,
+                ), // YZ
+            ] {
+                let handle_id = handle.id();
+                let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
+                    mix_alpha(self.config.hover_color, 0.85)
+                } else {
+                    base_color
+                };
+                let fill = if self.is_handle_highlighted(GizmoMode::Scale, handle_id) {
+                    mix_alpha(outline, 0.45)
+                } else {
+                    mix_alpha(outline, 0.22)
+                };
+                let quad = translate_plane_quad_world(origin, u, v, off, size);
+                self.push_tri(
+                    &mut out,
+                    quad[0],
+                    quad[1],
+                    quad[2],
+                    fill,
+                    self.config.depth_mode,
+                );
+                self.push_tri(
+                    &mut out,
+                    quad[0],
+                    quad[2],
+                    quad[3],
+                    fill,
+                    self.config.depth_mode,
+                );
+            }
+        }
+
         if include_uniform {
             // Uniform scale at the origin (screen-facing filled quad), always-on-top.
-            let handle = HandleId(7);
+            let handle = ScaleHandle::Uniform.id();
             let outline = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
             } else {
@@ -2132,6 +2403,7 @@ impl Gizmo {
         cursor: Vec2,
         axes: [Vec3; 3],
         include_uniform: bool,
+        include_planes: bool,
     ) -> Option<PickHit> {
         let length_world = axis_length_world(
             view_projection,
@@ -2177,9 +2449,9 @@ impl Gizmo {
             .map(plane_basis)
             .unwrap_or((Vec3::X, Vec3::Y));
         for &(axis_dir, handle) in &[
-            (axes[0], HandleId(1)),
-            (axes[1], HandleId(2)),
-            (axes[2], HandleId(3)),
+            (axes[0], ScaleHandle::AxisX.id()),
+            (axes[1], ScaleHandle::AxisY.id()),
+            (axes[2], ScaleHandle::AxisZ.id()),
         ] {
             let end = origin + axis_dir * length_world;
             let half = length_world * 0.06;
@@ -2206,6 +2478,31 @@ impl Gizmo {
             }
         }
 
+        if include_planes {
+            let off = length_world * 0.15;
+            let size = length_world * 0.25;
+            for &(u, v, handle) in &[
+                (axes[0], axes[1], ScaleHandle::PlaneXY.id()),
+                (axes[0], axes[2], ScaleHandle::PlaneXZ.id()),
+                (axes[1], axes[2], ScaleHandle::PlaneYZ.id()),
+            ] {
+                let world = translate_plane_quad_world(origin, u, v, off, size);
+                let Some(p) =
+                    project_quad(view_projection, viewport, world, self.config.depth_range)
+                else {
+                    continue;
+                };
+
+                let inside = point_in_convex_quad(cursor, p);
+                let edge_d = quad_edge_distance(cursor, p);
+                if inside {
+                    consider(handle, 0.20);
+                } else if edge_d <= self.config.pick_radius_px {
+                    consider(handle, edge_d + 0.9);
+                }
+            }
+        }
+
         best
     }
 
@@ -2226,7 +2523,17 @@ impl Gizmo {
         let scale = self
             .config
             .universal_includes_scale
-            .then(|| self.pick_scale_handle(view_projection, viewport, origin, cursor, axes, false))
+            .then(|| {
+                self.pick_scale_handle(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor,
+                    axes,
+                    false,
+                    false,
+                )
+            })
             .flatten()
             .map(|h| (h, GizmoMode::Scale));
 
@@ -3016,6 +3323,87 @@ mod tests {
 
         let input_back = GizmoInput {
             cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 1e-3,
+            "total={back_total:?}"
+        );
+    }
+
+    #[test]
+    fn scale_plane_drag_returns_to_one_when_cursor_returns() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_screen =
+            project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+        let cursor_start =
+            (quad_screen[0] + quad_screen[1] + quad_screen[2] + quad_screen[3]) * 0.25;
+        let cursor_moved = cursor_start + Vec2::new(30.0, -20.0);
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!(moved_total.y.is_finite());
+        assert!((moved_total.x - 1.0).abs() > 1e-6 || (moved_total.y - 1.0).abs() > 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
             hovered: true,
             drag_started: false,
             dragging: true,
