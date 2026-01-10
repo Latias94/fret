@@ -236,6 +236,65 @@ fn visual_transform_does_not_affect_hit_testing() {
 }
 
 #[test]
+fn render_transform_affects_hit_testing() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "render-transform-hit-test",
+        |cx| {
+            let transform = Transform2D::translation(Point::new(Px(50.0), Px(0.0)));
+            vec![cx.render_transform(transform, |cx| {
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(Px(20.0));
+                props.layout.size.height = Length::Px(Px(20.0));
+                vec![cx.pressable(props, |_cx, _state| Vec::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let transform_node = ui.children(root)[0];
+    let pressable_node = ui.children(transform_node)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    let original_hit_pos = Point::new(
+        Px(pressable_bounds.origin.x.0 + 2.0),
+        Px(pressable_bounds.origin.y.0 + 2.0),
+    );
+    assert_ne!(
+        ui.debug_hit_test(original_hit_pos).hit,
+        Some(pressable_node)
+    );
+
+    let translated_hit_pos = Point::new(
+        Px(pressable_bounds.origin.x.0 + 52.0),
+        Px(pressable_bounds.origin.y.0 + 2.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(translated_hit_pos).hit,
+        Some(pressable_node)
+    );
+}
+
+#[test]
 fn key_hook_runs_for_focused_text_input() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

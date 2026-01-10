@@ -167,6 +167,9 @@ impl ElementHostWidget {
             ElementInstance::VisualTransform(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::RenderTransform(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::Semantics(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

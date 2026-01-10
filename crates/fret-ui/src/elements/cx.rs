@@ -488,6 +488,21 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn render_transform(
+        &mut self,
+        transform: fret_core::Transform2D,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.render_transform_props(
+            crate::element::RenderTransformProps {
+                layout: LayoutStyle::default(),
+                transform,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
     pub fn visual_transform_props(
         &mut self,
         props: VisualTransformProps,
@@ -497,6 +512,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::VisualTransform(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn render_transform_props(
+        &mut self,
+        props: crate::element::RenderTransformProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::RenderTransform(props), children)
         })
     }
 

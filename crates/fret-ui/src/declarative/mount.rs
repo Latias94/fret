@@ -405,6 +405,7 @@ fn mount_element<H: UiHost>(
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
+        ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
