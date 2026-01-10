@@ -15,7 +15,6 @@ use fret_core::{
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
     Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
-use fret_runtime::Effect;
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -2935,8 +2934,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.force_uncached_paint = unfinished;
 
-        if unfinished && let Some(window) = cx.window {
-            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+        if unfinished {
+            cx.request_animation_frame();
         }
 
         self.rebuild_paths_if_needed(cx);
