@@ -38,6 +38,15 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct BrushSelection2D {
+    pub x_axis: crate::ids::AxisId,
+    pub y_axis: crate::ids::AxisId,
+    pub x: window::DataWindowX,
+    pub y: window::DataWindowY,
+}
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChartState {
@@ -47,6 +56,7 @@ pub struct ChartState {
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
     pub hover_px: Option<Point>,
+    pub brush_selection_2d: Option<BrushSelection2D>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
 }
 
@@ -67,6 +77,7 @@ pub struct ChartOutput {
     pub link_events: Vec<LinkEvent>,
     pub hover: Option<HoverHit>,
     pub axis_pointer: Option<AxisPointerOutput>,
+    pub brush_selection_2d: Option<BrushSelection2D>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -206,6 +217,25 @@ impl ChartEngine {
         match action {
             Action::HoverAt { point } => {
                 self.state.hover_px = Some(point);
+            }
+            Action::SetBrushSelection2D {
+                x_axis,
+                y_axis,
+                x,
+                y,
+            } => {
+                let next = BrushSelection2D {
+                    x_axis,
+                    y_axis,
+                    x,
+                    y,
+                };
+                if self.state.brush_selection_2d != Some(next) {
+                    self.state.brush_selection_2d = Some(next);
+                }
+            }
+            Action::ClearBrushSelection => {
+                self.state.brush_selection_2d = None;
             }
             Action::ToggleAxisPanLock { axis } => {
                 let entry =
@@ -774,6 +804,7 @@ impl ChartEngine {
         }
 
         self.output.link_events.clear();
+        self.output.brush_selection_2d = self.state.brush_selection_2d;
 
         let view_changed = self
             .view

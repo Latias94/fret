@@ -36,6 +36,7 @@ The defaults are intentionally aligned with ImPlot:
 
 - Fit view to data: `F` (focused canvas)
 - Reset view to auto: `R` (focused canvas)
+- Clear brush selection: `A` (focused canvas)
 - Toggle X filter mode: `M` (focused canvas)
   - `Filter` (default): X window filters bounds/LOD and slices rows (best performance, auto-scales Y to visible X).
   - `None`: X window does not filter bounds/LOD and does not slice rows (keeps global Y scale, more expensive).
@@ -90,6 +91,7 @@ All UI input is mapped into headless actions:
 - Pan: `Action::PanDataWindowXFromBase` / `Action::PanDataWindowYFromBase`
 - Wheel zoom: `Action::ZoomDataWindowXFromBase` / `Action::ZoomDataWindowYFromBase`
 - Box zoom: `Action::SetViewWindow2DFromZoom` (plot-region drag) and `Action::SetDataWindow*FromZoom` (axis slider)
+- Brush selection: `Action::SetBrushSelection2D` / `Action::ClearBrushSelection` (selection output; does not zoom)
 - Reset: `Action::SetViewWindow2D { x: None, y: None }` (plot) or `Action::SetDataWindowX/Y { window: None }` (single axis)
 
 ## Hover / crosshair / tooltip (P0)

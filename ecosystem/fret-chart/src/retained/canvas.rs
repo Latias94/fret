@@ -9,7 +9,7 @@ use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
 use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
-use delinea::{Action, ChartEngine, WorkBudget};
+use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
@@ -79,14 +79,6 @@ struct BoxZoomDrag {
     current_pos: Point,
     start_x: DataWindow,
     start_y: DataWindow,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct BrushSelection2D {
-    x_axis: delinea::AxisId,
-    y_axis: delinea::AxisId,
-    x: DataWindow,
-    y: DataWindow,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -160,7 +152,6 @@ pub struct ChartCanvas {
     legend_hover: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
-    brush_selection: Option<BrushSelection2D>,
     brush_drag: Option<BoxZoomDrag>,
     slider_drag: Option<DataZoomSliderDrag>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
@@ -209,7 +200,6 @@ impl ChartCanvas {
             legend_hover: None,
             pan_drag: None,
             box_zoom_drag: None,
-            brush_selection: None,
             brush_drag: None,
             slider_drag: None,
             axis_extent_cache: BTreeMap::default(),
@@ -628,8 +618,8 @@ impl ChartCanvas {
     }
 
     fn clear_brush(&mut self) {
-        self.brush_selection = None;
         self.brush_drag = None;
+        self.engine.apply_action(Action::ClearBrushSelection);
     }
 
     fn clear_slider_drag(&mut self) {
@@ -2752,14 +2742,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         *modifiers,
                         drag.required_mods,
                     ) {
-                        self.brush_selection = Some(BrushSelection2D {
+                        self.engine.apply_action(Action::SetBrushSelection2D {
                             x_axis: drag.x_axis,
                             y_axis: drag.y_axis,
                             x,
                             y,
                         });
                     } else {
-                        self.brush_selection = None;
+                        self.engine.apply_action(Action::ClearBrushSelection);
                     }
 
                     cx.invalidate_self(Invalidation::Paint);
@@ -3336,7 +3326,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
-        if let Some(brush) = self.brush_selection
+        if let Some(brush) = self.engine.state().brush_selection_2d
             && let Some(rect) = self.brush_rect_px(brush)
         {
             if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {

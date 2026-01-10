@@ -30,6 +30,7 @@ Status symbols:
   - Row selection + filtering: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
   - DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
   - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
+  - Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
 
 ## Quick Manual Validation
 
@@ -39,7 +40,7 @@ baseline for validating interaction semantics and span limits on both native and
 ### Native (desktop)
 
 - Run the demo:
-  - `cargo run -p fret-demo -- chart_multi_axis_demo`
+  - `cargo run -p fret-demo --bin fret-demo -- chart_multi_axis_demo`
 - What to validate (P0):
   - X and Y axis band pan/zoom routing matches the active axis rules.
   - X span limits (`minSpan/maxSpan`) clamp interaction-derived zoom updates (wheel/slider/box zoom).
@@ -227,7 +228,10 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[x]` Y inside zoom/pan (wheel on Y axis band; drag pan constrained via axis band or plot modifiers) (ADR 0136).
 - `[x]` 2D box zoom that writes `SetViewWindow2DFromZoom` for the active axis pair (ADR 0136).
   - Evidence: `ecosystem/fret-chart/src/retained/canvas.rs` (box zoom drag -> `Action::SetViewWindow2DFromZoom`).
-- `[~]` 2D brush selection (selection-only, not a view window write).
+- `[~]` 2D brush selection (rect selection output; does not write view windows).
+  - Headless state/output: `delinea::ChartState.brush_selection_2d` / `delinea::ChartOutput.brush_selection_2d`
+  - Action: `delinea::Action::SetBrushSelection2D` / `delinea::Action::ClearBrushSelection` (ADR 0144)
+  - UI gesture (current default): `Alt + RMB drag` (ImPlot-style)
 - `[x]` `minSpan/maxSpan` policies for interaction-derived view window writes (ADR 0138).
   - Evidence: `ecosystem/delinea/src/engine/mod.rs` (span clamp in interaction actions) + `ecosystem/delinea/src/engine/window.rs` (span limiter).
   - Notes: implemented as value-space `DataZoomXSpec.min_value_span/max_value_span` (no percent space).
@@ -256,6 +260,6 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Decide whether brush selection should be promoted to a view-window write (box-zoom style) or remain selection-only (ECharts brush parity), then add conformance tests.
+1. P0: Decide how brush selection maps to `RowSelection` / highlight semantics (contiguous range fast path vs sparse indices; ADR 0137), then add conformance tests.
 2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
 3. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.

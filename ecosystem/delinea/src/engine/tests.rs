@@ -1058,6 +1058,77 @@ fn set_view_window_2d_respects_zoom_lock() {
 }
 
 #[test]
+fn brush_selection_updates_state_without_bumping_view_revision_and_is_exposed_in_output() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let rev = engine.state().revision;
+
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis,
+        y_axis,
+        x: DataWindow {
+            min: 10.0,
+            max: 20.0,
+        },
+        y: DataWindow {
+            min: -5.0,
+            max: 5.0,
+        },
+    });
+
+    assert_eq!(engine.state().revision, rev);
+    assert_eq!(
+        engine.state().brush_selection_2d,
+        Some(crate::engine::BrushSelection2D {
+            x_axis,
+            y_axis,
+            x: DataWindow {
+                min: 10.0,
+                max: 20.0,
+            },
+            y: DataWindow {
+                min: -5.0,
+                max: 5.0,
+            },
+        })
+    );
+
+    #[derive(Debug, Default)]
+    struct NoopMeasurer;
+
+    impl TextMeasurer for NoopMeasurer {
+        fn measure(
+            &mut self,
+            _text: crate::ids::StringId,
+            _style: crate::text::TextStyleId,
+        ) -> TextMetrics {
+            TextMetrics::default()
+        }
+    }
+
+    let mut measurer = NoopMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert_eq!(
+        engine.output().brush_selection_2d,
+        engine.state().brush_selection_2d
+    );
+
+    engine.apply_action(Action::ClearBrushSelection);
+    assert_eq!(engine.state().revision, rev);
+    assert_eq!(engine.state().brush_selection_2d, None);
+}
+
+#[test]
 fn pan_lock_prevents_pan_window_update() {
     let x_axis = crate::ids::AxisId::new(1);
     let mut engine = ChartEngine::new(basic_spec()).unwrap();

@@ -159,6 +159,7 @@ Transforms:
 Interaction and output:
 
 - Brush selection: decide whether brush produces a durable selection output (indices/mask) or only writes view windows.
+  - v1 baseline: brush selection is a headless output (does not write view windows); see ADR 0144.
 - Tooltip formatting contract: decide headless formatter surfaces (typed values + series meta) vs UI-only formatting.
 - Visual mapping: decide whether “visualMap”-like encodings (color/size/opacity) are a first-class contract or UI-only.
 

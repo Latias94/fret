@@ -14,6 +14,13 @@ pub enum Action {
     HoverAt {
         point: Point,
     },
+    SetBrushSelection2D {
+        x_axis: AxisId,
+        y_axis: AxisId,
+        x: DataWindowX,
+        y: DataWindowY,
+    },
+    ClearBrushSelection,
     ToggleAxisPanLock {
         axis: AxisId,
     },
