@@ -55,6 +55,8 @@ use crate::ui::{
     NodeGraphInternalsStore, NodeGraphOverlayState,
 };
 
+use super::paint::CanvasPaintCache;
+
 mod cancel;
 mod context_menu;
 mod cursor;
@@ -145,6 +147,7 @@ pub struct NodeGraphCanvas {
     history: GraphHistory,
     geometry: GeometryCache,
 
+    paint_cache: CanvasPaintCache,
     wire_paths: Vec<fret_core::PathId>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
@@ -375,6 +378,7 @@ impl NodeGraphCanvas {
             cached_zoom: 1.0,
             history: GraphHistory::default(),
             geometry: GeometryCache::default(),
+            paint_cache: CanvasPaintCache::default(),
             wire_paths: Vec::new(),
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
@@ -3836,61 +3840,6 @@ impl NodeGraphCanvas {
         Some(id)
     }
 
-    fn prepare_step_path(
-        services: &mut dyn fret_core::UiServices,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        scale_factor: f32,
-        width_px: f32,
-    ) -> Option<fret_core::PathId> {
-        let mx = 0.5 * (from.x.0 + to.x.0);
-        let p1 = Point::new(Px(mx), from.y);
-        let p2 = Point::new(Px(mx), to.y);
-
-        let commands = [
-            PathCommand::MoveTo(from),
-            PathCommand::LineTo(p1),
-            PathCommand::LineTo(p2),
-            PathCommand::LineTo(to),
-        ];
-
-        let (id, _metrics) = services.path().prepare(
-            &commands,
-            PathStyle::Stroke(StrokeStyle {
-                width: Px(width_px / zoom),
-            }),
-            PathConstraints {
-                scale_factor: scale_factor * zoom,
-            },
-        );
-
-        Some(id)
-    }
-
-    fn prepare_straight_path(
-        services: &mut dyn fret_core::UiServices,
-        from: Point,
-        to: Point,
-        zoom: f32,
-        scale_factor: f32,
-        width_px: f32,
-    ) -> Option<fret_core::PathId> {
-        let commands = [PathCommand::MoveTo(from), PathCommand::LineTo(to)];
-
-        let (id, _metrics) = services.path().prepare(
-            &commands,
-            PathStyle::Stroke(StrokeStyle {
-                width: Px(width_px / zoom),
-            }),
-            PathConstraints {
-                scale_factor: scale_factor * zoom,
-            },
-        );
-
-        Some(id)
-    }
-
     fn prepare_edge_end_marker_path(
         services: &mut dyn fret_core::UiServices,
         route: EdgeRouteKind,
@@ -4786,6 +4735,7 @@ impl NodeGraphCanvas {
 
 impl<H: UiHost> Widget<H> for NodeGraphCanvas {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        self.paint_cache.clear(services);
         for id in self.wire_paths.drain(..) {
             services.path().release(id);
         }
@@ -6156,6 +6106,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         cx.observe_model(&self.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
+        self.paint_cache.begin_frame();
         for id in self.wire_paths.drain(..) {
             cx.services.path().release(id);
         }
@@ -6599,35 +6550,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             .chain(edges_selected)
             .chain(edges_hovered)
         {
-            let path = match edge.route {
-                EdgeRouteKind::Bezier => Self::prepare_wire_path(
-                    cx.services,
-                    edge.from,
-                    edge.to,
-                    zoom,
-                    cx.scale_factor,
-                    edge.width,
-                ),
-                EdgeRouteKind::Straight => Self::prepare_straight_path(
-                    cx.services,
-                    edge.from,
-                    edge.to,
-                    zoom,
-                    cx.scale_factor,
-                    edge.width,
-                ),
-                EdgeRouteKind::Step => Self::prepare_step_path(
-                    cx.services,
-                    edge.from,
-                    edge.to,
-                    zoom,
-                    cx.scale_factor,
-                    edge.width,
-                ),
-            };
+            let path = self.paint_cache.wire_path(
+                cx.services,
+                edge.route,
+                edge.from,
+                edge.to,
+                zoom,
+                cx.scale_factor,
+                edge.width,
+            );
 
             if let Some(path) = path {
-                self.wire_paths.push(path);
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
@@ -6678,6 +6611,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
             }
         }
+
+        self.paint_cache.prune(cx.services, 300, 30_000);
 
         if !edge_labels.is_empty() {
             let pad_screen = 6.0;

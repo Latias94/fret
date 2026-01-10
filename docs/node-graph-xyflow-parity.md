@@ -485,7 +485,8 @@ High-level layering (ADR 0135):
   - fret-node:
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
     - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
-    - [ ] incremental scene op updates
+    - [~] cached wire path tessellation (reduces per-frame `PathService::prepare`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
+    - [ ] incremental scene op updates (true retained scene graph diffing)
 
 - [~] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched
