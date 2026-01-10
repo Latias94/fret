@@ -1,6 +1,6 @@
 # ADR 0125: Renderer Extensibility (Materials, Effects, and Sandboxing v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
