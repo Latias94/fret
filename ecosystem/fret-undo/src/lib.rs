@@ -9,12 +9,40 @@
 //! - The app records committed transactions in a history stack.
 //! - Undo/redo is performed by applying transactions via app-provided closures.
 
+use std::collections::HashMap;
 use std::sync::Arc;
+
+use fret_core::AppWindowId;
 
 /// Recommended command id for document/window-level undo.
 pub const CMD_EDIT_UNDO: &str = "edit.undo";
 /// Recommended command id for document/window-level redo.
 pub const CMD_EDIT_REDO: &str = "edit.redo";
+
+/// App-defined document identity used for undo target routing.
+///
+/// A window typically has an "active document" (scene, graph, asset) that should receive
+/// `edit.undo/edit.redo` when focus is not inside a specialized widget-owned history.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DocumentId(pub Arc<str>);
+
+impl From<&'static str> for DocumentId {
+    fn from(value: &'static str) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl From<String> for DocumentId {
+    fn from(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl From<Arc<str>> for DocumentId {
+    fn from(value: Arc<str>) -> Self {
+        Self(value)
+    }
+}
 
 /// A transaction that can be inverted without additional context.
 ///
@@ -280,9 +308,108 @@ impl<T> UndoHistory<T> {
     }
 }
 
+/// Window/document-scoped undo routing helper (ADR 0136).
+///
+/// This is a small convenience service that:
+/// - stores a history per document,
+/// - tracks the active document per window,
+/// - provides `edit.undo/edit.redo`-style routing at the app layer.
+#[derive(Debug, Clone)]
+pub struct UndoService<T> {
+    per_document: HashMap<DocumentId, UndoHistory<T>>,
+    active_document_by_window: HashMap<AppWindowId, DocumentId>,
+    limit: usize,
+}
+
+impl<T> Default for UndoService<T> {
+    fn default() -> Self {
+        Self::with_limit(128)
+    }
+}
+
+impl<T> UndoService<T> {
+    pub fn with_limit(limit: usize) -> Self {
+        Self {
+            per_document: HashMap::new(),
+            active_document_by_window: HashMap::new(),
+            limit: limit.max(1),
+        }
+    }
+
+    pub fn set_active_document(&mut self, window: AppWindowId, document: impl Into<DocumentId>) {
+        self.active_document_by_window
+            .insert(window, document.into());
+    }
+
+    pub fn active_document(&self, window: AppWindowId) -> Option<&DocumentId> {
+        self.active_document_by_window.get(&window)
+    }
+
+    pub fn history_mut(&mut self, document: impl Into<DocumentId>) -> &mut UndoHistory<T> {
+        let doc = document.into();
+        self.per_document
+            .entry(doc)
+            .or_insert_with(|| UndoHistory::with_limit(self.limit))
+    }
+
+    pub fn history_mut_active(&mut self, window: AppWindowId) -> Option<&mut UndoHistory<T>> {
+        let doc = self.active_document_by_window.get(&window)?.clone();
+        Some(self.history_mut(doc))
+    }
+
+    pub fn record_active(&mut self, window: AppWindowId, record: UndoRecord<T>) -> bool {
+        let Some(history) = self.history_mut_active(window) else {
+            return false;
+        };
+        history.record(record);
+        true
+    }
+
+    pub fn record_or_coalesce_active(
+        &mut self,
+        window: AppWindowId,
+        record: UndoRecord<T>,
+    ) -> bool {
+        let Some(history) = self.history_mut_active(window) else {
+            return false;
+        };
+        history.record_or_coalesce(record);
+        true
+    }
+
+    pub fn undo_active_invertible<E>(
+        &mut self,
+        window: AppWindowId,
+        apply: impl FnMut(&UndoRecord<T>) -> Result<(), E>,
+    ) -> Result<bool, E>
+    where
+        T: InvertibleTransaction,
+    {
+        let Some(history) = self.history_mut_active(window) else {
+            return Ok(false);
+        };
+        history.undo_invertible(apply)
+    }
+
+    pub fn redo_active_invertible<E>(
+        &mut self,
+        window: AppWindowId,
+        apply: impl FnMut(&UndoRecord<T>) -> Result<(), E>,
+    ) -> Result<bool, E>
+    where
+        T: InvertibleTransaction,
+    {
+        let Some(history) = self.history_mut_active(window) else {
+            return Ok(false);
+        };
+        history.redo_invertible(apply)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use slotmap::KeyData;
 
     #[test]
     fn record_clears_redo() {
@@ -327,5 +454,36 @@ mod tests {
             .unwrap()
         );
         assert_eq!(value, 2);
+    }
+
+    #[test]
+    fn undo_service_routes_per_window_active_doc() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let mut svc = UndoService::<ValueTx<u32>>::with_limit(8);
+        svc.set_active_document(window_a, "a");
+        svc.set_active_document(window_b, "b");
+        assert!(svc.record_active(window_a, UndoRecord::new(ValueTx::new(0, 1))));
+        assert!(svc.record_active(window_b, UndoRecord::new(ValueTx::new(0, 2))));
+
+        let mut value_a = 1u32;
+        let mut value_b = 2u32;
+        assert!(
+            svc.undo_active_invertible(window_a, |rec| {
+                value_a = rec.tx.after;
+                Ok::<(), ()>(())
+            })
+            .unwrap()
+        );
+        assert_eq!(value_a, 0);
+        assert_eq!(value_b, 2);
+        assert!(
+            svc.undo_active_invertible(window_b, |rec| {
+                value_b = rec.tx.after;
+                Ok::<(), ()>(())
+            })
+            .unwrap()
+        );
+        assert_eq!(value_b, 0);
     }
 }
