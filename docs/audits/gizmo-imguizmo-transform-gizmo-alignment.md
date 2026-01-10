@@ -121,8 +121,8 @@ Fret’s current contract:
 | --- | --- | --- | --- | --- |
 | Translate axis X/Y/Z | Yes | Yes | **Aligned** | Axis handles exist + picking + axis constraint. `ecosystem/fret-gizmo/src/gizmo.rs` (`pick_translate_handle`, `begin_translate_drag`). |
 | Translate plane XY/XZ/YZ | Yes | Yes | **Aligned** | Plane quads + picking. `pick_translate_handle` + `translate_plane_quad_world`. |
-| Translate “screen-plane” (center handle) | Yes (screen component) | Partial (different: `TranslateView`) | **Partially aligned** | Fret supports a screen-plane handle (`TranslateHandle::Screen`) but does **not** support “translate along view forward axis”. |
-| Translate along view forward axis | No (not explicit) | Yes (`TranslateView`) | **Not implemented** | Candidate: add a view-axis translation handle/mode (use view dir at origin + ray/plane). |
+| Translate “screen-plane” (center handle) | Yes (screen component) | Yes (`TranslateView` uses view-plane) | **Aligned** | Fret’s center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
+| Translate “depth” (move toward/away camera) | No (not explicit) | No (not in core modes) | **Not implemented** | Optional future feature (sometimes called “dolly” translation). Not required for parity with these two references. |
 | Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Ring drawing + pick based on distance-to-segment. `draw_rotate_rings`, `pick_rotate_axis`. |
 | Rotate around view axis (screen ring) | Yes (`ROTATE_SCREEN`) | Yes (`RotateView`) | **Aligned** | `show_view_axis_ring` + handle id 8. `pick_rotate_axis` view ring path, `begin_rotate_drag` view-axis mode. |
 | Arcball rotation | No | Yes (`Arcball`) | **Not implemented** | transform-gizmo supports trackball rotation; Fret does not. |
@@ -201,9 +201,9 @@ This is a suggested sequence for reaching “mature editor” parity without ove
 
 ### P0 (correctness + UX baseline)
 
-1. **View-axis translation** (`TranslateView` equivalent)
-   - Motivation: transform-gizmo supports it; it’s a common editor affordance and improves navigation/tooling.
-   - Outcome: a dedicated handle/mode that moves along camera forward.
+1. **Stability + picking UX audit (lock-in “editor feel”)**
+   - Motivation: most user pain comes from drift/overshoot/mispicks, not missing modes.
+   - Outcome: add targeted tests for translate/rotate/scale drag stability + explicit picking priority ladder.
 2. **Universal + scale (or explicitly decide against it)**
    - If we keep `Universal`, decide whether it should include scale.
    - If yes: add scale picking rules that don’t fight translate planes / rotate rings.
