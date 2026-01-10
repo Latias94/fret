@@ -136,7 +136,7 @@ Fret's current contract:
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | Combine translate + rotate | Yes | Yes | **Aligned** | Fret `GizmoMode::Universal` overlays translate + rotate and resolves pick conflicts. `pick_universal_handle`. |
-| Combine translate + rotate + scale | Yes (`UNIVERSAL`) | Yes (via mode set) | **Partially aligned** | Fret Universal currently does **not** include scale interaction; only draw overlay. `Gizmo::update` Universal branch only begins translate/rotate drags. |
+| Combine translate + rotate + scale | Yes (`UNIVERSAL`) | Yes (via mode set) | **Aligned (with known gaps)** | Fret Universal supports axis scaling alongside translate+rotate when `universal_includes_scale` is enabled. Note: uniform scale (center handle) remains exclusive to `Scale` mode to avoid center-handle conflicts with view-plane translation. |
 | Fine-grained mode toggles | Yes (bitmask `OPERATION`) | Yes (`EnumSet<GizmoMode>`) | **Not implemented** | Fret uses coarse `GizmoMode` and hard-coded handle sets. Consider evolving to a bitmask/flags surface (without committing policy to `fret-ui`). |
 
 ### C) Orientation, pivot, multi-selection
@@ -179,7 +179,7 @@ Fret's current contract:
 | Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Partially aligned** | Center handle early-out exists in `pick_translate_handle`; plane-vs-axis priority is still heuristic-based. |
 | Rotate | Prefer the ring the user aims at; disambiguate view ring vs axis rings; avoid "wrong ring" when rings overlap in screen space. | **Partially aligned** | `pick_rotate_axis` exists, but there is no explicit priority ladder across view/axis rings and no per-ring bias knobs. |
 | Scale | Prefer axis end boxes when cursor is on the shaft; prefer center uniform only when close to origin; avoid fighting Universal overlays. | **Partially aligned** | `pick_scale_handle` has a center radius and an axis bias, but no plane scale and no unified policy with other modes. |
-| Universal | Prefer rotate when the cursor is near rings; prefer translate when cursor is inside plane handles / near center. | **Partially aligned** | `pick_universal_handle` applies a translate bias for planes/center, but rules are not yet systematic. |
+| Universal | Protect translate center/planes and scale end boxes; otherwise disambiguate rotate vs scale vs translate deterministically. | **Partially aligned** | `pick_universal_handle` enforces a priority ladder (translate center/plane interior wins; scale end boxes win; otherwise tie-break rotate > scale > translate). Still needs more tuning for edge cases (ring overlap, orthographic, behind-camera). |
 
 #### Drag stability invariants (what we must lock down)
 
