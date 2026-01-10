@@ -3671,6 +3671,58 @@ impl Gizmo {
             }
         }
 
+        // Plane handles (distance to projected quad; accept when inside).
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let mut plane_inside: Option<(HandleId, f32)> = None;
+        for &((u, v, handle), plane_axes) in &[
+            (
+                (axes[0], axes[1], TranslateHandle::PlaneXY.id()),
+                (0usize, 1usize),
+            ),
+            (
+                (axes[0], axes[2], TranslateHandle::PlaneXZ.id()),
+                (0usize, 2usize),
+            ),
+            (
+                (axes[1], axes[2], TranslateHandle::PlaneYZ.id()),
+                (1usize, 2usize),
+            ),
+        ] {
+            if !self.plane_allowed_by_mask(plane_axes) {
+                continue;
+            }
+            let world = translate_plane_quad_world(origin, u, v, off, size);
+            let Some(p) = project_quad(view_projection, viewport, world, self.config.depth_range)
+            else {
+                continue;
+            };
+            let alpha = self.plane_visibility_alpha(view_projection, viewport, world);
+            if alpha <= 0.01 {
+                continue;
+            }
+
+            let inside = point_in_convex_quad(cursor, p);
+            let edge_d = quad_edge_distance(cursor, p);
+            if inside {
+                // When the cursor is actually inside the plane handle quad, always prefer plane
+                // drags over axis segments (common editor expectation).
+                //
+                // If multiple plane quads overlap in projection, prefer the one where the cursor
+                // is deeper inside (larger edge distance).
+                match plane_inside {
+                    Some((_, best_edge_d)) if edge_d <= best_edge_d => {}
+                    _ => plane_inside = Some((handle, edge_d)),
+                }
+            } else {
+                // Edge-picking is handled below as part of the general "best score" selection.
+            }
+        }
+
+        if let Some((handle, _)) = plane_inside {
+            return Some(PickHit { handle, score: 0.0 });
+        }
+
         let mut best: Option<PickHit> = None;
         let mut consider = |handle: HandleId, score: f32| {
             if !score.is_finite() {
@@ -3719,9 +3771,7 @@ impl Gizmo {
             }
         }
 
-        // Plane handles (distance to projected quad; accept when inside).
-        let off = length_world * 0.15;
-        let size = length_world * 0.25;
+        // Plane handle edge picking.
         for &((u, v, handle), plane_axes) in &[
             (
                 (axes[0], axes[1], TranslateHandle::PlaneXY.id()),
@@ -3749,16 +3799,10 @@ impl Gizmo {
                 continue;
             }
 
-            let inside = point_in_convex_quad(cursor, p);
             let edge_d = quad_edge_distance(cursor, p);
-            if inside {
-                // Prefer plane drags when the cursor is actually inside the plane handle quad.
-                consider(handle, 0.20 / alpha.max(0.05));
-            } else {
-                let r = self.config.pick_radius_px * alpha.sqrt();
-                if edge_d <= r {
-                    consider(handle, (edge_d + 0.9) / alpha.max(0.05));
-                }
+            let r = self.config.pick_radius_px * alpha.sqrt();
+            if edge_d <= r {
+                consider(handle, (edge_d + 0.9) / alpha.max(0.05));
             }
         }
 
@@ -5224,6 +5268,87 @@ mod tests {
             .pick_translate_handle(view_proj, vp, origin, c_yz, axes)
             .unwrap();
         assert_eq!(h_yz.handle, TranslateHandle::PlaneYZ.id());
+    }
+
+    #[test]
+    fn translate_plane_inside_wins_over_axis_when_both_hit() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        // Make it easy for an axis segment to be "also hit" while still allowing the cursor to be
+        // far enough from the origin that the center handle does not steal the interaction.
+        config.pick_radius_px = 20.0;
+        let gizmo = Gizmo::new(config);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let axis_tip_len = length_world * gizmo.translate_axis_tip_scale();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_screen =
+            project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+
+        let pa = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let pb = project_point(
+            view_proj,
+            vp,
+            origin + axes[0].normalize_or_zero() * axis_tip_len,
+            gizmo.config.depth_range,
+        )
+        .unwrap();
+
+        let mut cursor: Option<Vec2> = None;
+        // Search for a point that is inside the plane quad but also within the X axis pick radius.
+        for i in 0..=24 {
+            for j in 0..=24 {
+                // Prefer small `t` (close to the X axis direction in screen space) and larger `s`
+                // (further from origin so the center handle doesn't steal).
+                let s = 0.25 + 0.70 * (i as f32) / 24.0;
+                let t = 0.01 + 0.25 * (j as f32) / 24.0;
+                let candidate = quad_screen[0] * (1.0 - s) * (1.0 - t)
+                    + quad_screen[1] * s * (1.0 - t)
+                    + quad_screen[3] * (1.0 - s) * t
+                    + quad_screen[2] * s * t;
+                if !point_in_convex_quad(candidate, quad_screen) {
+                    continue;
+                }
+                let d_center = (candidate - pa.screen).length();
+                if d_center <= gizmo.config.pick_radius_px {
+                    continue;
+                }
+                let d_axis = distance_point_to_segment_px(candidate, pa.screen, pb.screen);
+                if d_axis <= gizmo.config.pick_radius_px {
+                    cursor = Some(candidate);
+                    break;
+                }
+            }
+            if cursor.is_some() {
+                break;
+            }
+        }
+
+        let cursor = cursor.expect("expected a point where both plane-inside and axis hit");
+        let hit = gizmo
+            .pick_translate_handle(view_proj, vp, origin, cursor, axes)
+            .unwrap();
+        assert_eq!(hit.handle, TranslateHandle::PlaneXY.id());
     }
 
     #[test]
