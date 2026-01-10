@@ -448,10 +448,24 @@ impl TaffyLayoutEngine {
         } else {
             1.0
         };
+        let min_x_dp = layout.location.x;
+        let min_y_dp = layout.location.y;
+        let max_x_dp = layout.location.x + layout.size.width;
+        let max_y_dp = layout.location.y + layout.size.height;
+
+        let snap_edge_dp = |v: f32| if v.is_finite() { v.round() } else { 0.0 };
+
+        let snapped_min_x_dp = snap_edge_dp(min_x_dp);
+        let snapped_min_y_dp = snap_edge_dp(min_y_dp);
+        let snapped_max_x_dp = snap_edge_dp(max_x_dp);
+        let snapped_max_y_dp = snap_edge_dp(max_y_dp);
 
         Rect::new(
-            Point::new(Px(layout.location.x / sf), Px(layout.location.y / sf)),
-            Size::new(Px(layout.size.width / sf), Px(layout.size.height / sf)),
+            Point::new(Px(snapped_min_x_dp / sf), Px(snapped_min_y_dp / sf)),
+            Size::new(
+                Px(((snapped_max_x_dp - snapped_min_x_dp) / sf).max(0.0)),
+                Px(((snapped_max_y_dp - snapped_min_y_dp) / sf).max(0.0)),
+            ),
         )
     }
 
@@ -560,5 +574,56 @@ mod tests {
             Some(a_after),
             "solved subtree rects should remain readable after solving an unrelated root"
         );
+    }
+
+    #[test]
+    fn layout_rect_snaps_edges_not_location_and_size() {
+        let [root, child] = fresh_node_ids(2).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root, &[child]);
+
+        engine.set_style(
+            root,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                ..Default::default()
+            },
+        );
+
+        engine.set_style(
+            child,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                size: taffy::geometry::Size {
+                    width: taffy::style::Dimension::length(0.5),
+                    height: taffy::style::Dimension::length(0.5),
+                },
+                margin: taffy::geometry::Rect {
+                    left: taffy::style::LengthPercentageAuto::length(0.5),
+                    right: taffy::style::LengthPercentageAuto::auto(),
+                    top: taffy::style::LengthPercentageAuto::auto(),
+                    bottom: taffy::style::LengthPercentageAuto::auto(),
+                },
+                ..Default::default()
+            },
+        );
+
+        let root_id = engine.layout_id_for_node(root).unwrap();
+        engine.compute_root(
+            root_id,
+            LayoutSize::new(
+                AvailableSpace::Definite(Px(10.0)),
+                AvailableSpace::Definite(Px(10.0)),
+            ),
+            2.0,
+        );
+
+        let child_id = engine.layout_id_for_node(child).unwrap();
+        let rect = engine.layout_rect(child_id);
+        assert!((rect.origin.x.0 - 0.5).abs() < 0.0001);
+        assert!((rect.size.width.0 - 0.0).abs() < 0.0001);
     }
 }

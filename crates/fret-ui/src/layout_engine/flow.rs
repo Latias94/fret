@@ -104,6 +104,19 @@ fn build_flow_subtree_impl<H: UiHost>(
         style.align_items = Some(AlignItems::FlexStart);
         style.justify_content = Some(JustifyContent::FlexStart);
 
+        let wrapper_style = layout_style_for_node(app, window, node);
+        let child_style = layout_style_for_node(app, window, child);
+        if matches!(wrapper_style.size.width, crate::element::Length::Auto)
+            && matches!(child_style.size.width, crate::element::Length::Fill)
+        {
+            style.size.width = Dimension::percent(1.0);
+        }
+        if matches!(wrapper_style.size.height, crate::element::Length::Auto)
+            && matches!(child_style.size.height, crate::element::Length::Fill)
+        {
+            style.size.height = Dimension::percent(1.0);
+        }
+
         if let Some(props) = element_record_for_node(app, window, node).and_then(|r| {
             if let ElementInstance::Container(p) = r.instance {
                 Some(p)
@@ -149,6 +162,44 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_style(node, style);
             engine.set_children(node, &[]);
             engine.set_measured(node, true);
+        }
+        Some(
+            instance @ (ElementInstance::Container(_)
+            | ElementInstance::Pressable(_)
+            | ElementInstance::Opacity(_)
+            | ElementInstance::VisualTransform(_)
+            | ElementInstance::Semantics(_)
+            | ElementInstance::FocusScope(_)
+            | ElementInstance::InteractivityGate(_)
+            | ElementInstance::PointerRegion(_)
+            | ElementInstance::HoverRegion(_)
+            | ElementInstance::WheelRegion(_)
+            | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::Anchored(_)
+            | ElementInstance::Stack(_)),
+        ) if tree.children(node).is_empty() => {
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+
+            if let ElementInstance::Container(p) = &instance {
+                style.padding = TaffyRect {
+                    left: LengthPercentage::length(scale_nonneg_px(p.padding.left, sf)),
+                    right: LengthPercentage::length(scale_nonneg_px(p.padding.right, sf)),
+                    top: LengthPercentage::length(scale_nonneg_px(p.padding.top, sf)),
+                    bottom: LengthPercentage::length(scale_nonneg_px(p.padding.bottom, sf)),
+                };
+            }
+
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, false);
         }
         Some(ElementInstance::Flex(props)) => {
             let mut style = style_for_item_in_parent(
