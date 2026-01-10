@@ -9,17 +9,18 @@ use fret_gizmo::{
     ViewportRect,
 };
 use fret_launch::{
-    EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
+    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
-use fret_render::viewport_overlay::{ViewportOverlay3d, ViewportOverlay3dContext, run_overlays};
+use fret_render::viewport_overlay::ViewportOverlay3dContext;
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
 
@@ -550,6 +551,92 @@ impl Default for Gizmo3dDemoModel {
 #[derive(Default)]
 struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
+}
+
+#[derive(Clone)]
+struct OverlayDrawBuffer {
+    buffer: wgpu::Buffer,
+    vertex_count: u32,
+}
+
+#[derive(Clone)]
+struct Gizmo3dDemoViewportOverlayWindow {
+    target: RenderTargetId,
+    bind_group: wgpu::BindGroup,
+    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
+    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
+    thick_line_depth_pipeline: wgpu::RenderPipeline,
+    thick_line_always_pipeline: wgpu::RenderPipeline,
+    solid_test: Option<OverlayDrawBuffer>,
+    solid_ghost: Option<OverlayDrawBuffer>,
+    solid_always: Option<OverlayDrawBuffer>,
+    line_test: Option<OverlayDrawBuffer>,
+    line_ghost: Option<OverlayDrawBuffer>,
+    line_always: Option<OverlayDrawBuffer>,
+}
+
+#[derive(Default)]
+struct Gizmo3dDemoViewportOverlayService {
+    per_window: HashMap<AppWindowId, Gizmo3dDemoViewportOverlayWindow>,
+}
+
+struct Gizmo3dDemoViewportOverlayHooks;
+
+impl ViewportOverlay3dHooks for Gizmo3dDemoViewportOverlayHooks {
+    fn record(
+        &self,
+        app: &mut App,
+        window: AppWindowId,
+        target: RenderTargetId,
+        pass: &mut wgpu::RenderPass<'_>,
+        _ctx: &ViewportOverlay3dContext,
+    ) {
+        let Some(overlays) = app
+            .global::<Gizmo3dDemoViewportOverlayService>()
+            .and_then(|svc| svc.per_window.get(&window))
+        else {
+            return;
+        };
+
+        if overlays.target != target {
+            return;
+        }
+
+        pass.set_bind_group(0, &overlays.bind_group, &[]);
+
+        if let Some(buf) = &overlays.solid_ghost {
+            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_ghost {
+            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+
+        if let Some(buf) = &overlays.solid_test {
+            pass.set_pipeline(&overlays.gizmo_solid_depth_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_test {
+            pass.set_pipeline(&overlays.thick_line_depth_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+
+        if let Some(buf) = &overlays.solid_always {
+            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_always {
+            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+    }
 }
 
 struct Gizmo3dDemoWindowState {
@@ -1362,6 +1449,12 @@ fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
 impl WinitAppDriver for Gizmo3dDemoDriver {
     type WindowState = Gizmo3dDemoWindowState;
 
+    fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
+        app.with_global_mut(ViewportOverlay3dHooksService::default, |svc, _app| {
+            svc.set(Arc::new(Gizmo3dDemoViewportOverlayHooks));
+        });
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         let state = Self::build_ui(app, window);
         // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
@@ -2148,7 +2241,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         _tick_id: fret_runtime::TickId,
         _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
-        let (_id, color_view, depth_view, size) =
+        let (target_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
         Self::ensure_gpu(state, context);
 
@@ -2435,6 +2528,59 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 })
         });
 
+        let solid_count_test = solid_verts_test.len().min(u32::MAX as usize) as u32;
+        let solid_count_ghost = solid_verts_ghost.len().min(u32::MAX as usize) as u32;
+        let solid_count_always = solid_verts_always.len().min(u32::MAX as usize) as u32;
+        let line_count_test = line_verts_test.len().min(u32::MAX as usize) as u32;
+        let line_count_ghost = line_verts_ghost.len().min(u32::MAX as usize) as u32;
+        let line_count_always = line_verts_always.len().min(u32::MAX as usize) as u32;
+
+        app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
+            let overlays =
+                svc.per_window
+                    .entry(window)
+                    .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
+                        target: RenderTargetId::default(),
+                        bind_group: gpu.bind_group.clone(),
+                        gizmo_solid_depth_pipeline: gpu.gizmo_solid_depth_pipeline.clone(),
+                        gizmo_solid_always_pipeline: gpu.gizmo_solid_always_pipeline.clone(),
+                        thick_line_depth_pipeline: gpu.thick_line_depth_pipeline.clone(),
+                        thick_line_always_pipeline: gpu.thick_line_always_pipeline.clone(),
+                        solid_test: None,
+                        solid_ghost: None,
+                        solid_always: None,
+                        line_test: None,
+                        line_ghost: None,
+                        line_always: None,
+                    });
+
+            overlays.target = target_id;
+            overlays.solid_test = solid_vb_test.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: solid_count_test,
+            });
+            overlays.solid_ghost = solid_vb_ghost.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: solid_count_ghost,
+            });
+            overlays.solid_always = solid_vb_always.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: solid_count_always,
+            });
+            overlays.line_test = line_vb_test.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: line_count_test,
+            });
+            overlays.line_ghost = line_vb_ghost.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: line_count_ghost,
+            });
+            overlays.line_always = line_vb_always.as_ref().map(|buffer| OverlayDrawBuffer {
+                buffer: buffer.clone(),
+                vertex_count: line_count_always,
+            });
+        });
+
         let clear = wgpu::Color {
             r: 0.08,
             g: 0.08,
@@ -2484,72 +2630,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 view_proj,
                 viewport_px: size,
             };
-            let mut overlays: Vec<ViewportOverlay3d<'_>> = Vec::new();
 
-            overlays.push(Box::new(|pass, _ctx| {
-                pass.set_bind_group(0, &gpu.bind_group, &[]);
-
-                if let Some(solid_vb_ghost) = &solid_vb_ghost {
-                    pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                    pass.set_vertex_buffer(0, solid_vb_ghost.slice(..));
-                    pass.draw(
-                        0..(solid_verts_ghost.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-                if let Some(line_vb_ghost) = &line_vb_ghost {
-                    pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                    pass.set_vertex_buffer(0, line_vb_ghost.slice(..));
-                    pass.draw(
-                        0..(line_verts_ghost.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-            }));
-
-            overlays.push(Box::new(|pass, _ctx| {
-                pass.set_bind_group(0, &gpu.bind_group, &[]);
-
-                if let Some(solid_vb_test) = &solid_vb_test {
-                    pass.set_pipeline(&gpu.gizmo_solid_depth_pipeline);
-                    pass.set_vertex_buffer(0, solid_vb_test.slice(..));
-                    pass.draw(
-                        0..(solid_verts_test.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-                if let Some(line_vb_test) = &line_vb_test {
-                    pass.set_pipeline(&gpu.thick_line_depth_pipeline);
-                    pass.set_vertex_buffer(0, line_vb_test.slice(..));
-                    pass.draw(
-                        0..(line_verts_test.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-            }));
-
-            overlays.push(Box::new(|pass, _ctx| {
-                pass.set_bind_group(0, &gpu.bind_group, &[]);
-
-                if let Some(solid_vb_always) = &solid_vb_always {
-                    pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                    pass.set_vertex_buffer(0, solid_vb_always.slice(..));
-                    pass.draw(
-                        0..(solid_verts_always.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-                if let Some(line_vb_always) = &line_vb_always {
-                    pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                    pass.set_vertex_buffer(0, line_vb_always.slice(..));
-                    pass.draw(
-                        0..(line_verts_always.len().min(u32::MAX as usize) as u32),
-                        0..1,
-                    );
-                }
-            }));
-
-            run_overlays(&mut pass, &ctx, &mut overlays);
+            let hooks = app
+                .global::<ViewportOverlay3dHooksService>()
+                .and_then(|svc| svc.hooks());
+            if let Some(hooks) = hooks {
+                hooks.record(app, window, target_id, &mut pass, &ctx);
+            }
 
             let _ = _frame_id;
         }
