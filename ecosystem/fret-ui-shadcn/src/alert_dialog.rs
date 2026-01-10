@@ -7,7 +7,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    PositionStyle, RenderTransformProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -229,8 +229,8 @@ impl AlertDialog {
                             opacity,
                         },
                         move |cx| {
-                            let content = cx.visual_transform_props(
-                                VisualTransformProps {
+                            let content = cx.render_transform_props(
+                                RenderTransformProps {
                                     layout: content_layout,
                                     transform: zoom,
                                 },

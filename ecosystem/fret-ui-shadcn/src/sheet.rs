@@ -7,8 +7,8 @@ use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges,
-    OpacityProps, Overflow, PositionStyle, SemanticsProps, SizeStyle, TextProps,
-    VisualTransformProps,
+    OpacityProps, Overflow, PositionStyle, RenderTransformProps, SemanticsProps, SizeStyle,
+    TextProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -408,8 +408,8 @@ impl Sheet {
                             opacity,
                         },
                         move |cx| {
-                            let content = cx.visual_transform_props(
-                                VisualTransformProps {
+                            let content = cx.render_transform_props(
+                                RenderTransformProps {
                                     layout: opacity_layout,
                                     transform: slide,
                                 },

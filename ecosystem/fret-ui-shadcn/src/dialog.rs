@@ -9,8 +9,8 @@ use fret_runtime::{Model, ModelId};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    PositionStyle, PressableA11y, PressableProps, RenderTransformProps, RingPlacement, RingStyle,
+    SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -220,8 +220,8 @@ impl Dialog {
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let dialog = cx.visual_transform_props(
-                        VisualTransformProps {
+                    let dialog = cx.render_transform_props(
+                        RenderTransformProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
