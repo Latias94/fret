@@ -9,7 +9,6 @@ use fret_ui::{Invalidation, Theme};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 const CMD_ADD: &str = "todo.add";
-const CMD_CLEAR_DONE: &str = "todo.clear_done";
 const CMD_REMOVE_PREFIX: &str = "todo.remove.";
 
 #[derive(Clone)]
@@ -53,19 +52,25 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
-    let done_1 = app.models_mut().insert(false);
-    let done_2 = app.models_mut().insert(true);
+    let done_1 = app.models_mut().insert(true);
+    let done_2 = app.models_mut().insert(false);
+    let done_3 = app.models_mut().insert(false);
 
     let todos = app.models_mut().insert(vec![
         TodoItem {
             id: 1,
             done: done_1,
-            text: Arc::from("体验 shadcn 风格组件"),
+            text: Arc::from("体验 Shadcn UI 设计风格"),
         },
         TodoItem {
             id: 2,
             done: done_2,
-            text: Arc::from("把 demo 跑通并对齐黄金路径"),
+            text: Arc::from("构建一个极简待办清单"),
+        },
+        TodoItem {
+            id: 3,
+            done: done_3,
+            text: Arc::from("学习布局与交互组合"),
         },
     ]);
     let draft = app.models_mut().insert(String::new());
@@ -248,13 +253,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
 
             let mut right: Vec<AnyElement> = Vec::new();
             if completed > 0 {
-                let clear_done = shadcn::Button::new("清除已完成")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CMD_CLEAR_DONE)
-                    .into_element(cx);
-                right.push(clear_done);
-
                 right.push(
                     shadcn::Badge::new(format!("已完成 {completed}"))
                         .variant(shadcn::BadgeVariant::Secondary)
@@ -349,7 +347,8 @@ fn todo_list_panel(
             .border_1()
             .border_color(ColorRef::Color(theme.color_required("border")))
             .rounded(Radius::Lg)
-            .p(Space::N6);
+            .px(Space::N4)
+            .py(Space::N10);
         let props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
         return cx.container(props, |cx| {
@@ -403,13 +402,20 @@ fn todo_row(
         .into_element(cx);
 
     let remove_btn = shadcn::Button::new("")
-        .size(shadcn::ButtonSize::Icon)
+        .size(shadcn::ButtonSize::IconSm)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd(it.id))
-        .children(vec![icon::icon(cx, IconId::new("lucide.trash-2"))])
+        .children(vec![icon::icon_with(
+            cx,
+            IconId::new("lucide.trash-2"),
+            Some(fret_core::Px(16.0)),
+            Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+        )])
         .into_element(cx);
 
-    cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+    let mut hover = HoverRegionProps::default();
+    hover.layout.size.width = fret_ui::element::Length::Fill;
+    cx.hover_region(hover, move |cx, hovered| {
         let bg = hovered.then(|| theme.color_required("accent"));
 
         let mut chrome = row_chrome.clone();
@@ -437,7 +443,7 @@ fn todo_row(
                         |cx| {
                             vec![
                                 checkbox.clone(),
-                                todo_label_simple(cx, theme, &it.text, done),
+                                todo_label_simple(cx, theme, &it.text, done, hovered),
                             ]
                         },
                     );
@@ -460,8 +466,11 @@ fn todo_label_simple(
     theme: &Theme,
     text: &Arc<str>,
     done: bool,
+    hovered: bool,
 ) -> AnyElement {
-    let fg = if done {
+    let fg = if hovered {
+        theme.color_required("accent-foreground")
+    } else if done {
         theme.color_required("muted-foreground")
     } else {
         theme.color_required("foreground")
@@ -514,23 +523,6 @@ fn on_command(
                 );
             });
             let _ = app.models_mut().update(&state.draft, |s| s.clear());
-            app.push_effect(Effect::Redraw(window));
-        }
-        CMD_CLEAR_DONE => {
-            let snapshot = app
-                .models()
-                .read(&state.todos, |v| v.clone())
-                .ok()
-                .unwrap_or_default();
-
-            let keep: Vec<TodoItem> = snapshot
-                .into_iter()
-                .filter(|t| !app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
-                .collect();
-
-            let _ = app.models_mut().update(&state.todos, move |todos| {
-                *todos = keep;
-            });
             app.push_effect(Effect::Redraw(window));
         }
         other => {
