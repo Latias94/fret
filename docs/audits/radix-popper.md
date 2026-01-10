@@ -99,9 +99,10 @@ and transform origin:
 - Partial: `collisionBoundary` as a list of DOM elements / alternative boundaries.
   - Fret supports a single additional `boundary: Rect` (intersected with `outer`) via
     `CollisionOptions`, but does not model a full boundary list nor `altBoundary` semantics.
-- Missing: Radix `sticky` modes (`limitShift()`).
-  - Fret always clamps the placed rect into `outer` (and can clamp size in the sized solver), but
-    it does not expose a “sticky limiter” that intentionally preserves partial detachment behavior.
+- Pass: Radix `sticky="partial" | "always"` semantics (`limitShift()`).
+  - `StickyMode::Partial` emulates Floating `limitShift()` by allowing alignment-axis overflow to
+    keep the panel attached to the anchor (prevent detachment).
+  - `StickyMode::Always` keeps the current “fully clamp into boundary” behavior.
 - Missing: `hideWhenDetached` / “referenceHidden” outcome.
   - Fret clamps/fits instead of hiding the overlay when the anchor is detached from the boundary.
 - Missing: Exposed “available width/height” metrics.
@@ -120,8 +121,9 @@ deterministic:
 
 1. Add a collision options struct that can be applied to `outer` consistently (padding per side)
    and optionally supports “boundary composition” (e.g. intersect multiple rects).
-2. Add a “sticky limiter” option that emulates Radix `sticky="partial" | "always"` semantics
-   (Floating `limitShift()`), while preserving current behavior as default.
+2. Consider exposing `limitShift({ offset })`-style tuning.
+   - Fret currently models the default `limitShift()` behavior; it does not expose the optional
+     limiter offset configuration.
 3. Add an optional `reference_hidden` / `should_hide` output bit (Radix `hideWhenDetached`).
 4. Extend `ArrowLayout` to expose `center_offset` (and derive a `should_hide_arrow` helper).
 5. Expose Radix-like “available” metrics as structured outputs for recipes (instead of CSS vars).

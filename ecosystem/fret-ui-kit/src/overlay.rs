@@ -171,6 +171,7 @@ mod tests {
                     padding: Edges::all(Px(8.0)),
                 }),
                 collision: Default::default(),
+                sticky: Default::default(),
             },
         );
 

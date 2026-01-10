@@ -9,7 +9,7 @@ use fret_ui::overlay_placement::{
 };
 
 pub use fret_ui::overlay_placement::{
-    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side,
+    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side, StickyMode,
 };
 
 /// Build `AnchoredPanelOptions` for popper-like floating content.
@@ -34,6 +34,7 @@ pub fn anchored_panel_options_for_popper_content(
         },
         arrow,
         collision: Default::default(),
+        sticky: Default::default(),
     }
 }
 
@@ -50,6 +51,7 @@ pub struct PopperContentPlacement {
     pub collision_padding: Edges,
     pub collision_boundary: Option<Rect>,
     pub hide_when_detached: bool,
+    pub sticky: StickyMode,
 }
 
 impl PopperContentPlacement {
@@ -65,6 +67,7 @@ impl PopperContentPlacement {
             collision_padding: Edges::all(Px(0.0)),
             collision_boundary: None,
             hide_when_detached: false,
+            sticky: StickyMode::Partial,
         }
     }
 
@@ -91,6 +94,11 @@ impl PopperContentPlacement {
 
     pub fn with_hide_when_detached(mut self, hide_when_detached: bool) -> Self {
         self.hide_when_detached = hide_when_detached;
+        self
+    }
+
+    pub fn with_sticky(mut self, sticky: StickyMode) -> Self {
+        self.sticky = sticky;
         self
     }
 
@@ -124,6 +132,7 @@ impl PopperContentPlacement {
             padding: self.collision_padding,
             boundary: self.collision_boundary,
         };
+        options.sticky = self.sticky;
         options
     }
 }
@@ -347,6 +356,7 @@ mod tests {
                     padding: Edges::all(Px(8.0)),
                 }),
                 collision: Default::default(),
+                sticky: Default::default(),
             },
         );
 
@@ -382,6 +392,7 @@ mod tests {
                     padding: Edges::all(Px(8.0)),
                 }),
                 collision: Default::default(),
+                sticky: Default::default(),
             },
         );
 
@@ -418,6 +429,7 @@ mod tests {
                 offset: Offset::default(),
                 arrow: None,
                 collision: Default::default(),
+                sticky: Default::default(),
             },
         );
 

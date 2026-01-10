@@ -336,3 +336,50 @@ fn collision_boundary_intersects_outer_before_solving() {
     assert_eq!(layout.side, Side::Top);
     assert!(boundary.contains(layout.rect.origin));
 }
+
+#[test]
+fn sticky_always_clamps_into_outer() {
+    let outer = r(0.0, 0.0, 100.0, 100.0);
+    let anchor = r(150.0, 10.0, 10.0, 10.0);
+    let content = Size::new(Px(10.0), Px(10.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            sticky: StickyMode::Always,
+            ..Default::default()
+        },
+    );
+
+    // Clamped into `outer`: max_x = 100 - 10 = 90.
+    assert_eq!(layout.rect.origin.x, Px(90.0));
+}
+
+#[test]
+fn sticky_partial_limits_shift_to_keep_anchor_touching() {
+    let outer = r(0.0, 0.0, 100.0, 100.0);
+    let anchor = r(150.0, 10.0, 10.0, 10.0);
+    let content = Size::new(Px(10.0), Px(10.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            sticky: StickyMode::Partial,
+            ..Default::default()
+        },
+    );
+
+    // `limitShift()` keeps the panel from detaching from the anchor on the alignment axis, even if
+    // that overflows `outer`: min_x = anchor_x - panel_w = 150 - 10 = 140.
+    assert_eq!(layout.rect.origin.x, Px(140.0));
+}

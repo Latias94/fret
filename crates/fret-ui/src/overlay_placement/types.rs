@@ -22,6 +22,13 @@ pub enum LayoutDirection {
     Rtl,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StickyMode {
+    Partial,
+    #[default]
+    Always,
+}
+
 /// Offset configuration inspired by Floating UI's `offset()` middleware.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Offset {
@@ -54,6 +61,7 @@ pub struct AnchoredPanelOptions {
     pub offset: Offset,
     pub arrow: Option<ArrowOptions>,
     pub collision: CollisionOptions,
+    pub sticky: StickyMode,
 }
 
 /// Arrow positioning options inspired by Floating UI's `arrow()` middleware.

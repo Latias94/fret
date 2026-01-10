@@ -527,9 +527,10 @@ fn finalize_layout(
     align: Align,
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
-    let arrow = options
-        .arrow
-        .map(|arrow| apply_arrow_layout(outer, anchor, &mut rect, side, align, arrow));
+    rect = shift_rect_with_sticky(outer, anchor, rect, side, options.sticky);
+    let arrow = options.arrow.map(|arrow| {
+        apply_arrow_layout(outer, anchor, &mut rect, side, align, options.sticky, arrow)
+    });
 
     AnchoredPanelLayout {
         rect,
@@ -539,12 +540,65 @@ fn finalize_layout(
     }
 }
 
+fn shift_rect_with_sticky(
+    outer: Rect,
+    anchor: Rect,
+    rect: Rect,
+    side: Side,
+    sticky: StickyMode,
+) -> Rect {
+    let mut rect = clamp_rect_to_outer(outer, rect);
+    if sticky == StickyMode::Always {
+        return rect;
+    }
+
+    // Floating UI `limitShift()` (as used by Radix `sticky="partial"`) constrains the shift so the
+    // floating element does not detach from the reference on the alignment axis, even if that
+    // means overflowing the collision boundary.
+    let is_vertical = matches!(side, Side::Top | Side::Bottom);
+    let anchor_len = if is_vertical {
+        anchor.size.width.0.max(0.0)
+    } else {
+        anchor.size.height.0.max(0.0)
+    };
+    let rect_len = if is_vertical {
+        rect.size.width.0.max(0.0)
+    } else {
+        rect.size.height.0.max(0.0)
+    };
+    let anchor_start = if is_vertical {
+        anchor.origin.x.0
+    } else {
+        anchor.origin.y.0
+    };
+
+    let min = anchor_start - rect_len;
+    let max = anchor_start + anchor_len;
+
+    if is_vertical {
+        let mut x = rect.origin.x.0;
+        if !x.is_finite() {
+            x = 0.0;
+        }
+        rect.origin.x = Px(x.clamp(min, max));
+    } else {
+        let mut y = rect.origin.y.0;
+        if !y.is_finite() {
+            y = 0.0;
+        }
+        rect.origin.y = Px(y.clamp(min, max));
+    }
+
+    rect
+}
+
 fn apply_arrow_layout(
     outer: Rect,
     anchor: Rect,
     rect: &mut Rect,
     placement_side: Side,
     align: Align,
+    sticky: StickyMode,
     arrow: ArrowOptions,
 ) -> ArrowLayout {
     let is_vertical = matches!(placement_side, Side::Top | Side::Bottom);
@@ -611,7 +665,7 @@ fn apply_arrow_layout(
                 rect.origin.y = Px(rect.origin.y.0 + alignment_offset);
             }
 
-            *rect = clamp_rect_to_outer(outer, *rect);
+            *rect = shift_rect_with_sticky(outer, anchor, *rect, placement_side, sticky);
 
             // Recompute after shifting/clamping.
             let rect_start = if is_vertical {
