@@ -419,6 +419,7 @@ pub struct UiTree<H: UiHost> {
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
+    deferred_cleanup: Vec<Box<dyn Widget<H>>>,
 }
 
 impl<H: UiHost> Default for UiTree<H> {
@@ -454,6 +455,7 @@ impl<H: UiHost> Default for UiTree<H> {
             paint_cache: PaintCacheState::default(),
             semantics: None,
             semantics_requested: false,
+            deferred_cleanup: Vec::new(),
         }
     }
 }
@@ -528,6 +530,16 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn node_exists(&self, node: NodeId) -> bool {
+        self.nodes.contains_key(node)
+    }
+
+    pub(crate) fn flush_deferred_cleanup(&mut self, services: &mut dyn UiServices) {
+        for mut widget in self.deferred_cleanup.drain(..) {
+            widget.cleanup_resources(services);
+        }
     }
 
     pub fn set_debug_enabled(&mut self, enabled: bool) {
@@ -1067,7 +1079,15 @@ impl<H: UiHost> UiTree<H> {
         };
         let children = n.children.clone();
 
-        self.with_widget_mut(node, |widget, _tree| widget.cleanup_resources(services));
+        let widget = self.nodes.get_mut(node).and_then(|n| n.widget.take());
+        if let Some(mut widget) = widget {
+            widget.cleanup_resources(services);
+            if let Some(n) = self.nodes.get_mut(node) {
+                n.widget = Some(widget);
+            } else {
+                self.deferred_cleanup.push(widget);
+            }
+        }
 
         for child in children {
             self.cleanup_subtree_inner(services, child);
@@ -1079,15 +1099,18 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         f: impl FnOnce(&mut dyn Widget<H>, &mut UiTree<H>) -> R,
     ) -> R {
-        let widget = self
-            .nodes
-            .get_mut(node)
-            .and_then(|n| n.widget.take())
-            .expect("node widget must exist");
+        let Some(n) = self.nodes.get_mut(node) else {
+            panic!("node must exist: {node:?}");
+        };
+        let Some(widget) = n.widget.take() else {
+            panic!("node widget must exist: {node:?}");
+        };
         let mut widget = widget;
         let result = f(widget.as_mut(), self);
         if let Some(n) = self.nodes.get_mut(node) {
             n.widget = Some(widget);
+        } else {
+            self.deferred_cleanup.push(widget);
         }
         result
     }

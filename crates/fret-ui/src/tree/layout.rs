@@ -112,6 +112,8 @@ impl<H: UiHost> UiTree<H> {
             self.refresh_semantics_snapshot(app);
         }
 
+        self.flush_deferred_cleanup(services);
+
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
         }
