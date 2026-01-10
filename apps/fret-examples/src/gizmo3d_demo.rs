@@ -5,7 +5,7 @@ use fret_core::{
 };
 use fret_gizmo::{
     DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
-    GizmoPhase, Transform3d, ViewportRect,
+    GizmoPhase, GizmoTarget3d, GizmoTargetId, Transform3d, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -153,6 +153,7 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     gizmo: Gizmo,
+    target_id: GizmoTargetId,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
     input: GizmoInput,
@@ -167,6 +168,7 @@ impl Default for Gizmo3dDemoModel {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
+            target_id: GizmoTargetId(1),
             target: Transform3d {
                 translation: Vec3::new(0.0, 0.0, 0.0),
                 rotation: Quat::IDENTITY,
@@ -743,12 +745,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                 input.drag_started = false;
                 input.dragging = false;
                 input.cancel = true;
-                if let Some(update) = m.gizmo.update(
-                    view_projection,
-                    viewport,
-                    input,
-                    std::slice::from_ref(&m.target),
-                ) {
+                let targets = [GizmoTarget3d {
+                    id: m.target_id,
+                    transform: m.target,
+                }];
+                if let Some(update) =
+                    m.gizmo
+                        .update(view_projection, viewport, input, m.target_id, &targets)
+                {
                     if update.phase == GizmoPhase::Cancel {
                         if let Some(start) = m.drag_start_target.take() {
                             m.target = start;
@@ -920,12 +924,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     input.dragging = false;
                     input.cancel = true;
 
-                    if let Some(update) = m.gizmo.update(
-                        view_projection,
-                        viewport,
-                        input,
-                        std::slice::from_ref(&m.target),
-                    ) {
+                    let targets = [GizmoTarget3d {
+                        id: m.target_id,
+                        transform: m.target,
+                    }];
+                    if let Some(update) =
+                        m.gizmo
+                            .update(view_projection, viewport, input, m.target_id, &targets)
+                    {
                         if update.phase == GizmoPhase::Cancel {
                             if let Some(start) = m.drag_start_target.take() {
                                 m.target = start;
@@ -1158,19 +1164,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::ZERO,
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
             );
-            if let Some(update) = m.gizmo.update(
-                view_projection,
-                viewport,
-                m.input,
-                std::slice::from_ref(&m.target),
-            ) {
+            let targets = [GizmoTarget3d {
+                id: m.target_id,
+                transform: m.target,
+            }];
+            if let Some(update) =
+                m.gizmo
+                    .update(view_projection, viewport, m.input, m.target_id, &targets)
+            {
                 match update.phase {
                     GizmoPhase::Begin => {
                         m.drag_start_target = Some(m.target);
-                        m.target = update.updated_targets[0];
+                        m.target = update.updated_targets[0].transform;
                     }
                     GizmoPhase::Update => {
-                        m.target = update.updated_targets[0];
+                        m.target = update.updated_targets[0].transform;
                     }
                     GizmoPhase::Commit => {
                         if let Some(before) = m.drag_start_target.take() {
@@ -1183,6 +1191,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
                                     fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
                                 };
+                                let tool = format!("{tool}:{}", m.target_id.0);
                                 let rec = UndoRecord::new(ValueTx::new(before, after))
                                     .label("Transform")
                                     .coalesce_key(CoalesceKey::from(tool));
@@ -1234,11 +1243,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .demo
             .read(app, |_app, m| {
                 let view_proj = camera_view_projection(size, m.camera);
+                let targets = [GizmoTarget3d {
+                    id: m.target_id,
+                    transform: m.target,
+                }];
                 (
                     m.gizmo.draw(
                         view_proj,
                         ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                        m.target,
+                        m.target_id,
+                        &targets,
                     ),
                     m.gizmo.config.line_thickness_px,
                     view_proj,
