@@ -133,6 +133,7 @@ and transform origin:
       `ecosystem/fret-ui-shadcn/src/menubar.rs`
     - HoverCard: `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
     - Popover: `ecosystem/fret-ui-kit/src/primitives/popover.rs`
+    - Tooltip: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
 - Pass: Arrow “cannot center” signal.
   - Fret exposes `ArrowLayout.center_offset` (Floating `centerOffset`), which callers can use to
     implement Radix `shouldHideArrow` (`center_offset != 0`).

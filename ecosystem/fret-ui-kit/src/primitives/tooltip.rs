@@ -35,6 +35,7 @@ pub use crate::primitives::popper::{Align, ArrowOptions, LayoutDirection, Side};
 use crate::declarative::ModelWatchExt;
 use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIntentUpdate};
 use crate::headless::safe_hover;
+use crate::primitives::popper;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -58,6 +59,44 @@ pub fn apply_tooltip_trigger_a11y(
 /// Stable per-overlay root naming convention for tooltip overlays.
 pub fn tooltip_root_name(id: GlobalElementId) -> String {
     OverlayController::tooltip_root_name(id)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TooltipPopperVars {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub trigger_width: Px,
+    pub trigger_height: Px,
+}
+
+pub fn tooltip_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    popper::popper_desired_width(outer, anchor, min_width)
+}
+
+/// Compute Radix-like "tooltip popper vars" (`--radix-tooltip-*`) for recipes.
+///
+/// Upstream Radix re-namespaces these from `@radix-ui/react-popper`:
+/// - `--radix-tooltip-content-available-width`
+/// - `--radix-tooltip-content-available-height`
+/// - `--radix-tooltip-trigger-width`
+/// - `--radix-tooltip-trigger-height`
+///
+/// In Fret, we compute the same concepts as a structured return value so recipes can constrain
+/// their content without relying on CSS variables.
+pub fn tooltip_popper_vars(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> TooltipPopperVars {
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
+    TooltipPopperVars {
+        available_width: metrics.available_width,
+        available_height: metrics.available_height,
+        trigger_width: metrics.anchor_width,
+        trigger_height: metrics.anchor_height,
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -573,6 +612,8 @@ mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_core::Point as CorePoint;
+    use fret_core::Size;
     use fret_ui::element::{ElementKind, LayoutStyle, PressableProps, SemanticsProps};
 
     #[test]
@@ -665,5 +706,26 @@ mod tests {
             };
             assert_eq!(a11y.described_by_element, None);
         });
+    }
+
+    #[test]
+    fn tooltip_popper_vars_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            CorePoint::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            CorePoint::new(Px(10.0), Px(70.0)),
+            Size::new(Px(30.0), Px(10.0)),
+        );
+
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            popper::Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+        let vars = tooltip_popper_vars(outer, anchor, Px(0.0), placement);
+        assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
     }
 }
