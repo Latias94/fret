@@ -532,6 +532,23 @@ pub fn select_content_placement_popper(
     }
 }
 
+/// Compute a Radix-like default max height for select popper content.
+///
+/// Upstream Radix sets `max-height: var(--radix-select-content-available-height)` for shadcn
+/// recipes. In Fret, we compute the same concept using `popper_available_metrics(...)` so recipes
+/// can size the listbox without relying on CSS variables.
+pub fn select_popper_available_height(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> Px {
+    let desired_w = Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
+    let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
+    let layout = popper::popper_content_layout_sized(outer, anchor, probe_desired, placement);
+    popper::popper_available_metrics(outer, anchor, &layout, placement.direction).available_height
+}
+
 /// Radix-like select typeahead clear timeout (in milliseconds).
 ///
 /// Upstream Radix resets the typeahead search 1 second after it was last updated.
@@ -1552,6 +1569,30 @@ mod tests {
         assert!(select_open_key_suppresses_activate(KeyCode::Space));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowDown));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowUp));
+    }
+
+    #[test]
+    fn select_popper_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(70.0)),
+            Size::new(Px(30.0), Px(10.0)),
+        );
+
+        // Preferred bottom won't fit for a tall list; the solver should flip to top, and the
+        // available height should match the top space.
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+
+        let available = select_popper_available_height(outer, anchor, Px(0.0), placement);
+        assert!(available.0 > 60.0 && available.0 < 80.0);
     }
 
     #[test]
