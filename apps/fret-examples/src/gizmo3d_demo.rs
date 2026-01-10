@@ -14,9 +14,42 @@ use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewpo
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
+use fret_undo::{CoalesceKey, UndoHistory, UndoRecord};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TransformTx {
+    before: Transform3d,
+    after: Transform3d,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OrbitCamera {
+    target: Vec3,
+    yaw_radians: f32,
+    pitch_radians: f32,
+    distance: f32,
+    orbiting: bool,
+    panning: bool,
+    last_cursor_px: Vec2,
+}
+
+impl Default for OrbitCamera {
+    fn default() -> Self {
+        // Roughly matches the previous hard-coded view: eye = (1.6, 1.2, 2.2), target = (0,0,0).
+        Self {
+            target: Vec3::ZERO,
+            yaw_radians: 0.94,
+            pitch_radians: 0.42,
+            distance: 2.95,
+            orbiting: false,
+            panning: false,
+            last_cursor_px: Vec2::ZERO,
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -127,7 +160,9 @@ struct Gizmo3dDemoModel {
     gizmo: Gizmo,
     target: Transform3d,
     drag_start_target: Option<Transform3d>,
+    history: UndoHistory<TransformTx>,
     input: GizmoInput,
+    camera: OrbitCamera,
 }
 
 impl Default for Gizmo3dDemoModel {
@@ -144,6 +179,7 @@ impl Default for Gizmo3dDemoModel {
                 scale: Vec3::ONE,
             },
             drag_start_target: None,
+            history: UndoHistory::with_limit(128),
             input: GizmoInput {
                 cursor_px: Vec2::ZERO,
                 hovered: true,
@@ -152,6 +188,7 @@ impl Default for Gizmo3dDemoModel {
                 snap: false,
                 cancel: false,
             },
+            camera: OrbitCamera::default(),
         }
     }
 }
@@ -680,6 +717,72 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             cube_index_count: cube_indices.len().min(u32::MAX as usize) as u32,
         });
     }
+
+    fn handle_undo_redo_shortcut(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut Gizmo3dDemoWindowState,
+        undo: bool,
+    ) -> bool {
+        let mut did_apply = false;
+        let _ = state.demo.update(app, |m, _cx| {
+            let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+            if is_dragging {
+                let view_projection = camera_view_projection(m.viewport_px, m.camera);
+                let viewport = ViewportRect::new(
+                    Vec2::ZERO,
+                    Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
+                );
+                let mut input = m.input;
+                input.drag_started = false;
+                input.dragging = false;
+                input.cancel = true;
+                if let Some(update) = m.gizmo.update(
+                    view_projection,
+                    viewport,
+                    input,
+                    std::slice::from_ref(&m.target),
+                ) {
+                    if update.phase == GizmoPhase::Cancel {
+                        if let Some(start) = m.drag_start_target.take() {
+                            m.target = start;
+                        }
+                    }
+                }
+                m.drag_start_target = None;
+                m.input.cancel = false;
+                m.input.dragging = false;
+                m.input.drag_started = false;
+            }
+
+            let applied = if undo {
+                m.history
+                    .undo(|rec| {
+                        m.target = rec.tx.before;
+                        Ok::<TransformTx, ()>(rec.tx)
+                    })
+                    .ok()
+                    .flatten()
+                    .is_some()
+            } else {
+                m.history
+                    .redo(|rec| {
+                        m.target = rec.tx.after;
+                        Ok::<TransformTx, ()>(rec.tx)
+                    })
+                    .ok()
+                    .flatten()
+                    .is_some()
+            };
+            did_apply |= applied;
+        });
+
+        if did_apply {
+            app.request_redraw(window);
+        }
+        did_apply
+    }
 }
 
 fn cube_mesh() -> (Vec<Vertex>, Vec<u16>) {
@@ -712,13 +815,19 @@ fn cube_mesh() -> (Vec<Vertex>, Vec<u16>) {
     (verts, idx)
 }
 
-fn camera_view_projection(size: (u32, u32)) -> Mat4 {
+fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     let (w, h) = size;
     let aspect = (w.max(1) as f32) / (h.max(1) as f32);
-    let eye = Vec3::new(1.6, 1.2, 2.2);
-    let center = Vec3::new(0.0, 0.0, 0.0);
-    let up = Vec3::Y;
-    let view = Mat4::look_at_rh(eye, center, up);
+    let pitch = camera.pitch_radians.clamp(-1.55, 1.55);
+    let yaw = camera.yaw_radians;
+    let distance = camera.distance.max(0.05);
+    let dir = Vec3::new(
+        yaw.cos() * pitch.cos(),
+        pitch.sin(),
+        yaw.sin() * pitch.cos(),
+    );
+    let eye = camera.target + dir * distance;
+    let view = Mat4::look_at_rh(eye, camera.target, Vec3::Y);
     let proj = Mat4::perspective_rh(55.0_f32.to_radians(), aspect, 0.05, 50.0);
     proj * view
 }
@@ -748,6 +857,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
             Event::KeyDown {
+                key: fret_core::KeyCode::KeyZ,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let redo = modifiers.shift;
+                let _ = self.handle_undo_redo_shortcut(app, window, state, !redo);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyY,
+                modifiers,
+                repeat: false,
+            } if modifiers.ctrl || modifiers.meta => {
+                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
+            }
+            Event::KeyDown {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
@@ -758,7 +882,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         return;
                     }
 
-                    let view_projection = camera_view_projection(m.viewport_px);
+                    let view_projection = camera_view_projection(m.viewport_px, m.camera);
                     let viewport = ViewportRect::new(
                         Vec2::ZERO,
                         Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
@@ -871,6 +995,93 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 event.uv.0 * m.viewport_px.0 as f32,
                 event.uv.1 * m.viewport_px.1 as f32,
             );
+
+            match event.kind {
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Right,
+                    ..
+                } => {
+                    m.camera.orbiting = true;
+                    m.camera.panning = false;
+                    m.camera.last_cursor_px = cursor_px;
+                }
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Middle,
+                    ..
+                } => {
+                    m.camera.panning = true;
+                    m.camera.orbiting = false;
+                    m.camera.last_cursor_px = cursor_px;
+                }
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Right,
+                    ..
+                } => {
+                    m.camera.orbiting = false;
+                }
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Middle,
+                    ..
+                } => {
+                    m.camera.panning = false;
+                }
+                ViewportInputKind::PointerMove { buttons, .. } => {
+                    // Some platforms can produce inconsistent "buttons" state for move events.
+                    // Prefer to keep orbit/pan latched until an explicit PointerUp arrives, but
+                    // still allow the move buttons state to end navigation if it becomes false.
+                    if m.camera.orbiting && !buttons.right {
+                        m.camera.orbiting = false;
+                    }
+                    if m.camera.panning && !buttons.middle {
+                        m.camera.panning = false;
+                    }
+
+                    if m.camera.orbiting || m.camera.panning {
+                        let delta = cursor_px - m.camera.last_cursor_px;
+                        m.camera.last_cursor_px = cursor_px;
+
+                        if m.camera.orbiting {
+                            let orbit_sensitivity = 0.008;
+                            m.camera.yaw_radians -= delta.x * orbit_sensitivity;
+                            m.camera.pitch_radians = (m.camera.pitch_radians
+                                - delta.y * orbit_sensitivity)
+                                .clamp(-1.55, 1.55);
+                        }
+
+                        if m.camera.panning {
+                            let pan_sensitivity = 0.002;
+                            let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
+                            let yaw = m.camera.yaw_radians;
+                            let distance = m.camera.distance.max(0.05);
+
+                            let dir = Vec3::new(
+                                yaw.cos() * pitch.cos(),
+                                pitch.sin(),
+                                yaw.sin() * pitch.cos(),
+                            );
+                            let eye = m.camera.target + dir * distance;
+                            let forward = (m.camera.target - eye).normalize_or_zero();
+                            let right = forward.cross(Vec3::Y).normalize_or_zero();
+                            let up = right.cross(forward).normalize_or_zero();
+
+                            if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
+                                let pan = (-right * delta.x + up * delta.y)
+                                    * (distance * pan_sensitivity);
+                                m.camera.target += pan;
+                            }
+                        }
+                    }
+                }
+                ViewportInputKind::Wheel { delta, .. } => {
+                    // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
+                    let zoom_sensitivity = 0.0015;
+                    let scroll = delta.y.0;
+                    let factor = (-scroll * zoom_sensitivity).exp();
+                    m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                }
+                _ => {}
+            };
+
             let (drag_started, dragging) = match event.kind {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Left,
@@ -895,16 +1106,25 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
             };
 
+            let is_navigating = m.camera.orbiting || m.camera.panning;
+            let hovered = !is_navigating;
+
+            let (drag_started, dragging) = if is_navigating {
+                (false, false)
+            } else {
+                (drag_started, dragging)
+            };
+
             m.input = GizmoInput {
                 cursor_px,
-                hovered: true,
+                hovered,
                 drag_started,
                 dragging,
                 snap,
                 cancel: false,
             };
 
-            let view_projection = camera_view_projection(m.viewport_px);
+            let view_projection = camera_view_projection(m.viewport_px, m.camera);
             let viewport = ViewportRect::new(
                 Vec2::ZERO,
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
@@ -924,7 +1144,22 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.target = update.updated_targets[0];
                     }
                     GizmoPhase::Commit => {
-                        m.drag_start_target = None;
+                        if let Some(before) = m.drag_start_target.take() {
+                            let after = m.target;
+                            if before != after {
+                                let tool = match update.result {
+                                    fret_gizmo::GizmoResult::Translation { .. } => {
+                                        "gizmo.translate"
+                                    }
+                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                                };
+                                let rec = UndoRecord::new(TransformTx { before, after })
+                                    .label("Transform")
+                                    .coalesce_key(CoalesceKey::from(tool));
+                                m.history.record_or_coalesce(rec);
+                            }
+                        }
                     }
                     GizmoPhase::Cancel => {
                         if let Some(start) = m.drag_start_target.take() {
@@ -955,10 +1190,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
         let gpu = state.gpu.as_ref().expect("gpu ensured");
 
-        let view_proj = camera_view_projection(size);
-        let (draw, thickness_px) = state
+        let (draw, thickness_px, view_proj) = state
             .demo
             .read(app, |_app, m| {
+                let view_proj = camera_view_projection(size, m.camera);
                 (
                     m.gizmo.draw(
                         view_proj,
@@ -966,9 +1201,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.target,
                     ),
                     m.gizmo.config.line_thickness_px,
+                    view_proj,
                 )
             })
-            .unwrap_or_else(|_| (GizmoDrawList3d::default(), 6.0));
+            .unwrap_or_else(|_| (GizmoDrawList3d::default(), 6.0, Mat4::IDENTITY));
 
         let uniforms = Uniforms {
             view_proj: view_proj.to_cols_array_2d(),

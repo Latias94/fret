@@ -40,6 +40,7 @@ pub enum ElementKind {
     InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
     VisualTransform(VisualTransformProps),
+    RenderTransform(RenderTransformProps),
     Anchored(AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
@@ -380,6 +381,21 @@ pub struct VisualTransformProps {
     ///
     /// The runtime composes this around the element's bounds origin so that local transforms can be
     /// expressed in px relative to the element (e.g. rotate around `Point(Px(w/2), Px(h/2))`).
+    pub transform: fret_core::Transform2D,
+}
+
+/// Render transform wrapper for declarative element subtrees.
+///
+/// This applies `Widget::render_transform(...)` for the subtree rooted at this element:
+/// - Paint and hit-testing are both transformed.
+/// - Pointer event coordinates are mapped through the inverse transform (when invertible).
+/// - Layout bounds remain authoritative (this is not a layout transform).
+///
+/// This is useful for interactive translations (e.g. drag-to-dismiss surfaces) that must keep input
+/// aligned with the rendered output.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RenderTransformProps {
+    pub layout: LayoutStyle,
     pub transform: fret_core::Transform2D,
 }
 
