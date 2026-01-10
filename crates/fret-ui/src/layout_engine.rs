@@ -1,5 +1,6 @@
+use fret_core::time::Instant;
 use std::collections::{HashMap, HashSet};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};

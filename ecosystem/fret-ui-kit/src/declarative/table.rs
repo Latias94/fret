@@ -7,9 +7,9 @@ use fret_ui::element::{
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use fret_core::time::Instant;
 use std::cell::Cell;
 use std::sync::Arc;
-use std::time::Instant;
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;

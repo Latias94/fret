@@ -131,6 +131,12 @@ Cons / Costs:
 - Ecosystem direction: create `ecosystem/fret-gizmo` as a policy-heavy editor/tool crate (ADR 0027).
   - Core API should separate `update(...)` (interaction/math) from engine-facing draw outputs, similar in spirit
     to `repo-ref/transform-gizmo`, but without inheriting framework-specific types.
+- Renderer substrate: provide a minimal engine-pass overlay hook in `fret-render` so engines/runners can draw
+  depth-tested gizmo geometry inside the viewport render pass without adding new `SceneOp` primitives.
+  - `fret_render::viewport_overlay::{ViewportOverlay3dContext, ViewportOverlay3d, run_overlays}`
+- Runner/app boundary: expose an app-owned hook service so engine integrations can consistently “draw overlays
+  after scene” inside the viewport pass without wiring bespoke callbacks in every demo/runner.
+  - `fret_launch::{ViewportOverlay3dHooks, ViewportOverlay3dHooksService}`
 - Docking overlay hooks (`DockViewportOverlayHooks`) remain appropriate for 2D overlay affordances (HUD/labels),
   but the depth-tested 3D gizmo geometry should be drawn inside the engine-owned viewport render target.
 

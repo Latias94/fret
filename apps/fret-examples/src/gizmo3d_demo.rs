@@ -9,25 +9,29 @@ use fret_gizmo::{
     ViewportRect,
 };
 use fret_launch::{
-    EngineFrameUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
+    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
+use fret_render::viewport_overlay::ViewportOverlay3dContext;
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Instant;
 use wgpu::util::DeviceExt as _;
 
 #[derive(Debug, Clone, Copy)]
 struct FrameAnim {
-    start_target: Vec3,
-    start_distance: f32,
-    end_target: Vec3,
-    end_distance: f32,
-    t: f32,
+    target: Vec3,
+    distance: f32,
+    target_velocity: Vec3,
+    distance_velocity: f32,
+    smooth_time_s: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -334,7 +338,53 @@ fn targets_world_aabb(targets: &[GizmoTarget3d]) -> Option<(Vec3, Vec3)> {
     any.then_some((min, max))
 }
 
-fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
+fn smooth_damp_f32(
+    current: f32,
+    target: f32,
+    current_velocity: &mut f32,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> f32 {
+    let smooth_time_s = smooth_time_s.max(1e-4);
+    let omega = 2.0 / smooth_time_s;
+    let x = omega * dt_seconds;
+    let exp = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
+
+    let change = current - target;
+    let temp = (*current_velocity + omega * change) * dt_seconds;
+    *current_velocity = (*current_velocity - omega * temp) * exp;
+
+    let mut output = target + (change + temp) * exp;
+
+    // Prevent overshoot.
+    if (target - current > 0.0) == (output > target) {
+        output = target;
+        *current_velocity = 0.0;
+    }
+
+    output
+}
+
+fn smooth_damp_vec3(
+    current: Vec3,
+    target: Vec3,
+    current_velocity: &mut Vec3,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> Vec3 {
+    let mut vx = current_velocity.x;
+    let mut vy = current_velocity.y;
+    let mut vz = current_velocity.z;
+
+    let x = smooth_damp_f32(current.x, target.x, &mut vx, smooth_time_s, dt_seconds);
+    let y = smooth_damp_f32(current.y, target.y, &mut vy, smooth_time_s, dt_seconds);
+    let z = smooth_damp_f32(current.z, target.z, &mut vz, smooth_time_s, dt_seconds);
+
+    *current_velocity = Vec3::new(vx, vy, vz);
+    Vec3::new(x, y, z)
+}
+
+fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     if camera.orbiting || camera.panning {
         camera.frame_anim = None;
         return false;
@@ -344,22 +394,36 @@ fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
         return false;
     };
 
-    let step = 0.18;
-    anim.t = (anim.t + step).min(1.0);
-    let t = anim.t;
-    let eased = t * t * (3.0 - 2.0 * t); // smoothstep
+    let dt_seconds = dt_seconds.clamp(0.0, 0.1);
+    if dt_seconds <= 0.0 {
+        camera.frame_anim = Some(anim);
+        return true;
+    }
 
-    camera.target = anim.start_target.lerp(anim.end_target, eased);
-    camera.distance =
-        (anim.start_distance + (anim.end_distance - anim.start_distance) * eased).clamp(0.2, 25.0);
+    camera.target = smooth_damp_vec3(
+        camera.target,
+        anim.target,
+        &mut anim.target_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    );
+    camera.distance = smooth_damp_f32(
+        camera.distance,
+        anim.distance,
+        &mut anim.distance_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(0.2, 25.0);
 
-    let done = (1.0 - anim.t) <= 1e-6
-        || ((camera.target - anim.end_target).length() <= 1e-3
-            && (camera.distance - anim.end_distance).abs() <= 1e-3);
+    let done = (camera.target - anim.target).length() <= 1e-3
+        && (camera.distance - anim.distance).abs() <= 1e-3
+        && anim.target_velocity.length() <= 1e-3
+        && anim.distance_velocity.abs() <= 1e-3;
 
     if done {
-        camera.target = anim.end_target;
-        camera.distance = anim.end_distance.clamp(0.2, 25.0);
+        camera.target = anim.target;
+        camera.distance = anim.distance.clamp(0.2, 25.0);
         camera.frame_anim = None;
         false
     } else {
@@ -368,7 +432,13 @@ fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
     }
 }
 
-fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max: Vec3) {
+fn frame_aabb(
+    camera: &mut OrbitCamera,
+    viewport_px: (u32, u32),
+    min: Vec3,
+    max: Vec3,
+    smooth_time_s: f32,
+) {
     let center = (min + max) * 0.5;
     let radius = ((max - min).length() * 0.5).max(0.001);
 
@@ -383,11 +453,11 @@ fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max:
     let dist = (radius * margin) / (fov * 0.5).tan();
 
     camera.frame_anim = Some(FrameAnim {
-        start_target: camera.target,
-        start_distance: camera.distance,
-        end_target: center,
-        end_distance: dist.clamp(0.2, 25.0),
-        t: 0.0,
+        target: center,
+        distance: dist.clamp(0.2, 25.0),
+        target_velocity: Vec3::ZERO,
+        distance_velocity: 0.0,
+        smooth_time_s: smooth_time_s.max(1e-4),
     });
 }
 #[derive(Debug, Clone, Copy)]
@@ -419,6 +489,7 @@ struct Gizmo3dDemoModel {
     marquee: Option<MarqueeSelection>,
     input: GizmoInput,
     camera: OrbitCamera,
+    last_frame_instant: Option<Instant>,
 }
 
 impl Default for Gizmo3dDemoModel {
@@ -473,6 +544,7 @@ impl Default for Gizmo3dDemoModel {
                 cancel: false,
             },
             camera: OrbitCamera::default(),
+            last_frame_instant: None,
         }
     }
 }
@@ -480,6 +552,161 @@ impl Default for Gizmo3dDemoModel {
 #[derive(Default)]
 struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
+}
+
+#[derive(Clone)]
+struct OverlayDrawBuffer {
+    buffer: wgpu::Buffer,
+    vertex_count: u32,
+}
+
+#[derive(Clone)]
+struct Gizmo3dDemoViewportOverlayWindow {
+    bind_group: wgpu::BindGroup,
+    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
+    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
+    thick_line_depth_pipeline: wgpu::RenderPipeline,
+    thick_line_always_pipeline: wgpu::RenderPipeline,
+    solid_test: Option<OverlayDrawBuffer>,
+    solid_ghost: Option<OverlayDrawBuffer>,
+    solid_always: Option<OverlayDrawBuffer>,
+    line_test: Option<OverlayDrawBuffer>,
+    line_ghost: Option<OverlayDrawBuffer>,
+    line_always: Option<OverlayDrawBuffer>,
+}
+
+#[derive(Default)]
+struct Gizmo3dDemoViewportOverlayService {
+    per_viewport: HashMap<(AppWindowId, RenderTargetId), Gizmo3dDemoViewportOverlayWindow>,
+}
+
+impl Gizmo3dDemoViewportOverlayService {
+    fn ensure_entry(
+        &mut self,
+        window: AppWindowId,
+        target: RenderTargetId,
+        gpu: &Gizmo3dDemoGpu,
+    ) -> &mut Gizmo3dDemoViewportOverlayWindow {
+        self.per_viewport
+            .entry((window, target))
+            .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
+                bind_group: gpu.bind_group.clone(),
+                gizmo_solid_depth_pipeline: gpu.gizmo_solid_depth_pipeline.clone(),
+                gizmo_solid_always_pipeline: gpu.gizmo_solid_always_pipeline.clone(),
+                thick_line_depth_pipeline: gpu.thick_line_depth_pipeline.clone(),
+                thick_line_always_pipeline: gpu.thick_line_always_pipeline.clone(),
+                solid_test: None,
+                solid_ghost: None,
+                solid_always: None,
+                line_test: None,
+                line_ghost: None,
+                line_always: None,
+            })
+    }
+
+    fn update_buffers(
+        &mut self,
+        window: AppWindowId,
+        target: RenderTargetId,
+        gpu: &Gizmo3dDemoGpu,
+        solid_vb_test: Option<wgpu::Buffer>,
+        solid_count_test: u32,
+        solid_vb_ghost: Option<wgpu::Buffer>,
+        solid_count_ghost: u32,
+        solid_vb_always: Option<wgpu::Buffer>,
+        solid_count_always: u32,
+        line_vb_test: Option<wgpu::Buffer>,
+        line_count_test: u32,
+        line_vb_ghost: Option<wgpu::Buffer>,
+        line_count_ghost: u32,
+        line_vb_always: Option<wgpu::Buffer>,
+        line_count_always: u32,
+    ) {
+        let entry = self.ensure_entry(window, target, gpu);
+        entry.solid_test = solid_vb_test.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: solid_count_test,
+        });
+        entry.solid_ghost = solid_vb_ghost.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: solid_count_ghost,
+        });
+        entry.solid_always = solid_vb_always.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: solid_count_always,
+        });
+        entry.line_test = line_vb_test.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: line_count_test,
+        });
+        entry.line_ghost = line_vb_ghost.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: line_count_ghost,
+        });
+        entry.line_always = line_vb_always.map(|buffer| OverlayDrawBuffer {
+            buffer,
+            vertex_count: line_count_always,
+        });
+    }
+
+    fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
+        let Some(overlays) = self.per_viewport.get(&(window, target)) else {
+            return;
+        };
+
+        pass.set_bind_group(0, &overlays.bind_group, &[]);
+
+        if let Some(buf) = &overlays.solid_ghost {
+            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_ghost {
+            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+
+        if let Some(buf) = &overlays.solid_test {
+            pass.set_pipeline(&overlays.gizmo_solid_depth_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_test {
+            pass.set_pipeline(&overlays.thick_line_depth_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+
+        if let Some(buf) = &overlays.solid_always {
+            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+        if let Some(buf) = &overlays.line_always {
+            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, buf.buffer.slice(..));
+            pass.draw(0..buf.vertex_count, 0..1);
+        }
+    }
+}
+
+struct Gizmo3dDemoViewportOverlayHooks;
+
+impl ViewportOverlay3dHooks for Gizmo3dDemoViewportOverlayHooks {
+    fn record(
+        &self,
+        app: &mut App,
+        window: AppWindowId,
+        target: RenderTargetId,
+        pass: &mut wgpu::RenderPass<'_>,
+        _ctx: &ViewportOverlay3dContext,
+    ) {
+        let Some(svc) = app.global::<Gizmo3dDemoViewportOverlayService>() else {
+            return;
+        };
+        svc.record(window, target, pass);
+    }
 }
 
 struct Gizmo3dDemoWindowState {
@@ -1292,6 +1519,12 @@ fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
 impl WinitAppDriver for Gizmo3dDemoDriver {
     type WindowState = Gizmo3dDemoWindowState;
 
+    fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
+        app.with_global_mut(ViewportOverlay3dHooksService::default, |svc, _app| {
+            svc.set(Arc::new(Gizmo3dDemoViewportOverlayHooks));
+        });
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         let state = Self::build_ui(app, window);
         // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
@@ -1532,6 +1765,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 repeat: false,
             } => {
                 let frame_all = modifiers.shift;
+                let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
                 let _ = state.demo.update(app, |m, _cx| {
                     if m.input.dragging || m.gizmo.state.active.is_some() {
                         return;
@@ -1550,7 +1784,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     let Some((min, max)) = targets_world_aabb(&targets) else {
                         return;
                     };
-                    frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                    frame_aabb(&mut m.camera, m.viewport_px, min, max, smooth_time_s);
                 });
                 app.request_redraw(window);
             }
@@ -1942,7 +2176,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                             .filter(|t| m.selection.contains(&t.id))
                                             .collect();
                                         if let Some((min, max)) = targets_world_aabb(&targets) {
-                                            frame_aabb(&mut m.camera, m.viewport_px, min, max);
+                                            frame_aabb(
+                                                &mut m.camera,
+                                                m.viewport_px,
+                                                min,
+                                                max,
+                                                0.18,
+                                            );
                                         }
                                     }
                                 } else if matches!(op, SelectionOp::Replace) {
@@ -2071,13 +2311,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         _tick_id: fret_runtime::TickId,
         _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
-        let (_id, color_view, depth_view, size) =
+        let (target_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
         Self::ensure_gpu(state, context);
 
         let animating = state
             .demo
-            .update(app, |m, _cx| step_frame_anim(&mut m.camera))
+            .update(app, |m, _cx| {
+                let now = Instant::now();
+                let dt = m
+                    .last_frame_instant
+                    .and_then(|prev| now.checked_duration_since(prev))
+                    .unwrap_or_default();
+                m.last_frame_instant = Some(now);
+                step_frame_anim(&mut m.camera, dt.as_secs_f32())
+            })
             .unwrap_or(false);
         if animating {
             app.request_redraw(window);
@@ -2350,6 +2598,33 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 })
         });
 
+        let solid_count_test = solid_verts_test.len().min(u32::MAX as usize) as u32;
+        let solid_count_ghost = solid_verts_ghost.len().min(u32::MAX as usize) as u32;
+        let solid_count_always = solid_verts_always.len().min(u32::MAX as usize) as u32;
+        let line_count_test = line_verts_test.len().min(u32::MAX as usize) as u32;
+        let line_count_ghost = line_verts_ghost.len().min(u32::MAX as usize) as u32;
+        let line_count_always = line_verts_always.len().min(u32::MAX as usize) as u32;
+
+        app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
+            svc.update_buffers(
+                window,
+                target_id,
+                gpu,
+                solid_vb_test.clone(),
+                solid_count_test,
+                solid_vb_ghost.clone(),
+                solid_count_ghost,
+                solid_vb_always.clone(),
+                solid_count_always,
+                line_vb_test.clone(),
+                line_count_test,
+                line_vb_ghost.clone(),
+                line_count_ghost,
+                line_vb_always.clone(),
+                line_count_always,
+            );
+        });
+
         let clear = wgpu::Color {
             r: 0.08,
             g: 0.08,
@@ -2388,64 +2663,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 multiview_mask: None,
             });
 
-            pass.set_bind_group(0, &gpu.bind_group, &[]);
-
             if let Some(cube_vb) = &cube_vb {
+                pass.set_bind_group(0, &gpu.bind_group, &[]);
                 pass.set_pipeline(&gpu.tri_pipeline);
                 pass.set_vertex_buffer(0, cube_vb.slice(..));
                 pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
             }
 
-            if let Some(solid_vb_ghost) = &solid_vb_ghost {
-                pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_ghost.slice(..));
-                pass.draw(
-                    0..(solid_verts_ghost.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_ghost) = &line_vb_ghost {
-                pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                pass.set_vertex_buffer(0, line_vb_ghost.slice(..));
-                pass.draw(
-                    0..(line_verts_ghost.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
+            let ctx = ViewportOverlay3dContext {
+                view_proj,
+                viewport_px: size,
+            };
 
-            if let Some(solid_vb_test) = &solid_vb_test {
-                pass.set_pipeline(&gpu.gizmo_solid_depth_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_test.slice(..));
-                pass.draw(
-                    0..(solid_verts_test.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_test) = &line_vb_test {
-                pass.set_pipeline(&gpu.thick_line_depth_pipeline);
-                pass.set_vertex_buffer(0, line_vb_test.slice(..));
-                pass.draw(
-                    0..(line_verts_test.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-
-            if let Some(solid_vb_always) = &solid_vb_always {
-                pass.set_pipeline(&gpu.gizmo_solid_always_pipeline);
-                pass.set_vertex_buffer(0, solid_vb_always.slice(..));
-                pass.draw(
-                    0..(solid_verts_always.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
-            if let Some(line_vb_always) = &line_vb_always {
-                pass.set_pipeline(&gpu.thick_line_always_pipeline);
-                pass.set_vertex_buffer(0, line_vb_always.slice(..));
-                pass.draw(
-                    0..(line_verts_always.len().min(u32::MAX as usize) as u32),
-                    0..1,
-                );
-            }
+            record_viewport_overlay_3d(app, window, target_id, &mut pass, &ctx);
 
             let _ = _frame_id;
         }

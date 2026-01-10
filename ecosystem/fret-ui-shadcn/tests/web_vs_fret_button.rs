@@ -329,8 +329,18 @@ fn extract_web_button_style(golden: &WebGolden) -> WebButtonStyle {
         .or_else(|| golden.themes.get("dark"))
         .expect("missing theme in web golden");
 
-    let button = find_first(&theme.root, &|n| n.tag == "button")
-        .expect("expected at least one <button> node");
+    fn is_button_node(node: &WebNode) -> bool {
+        if node.tag == "button" {
+            return true;
+        }
+
+        node.attrs
+            .get("role")
+            .is_some_and(|value| value == "button")
+    }
+
+    let button =
+        find_first(&theme.root, &is_button_node).expect("expected at least one <button> node");
 
     WebButtonStyle {
         rect: button.rect.clone(),

@@ -4,8 +4,8 @@ use fret_core::{Point, Px, Rect, Size};
 
 use super::*;
 use crate::spec::{
-    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-    SeriesSpec,
+    AxisKind, AxisSpec, ChartSpec, DataZoomYSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
+    SeriesKind, SeriesSpec,
 };
 
 fn basic_spec() -> ChartSpec {
@@ -52,6 +52,7 @@ fn basic_spec() -> ChartSpec {
             },
         ],
         data_zoom_x: vec![],
+        data_zoom_y: vec![],
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
@@ -65,9 +66,65 @@ fn basic_spec() -> ChartSpec {
             },
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
             area_baseline: None,
         }],
     }
+}
+
+#[test]
+fn data_zoom_y_rejects_non_y_axis_binding() {
+    let mut spec = basic_spec();
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: crate::ids::AxisId::new(1),
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn data_zoom_y_rejects_multiple_specs_for_same_axis() {
+    let mut spec = basic_spec();
+    let y_axis = crate::ids::AxisId::new(2);
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: None,
+        max_value_span: None,
+    });
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(2),
+        axis: y_axis,
+        min_value_span: None,
+        max_value_span: None,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn data_zoom_y_is_accepted_for_y_axes() {
+    let mut spec = basic_spec();
+    let y_axis = crate::ids::AxisId::new(2);
+    spec.data_zoom_y.push(DataZoomYSpec {
+        id: crate::ids::DataZoomId::new(1),
+        axis: y_axis,
+        min_value_span: Some(10.0),
+        max_value_span: Some(100.0),
+    });
+
+    let model = ChartModel::from_spec(spec).unwrap();
+    assert_eq!(
+        model.data_zoom_y_by_axis.get(&y_axis).copied(),
+        Some(crate::ids::DataZoomId::new(1))
+    );
 }
 
 #[test]
@@ -80,11 +137,21 @@ fn band_requires_y2_col() {
 }
 
 #[test]
-fn bar_requires_category_x_axis() {
+fn bar_requires_exactly_one_category_axis() {
     let mut spec = basic_spec();
     spec.series[0].kind = SeriesKind::Bar;
     let err = ChartModel::from_spec(spec).unwrap_err();
     assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
+fn bar_allows_category_y_axis_for_horizontal_bars() {
+    let mut spec = basic_spec();
+    spec.series[0].kind = SeriesKind::Bar;
+    spec.axes[1].scale = crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+        categories: vec!["A".into(), "B".into()],
+    });
+    ChartModel::from_spec(spec).unwrap();
 }
 
 #[test]
@@ -153,6 +220,9 @@ fn replace_merge_can_replace_series_only() {
                     },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     visible: Some(true),
                     area_baseline: None,
                 })],
@@ -193,6 +263,9 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                     },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     visible: Some(false),
                     area_baseline: None,
                 })],
@@ -334,6 +407,9 @@ fn merge_series_visibility_updates_visual_without_structure() {
                     },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
                     visible: Some(false),
                     area_baseline: None,
                 })],

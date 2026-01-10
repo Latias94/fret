@@ -18,6 +18,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) clips: &'a mut Vec<ClipRRectUniform>,
     pub(super) uniforms: &'a mut Vec<ViewportUniform>,
     pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
+    pub(super) effect_markers: &'a mut Vec<EffectMarker>,
 
     pub(super) scissor_stack: Vec<ScissorRect>,
     pub(super) current_scissor: ScissorRect,
@@ -35,6 +36,8 @@ pub(super) struct EncodeState<'a> {
 }
 
 impl<'a> EncodeState<'a> {
+    const MAX_CLIP_STACK_DEPTH: u32 = 64;
+
     pub(super) fn new(
         encoding: &'a mut SceneEncoding,
         scale_factor: f32,
@@ -48,6 +51,7 @@ impl<'a> EncodeState<'a> {
         let clips = &mut encoding.clips;
         let uniforms = &mut encoding.uniforms;
         let ordered_draws = &mut encoding.ordered_draws;
+        let effect_markers = &mut encoding.effect_markers;
 
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         let mut state = Self {
@@ -61,6 +65,7 @@ impl<'a> EncodeState<'a> {
             clips,
             uniforms,
             ordered_draws,
+            effect_markers,
             scissor_stack: vec![current_scissor],
             current_scissor,
             clip_pop_stack: Vec::new(),
@@ -95,9 +100,27 @@ impl<'a> EncodeState<'a> {
         self.uniforms.push(ViewportUniform {
             viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
             clip_head,
-            clip_count,
+            clip_count: clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
             output_is_srgb: self.output_is_srgb,
             _pad: [0; 3],
+            mask_viewport_origin: [0.0, 0.0],
+            mask_viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+        });
+        uniform_index
+    }
+
+    pub(super) fn push_effect_uniform_snapshot(&mut self, mask_viewport: ScissorRect) -> u32 {
+        let uniform_index = self.uniforms.len() as u32;
+        let w = mask_viewport.w.max(1) as f32;
+        let h = mask_viewport.h.max(1) as f32;
+        self.uniforms.push(ViewportUniform {
+            viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+            clip_head: self.clip_head,
+            clip_count: self.clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
+            output_is_srgb: self.output_is_srgb,
+            _pad: [0; 3],
+            mask_viewport_origin: [mask_viewport.x as f32, mask_viewport.y as f32],
+            mask_viewport_size: [w, h],
         });
         uniform_index
     }

@@ -11,9 +11,10 @@ impl Renderer {
             return;
         }
 
+        let quad_shader_source = quad_shader_source();
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret quad shader"),
-            source: wgpu::ShaderSource::Wgsl(QUAD_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(quad_shader_source.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

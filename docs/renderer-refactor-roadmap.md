@@ -18,6 +18,7 @@ Primary ADR:
 - Extensibility ADR: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 - Streaming update model ADR: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
 - Capture options ADR: `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
+- Effect clip masks ADR: `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md`
 
 ## Goals
 
@@ -65,9 +66,12 @@ Deliverables:
 - Add infrastructure for fullscreen passes (triangle/quad) that:
   - bind a source texture + sampler + uniform block,
   - write to a destination color attachment.
+- Implementation note:
+  - Keep a shared fullscreen pass runner utility that owns render-pass boilerplate (to avoid N copies as effects grow).
+- Add support for region-scissored fullscreen passes (required for bounded glass/backdrop effects).
 - Add internal utilities for common postprocess patterns:
   - ping-pong between A/B intermediates
-  - downsample chain helpers (half/quarter res)
+  - downsample chain helpers (half/quarter res; chain sizing metadata in `RenderPlan`)
 
 Acceptance criteria:
 
@@ -194,16 +198,54 @@ accepted as ADRs, but they help keep early implementation aligned with long-term
 
 This section is intentionally lightweight and should be updated as work lands.
 
-- **ADRs drafted (Proposed):**
+- **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+  - `docs/adr/0135-renderer-effect-clip-masks-and-soft-clipping-v1.md` (v1 clip mask substrate)
 - **Implementation status (as of now):**
-  - M0: Not started (design locked by ADRs, pending code work).
-  - M1: Not started.
-  - M2: Not started.
-  - M3: Not started.
+  - M0: In progress (landed in `refactor/renderer-v3`):
+    - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
+    - Path MSAA multi-pass is represented as explicit plan passes (no ad-hoc drop/re-begin main pass).
+  - M1: In progress (landed in `refactor/renderer-v3`):
+    - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
+    - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
+  - M2: In progress:
+    - Debug-gated "pixelate" is compiled into the plan (downsample chain -> upscale chain -> blit).
+    - Debug-gated separable blur exists (downsample -> blur H/V -> upscale -> blit).
+    - MVP public semantics: `SceneOp::PushEffect/PopEffect` are encoded as explicit markers and compiled into
+      `RenderPlan` as bounded, scissored `Backdrop` + `FilterContent` blur (ordering preserved).
+    - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
+    - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
+    - GPU conformance tests cover scissored pixelate for both effect modes.
+    - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
+    - GPU conformance tests cover rounded-clip pixelate for both effect modes.
+    - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by scissored effect writeback passes.
+    - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter of the effect viewport rect) with deterministic sampling (origin-aware mapping).
+    - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
+      forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
+    - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
+    - Next: consider region/tiled masks to reduce peak bytes, and lock down any future clip-path expansion strategy (ADR-gated).
+    - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
+  - M3: In progress:
+    - Intermediate pool has a budgeted eviction path and perf snapshot counters (alloc/reuse/release/evict + free bytes).
+    - `RenderPlan` can release intermediate targets early (`ReleaseTarget`) to reduce peak resident bytes.
+    - Debug blur postprocess selects a cheaper downsample tier when `intermediate_budget_bytes` would be exceeded.
+    - Region-scissored blur preserves outside pixels with GPU conformance tests (debug scissor + effect-bounds scissor).
   - M4: Deferred.
+
+Recent landing points (branch-local):
+
+- `f47f0ec`: minimal `RenderPlan` skeleton.
+- `045a69c`: Path MSAA is an explicit `RenderPlan` pass.
+- `f32a62f`: Offscreen target + fullscreen identity blit pass + GPU equality test.
+- `27891de`: Intermediate texture pooling for offscreen targets (acquire/release per frame).
+- `865d15d`: Debug-gated pixelate postprocess (downsample/upscale chain + blit).
+- `8ba9319`: Debug-gated separable blur postprocess (downsample -> blur H/V -> upscale -> blit).
+- `523d913`: Region-scissored fullscreen passes (required for bounded backdrop/glass).
+- `b64d623`: Pixelate effect step in `EffectChain` (+ conformance tests).
+- `2a2b962`: `effects_demo` for visual smoke checks.
+- `d4d0d7b`, `7dee14d`: ADR 0135 + mask semantics/budget clarifications.
 
 ## Work Breakdown (Actionable Checklist)
 
@@ -253,6 +295,26 @@ Exit criteria:
 Exit criteria:
 
 - At least one effect group (`FilterContent` or `Backdrop`) works end-to-end with correct ordering/clip/transform (ADR 0119).
+
+### M2.5: Mask-aware effects (rounded clip integration)
+
+Deliverables:
+
+- Encode the effective clip stack (including rounded clips) at effect boundaries during scene encoding.
+- Add a renderer-internal clip mask substrate:
+  - scissor for rectangular intersection,
+  - optional alpha mask for rounded clips (coverage-based).
+- Ensure effect passes can consume clip masks:
+  - `Backdrop` steps write only within the clip mask (and preserve outside pixels),
+  - `FilterContent` composite respects the clip mask (bounds remain computation-only).
+- Add GPU conformance scenes that validate:
+  - rounded “overflow-hidden” glass panel does not bleed into corners,
+  - blur/pixelate do not leak outside the rounded clip under transforms,
+  - behavior is deterministic under budget degradation (ADR 0120).
+
+Exit criteria:
+
+- A rounded clip + effect chain (Backdrop and FilterContent) is visually correct and covered by GPU conformance tests (ADR 0063 / ADR 0135).
 
 ### M3: Budgets + observability hardening
 

@@ -1,6 +1,6 @@
 # ADR 0119: Effect Layers and Backdrop Filters (Scene Semantics v1)
 
-Status: Proposed
+Status: Accepted (MVP implemented)
 
 ## Context
 
@@ -160,6 +160,8 @@ Budgets themselves (scope, accounting, and deterministic degradation order) are 
 - Backdrop read-after-write safety: exact approach is renderer-defined (copy vs dual-target vs ping-pong).
 - Whether to add an explicit “effect blend mode” beyond premul over (recommendation: defer; keep premul over v1).
 - Whether `bounds` should be optional for `FilterContent` (recommendation: keep required to enforce predictability).
+- Rounded/soft clipping interaction: effect passes must eventually respect `PushClipRRect` (ADR 0063) via a renderer
+  clip-mask substrate (ADR 0135).
 
 ## Non-goals (v1)
 
@@ -178,8 +180,25 @@ Implementations are considered conformant when:
 - Nested clips/transforms inside and around effect groups render correctly in a harness scene.
 - When budgets are exceeded (ADR 0120), degradation behavior is deterministic and layout-invariant.
 
+## Implementation Notes (Renderer v3 / RenderPlan)
+
+Current v3 implementation is intentionally minimal and focuses on proving the substrate + ordering contract:
+
+- `SceneOp::PushEffect/PopEffect` are encoded as explicit markers (sequence points) and compiled into `RenderPlan`.
+- MVP supported effect steps:
+  - `EffectMode::Backdrop` + `EffectStep::GaussianBlur { .. }` (bounded by `bounds` and current clip/scissor).
+  - `EffectMode::FilterContent` + `EffectStep::GaussianBlur { .. }` (scissored in-place filtering, then premul over composite).
+  - `EffectStep::ColorAdjust { saturation, brightness, contrast }` (scissored, in-place via scratch target).
+  - `EffectStep::Pixelate { scale }` (bounded + scissored, implemented via nearest downsample -> upscale passes).
+- Not yet implemented (treated as a no-op by the renderer):
+  - `Dither` as an effect step (debug-only postprocess exists separately).
+- Blur kernel is currently a fixed separable 9-tap kernel (approx radius 4) and `radius_px` is treated as a hint for
+  future quality selection (downsample tier / kernel variants).
+
 ## References
 
 - ADR 0118 (RenderPlan substrate): `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - Bevy postprocess patterns (ping-pong view targets): `repo-ref/bevy`
 - Zed/GPUI shader patterns (reference only): `repo-ref/zed/crates/gpui`
+- React Bits "glass" components (visual inspiration only; do not port): `repo-ref/react-bits`
+- Apple / Fluent glass-style materials (visual references; semantics must remain portable)

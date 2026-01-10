@@ -50,6 +50,29 @@ Contract:
 - `trigger=axis` produces a value per visible series when sampling is possible, even if no curve
   is within a hit threshold.
 
+`HoverHit.y_value` is the **rendered** Y value in data space for the hovered series. For stacked series,
+this means `y_value` includes the stack base (the same value used for coordinate mapping), so the tooltip
+and hit testing stay consistent with what is drawn.
+
+#### v1 tooltip defaults (ECharts-aligned)
+
+To match common “charting app” expectations (and avoid surprising “nothing happens” states), v1 defaults are:
+
+- `AxisPointerSpec.trigger = Axis`
+- `AxisPointerSpec.snap = false` (opt-in)
+
+Semantics:
+
+- `trigger=Axis` always shows the axis pointer/crosshair when inside the plot rect.
+- With `snap=true`, the axis pointer may snap to the nearest “meaningful” item when a close-enough hit exists:
+  - line-family: nearest segment, with sampling at the snapped X.
+  - scatter: nearest point (no interpolation).
+- When no hit exists, the pointer uses the raw cursor X for axis sampling (line-family interpolation allowed).
+- Axis-trigger tooltips are stable and complete by default:
+  - The first line is the trigger axis label/value.
+  - Then one line per visible series in `series_order`.
+  - If a series cannot be sampled at the current axis value (missing/NaN/out of range), its value is `-`.
+
 ### 3) Input -> action mapping is explicit and portable
 
 The UI adapter maps platform input (pointer, wheel, keys) into headless actions.
@@ -91,8 +114,8 @@ Headless actions:
 - `Action::PanDataWindowYFromBase { axis, base, delta_px, viewport_span_px }`
 - `Action::ZoomDataWindowXFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
 - `Action::ZoomDataWindowYFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
-- `Action::SetDataWindowXFromZoom { axis, window }`
-- `Action::SetDataWindowYFromZoom { axis, window }`
+- `Action::SetDataWindowXFromZoom { axis, base, window, anchor }`
+- `Action::SetDataWindowYFromZoom { axis, base, window, anchor }`
 
 Semantics:
 

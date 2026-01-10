@@ -1,7 +1,32 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::ids::{DatasetId, Revision, StringId};
+
+mod table_view;
+
+pub use table_view::*;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DataTableAppendError {
+    ColumnCountMismatch { expected: usize, actual: usize },
+    NonF64Column { column: usize },
+}
+
+impl core::fmt::Display for DataTableAppendError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::ColumnCountMismatch { expected, actual } => write!(
+                f,
+                "column count mismatch: expected {expected} values, got {actual}"
+            ),
+            Self::NonF64Column { column } => write!(f, "column {column} is not an f64 column"),
+        }
+    }
+}
+
+impl std::error::Error for DataTableAppendError {}
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -58,6 +83,32 @@ impl DataTable {
         self.revision.bump();
     }
 
+    /// Appends a single row to a table that contains only f64 columns.
+    ///
+    /// This is the recommended mutation API for streaming/real-time datasets because it:
+    /// - keeps `row_count` consistent,
+    /// - bumps `revision` so dependent caches can invalidate,
+    /// - enforces a single, deterministic append path.
+    pub fn append_row_f64(&mut self, row: &[f64]) -> Result<(), DataTableAppendError> {
+        if row.len() != self.columns.len() {
+            return Err(DataTableAppendError::ColumnCountMismatch {
+                expected: self.columns.len(),
+                actual: row.len(),
+            });
+        }
+
+        for (i, col) in self.columns.iter_mut().enumerate() {
+            let Column::F64(v) = col else {
+                return Err(DataTableAppendError::NonF64Column { column: i });
+            };
+            v.push(row[i]);
+        }
+
+        self.row_count = self.columns.iter().map(|c| c.len()).min().unwrap_or(0);
+        self.revision.bump();
+        Ok(())
+    }
+
     pub fn column_f64(&self, index: usize) -> Option<&[f64]> {
         self.columns
             .get(index)?
@@ -66,16 +117,100 @@ impl DataTable {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::transform::RowSelection;
+
+    use super::*;
+
+    #[test]
+    fn append_row_f64_bumps_revision_and_row_count() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::F64(vec![2.0]));
+
+        let rev0 = table.revision;
+        table.append_row_f64(&[3.0, 4.0]).unwrap();
+
+        assert!(table.revision.0 > rev0.0);
+        assert_eq!(table.row_count, 2);
+        assert_eq!(table.column_f64(0).unwrap(), &[1.0, 3.0]);
+        assert_eq!(table.column_f64(1).unwrap(), &[2.0, 4.0]);
+    }
+
+    #[test]
+    fn append_row_f64_rejects_wrong_width() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        let err = table.append_row_f64(&[1.0, 2.0]).unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableAppendError::ColumnCountMismatch { .. }
+        ));
+    }
+
+    #[test]
+    fn append_row_f64_rejects_non_f64_columns() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0]));
+        table.push_column(Column::Bool(vec![true]));
+
+        let err = table.append_row_f64(&[2.0, 3.0]).unwrap_err();
+        assert!(matches!(
+            err,
+            DataTableAppendError::NonF64Column { column: 1 }
+        ));
+    }
+
+    #[test]
+    fn dataset_store_insert_and_lookup() {
+        let mut store = DatasetStore::default();
+        let dataset_id = DatasetId::new(1);
+
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![1.0, 2.0, 3.0]));
+
+        store.insert(dataset_id, table);
+
+        let got = store
+            .dataset(dataset_id)
+            .expect("dataset should be present");
+        assert_eq!(got.row_count, 3);
+        assert_eq!(got.column_f64(0).unwrap(), &[1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn data_table_view_maps_indices_to_raw() {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0, 40.0]));
+
+        let sel = RowSelection::Indices(vec![1u32, 3u32].into());
+        let view = DataTableView::new(&table, sel);
+
+        assert_eq!(view.raw_len(), 4);
+        assert_eq!(view.len(), 2);
+        assert_eq!(view.get_raw_index(0), Some(1));
+        assert_eq!(view.get_raw_index(1), Some(3));
+        assert_eq!(view.column_f64(0).unwrap(), &[10.0, 20.0, 30.0, 40.0]);
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DatasetStore {
-    pub datasets: Vec<(DatasetId, DataTable)>,
+    pub datasets: BTreeMap<DatasetId, DataTable>,
 }
 
 impl DatasetStore {
+    pub fn dataset(&self, id: DatasetId) -> Option<&DataTable> {
+        self.datasets.get(&id)
+    }
+
     pub fn dataset_mut(&mut self, id: DatasetId) -> Option<&mut DataTable> {
-        self.datasets
-            .iter_mut()
-            .find_map(|(k, v)| (*k == id).then_some(v))
+        self.datasets.get_mut(&id)
+    }
+
+    pub fn insert(&mut self, id: DatasetId, table: DataTable) -> Option<DataTable> {
+        self.datasets.insert(id, table)
     }
 }

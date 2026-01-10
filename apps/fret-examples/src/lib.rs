@@ -29,12 +29,15 @@ pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
 pub mod chart_demo;
+pub mod chart_multi_axis_demo;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
 pub mod drag_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod effects_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
@@ -44,6 +47,7 @@ pub mod grouped_bars_demo;
 pub mod heatmap_demo;
 pub mod histogram2d_demo;
 pub mod histogram_demo;
+pub mod horizontal_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod image_upload_demo;
 #[cfg(not(target_arch = "wasm32"))]

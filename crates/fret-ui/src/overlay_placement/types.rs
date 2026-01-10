@@ -22,6 +22,13 @@ pub enum LayoutDirection {
     Rtl,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StickyMode {
+    Partial,
+    #[default]
+    Always,
+}
+
 /// Offset configuration inspired by Floating UI's `offset()` middleware.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Offset {
@@ -36,11 +43,25 @@ pub struct Offset {
     pub alignment_axis: Option<Px>,
 }
 
+/// Collision/overflow options inspired by Floating UI's `detectOverflow` configuration.
+///
+/// This is applied to the `outer` boundary before running the placement solver:
+///
+/// 1) If `boundary` is set, intersect `outer` with it (clipping ancestor style).
+/// 2) Inset by `padding` (collision padding).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CollisionOptions {
+    pub padding: Edges,
+    pub boundary: Option<Rect>,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct AnchoredPanelOptions {
     pub direction: LayoutDirection,
     pub offset: Offset,
     pub arrow: Option<ArrowOptions>,
+    pub collision: CollisionOptions,
+    pub sticky: StickyMode,
 }
 
 /// Arrow positioning options inspired by Floating UI's `arrow()` middleware.
@@ -61,6 +82,11 @@ pub struct ArrowLayout {
     /// The alignment-axis translation applied to the panel to keep the arrow pointing at the anchor
     /// when the anchor is too small (Radix/Floating behavior).
     pub alignment_offset: Px,
+    /// Signed center delta between the ideal arrow center point and the clamped offset.
+    ///
+    /// This matches Floating UI's `centerOffset` and is used by Radix to determine whether the arrow
+    /// should be hidden (`shouldHideArrow`).
+    pub center_offset: Px,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

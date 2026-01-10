@@ -138,6 +138,87 @@ impl Renderer {
         self.path_msaa_samples = pow2_floor.max(1);
     }
 
+    pub fn debug_offscreen_blit_enabled(&self) -> bool {
+        self.debug_offscreen_blit_enabled
+    }
+
+    pub fn set_debug_offscreen_blit_enabled(&mut self, enabled: bool) {
+        self.debug_offscreen_blit_enabled = enabled;
+    }
+
+    pub fn debug_pixelate_scale(&self) -> u32 {
+        self.debug_pixelate_scale
+    }
+
+    pub fn set_debug_pixelate_scale(&mut self, scale: u32) {
+        // 0 disables the debug pixelate path; otherwise clamp to a sane upper bound.
+        self.debug_pixelate_scale = scale.min(128);
+    }
+
+    pub fn debug_blur_radius(&self) -> u32 {
+        self.debug_blur_radius
+    }
+
+    pub fn set_debug_blur_radius(&mut self, radius: u32) {
+        // 0 disables the debug blur path; otherwise clamp to a sane upper bound.
+        self.debug_blur_radius = radius.min(64);
+    }
+
+    pub fn debug_blur_scissor(&self) -> Option<(u32, u32, u32, u32)> {
+        self.debug_blur_scissor.map(|s| (s.x, s.y, s.w, s.h))
+    }
+
+    pub fn set_debug_blur_scissor(&mut self, scissor: Option<(u32, u32, u32, u32)>) {
+        self.debug_blur_scissor = scissor.and_then(|(x, y, w, h)| {
+            if w == 0 || h == 0 {
+                return None;
+            }
+            Some(ScissorRect { x, y, w, h })
+        });
+    }
+
+    pub fn intermediate_budget_bytes(&self) -> u64 {
+        self.intermediate_budget_bytes
+    }
+
+    pub fn set_intermediate_budget_bytes(&mut self, bytes: u64) {
+        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
+        self.intermediate_budget_bytes = bytes.max(1024);
+        self.intermediate_pool
+            .enforce_budget(self.intermediate_budget_bytes);
+    }
+
+    pub fn set_intermediate_perf_enabled(&mut self, enabled: bool) {
+        self.intermediate_perf_enabled = enabled;
+        self.intermediate_perf = IntermediatePerfStats::default();
+        let _ = self.intermediate_pool.take_perf_snapshot();
+    }
+
+    pub fn take_intermediate_perf_snapshot(&mut self) -> Option<IntermediatePerfSnapshot> {
+        if !self.intermediate_perf_enabled {
+            return None;
+        }
+
+        let pool = self.intermediate_pool.take_perf_snapshot();
+        let snap = IntermediatePerfSnapshot {
+            frames: self.intermediate_perf.frames,
+            budget_bytes: self.intermediate_budget_bytes,
+            last_frame_in_use_bytes: self.intermediate_perf.last_frame_in_use_bytes,
+            last_frame_peak_in_use_bytes: self.intermediate_perf.last_frame_peak_in_use_bytes,
+            last_frame_release_targets: self.intermediate_perf.last_frame_release_targets,
+            blur_degraded_to_quarter: self.intermediate_perf.blur_degraded_to_quarter,
+            blur_disabled_due_to_budget: self.intermediate_perf.blur_disabled_due_to_budget,
+            pool_free_bytes: pool.free_bytes,
+            pool_free_textures: pool.free_textures,
+            pool_allocations: pool.allocations,
+            pool_reuses: pool.reuses,
+            pool_releases: pool.releases,
+            pool_evictions: pool.evictions,
+        };
+        self.intermediate_perf = IntermediatePerfStats::default();
+        Some(snap)
+    }
+
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
     }

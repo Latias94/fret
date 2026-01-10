@@ -35,6 +35,16 @@ The `delinea` engine outputs a stable set of mark primitives, expressed in **cha
 The UI adapter (`fret-chart`) is responsible for mapping these marks into `SceneOp::{Path,Quad,Text}`
 and applying theme tokens (colors, fonts, corner radii, etc.).
 
+#### v1 mark kinds (minimum)
+
+The engine may extend this list over time, but the intent is to keep the surface small and portable.
+
+- `MarkKind::Group`: grouping + clip only (no renderer-specific transform ops).
+- `MarkKind::Polyline`: line-family strokes (line series, axis pointer lines, grid lines).
+- `MarkKind::Points`: point clouds (scatter series).
+- `MarkKind::Rect`: rect batches (bars, banded backgrounds, selection/brush regions in the future).
+- `MarkKind::Text`: text labels (axis ticks, tooltip strings), with styling resolved by the adapter.
+
 This keeps:
 
 - headless logic deterministic and testable,
@@ -95,6 +105,7 @@ P0:
 
 - Add a dedicated mark output module (if needed) to keep the output surface small and stable.
 - Ensure all existing outputs (axis pointer/tooltip) are keyed by stable series identity.
+- Ensure `Points` marks are stable under large-mode sampling (no per-frame churn).
 
 P1:
 

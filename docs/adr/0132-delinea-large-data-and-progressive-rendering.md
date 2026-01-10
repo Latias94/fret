@@ -46,6 +46,19 @@ For cartesian line-family charts, the baseline LOD strategy is:
 
 This is deterministic, fast, and allocation-friendly.
 
+#### Scatter baseline (v1)
+
+Scatter series cannot preserve spikes the same way as line strokes. The v1 baseline for large scatter is:
+
+- clip to the visible X window,
+- apply a deterministic, pixel-budgeted sampling strategy,
+- ensure the total emitted point count is bounded by the plot rect width (in pixels).
+
+Current implementation policy (subject to a future spec surface):
+
+- large behavior is automatically enabled when the visible point count is “large enough”.
+- emitted points are bounded to `O(plot_width_px)` (currently `<= 4 * plot_width_px`).
+
 Follow-up (P1):
 
 - optional LTTB sampling for better visual fidelity at moderate sizes,
@@ -74,6 +87,14 @@ The engine must be able to:
 The UI adapter may call `step()` multiple times per frame, but the engine must never assume it
 can finish a full rebuild in one call.
 
+UI integration requirement (event-driven scheduling):
+
+- When `step()` reports unfinished work, the UI adapter must continue driving future frames by
+  requesting animation frames (ADR 0034). Progressive rendering must not depend on pointer-driven
+  redraws.
+- UI runtimes with paint caching must ensure progressive adapters are not skipped by cache replays
+  while the engine is unfinished (e.g. disable cache for that node until the engine finishes).
+
 ### 5) Hover/tooltip must not force full geometry rebuild
 
 Hover and tooltip sampling should:
@@ -100,9 +121,12 @@ P1:
 
 - Add progressive chunking for bar/stack (rects) and scatter (symbols).
 - Add optional spatial indices for unsorted data (grid/KD-tree) behind feature gates.
+- Expose ECharts-aligned knobs (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`) in spec/style.
 
 ## References
 
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
 - ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
 - ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- Scheduling contract: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- Zed/GPUI reference: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\zed\\crates\\gpui\\src\\window.rs` (`Window::request_animation_frame`)

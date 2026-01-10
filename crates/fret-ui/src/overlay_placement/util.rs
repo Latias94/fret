@@ -14,3 +14,25 @@ pub fn inset_rect(rect: Rect, margin: Edges) -> Rect {
         Size::new(Px((w - l - r).max(0.0)), Px((h - t - b).max(0.0))),
     )
 }
+
+pub fn intersect_rect(a: Rect, b: Rect) -> Rect {
+    let a_left = a.origin.x.0;
+    let a_top = a.origin.y.0;
+    let a_right = a_left + a.size.width.0.max(0.0);
+    let a_bottom = a_top + a.size.height.0.max(0.0);
+
+    let b_left = b.origin.x.0;
+    let b_top = b.origin.y.0;
+    let b_right = b_left + b.size.width.0.max(0.0);
+    let b_bottom = b_top + b.size.height.0.max(0.0);
+
+    let left = a_left.max(b_left);
+    let top = a_top.max(b_top);
+    let right = a_right.min(b_right);
+    let bottom = a_bottom.min(b_bottom);
+
+    Rect::new(
+        Point::new(Px(left), Px(top)),
+        Size::new(Px((right - left).max(0.0)), Px((bottom - top).max(0.0))),
+    )
+}

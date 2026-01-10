@@ -46,8 +46,8 @@ pub use input::{
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{
-    Color, DrawOrder, Scene, SceneOp, SceneRecording, SceneValidationError,
-    SceneValidationErrorKind, UvRect,
+    Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,
+    SceneOp, SceneRecording, SceneValidationError, SceneValidationErrorKind, UvRect,
 };
 pub use semantics::{
     SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole, SemanticsRoot,

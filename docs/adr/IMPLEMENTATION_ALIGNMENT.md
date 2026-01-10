@@ -15,13 +15,13 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-01-10
-- ADR count (numbered): 139
+- ADR count (numbered): 152
 
 - Aligned: 77
-- Aligned (with known gaps): 24
+- Aligned (with known gaps): 26
 - N/A (superseded): 1
-- Not audited: 15
-- Not implemented: 4
+- Not audited: 27
+- Not implemented: 3
 - Partially aligned: 18
 
 ## Matrix
@@ -51,7 +51,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0021-keymap-file-format.md`](0021-keymap-file-format.md) | Accepted | Partially aligned | Keymap parsing + platform/when support: `crates/fret-runtime/src/keymap.rs` (v1 + sequences); disk IO helper: `crates/fret-app/src/keymap.rs`; end-to-end layered loading (user/project) not standardized yet. |
 | [`0022-when-expressions.md`](0022-when-expressions.md) | Accepted | Aligned | Parser/validator/evaluator: `crates/fret-runtime/src/when_expr.rs` (unknown identifiers evaluate false via `eval_ident_bool`). |
 | [`0023-command-metadata-menus-and-palette.md`](0023-command-metadata-menus-and-palette.md) | Accepted | Partially aligned | Command metadata + scopes: `crates/fret-runtime/src/commands.rs` (`CommandMeta`, `CommandScope`), stored on app: `crates/fret-app/src/app.rs`; menu model: `crates/fret-runtime/src/menu.rs`; command palette widget exists (`ecosystem/fret-ui-shadcn/src/command.rs`) but registry→palette wiring remains app-owned. |
-| [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Partially aligned | Domain-local, op-based undo/redo exists for the node-graph editor: `GraphTransaction` + `GraphHistory` (invert + linear stacks) in `ecosystem/fret-node/src/ops/{mod.rs,history.rs}`; UI integration records committed transactions and exposes undo/redo as widget-scoped commands (`node_graph.undo`/`node_graph.redo`) in `ecosystem/fret-node/src/ui/{commands.rs,canvas/widget.rs}`. No shared cross-domain editor history or generic `EditOp`/transaction manager is provided by `fret-ui`/`fret-app` yet (consistent with ADR scope being editor-app). |
+| [`0024-undo-redo-and-edit-transactions.md`](0024-undo-redo-and-edit-transactions.md) | Deferred | Partially aligned | Reusable app-owned undo substrate exists in `ecosystem/fret-undo` (`UndoService`, `UndoRecord`, `ValueTx`, `CoalesceKey`) and is exercised by viewport tool interactions (gizmo drag begin/update/commit/cancel + coalescing) in `apps/fret-examples/src/gizmo3d_demo.rs`. Domain-local, op-based undo/redo also exists for the node-graph editor (`GraphTransaction` + `GraphHistory`) in `ecosystem/fret-node/src/ops/{mod.rs,history.rs}`. Gaps: no standardized cross-domain `EditOp` schema, no multi-effect transaction bundling (e.g. selection + transform + dirty) as a single edit unit, and no persistence/serialization policy is implemented yet (consistent with ADR scope being editor-app). |
 | [`0025-viewport-input-forwarding.md`](0025-viewport-input-forwarding.md) | Accepted | Aligned | Core event + mapping: `crates/fret-core/src/input.rs` (`ViewportInputEvent`), `crates/fret-core/src/viewport.rs` (`ViewportMapping`); UI emits `Effect::ViewportInput`: `ecosystem/fret-ui-docking/src/dock/space.rs`; runner drains into driver hook: `crates/fret-launch/src/runner/desktop/mod.rs`. |
 | [`0026-asset-database-and-import-pipeline.md`](0026-asset-database-and-import-pipeline.md) | Deferred | Not implemented | No editor/project asset database or importer pipeline exists in-repo. Existing "assets" crates are explicitly renderer/UI-asset focused: `ecosystem/fret-asset-cache` provides renderer-facing image/SVG caches, and `ecosystem/fret-ui-assets/src/lib.rs` clarifies it is *not* an editor/project asset pipeline. |
 | [`0027-framework-scope-and-responsibilities.md`](0027-framework-scope-and-responsibilities.md) | Accepted | Aligned | Layering matches: `fret-core` stays platform/render-agnostic while `wgpu` lives in `crates/fret-render`; policy-heavy surfaces live under `ecosystem/` (see `AGENTS.md`, `docs/dependency-policy.md`). |
@@ -163,7 +163,20 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0132-delinea-large-data-and-progressive-rendering.md`](0132-delinea-large-data-and-progressive-rendering.md) | Proposed | Not audited |  |
 | [`0133-delinea-interaction-and-hit-testing-contract.md`](0133-delinea-interaction-and-hit-testing-contract.md) | Proposed | Not audited |  |
 | [`0134-delinea-multi-axis-and-layout-contract.md`](0134-delinea-multi-axis-and-layout-contract.md) | Proposed | Not audited |  |
+| [`0135-delinea-axis-interaction-locks-and-shortcuts.md`](0135-delinea-axis-interaction-locks-and-shortcuts.md) | Accepted | Not audited |  |
+| [`0136-delinea-datazoom-y-and-2d-semantics.md`](0136-delinea-datazoom-y-and-2d-semantics.md) | Accepted | Not audited |  |
+| [`0137-delinea-row-selection-and-filtering-contract.md`](0137-delinea-row-selection-and-filtering-contract.md) | Accepted | Not audited |  |
+| [`0138-delinea-datazoom-component-composition-and-span-policy.md`](0138-delinea-datazoom-component-composition-and-span-policy.md) | Accepted | Not audited |  |
+| [`0139-delinea-time-axis-ticks-and-labels.md`](0139-delinea-time-axis-ticks-and-labels.md) | Proposed | Not audited |  |
 | [`0135-window-styles-and-utility-windows.md`](0135-window-styles-and-utility-windows.md) | Proposed | Not implemented | ADR only; no portable window-style/utility-window surface wired yet. |
-| [`0136-undo-redo-infrastructure-boundary.md`](0136-undo-redo-infrastructure-boundary.md) | Proposed | Partially aligned | Reusable app-owned substrate in `ecosystem/fret-undo` (`UndoHistory`, `UndoService`, `ValueTx`); demo wiring in `apps/fret-examples/src/gizmo3d_demo.rs`. Gaps: focus-chain target resolution (ADR 0020) and broader command routing conventions not yet standardized in framework surfaces. |
+| [`0136-undo-redo-infrastructure-boundary.md`](0136-undo-redo-infrastructure-boundary.md) | Proposed | Aligned (with known gaps) | App-owned history substrate exists in `ecosystem/fret-undo` (`UndoHistory`, `UndoService`, `UndoRecord`, `ValueTx`, `CoalesceKey`) and is wired in demos: `apps/fret-examples/src/gizmo3d_demo.rs` records coalesced gizmo edits and routes `edit.undo`/`edit.redo` through `UiTree::dispatch_command` first (ADR 0020), then falls back to the active document history. Gaps: there is no shared editor-level document registry/service in `fret-app` yet (demo owns window/document mapping), and history persistence is not implemented. |
 | [`0137-canvas-widgets-and-interactive-surfaces.md`](0137-canvas-widgets-and-interactive-surfaces.md) | Proposed | Not implemented | ADR only; `fret-canvas` ecosystem crate not created yet. |
 | [`0138-tooltip-scroll-dismissal.md`](0138-tooltip-scroll-dismissal.md) | Accepted | Aligned | Scroll dismissal: `UiTree::set_layer_scroll_dismiss_elements` (`crates/fret-ui/src/tree/layers.rs`) + dispatch in `crates/fret-ui/src/tree/dispatch.rs`; wiring in `ecosystem/fret-ui-kit/src/window_overlays/render.rs` and `ecosystem/fret-ui-shadcn/src/tooltip.rs` (plus tests). |
+| [`0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`](0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md) | Proposed | Aligned (with known gaps) | Engine-pass gizmo rendering is demonstrated without introducing new `SceneOp` primitives: `ecosystem/fret-gizmo` provides update/draw + ray/project math (`ecosystem/fret-gizmo/src/{gizmo.rs,math.rs}`) and `apps/fret-examples/src/gizmo3d_demo.rs` renders gizmo draw lists with depth-tested geometry alongside the scene. A minimal render-pass overlay extension point exists in `crates/fret-render/src/viewport_overlay.rs`. A runner/app boundary hook service exists in `crates/fret-launch/src/runner/common.rs` (`ViewportOverlay3dHooksService`) and is exercised by the demo to record gizmo overlays into the viewport pass. Input flows via `ViewportInputEvent` (ADR 0025) and drag phases map to begin/update/commit/cancel (ADR 0024/0136 direction). Gaps: the demo still owns its wgpu pipelines, there is no standardized 2D overlay composition for tool UI (labels, snapping HUD, etc.) yet, and per-viewport overlay registration is still app-owned (no shared editor service). |
+| [`0140-delinea-dataset-storage-and-indices.md`](0140-delinea-dataset-storage-and-indices.md) | Accepted | Not audited |  |
+| [`0141-delinea-missing-values-and-segment-policy.md`](0141-delinea-missing-values-and-segment-policy.md) | Proposed | Not audited |  |
+| [`0142-fret-chart-theme-tokens-and-style-resolution.md`](0142-fret-chart-theme-tokens-and-style-resolution.md) | Accepted | Not audited |  |
+| [`0143-delinea-derived-dimensions-and-stack-transform.md`](0143-delinea-derived-dimensions-and-stack-transform.md) | Accepted | Not audited |  |
+| [`0144-delinea-brush-selection-and-output-contract.md`](0144-delinea-brush-selection-and-output-contract.md) | Accepted | Not audited |  |
+| [`0145-delinea-brush-selection-to-row-selection-fast-path.md`](0145-delinea-brush-selection-to-row-selection-fast-path.md) | Accepted | Not audited |  |
+| [`0146-delinea-link-events-for-brush-selection.md`](0146-delinea-link-events-for-brush-selection.md) | Accepted | Not audited |  |

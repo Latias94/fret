@@ -19,6 +19,13 @@ pub(super) struct ViewportUniform {
     pub(super) clip_count: u32,
     pub(super) output_is_srgb: u32,
     pub(super) _pad: [u32; 3],
+    /// The viewport-space rect that mask textures are scoped to (top-left origin in pixels).
+    ///
+    /// For non-effect draws this is the full viewport. For effect scopes this is the effect
+    /// scissor rect so viewport-scoped mask targets can be generated and sampled correctly.
+    pub(super) mask_viewport_origin: [f32; 2],
+    /// The viewport-space size of the rect that mask textures are scoped to (in pixels).
+    pub(super) mask_viewport_size: [f32; 2],
 }
 
 #[repr(C)]
@@ -132,6 +139,35 @@ pub(super) struct SvgPerfStats {
     pub(super) alpha_standalone_upload: Duration,
     pub(super) rgba_uploads: u64,
     pub(super) rgba_upload: Duration,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct IntermediatePerfSnapshot {
+    pub frames: u64,
+    pub budget_bytes: u64,
+
+    pub last_frame_in_use_bytes: u64,
+    pub last_frame_peak_in_use_bytes: u64,
+    pub last_frame_release_targets: u64,
+    pub blur_degraded_to_quarter: u64,
+    pub blur_disabled_due_to_budget: u64,
+    pub pool_free_bytes: u64,
+    pub pool_free_textures: u64,
+
+    pub pool_allocations: u64,
+    pub pool_reuses: u64,
+    pub pool_releases: u64,
+    pub pool_evictions: u64,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct IntermediatePerfStats {
+    pub(super) frames: u64,
+    pub(super) last_frame_in_use_bytes: u64,
+    pub(super) last_frame_peak_in_use_bytes: u64,
+    pub(super) last_frame_release_targets: u64,
+    pub(super) blur_degraded_to_quarter: u64,
+    pub(super) blur_disabled_due_to_budget: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -251,6 +287,24 @@ pub(super) enum OrderedDraw {
     Path(PathDraw),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum EffectMarkerKind {
+    Push {
+        scissor: ScissorRect,
+        uniform_index: u32,
+        mode: fret_core::EffectMode,
+        chain: fret_core::EffectChain,
+        quality: fret_core::EffectQuality,
+    },
+    Pop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct EffectMarker {
+    pub(super) draw_ix: usize,
+    pub(super) kind: EffectMarkerKind,
+}
+
 #[derive(Default)]
 pub(super) struct SceneEncoding {
     pub(super) instances: Vec<QuadInstance>,
@@ -260,6 +314,7 @@ pub(super) struct SceneEncoding {
     pub(super) clips: Vec<ClipRRectUniform>,
     pub(super) uniforms: Vec<ViewportUniform>,
     pub(super) ordered_draws: Vec<OrderedDraw>,
+    pub(super) effect_markers: Vec<EffectMarker>,
 }
 
 impl SceneEncoding {
@@ -271,6 +326,7 @@ impl SceneEncoding {
         self.clips.clear();
         self.uniforms.clear();
         self.ordered_draws.clear();
+        self.effect_markers.clear();
     }
 }
 

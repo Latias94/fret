@@ -251,6 +251,7 @@ fn arrow_centers_when_possible() {
     assert_eq!(arrow.side, Side::Top);
     assert!((arrow.offset.0 - 94.0).abs() < 0.1);
     assert_eq!(arrow.alignment_offset, Px(0.0));
+    assert!(arrow.center_offset.0.abs() < 0.1);
 }
 
 #[test]
@@ -277,4 +278,110 @@ fn arrow_clamps_to_padding_near_edge() {
 
     let arrow = layout.arrow.expect("arrow layout");
     assert!(arrow.offset.0 >= 16.0 - 0.01);
+    assert!(arrow.center_offset.0.abs() > 0.1);
+}
+
+#[test]
+fn collision_padding_insets_outer_before_flip_decision() {
+    let outer = r(0.0, 0.0, 200.0, 100.0);
+    let anchor = r(10.0, 40.0, 40.0, 10.0);
+    let content = Size::new(Px(120.0), Px(40.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            collision: CollisionOptions {
+                padding: Edges {
+                    bottom: Px(20.0),
+                    ..Edges::all(Px(0.0))
+                },
+                boundary: None,
+            },
+            ..Default::default()
+        },
+    );
+
+    // Without collision padding, bottom fits: y=50, y+40=90 <= 100.
+    // With bottom padding=20, effective outer bottom=80, so bottom does not fit; we should flip.
+    assert_eq!(layout.side, Side::Top);
+}
+
+#[test]
+fn collision_boundary_intersects_outer_before_solving() {
+    let outer = r(0.0, 0.0, 200.0, 200.0);
+    let boundary = r(0.0, 0.0, 100.0, 100.0);
+    let anchor = r(80.0, 80.0, 10.0, 10.0);
+    let content = Size::new(Px(60.0), Px(40.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            collision: CollisionOptions {
+                padding: Edges::all(Px(0.0)),
+                boundary: Some(boundary),
+            },
+            ..Default::default()
+        },
+    );
+
+    // The effective outer bottom is 100. Bottom would place at y=90 and overflow, so it flips.
+    assert_eq!(layout.side, Side::Top);
+    assert!(boundary.contains(layout.rect.origin));
+}
+
+#[test]
+fn sticky_always_clamps_into_outer() {
+    let outer = r(0.0, 0.0, 100.0, 100.0);
+    let anchor = r(150.0, 10.0, 10.0, 10.0);
+    let content = Size::new(Px(10.0), Px(10.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            sticky: StickyMode::Always,
+            ..Default::default()
+        },
+    );
+
+    // Clamped into `outer`: max_x = 100 - 10 = 90.
+    assert_eq!(layout.rect.origin.x, Px(90.0));
+}
+
+#[test]
+fn sticky_partial_limits_shift_to_keep_anchor_touching() {
+    let outer = r(0.0, 0.0, 100.0, 100.0);
+    let anchor = r(150.0, 10.0, 10.0, 10.0);
+    let content = Size::new(Px(10.0), Px(10.0));
+
+    let layout = anchored_panel_layout_ex(
+        outer,
+        anchor,
+        content,
+        Px(0.0),
+        Side::Bottom,
+        Align::Start,
+        AnchoredPanelOptions {
+            sticky: StickyMode::Partial,
+            ..Default::default()
+        },
+    );
+
+    // `limitShift()` keeps the panel from detaching from the anchor on the alignment axis, even if
+    // that overflows `outer`: min_x = anchor_x - panel_w = 150 - 10 = 140.
+    assert_eq!(layout.rect.origin.x, Px(140.0));
 }

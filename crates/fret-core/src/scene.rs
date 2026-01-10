@@ -28,6 +28,86 @@ impl Color {
     };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectMode {
+    /// Render children to an offscreen intermediate, then filter and composite the result.
+    FilterContent,
+    /// Sample already-rendered backdrop behind the group, filter it, then draw children on top.
+    Backdrop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectQuality {
+    /// Renderer-chosen quality within budgets (ADR 0120).
+    Auto,
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DitherMode {
+    Bayer4x4,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EffectStep {
+    GaussianBlur {
+        radius_px: crate::Px,
+        downsample: u32,
+    },
+    ColorAdjust {
+        saturation: f32,
+        brightness: f32,
+        contrast: f32,
+    },
+    Pixelate {
+        scale: u32,
+    },
+    Dither {
+        mode: DitherMode,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EffectChain {
+    steps: [Option<EffectStep>; 4],
+}
+
+impl EffectChain {
+    pub const MAX_STEPS: usize = 4;
+    pub const EMPTY: Self = Self {
+        steps: [None, None, None, None],
+    };
+
+    pub fn from_steps(steps: &[EffectStep]) -> Self {
+        assert!(
+            steps.len() <= Self::MAX_STEPS,
+            "EffectChain supports up to {} steps",
+            Self::MAX_STEPS
+        );
+        let mut out = Self::EMPTY;
+        for (idx, step) in steps.iter().copied().enumerate() {
+            out.steps[idx] = Some(step);
+        }
+        out
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.steps.iter().all(|s| s.is_none())
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = EffectStep> + '_ {
+        self.steps.iter().copied().flatten()
+    }
+}
+
+impl Default for EffectChain {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct SceneRecording {
     ops: Vec<SceneOp>,
@@ -81,6 +161,7 @@ impl SceneRecording {
         let mut opacity_depth: usize = 0;
         let mut layer_depth: usize = 0;
         let mut clip_depth: usize = 0;
+        let mut effect_depth: usize = 0;
 
         for (index, &op) in self.ops.iter().enumerate() {
             match op {
@@ -169,6 +250,54 @@ impl SceneRecording {
                         });
                     }
                     clip_depth = clip_depth.saturating_sub(1);
+                }
+                SceneOp::PushEffect { bounds, chain, .. } => {
+                    if !rect_is_finite(bounds) {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+
+                    for step in chain.iter() {
+                        let ok = match step {
+                            EffectStep::GaussianBlur {
+                                radius_px,
+                                downsample,
+                            } => px_is_finite(radius_px) && downsample > 0,
+                            EffectStep::ColorAdjust {
+                                saturation,
+                                brightness,
+                                contrast,
+                            } => {
+                                saturation.is_finite()
+                                    && brightness.is_finite()
+                                    && contrast.is_finite()
+                            }
+                            EffectStep::Pixelate { scale } => scale > 0,
+                            EffectStep::Dither { .. } => true,
+                        };
+                        if !ok {
+                            return Err(SceneValidationError {
+                                index,
+                                op,
+                                kind: SceneValidationErrorKind::NonFiniteOpData,
+                            });
+                        }
+                    }
+
+                    effect_depth = effect_depth.saturating_add(1);
+                }
+                SceneOp::PopEffect => {
+                    if effect_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::EffectUnderflow,
+                        });
+                    }
+                    effect_depth = effect_depth.saturating_sub(1);
                 }
                 SceneOp::Quad {
                     rect,
@@ -319,6 +448,15 @@ impl SceneRecording {
                 },
             });
         }
+        if effect_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopEffect,
+                kind: SceneValidationErrorKind::UnbalancedEffectStack {
+                    remaining: effect_depth,
+                },
+            });
+        }
 
         Ok(())
     }
@@ -393,6 +531,25 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_effect<T>(
+        &mut self,
+        bounds: Rect,
+        mode: EffectMode,
+        chain: EffectChain,
+        quality: EffectQuality,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushEffect {
+            bounds,
+            mode,
+            chain,
+            quality,
+        });
+        let out = f(self);
+        self.push(SceneOp::PopEffect);
+        out
+    }
+
     pub fn ops(&self) -> &[SceneOp] {
         &self.ops
     }
@@ -440,6 +597,15 @@ pub enum SceneOp {
         corner_radii: Corners,
     },
     PopClip,
+
+    PushEffect {
+        /// Computation bounds (not an implicit clip), see ADR 0119.
+        bounds: Rect,
+        mode: EffectMode,
+        chain: EffectChain,
+        quality: EffectQuality,
+    },
+    PopEffect,
 
     Quad {
         order: DrawOrder,
@@ -524,6 +690,7 @@ pub enum SceneValidationErrorKind {
     OpacityUnderflow,
     LayerUnderflow,
     ClipUnderflow,
+    EffectUnderflow,
     NonFiniteTransform,
     NonFiniteOpacity,
     NonFiniteOpData,
@@ -531,6 +698,7 @@ pub enum SceneValidationErrorKind {
     UnbalancedOpacityStack { remaining: usize },
     UnbalancedLayerStack { remaining: usize },
     UnbalancedClipStack { remaining: usize },
+    UnbalancedEffectStack { remaining: usize },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -655,6 +823,64 @@ fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             mix_corners(state, corner_radii)
         }
         SceneOp::PopClip => mix_u64(state, 2),
+        SceneOp::PushEffect {
+            bounds,
+            mode,
+            chain,
+            quality,
+        } => {
+            let mut state = mix_u64(state, 106);
+            state = mix_rect(state, bounds);
+            state = mix_u64(
+                state,
+                match mode {
+                    EffectMode::FilterContent => 1,
+                    EffectMode::Backdrop => 2,
+                },
+            );
+            state = mix_u64(
+                state,
+                match quality {
+                    EffectQuality::Auto => 1,
+                    EffectQuality::Low => 2,
+                    EffectQuality::Medium => 3,
+                    EffectQuality::High => 4,
+                },
+            );
+
+            for step in chain.iter() {
+                state = match step {
+                    EffectStep::GaussianBlur {
+                        radius_px,
+                        downsample,
+                    } => {
+                        let mut state = mix_u64(state, 1);
+                        state = mix_px(state, radius_px);
+                        mix_u64(state, u64::from(downsample))
+                    }
+                    EffectStep::ColorAdjust {
+                        saturation,
+                        brightness,
+                        contrast,
+                    } => {
+                        let mut state = mix_u64(state, 2);
+                        state = mix_f32(state, saturation);
+                        state = mix_f32(state, brightness);
+                        mix_f32(state, contrast)
+                    }
+                    EffectStep::Pixelate { scale } => mix_u64(mix_u64(state, 3), u64::from(scale)),
+                    EffectStep::Dither { mode } => mix_u64(
+                        mix_u64(state, 4),
+                        match mode {
+                            DitherMode::Bayer4x4 => 1,
+                        },
+                    ),
+                };
+            }
+
+            state
+        }
+        SceneOp::PopEffect => mix_u64(state, 107),
         SceneOp::Quad {
             order,
             rect,
@@ -850,6 +1076,40 @@ mod tests {
             scene.validate(),
             Err(SceneValidationError {
                 kind: SceneValidationErrorKind::UnbalancedClipStack { remaining: 1 },
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_effect_underflow() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PopEffect);
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::EffectUnderflow,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn validate_rejects_unbalanced_effect_stack() {
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushEffect {
+            bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
+            mode: EffectMode::Backdrop,
+            chain: EffectChain::from_steps(&[EffectStep::GaussianBlur {
+                radius_px: Px(2.0),
+                downsample: 2,
+            }]),
+            quality: EffectQuality::Auto,
+        });
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneValidationError {
+                kind: SceneValidationErrorKind::UnbalancedEffectStack { remaining: 1 },
                 ..
             })
         ));

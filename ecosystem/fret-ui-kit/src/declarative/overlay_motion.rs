@@ -8,7 +8,8 @@
 
 use fret_core::{Edges, Point, Px, Rect, Transform2D};
 use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, OpacityProps, RenderTransformProps, SizeStyle,
+    AnyElement, InteractivityGateProps, LayoutStyle, Length, OpacityProps, RenderTransformProps,
+    SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
@@ -54,9 +55,28 @@ pub fn wrap_opacity_and_render_transform<H: UiHost>(
     let layout = fullscreen_motion_layout();
     wrap_opacity_and_render_transform_with_layouts(
         cx,
-        layout.clone(),
+        layout,
         opacity,
         RenderTransformProps { layout, transform },
+        children,
+    )
+}
+
+/// Like [`wrap_opacity_and_render_transform`], but allows gating interactivity.
+pub fn wrap_opacity_and_render_transform_gated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity: f32,
+    transform: Transform2D,
+    interactive: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = fullscreen_motion_layout();
+    wrap_opacity_and_render_transform_with_layouts_gated(
+        cx,
+        layout,
+        opacity,
+        RenderTransformProps { layout, transform },
+        interactive,
         children,
     )
 }
@@ -75,6 +95,36 @@ pub fn wrap_opacity_and_render_transform_with_layouts<H: UiHost>(
             opacity,
         },
         move |cx| vec![cx.render_transform_props(transform_props, move |_cx| children)],
+    )
+}
+
+/// Like [`wrap_opacity_and_render_transform_with_layouts`], but allows gating interactivity.
+///
+/// This is useful for Radix-like `hideWhenDetached` behavior where content remains mounted for
+/// measurement/state preservation but should not be interactable when hidden.
+pub fn wrap_opacity_and_render_transform_with_layouts_gated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity_layout: LayoutStyle,
+    opacity: f32,
+    transform_props: RenderTransformProps,
+    interactive: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: opacity_layout,
+            present: true,
+            interactive,
+        },
+        move |cx| {
+            vec![cx.opacity_props(
+                OpacityProps {
+                    layout: opacity_layout,
+                    opacity,
+                },
+                move |cx| vec![cx.render_transform_props(transform_props, move |_cx| children)],
+            )]
+        },
     )
 }
 

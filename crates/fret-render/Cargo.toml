@@ -13,6 +13,7 @@ documentation.workspace = true
 wgpu.workspace = true
 bytemuck.workspace = true
 anyhow.workspace = true
+glam.workspace = true
 fret-core = { path = "../fret-core" }
 slotmap.workspace = true
 thiserror.workspace = true

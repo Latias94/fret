@@ -1,16 +1,43 @@
 use super::shaders::{
-    COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER,
-    VIEWPORT_SHADER,
+    BLIT_SHADER, BLUR_H_MASK_SHADER, BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER,
+    COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER, COMPOSITE_PREMUL_MASK_SHADER,
+    COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER, PATH_SHADER,
+    TEXT_COLOR_SHADER, TEXT_SHADER, UPSCALE_NEAREST_MASK_SHADER, UPSCALE_NEAREST_SHADER,
+    VIEWPORT_SHADER, blur_h_masked_shader_source, blur_v_masked_shader_source,
+    clip_mask_shader_source, color_adjust_masked_shader_source, quad_shader_source,
+    upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
 
 #[test]
 fn shaders_parse_as_wgsl() {
+    let quad_src = quad_shader_source();
+    let clip_mask_src = clip_mask_shader_source();
+    let upscale_masked_src = upscale_nearest_masked_shader_source();
+    let color_adjust_masked_src = color_adjust_masked_shader_source();
+    let blur_h_masked_src = blur_h_masked_shader_source();
+    let blur_v_masked_src = blur_v_masked_shader_source();
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
-        ("quad", QUAD_SHADER),
+        ("quad", quad_src.as_str()),
+        ("blit", BLIT_SHADER),
+        ("blur_h", BLUR_H_SHADER),
+        ("blur_v", BLUR_V_SHADER),
+        ("blur_h_masked", blur_h_masked_src.as_str()),
+        ("blur_v_masked", blur_v_masked_src.as_str()),
+        ("blur_h_mask", BLUR_H_MASK_SHADER),
+        ("blur_v_mask", BLUR_V_MASK_SHADER),
+        ("downsample_nearest", DOWNSAMPLE_NEAREST_SHADER),
+        ("upscale_nearest", UPSCALE_NEAREST_SHADER),
+        ("upscale_nearest_masked", upscale_masked_src.as_str()),
+        ("upscale_nearest_mask", UPSCALE_NEAREST_MASK_SHADER),
+        ("color_adjust", COLOR_ADJUST_SHADER),
+        ("color_adjust_masked", color_adjust_masked_src.as_str()),
+        ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
+        ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
+        ("clip_mask", clip_mask_src.as_str()),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),
@@ -25,10 +52,32 @@ fn shaders_parse_as_wgsl() {
 fn shaders_validate_for_webgpu() {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
 
+    let quad_src = quad_shader_source();
+    let clip_mask_src = clip_mask_shader_source();
+    let upscale_masked_src = upscale_nearest_masked_shader_source();
+    let color_adjust_masked_src = color_adjust_masked_shader_source();
+    let blur_h_masked_src = blur_h_masked_shader_source();
+    let blur_v_masked_src = blur_v_masked_shader_source();
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
-        ("quad", QUAD_SHADER),
+        ("quad", quad_src.as_str()),
+        ("blit", BLIT_SHADER),
+        ("blur_h", BLUR_H_SHADER),
+        ("blur_v", BLUR_V_SHADER),
+        ("blur_h_masked", blur_h_masked_src.as_str()),
+        ("blur_v_masked", blur_v_masked_src.as_str()),
+        ("blur_h_mask", BLUR_H_MASK_SHADER),
+        ("blur_v_mask", BLUR_V_MASK_SHADER),
+        ("downsample_nearest", DOWNSAMPLE_NEAREST_SHADER),
+        ("upscale_nearest", UPSCALE_NEAREST_SHADER),
+        ("upscale_nearest_masked", upscale_masked_src.as_str()),
+        ("upscale_nearest_mask", UPSCALE_NEAREST_MASK_SHADER),
+        ("color_adjust", COLOR_ADJUST_SHADER),
+        ("color_adjust_masked", color_adjust_masked_src.as_str()),
+        ("color_adjust_mask", COLOR_ADJUST_MASK_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
+        ("composite_premul_mask", COMPOSITE_PREMUL_MASK_SHADER),
+        ("clip_mask", clip_mask_src.as_str()),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),

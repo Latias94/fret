@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 pub enum MarkKind {
     Group,
     Polyline,
+    Points,
     Rect,
     Text,
 }
@@ -40,6 +41,7 @@ pub struct MarkNode {
 pub enum MarkPayloadRef {
     Group(MarkGroup),
     Polyline(MarkPolylineRef),
+    Points(MarkPointsRef),
     Rect(MarkRectRef),
     Text(MarkText),
 }
@@ -54,6 +56,14 @@ pub struct MarkGroup {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MarkPolylineRef {
     pub points: Range<usize>,
+    pub stroke: Option<(PaintId, StrokeStyleV2)>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkPointsRef {
+    pub points: Range<usize>,
+    pub fill: Option<PaintId>,
     pub stroke: Option<(PaintId, StrokeStyleV2)>,
 }
 

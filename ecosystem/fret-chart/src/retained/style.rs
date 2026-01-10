@@ -1,4 +1,39 @@
 use fret_core::{Color, DrawOrder, Edges, Px};
+use fret_ui::Theme;
+
+fn srgb_channel_to_linear(v: u8) -> f32 {
+    let c = (v as f32) / 255.0;
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+fn color_from_srgb8(r: u8, g: u8, b: u8) -> Color {
+    Color {
+        r: srgb_channel_to_linear(r),
+        g: srgb_channel_to_linear(g),
+        b: srgb_channel_to_linear(b),
+        a: 1.0,
+    }
+}
+
+fn default_series_palette() -> [Color; 10] {
+    // ECharts default palette (concept reference): https://echarts.apache.org/en/option.html#color
+    [
+        color_from_srgb8(0x54, 0x70, 0xC6),
+        color_from_srgb8(0x91, 0xCC, 0x75),
+        color_from_srgb8(0xEE, 0x66, 0x66),
+        color_from_srgb8(0x73, 0xC0, 0xDE),
+        color_from_srgb8(0x3B, 0xA2, 0x72),
+        color_from_srgb8(0xFC, 0x84, 0x52),
+        color_from_srgb8(0x9A, 0x60, 0xB4),
+        color_from_srgb8(0xEA, 0x7C, 0xCC),
+        color_from_srgb8(0xFA, 0xC8, 0x58),
+        color_from_srgb8(0x6E, 0x70, 0x74),
+    ]
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChartStyle {
@@ -8,6 +43,8 @@ pub struct ChartStyle {
     pub area_fill_color: Color,
     pub band_fill_color: Color,
     pub bar_fill_alpha: f32,
+    pub scatter_point_radius: Px,
+    pub scatter_fill_alpha: f32,
     pub selection_fill: Color,
     pub selection_stroke: Color,
     pub selection_stroke_width: Px,
@@ -43,11 +80,15 @@ pub struct ChartStyle {
     pub legend_swatch_size: Px,
     pub legend_swatch_gap: Px,
     pub legend_hover_background: Color,
+
+    pub series_palette: [Color; 10],
     pub draw_order: DrawOrder,
 }
 
 impl Default for ChartStyle {
     fn default() -> Self {
+        let series_palette = default_series_palette();
+
         Self {
             background: Some(Color {
                 r: 0.06,
@@ -75,6 +116,8 @@ impl Default for ChartStyle {
                 a: 0.12,
             },
             bar_fill_alpha: 0.7,
+            scatter_point_radius: Px(5.0),
+            scatter_fill_alpha: 0.9,
             selection_fill: Color {
                 r: 0.2,
                 g: 0.6,
@@ -176,7 +219,204 @@ impl Default for ChartStyle {
                 b: 1.0,
                 a: 0.06,
             },
+            series_palette,
             draw_order: DrawOrder(100),
         }
+    }
+}
+
+impl ChartStyle {
+    pub fn from_theme(theme: &Theme) -> Self {
+        fn color(theme: &Theme, key: &str) -> Option<Color> {
+            theme.color_by_key(key)
+        }
+
+        fn metric(theme: &Theme, key: &str) -> Option<Px> {
+            theme.metric_by_key(key)
+        }
+
+        fn with_alpha(mut c: Color, a: f32) -> Color {
+            c.a *= a.clamp(0.0, 1.0);
+            c
+        }
+
+        fn pick_color(theme: &Theme, key: &str, fallback: Color) -> Color {
+            color(theme, key).unwrap_or(fallback)
+        }
+
+        fn pick_metric(theme: &Theme, key: &str, fallback: Px) -> Px {
+            metric(theme, key).unwrap_or(fallback)
+        }
+
+        let foreground = theme.color_required("foreground");
+        let muted_foreground = theme.color_required("muted-foreground");
+        let border = theme.color_required("border");
+        let primary = theme.color_required("primary");
+        let popover = theme.color_required("popover");
+
+        let background = pick_color(theme, "chart.background", theme.color_required("card"));
+        let tooltip_background =
+            pick_color(theme, "chart.tooltip.background", with_alpha(popover, 0.9));
+        let tooltip_border = pick_color(theme, "chart.tooltip.border", with_alpha(border, 0.15));
+        let tooltip_text = pick_color(theme, "chart.tooltip.text", with_alpha(foreground, 0.9));
+
+        let legend_background =
+            pick_color(theme, "chart.legend.background", with_alpha(popover, 0.9));
+        let legend_border = pick_color(theme, "chart.legend.border", with_alpha(border, 0.15));
+        let legend_text = pick_color(theme, "chart.legend.text", with_alpha(foreground, 0.9));
+
+        let axis_line_color =
+            pick_color(theme, "chart.axis.line", with_alpha(muted_foreground, 0.7));
+        let axis_tick_color =
+            pick_color(theme, "chart.axis.tick", with_alpha(muted_foreground, 0.55));
+        let axis_label_color = pick_color(theme, "chart.axis.label", with_alpha(foreground, 0.8));
+
+        let crosshair_color = pick_color(theme, "chart.crosshair", with_alpha(foreground, 0.25));
+
+        let selection_fill = pick_color(theme, "chart.selection.fill", with_alpha(primary, 0.12));
+        let selection_stroke =
+            pick_color(theme, "chart.selection.stroke", with_alpha(primary, 0.75));
+
+        let stroke_width = pick_metric(theme, "metric.chart.stroke.width", Px(1.0));
+        let axis_line_width = pick_metric(theme, "metric.chart.axis.line.width", Px(1.0));
+        let axis_tick_length = pick_metric(theme, "metric.chart.axis.tick.length", Px(6.0));
+        let scatter_point_radius = pick_metric(theme, "metric.chart.scatter.point_radius", Px(5.0));
+        let hover_point_size = pick_metric(theme, "metric.chart.hover.point_size", Px(4.0));
+        let tooltip_border_width = pick_metric(theme, "metric.chart.tooltip.border.width", Px(1.0));
+        let legend_border_width = pick_metric(theme, "metric.chart.legend.border.width", Px(1.0));
+        let selection_stroke_width =
+            pick_metric(theme, "metric.chart.selection.stroke.width", Px(1.0));
+
+        let padding_all = metric(theme, "metric.chart.padding")
+            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+        let padding = Edges::all(padding_all);
+
+        let axis_band_x = pick_metric(theme, "metric.chart.axis.band.x", Px(56.0));
+        let axis_band_y = pick_metric(theme, "metric.chart.axis.band.y", Px(36.0));
+
+        let tooltip_padding_x = pick_metric(theme, "metric.chart.tooltip.padding.x", Px(8.0));
+        let tooltip_padding_y = pick_metric(theme, "metric.chart.tooltip.padding.y", Px(6.0));
+        let tooltip_corner_radius = pick_metric(
+            theme,
+            "metric.chart.tooltip.corner_radius",
+            theme.metric_required("metric.radius.sm"),
+        );
+
+        let legend_padding_x = pick_metric(theme, "metric.chart.legend.padding.x", Px(10.0));
+        let legend_padding_y = pick_metric(theme, "metric.chart.legend.padding.y", Px(8.0));
+        let legend_corner_radius = pick_metric(
+            theme,
+            "metric.chart.legend.corner_radius",
+            theme.metric_required("metric.radius.md"),
+        );
+        let legend_item_gap = pick_metric(theme, "metric.chart.legend.item.gap", Px(4.0));
+        let legend_swatch_size = pick_metric(theme, "metric.chart.legend.swatch.size", Px(10.0));
+        let legend_swatch_gap = pick_metric(theme, "metric.chart.legend.swatch.gap", Px(8.0));
+
+        let legend_hover_background = pick_color(
+            theme,
+            "chart.legend.hover.background",
+            with_alpha(foreground, 0.06),
+        );
+
+        const PALETTE_KEYS: [&str; 10] = [
+            "chart.palette.0",
+            "chart.palette.1",
+            "chart.palette.2",
+            "chart.palette.3",
+            "chart.palette.4",
+            "chart.palette.5",
+            "chart.palette.6",
+            "chart.palette.7",
+            "chart.palette.8",
+            "chart.palette.9",
+        ];
+        const SHADCN_CHART_KEYS: [&str; 5] =
+            ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"];
+
+        let fallback_palette = default_series_palette();
+        let mut series_palette = fallback_palette;
+        for (index, key) in PALETTE_KEYS.iter().enumerate() {
+            if let Some(c) = color(theme, key) {
+                series_palette[index] = c;
+                continue;
+            }
+            if index < SHADCN_CHART_KEYS.len() {
+                if let Some(c) = color(theme, SHADCN_CHART_KEYS[index]) {
+                    series_palette[index] = c;
+                }
+            }
+        }
+
+        Self {
+            background: Some(background),
+            stroke_color: with_alpha(foreground, 0.9),
+            stroke_width,
+            area_fill_color: with_alpha(primary, 0.18),
+            band_fill_color: with_alpha(primary, 0.12),
+            bar_fill_alpha: 0.7,
+            scatter_point_radius,
+            scatter_fill_alpha: 0.9,
+            selection_fill,
+            selection_stroke,
+            selection_stroke_width,
+            padding,
+            axis_band_x,
+            axis_band_y,
+            axis_line_color,
+            axis_tick_color,
+            axis_label_color,
+            axis_line_width,
+            axis_tick_length,
+            crosshair_color,
+            crosshair_width: Px(1.0),
+            hover_point_color: with_alpha(foreground, 0.9),
+            hover_point_size,
+            tooltip_background,
+            tooltip_border_color: tooltip_border,
+            tooltip_border_width,
+            tooltip_text_color: tooltip_text,
+            tooltip_padding: Edges::symmetric(tooltip_padding_x, tooltip_padding_y),
+            tooltip_corner_radius,
+            legend_background,
+            legend_border_color: legend_border,
+            legend_border_width,
+            legend_text_color: legend_text,
+            legend_padding: Edges::symmetric(legend_padding_x, legend_padding_y),
+            legend_corner_radius,
+            legend_item_gap,
+            legend_swatch_size,
+            legend_swatch_gap,
+            legend_hover_background,
+            series_palette,
+            draw_order: DrawOrder(100),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_app::App;
+    use fret_ui::{Theme, ThemeConfig};
+
+    use super::ChartStyle;
+
+    #[test]
+    fn series_palette_prefers_chart_palette_tokens_over_shadcn_aliases() {
+        let mut app = App::new();
+        let theme = Theme::global_mut(&mut app);
+
+        let mut cfg = ThemeConfig::default();
+        cfg.colors
+            .insert("chart.palette.0".to_string(), "#FF0000".to_string());
+        cfg.colors
+            .insert("chart-1".to_string(), "#00FF00".to_string());
+        theme.apply_config(&cfg);
+
+        let style = ChartStyle::from_theme(theme);
+        assert_eq!(
+            style.series_palette[0],
+            theme.color_required("chart.palette.0")
+        );
     }
 }
