@@ -486,6 +486,7 @@ High-level layering (ADR 0135):
     - [x] portal subtree culling by viewport: `ecosystem/fret-node/src/ui/portal.rs` (`NodeGraphPortalHost::layout`)
     - [x] canvas paint culling by viewport (nodes/edges): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
     - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
+    - [x] cached text blob shaping/metrics (reduces per-frame `TextService::prepare`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [ ] incremental scene op updates (true retained scene graph diffing)
 
 - [~] **Derived geometry invalidation discipline**

@@ -6,10 +6,12 @@
 //! not re-tessellate every edge on every frame.
 
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
 use fret_core::{
-    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, StrokeStyle,
+    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, StrokeStyle, TextBlobId,
+    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 
 use crate::ui::presenter::{EdgeMarker, EdgeMarkerKind, EdgeRouteKind};
@@ -55,11 +57,53 @@ struct MarkerPathKey {
     pin_radius_screen: i64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TextBlobKey {
+    text_hash: u64,
+    text_len: u32,
+    text: Arc<str>,
+    font: fret_core::FontId,
+    size: i64,
+    weight: u16,
+    slant: u8,
+    line_height: i64,
+    letter_spacing_em: i64,
+    max_width: i64,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    scale_factor: i64,
+}
+
+impl Hash for TextBlobKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.text_hash.hash(state);
+        self.text_len.hash(state);
+        self.font.hash(state);
+        self.size.hash(state);
+        self.weight.hash(state);
+        self.slant.hash(state);
+        self.line_height.hash(state);
+        self.letter_spacing_em.hash(state);
+        self.max_width.hash(state);
+        self.wrap.hash(state);
+        self.overflow.hash(state);
+        self.scale_factor.hash(state);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TextBlobEntry {
+    id: TextBlobId,
+    metrics: TextMetrics,
+    last_used_frame: u64,
+}
+
 #[derive(Debug, Default)]
 pub(crate) struct CanvasPaintCache {
     frame: u64,
     wire_paths: HashMap<WirePathKey, PathCacheEntry>,
     marker_paths: HashMap<MarkerPathKey, PathCacheEntry>,
+    text_blobs: HashMap<TextBlobKey, TextBlobEntry>,
 }
 
 impl CanvasPaintCache {
@@ -74,6 +118,9 @@ impl CanvasPaintCache {
         }
         for entry in self.marker_paths.drain().map(|(_, e)| e) {
             services.path().release(entry.id);
+        }
+        for entry in self.text_blobs.drain().map(|(_, e)| e) {
+            services.text().release(entry.id);
         }
     }
 
@@ -102,18 +149,28 @@ impl CanvasPaintCache {
         prune_map_by_age(&mut self.wire_paths, services, now, max_age_frames);
         prune_map_by_age(&mut self.marker_paths, services, now, max_age_frames);
 
+        self.text_blobs.retain(|_, entry| {
+            let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
+            if !keep {
+                services.text().release(entry.id);
+            }
+            keep
+        });
+
         let total = self
             .wire_paths
             .len()
             .saturating_add(self.marker_paths.len());
+        let total = total.saturating_add(self.text_blobs.len());
         if total <= max_entries {
             return;
         }
 
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone)]
         enum EvictKey {
             Wire(WirePathKey),
             Marker(MarkerPathKey),
+            Text(TextBlobKey),
         }
 
         let mut entries: Vec<(EvictKey, u64)> = Vec::with_capacity(total);
@@ -126,6 +183,11 @@ impl CanvasPaintCache {
             self.marker_paths
                 .iter()
                 .map(|(k, v)| (EvictKey::Marker(*k), v.last_used_frame)),
+        );
+        entries.extend(
+            self.text_blobs
+                .iter()
+                .map(|(k, v)| (EvictKey::Text(k.clone()), v.last_used_frame)),
         );
         entries.sort_by_key(|(_k, last)| *last);
 
@@ -140,6 +202,11 @@ impl CanvasPaintCache {
                 EvictKey::Marker(key) => {
                     if let Some(entry) = self.marker_paths.remove(&key) {
                         services.path().release(entry.id);
+                    }
+                }
+                EvictKey::Text(key) => {
+                    if let Some(entry) = self.text_blobs.remove(&key) {
+                        services.text().release(entry.id);
                     }
                 }
             }
@@ -344,6 +411,65 @@ impl CanvasPaintCache {
             },
         );
         Some(id)
+    }
+
+    pub(crate) fn text_blob(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        text: impl Into<Arc<str>>,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> (TextBlobId, TextMetrics) {
+        let text: Arc<str> = text.into();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        text.as_ref().hash(&mut hasher);
+        let text_hash = hasher.finish();
+
+        let q = |v: f32, step: f32| -> i64 {
+            if !v.is_finite() {
+                return 0;
+            }
+            (v / step).round() as i64
+        };
+
+        let max_width = constraints.max_width.map(|w| w.0.max(0.0)).unwrap_or(0.0);
+
+        let key = TextBlobKey {
+            text_hash,
+            text_len: text.len().min(u32::MAX as usize) as u32,
+            text: text.clone(),
+            font: style.font.clone(),
+            size: q(style.size.0.max(0.0), 0.01),
+            weight: style.weight.0,
+            slant: match style.slant {
+                fret_core::TextSlant::Normal => 0,
+                fret_core::TextSlant::Italic => 1,
+                fret_core::TextSlant::Oblique => 2,
+            },
+            line_height: q(style.line_height.map(|v| v.0).unwrap_or(0.0).max(0.0), 0.01),
+            letter_spacing_em: q(style.letter_spacing_em.unwrap_or(0.0), 0.0001),
+            max_width: q(max_width, 0.01),
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+            scale_factor: q(constraints.scale_factor.max(0.0), 0.0001),
+        };
+
+        let now = self.frame;
+        if let Some(entry) = self.text_blobs.get_mut(&key) {
+            entry.last_used_frame = now;
+            return (entry.id, entry.metrics);
+        }
+
+        let (id, metrics) = services.text().prepare(text.as_ref(), style, constraints);
+        self.text_blobs.insert(
+            key,
+            TextBlobEntry {
+                id,
+                metrics,
+                last_used_frame: now,
+            },
+        );
+        (id, metrics)
     }
 }
 

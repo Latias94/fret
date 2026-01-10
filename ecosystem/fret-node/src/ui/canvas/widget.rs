@@ -3332,11 +3332,12 @@ impl NodeGraphCanvas {
                 });
             }
 
-            let (blob, metrics) =
-                cx.services
-                    .text()
-                    .prepare(item.label.as_ref(), &text_style, constraints);
-            self.text_blobs.push(blob);
+            let (blob, metrics) = self.paint_cache.text_blob(
+                cx.services,
+                item.label.clone(),
+                &text_style,
+                constraints,
+            );
 
             let text_x = item_rect.origin.x;
             let inner_y =
@@ -3476,10 +3477,8 @@ impl NodeGraphCanvas {
             Arc::<str>::from(format!("Search: {}", searcher.query))
         };
         let (blob, metrics) =
-            cx.services
-                .text()
-                .prepare(query_text.as_ref(), &text_style, constraints);
-        self.text_blobs.push(blob);
+            self.paint_cache
+                .text_blob(cx.services, query_text, &text_style, constraints);
         let text_x = query_rect.origin.x;
         let text_y = Px(query_rect.origin.y.0
             + (query_rect.size.height.0 - metrics.size.height.0) * 0.5
@@ -3519,11 +3518,12 @@ impl NodeGraphCanvas {
                 });
             }
 
-            let (blob, metrics) =
-                cx.services
-                    .text()
-                    .prepare(row.label.as_ref(), &text_style, constraints);
-            self.text_blobs.push(blob);
+            let (blob, metrics) = self.paint_cache.text_blob(
+                cx.services,
+                row.label.clone(),
+                &text_style,
+                constraints,
+            );
 
             let text_x = item_rect.origin.x;
             let text_y = Px(item_rect.origin.y.0
@@ -3570,11 +3570,12 @@ impl NodeGraphCanvas {
             scale_factor: cx.scale_factor * zoom,
         };
 
-        let (blob, metrics) =
-            cx.services
-                .text()
-                .prepare(toast.message.as_ref(), &text_style, constraints);
-        self.text_blobs.push(blob);
+        let (blob, metrics) = self.paint_cache.text_blob(
+            cx.services,
+            toast.message.clone(),
+            &text_style,
+            constraints,
+        );
 
         let box_w = (metrics.size.width.0 + 2.0 * pad).clamp(120.0 / zoom, max_w);
         let box_h = metrics.size.height.0 + 2.0 * pad;
@@ -3655,11 +3656,9 @@ impl NodeGraphCanvas {
             scale_factor: cx.scale_factor * zoom,
         };
 
-        let (blob, metrics) = cx
-            .services
-            .text()
-            .prepare(text.as_ref(), &text_style, constraints);
-        self.text_blobs.push(blob);
+        let (blob, metrics) =
+            self.paint_cache
+                .text_blob(cx.services, text, &text_style, constraints);
 
         let box_w = (metrics.size.width.0 + 2.0 * pad).clamp(72.0 / zoom, max_w);
         let box_h = metrics.size.height.0 + 2.0 * pad;
@@ -6310,11 +6309,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         overflow: TextOverflow::Clip,
                         scale_factor: cx.scale_factor * zoom,
                     };
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare(title.as_ref(), &group_text_style, constraints);
-                    self.text_blobs.push(blob);
+                    let (blob, metrics) = self.paint_cache.text_blob(
+                        cx.services,
+                        title.clone(),
+                        &group_text_style,
+                        constraints,
+                    );
 
                     let text_x = Px(rect.origin.x.0 + group_pad);
                     let text_y = Px(rect.origin.y.0 + group_pad + metrics.baseline.0);
@@ -6499,11 +6499,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     overflow: TextOverflow::Ellipsis,
                     scale_factor: cx.scale_factor * zoom,
                 };
-                let (blob, metrics) =
-                    cx.services
-                        .text()
-                        .prepare(label.as_ref(), &edge_text_style, constraints);
-                self.text_blobs.push(blob);
+                let (blob, metrics) = self.paint_cache.text_blob(
+                    cx.services,
+                    label.clone(),
+                    &edge_text_style,
+                    constraints,
+                );
 
                 let pad = pad_screen / z;
                 let w = metrics.size.width.0.max(0.0);
@@ -6694,11 +6695,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor * zoom,
                 };
-                let (blob, metrics) =
-                    cx.services
-                        .text()
-                        .prepare(title.as_ref(), &node_text_style, constraints);
-                self.text_blobs.push(blob);
+                let (blob, metrics) = self.paint_cache.text_blob(
+                    cx.services,
+                    title.clone(),
+                    &node_text_style,
+                    constraints,
+                );
 
                 let text_x = Px(rect.origin.x.0 + title_pad);
                 let inner_y = rect.origin.y.0 + (title_h - metrics.size.height.0) * 0.5;
@@ -6729,11 +6731,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor * zoom,
                 };
-                let (blob, metrics) =
-                    cx.services
-                        .text()
-                        .prepare(body.as_ref(), &node_text_style, constraints);
-                self.text_blobs.push(blob);
+                let (blob, metrics) = self.paint_cache.text_blob(
+                    cx.services,
+                    body.clone(),
+                    &node_text_style,
+                    constraints,
+                );
 
                 let text_x = Px(rect.origin.x.0 + title_pad);
                 let inner_y = body_top + metrics.baseline.0;
@@ -6759,11 +6762,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor * zoom,
             };
-            let (blob, metrics) =
-                cx.services
-                    .text()
-                    .prepare(info.label.as_ref(), &node_text_style, port_constraints);
-            self.text_blobs.push(blob);
+            let (blob, metrics) = self.paint_cache.text_blob(
+                cx.services,
+                info.label.clone(),
+                &node_text_style,
+                port_constraints,
+            );
 
             let y = Px(center.y.0 - 0.5 * metrics.size.height.0 + metrics.baseline.0);
             let x = match info.dir {
@@ -6999,11 +7003,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor * zoom,
             };
-            let (blob, metrics) = cx
-                .services
-                .text()
-                .prepare("Close", &text_style, constraints);
-            self.text_blobs.push(blob);
+            let (blob, metrics) =
+                self.paint_cache
+                    .text_blob(cx.services, "Close", &text_style, constraints);
 
             let text_x = Px(rect.origin.x.0 + pad);
             let inner_y = rect.origin.y.0 + (rect.size.height.0 - metrics.size.height.0) * 0.5;
