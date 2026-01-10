@@ -198,6 +198,7 @@ pub struct GizmoState {
     pub active: Option<HandleId>,
     pub hovered_kind: Option<GizmoMode>,
     drag_mode: GizmoMode,
+    drag_snap: bool,
     drag_axis_dir: Vec3,
     drag_origin: Vec3,
     drag_origin_z01: f32,
@@ -212,6 +213,7 @@ pub struct GizmoState {
     drag_total_plane_applied: Vec2,
     drag_basis_u: Vec3,
     drag_basis_v: Vec3,
+    drag_start_angle: f32,
     drag_prev_angle: f32,
     drag_total_angle_raw: f32,
     drag_total_angle_applied: f32,
@@ -228,6 +230,7 @@ impl Default for GizmoState {
             active: None,
             hovered_kind: None,
             drag_mode: GizmoMode::Translate,
+            drag_snap: false,
             drag_axis_dir: Vec3::X,
             drag_origin: Vec3::ZERO,
             drag_origin_z01: 0.0,
@@ -242,6 +245,7 @@ impl Default for GizmoState {
             drag_total_plane_applied: Vec2::ZERO,
             drag_basis_u: Vec3::X,
             drag_basis_v: Vec3::Y,
+            drag_start_angle: 0.0,
             drag_prev_angle: 0.0,
             drag_total_angle_raw: 0.0,
             drag_total_angle_applied: 0.0,
@@ -443,6 +447,7 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -558,6 +563,7 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -672,6 +678,7 @@ impl Gizmo {
                 }
 
                 if input.dragging {
+                    self.state.drag_snap = input.snap;
                     let hit_world = ray_plane_intersect(
                         cursor_ray,
                         self.state.drag_origin,
@@ -793,10 +800,15 @@ impl Gizmo {
                 ));
                 out
             }
-            GizmoMode::Rotate => GizmoDrawList3d {
-                lines: self.draw_rotate_rings(view_projection, viewport, origin, axes),
-                triangles: Vec::new(),
-            },
+            GizmoMode::Rotate => {
+                let mut out = GizmoDrawList3d::default();
+                out.lines
+                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                let feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                out.lines.extend(feedback.lines);
+                out.triangles.extend(feedback.triangles);
+                out
+            }
             GizmoMode::Scale => GizmoDrawList3d {
                 lines: self.draw_scale_handles(view_projection, viewport, origin, axes),
                 triangles: self.draw_scale_solids(view_projection, viewport, origin, axes),
@@ -815,12 +827,15 @@ impl Gizmo {
                     .extend(self.draw_translate_screen(view_projection, viewport, origin));
                 out.lines
                     .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                let rotate_feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                out.lines.extend(rotate_feedback.lines);
                 out.triangles.extend(self.draw_translate_solids(
                     view_projection,
                     viewport,
                     origin,
                     axes,
                 ));
+                out.triangles.extend(rotate_feedback.triangles);
                 out
             }
         }
@@ -907,6 +922,7 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Translate;
+        self.state.drag_snap = input.snap;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_total_axis_raw = 0.0;
@@ -987,6 +1003,7 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Rotate;
+        self.state.drag_snap = input.snap;
         self.state.drag_axis_dir = axis_dir;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
@@ -1010,6 +1027,7 @@ impl Gizmo {
             });
 
         let angle = angle_on_plane(origin, start_hit_world, axis_dir, u, v)?;
+        self.state.drag_start_angle = angle;
         self.state.drag_prev_angle = angle;
 
         Some(GizmoUpdate {
@@ -1069,6 +1087,7 @@ impl Gizmo {
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Scale;
+        self.state.drag_snap = input.snap;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
         self.state.drag_plane_normal = plane_normal;
@@ -1445,6 +1464,168 @@ impl Gizmo {
                         let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
                         self.push_line(&mut out, prev, p, c, DepthMode::Always);
                         prev = p;
+                    }
+                }
+            }
+        }
+
+        out
+    }
+
+    fn draw_rotate_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Rotate {
+            return GizmoDrawList3d::default();
+        }
+        let Some(active) = self.state.active else {
+            return GizmoDrawList3d::default();
+        };
+
+        let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+        if axis_dir.length_squared() == 0.0 {
+            return GizmoDrawList3d::default();
+        }
+
+        let radius_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )
+        .unwrap_or(1.0)
+        .max(1e-6);
+
+        let thickness_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.line_thickness_px,
+        )
+        .unwrap_or(radius_world * 0.04);
+
+        let half = (thickness_world * 1.15)
+            .clamp(radius_world * 0.015, radius_world * 0.12)
+            .max(1e-6);
+        let inner_r = (radius_world - half).max(radius_world * 0.2);
+        let outer_r = radius_world + half;
+
+        let base = match active.0 {
+            1 => self.config.x_color,
+            2 => self.config.y_color,
+            3 => self.config.z_color,
+            8 => Color {
+                r: 0.9,
+                g: 0.9,
+                b: 0.9,
+                a: 0.8,
+            },
+            _ => self.config.hover_color,
+        };
+        let color = if self.state.active == Some(active) {
+            self.config.hover_color
+        } else {
+            base
+        };
+
+        let total = self.state.drag_total_angle_applied;
+        let start = self.state.drag_start_angle;
+        let end = start + total;
+
+        let u = self.state.drag_basis_u.normalize_or_zero();
+        let v = self.state.drag_basis_v.normalize_or_zero();
+        if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+            return GizmoDrawList3d::default();
+        }
+
+        let mut out = GizmoDrawList3d::default();
+
+        if total.abs() > 1e-6 {
+            let segs = ((total.abs() / std::f32::consts::TAU) * 96.0)
+                .ceil()
+                .clamp(12.0, 192.0) as usize;
+            let step = total / (segs as f32);
+
+            let fill_alpha = if self.state.drag_snap { 0.30 } else { 0.22 };
+            let fill = mix_alpha(color, fill_alpha);
+            let edge = mix_alpha(color, 0.95);
+
+            let point =
+                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
+
+            let mut prev_outer = point(start, outer_r);
+            for i in 0..segs {
+                let t0 = start + step * (i as f32);
+                let t1 = start + step * ((i + 1) as f32);
+                let o0 = point(t0, outer_r);
+                let i0 = point(t0, inner_r);
+                let o1 = point(t1, outer_r);
+                let i1 = point(t1, inner_r);
+
+                self.push_tri(&mut out.triangles, o0, i0, i1, fill, DepthMode::Always);
+                self.push_tri(&mut out.triangles, o0, i1, o1, fill, DepthMode::Always);
+
+                self.push_line(&mut out.lines, prev_outer, o1, edge, DepthMode::Always);
+                prev_outer = o1;
+            }
+
+            let start_dir = (u * start.cos() + v * start.sin()).normalize_or_zero();
+            let end_dir = (u * end.cos() + v * end.sin()).normalize_or_zero();
+            if start_dir.length_squared() > 0.0 {
+                self.push_line(
+                    &mut out.lines,
+                    origin,
+                    origin + start_dir * radius_world,
+                    mix_alpha(color, 0.35),
+                    DepthMode::Always,
+                );
+            }
+            if end_dir.length_squared() > 0.0 {
+                self.push_line(
+                    &mut out.lines,
+                    origin,
+                    origin + end_dir * radius_world,
+                    mix_alpha(color, 0.75),
+                    DepthMode::Always,
+                );
+                self.push_line(
+                    &mut out.lines,
+                    origin + end_dir * inner_r,
+                    origin + end_dir * (outer_r + half * 0.8),
+                    edge,
+                    DepthMode::Always,
+                );
+            }
+        }
+
+        if self.state.drag_snap {
+            if let Some(step) = self
+                .config
+                .rotate_snap_step_radians
+                .filter(|s| s.is_finite() && *s > 0.0)
+            {
+                let ticks = (std::f32::consts::TAU / step).round() as usize;
+                if (4..=128).contains(&ticks) {
+                    let tick_color = Color {
+                        r: 0.9,
+                        g: 0.9,
+                        b: 0.9,
+                        a: 0.35,
+                    };
+                    for k in 0..ticks {
+                        let t = (k as f32) * step;
+                        let dir = (u * t.cos() + v * t.sin()).normalize_or_zero();
+                        if dir.length_squared() == 0.0 {
+                            continue;
+                        }
+                        let a = origin + dir * (outer_r + half * 0.8);
+                        let b = origin + dir * (outer_r + half * 2.2);
+                        self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
                     }
                 }
             }
