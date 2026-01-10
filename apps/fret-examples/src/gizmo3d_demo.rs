@@ -22,6 +22,15 @@ use std::collections::HashMap;
 use wgpu::util::DeviceExt as _;
 
 #[derive(Debug, Clone, Copy)]
+struct FrameAnim {
+    start_target: Vec3,
+    start_distance: f32,
+    end_target: Vec3,
+    end_distance: f32,
+    t: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
 struct OrbitCamera {
     target: Vec3,
     yaw_radians: f32,
@@ -30,6 +39,7 @@ struct OrbitCamera {
     orbiting: bool,
     panning: bool,
     last_cursor_px: Vec2,
+    frame_anim: Option<FrameAnim>,
 }
 
 impl Default for OrbitCamera {
@@ -43,6 +53,7 @@ impl Default for OrbitCamera {
             orbiting: false,
             panning: false,
             last_cursor_px: Vec2::ZERO,
+            frame_anim: None,
         }
     }
 }
@@ -323,6 +334,40 @@ fn targets_world_aabb(targets: &[GizmoTarget3d]) -> Option<(Vec3, Vec3)> {
     any.then_some((min, max))
 }
 
+fn step_frame_anim(camera: &mut OrbitCamera) -> bool {
+    if camera.orbiting || camera.panning {
+        camera.frame_anim = None;
+        return false;
+    }
+
+    let Some(mut anim) = camera.frame_anim else {
+        return false;
+    };
+
+    let step = 0.18;
+    anim.t = (anim.t + step).min(1.0);
+    let t = anim.t;
+    let eased = t * t * (3.0 - 2.0 * t); // smoothstep
+
+    camera.target = anim.start_target.lerp(anim.end_target, eased);
+    camera.distance =
+        (anim.start_distance + (anim.end_distance - anim.start_distance) * eased).clamp(0.2, 25.0);
+
+    let done = (1.0 - anim.t) <= 1e-6
+        || ((camera.target - anim.end_target).length() <= 1e-3
+            && (camera.distance - anim.end_distance).abs() <= 1e-3);
+
+    if done {
+        camera.target = anim.end_target;
+        camera.distance = anim.end_distance.clamp(0.2, 25.0);
+        camera.frame_anim = None;
+        false
+    } else {
+        camera.frame_anim = Some(anim);
+        true
+    }
+}
+
 fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max: Vec3) {
     let center = (min + max) * 0.5;
     let radius = ((max - min).length() * 0.5).max(0.001);
@@ -337,8 +382,13 @@ fn frame_aabb(camera: &mut OrbitCamera, viewport_px: (u32, u32), min: Vec3, max:
     let margin = 1.25;
     let dist = (radius * margin) / (fov * 0.5).tan();
 
-    camera.target = center;
-    camera.distance = dist.clamp(0.2, 25.0);
+    camera.frame_anim = Some(FrameAnim {
+        start_target: camera.target,
+        start_distance: camera.distance,
+        end_target: center,
+        end_distance: dist.clamp(0.2, 25.0),
+        t: 0.0,
+    });
 }
 #[derive(Debug, Clone, Copy)]
 struct PendingSelection {
@@ -1604,6 +1654,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     button: fret_core::MouseButton::Right,
                     ..
                 } => {
+                    m.camera.frame_anim = None;
                     m.camera.orbiting = true;
                     m.camera.panning = false;
                     m.camera.last_cursor_px = cursor_px;
@@ -1612,6 +1663,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     button: fret_core::MouseButton::Middle,
                     ..
                 } => {
+                    m.camera.frame_anim = None;
                     m.camera.panning = true;
                     m.camera.orbiting = false;
                     m.camera.last_cursor_px = cursor_px;
@@ -1676,6 +1728,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 }
                 ViewportInputKind::Wheel { delta, .. } => {
+                    m.camera.frame_anim = None;
                     // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
                     let zoom_sensitivity = 0.0015;
                     let scroll = delta.y.0;
@@ -2016,11 +2069,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         renderer: &mut Renderer,
         _scale_factor: f32,
         _tick_id: fret_runtime::TickId,
-        frame_id: fret_runtime::FrameId,
+        _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
         let (_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
         Self::ensure_gpu(state, context);
+
+        let animating = state
+            .demo
+            .update(app, |m, _cx| step_frame_anim(&mut m.camera))
+            .unwrap_or(false);
+        if animating {
+            app.request_redraw(window);
+        }
 
         let gpu = state.gpu.as_ref().expect("gpu ensured");
 
@@ -2386,7 +2447,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 );
             }
 
-            let _ = frame_id;
+            let _ = _frame_id;
         }
 
         EngineFrameUpdate {
