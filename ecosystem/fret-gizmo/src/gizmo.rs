@@ -4110,6 +4110,14 @@ impl Gizmo {
             .flatten()
             .map(|h| (h, 0usize));
 
+        // Bounds handles are explicit solid affordances. If the cursor is inside a bounds handle,
+        // it should win over axis end-box scaling that may overlap in projection.
+        if let Some((hit, _)) = bounds {
+            if hit.score <= 0.25 {
+                return Some(hit);
+            }
+        }
+
         let mut best: Option<(PickHit, usize)> = None;
         let mut consider = |cand: Option<(PickHit, usize)>| {
             let Some((hit, pri)) = cand else {
@@ -6179,6 +6187,76 @@ mod tests {
             "extent_x={extent_x} snapped={snapped}"
         );
         assert!((moved_total.x - 1.0).abs() > 1e-6, "total={moved_total:?}");
+    }
+
+    #[test]
+    fn scale_prefers_bounds_face_handle_over_axis_end_box_when_overlapping() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Scale;
+        config.pivot_mode = GizmoPivotMode::Center;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.show_bounds = true;
+        let gizmo = Gizmo::new(config);
+
+        let origin = Vec3::ZERO;
+        let axes_raw = gizmo.axis_dirs(&Transform3d::default());
+        let axes_flipped = axes_raw;
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        // Construct a selection whose bounds +X face center coincides with the X axis end-box.
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d {
+                    translation: Vec3::new(-length_world, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(length_world, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::ONE,
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let cursor_world = origin + axes_raw[0].normalize_or_zero() * length_world;
+        let cursor = project_point(view_proj, vp, cursor_world, gizmo.config.depth_range)
+            .unwrap()
+            .screen;
+
+        let hit = gizmo
+            .pick_scale_or_bounds_handle(
+                view_proj,
+                vp,
+                origin,
+                cursor,
+                axes_flipped,
+                axes_raw,
+                &targets,
+            )
+            .unwrap();
+        assert_eq!(hit.handle, Gizmo::bounds_face_id(0, true));
     }
 
     #[test]
