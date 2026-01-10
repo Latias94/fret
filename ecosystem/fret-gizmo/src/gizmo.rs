@@ -158,9 +158,16 @@ enum TranslateConstraint {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+struct PickHit {
+    handle: HandleId,
+    score: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoState {
     pub hovered: Option<HandleId>,
     pub active: Option<HandleId>,
+    pub hovered_kind: Option<GizmoMode>,
     drag_mode: GizmoMode,
     drag_axis_dir: Vec3,
     drag_origin: Vec3,
@@ -190,6 +197,7 @@ impl Default for GizmoState {
         Self {
             hovered: None,
             active: None,
+            hovered_kind: None,
             drag_mode: GizmoMode::Translate,
             drag_axis_dir: Vec3::X,
             drag_origin: Vec3::ZERO,
@@ -287,26 +295,35 @@ impl Gizmo {
         };
 
         let axes = self.axis_dirs(&targets[0]);
-        let mut hovered = None;
+        let mut hovered: Option<HandleId> = None;
+        let mut hovered_kind: Option<GizmoMode> = None;
         if self.state.active.is_none() && input.hovered {
-            hovered = match self.config.mode {
-                GizmoMode::Translate => self.pick_translate_handle(
+            let pick = match self.config.mode {
+                GizmoMode::Translate => self
+                    .pick_translate_handle(view_projection, viewport, origin, input.cursor_px, axes)
+                    .map(|h| (h, GizmoMode::Translate)),
+                GizmoMode::Rotate => self
+                    .pick_rotate_axis(view_projection, viewport, origin, input.cursor_px, axes)
+                    .map(|h| (h, GizmoMode::Rotate)),
+                GizmoMode::Scale => self
+                    .pick_scale_handle(view_projection, viewport, origin, input.cursor_px, axes)
+                    .map(|h| (h, GizmoMode::Scale)),
+                GizmoMode::Universal => self.pick_universal_handle(
                     view_projection,
                     viewport,
                     origin,
                     input.cursor_px,
                     axes,
                 ),
-                GizmoMode::Rotate => {
-                    self.pick_rotate_axis(view_projection, viewport, origin, input.cursor_px, axes)
-                }
-                GizmoMode::Scale => {
-                    self.pick_scale_handle(view_projection, viewport, origin, input.cursor_px, axes)
-                }
-                GizmoMode::Universal => None,
             };
+
+            if let Some((h, kind)) = pick {
+                hovered = Some(h.handle);
+                hovered_kind = Some(kind);
+            }
         }
         self.state.hovered = hovered;
+        self.state.hovered_kind = hovered_kind;
 
         if self.state.active.is_none() {
             if input.drag_started {
@@ -342,7 +359,29 @@ impl Gizmo {
                             h,
                             axes,
                         ),
-                        GizmoMode::Universal => None,
+                        GizmoMode::Universal => match self.state.hovered_kind {
+                            Some(GizmoMode::Translate) => self.begin_translate_drag(
+                                view_projection,
+                                viewport,
+                                input,
+                                targets,
+                                cursor_ray,
+                                origin,
+                                h,
+                                axes,
+                            ),
+                            Some(GizmoMode::Rotate) => self.begin_rotate_drag(
+                                view_projection,
+                                viewport,
+                                input,
+                                targets,
+                                cursor_ray,
+                                origin,
+                                h,
+                                axes,
+                            ),
+                            _ => None,
+                        },
                     };
                 }
             }
@@ -713,8 +752,21 @@ impl Gizmo {
             }
             GizmoMode::Rotate => self.draw_rotate_rings(view_projection, viewport, origin, axes),
             GizmoMode::Scale => self.draw_scale_handles(view_projection, viewport, origin, axes),
-            GizmoMode::Universal => Vec::new(),
+            GizmoMode::Universal => {
+                let mut out = self.draw_translate_axes(view_projection, viewport, origin, axes);
+                out.extend(self.draw_translate_planes(view_projection, viewport, origin, axes));
+                out.extend(self.draw_translate_screen(view_projection, viewport, origin));
+                out.extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                out
+            }
         }
+    }
+
+    fn is_handle_highlighted(&self, kind: GizmoMode, handle: HandleId) -> bool {
+        if self.state.active == Some(handle) {
+            return self.state.drag_mode == kind;
+        }
+        self.state.hovered == Some(handle) && self.state.hovered_kind == Some(kind)
     }
 
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
@@ -961,7 +1013,7 @@ impl Gizmo {
             ((axes[1], self.config.y_color), HandleId(2)),
             ((axes[2], self.config.z_color), HandleId(3)),
         ] {
-            let c = if self.state.active == Some(handle) || self.state.hovered == Some(handle) {
+            let c = if self.is_handle_highlighted(GizmoMode::Translate, handle) {
                 self.config.hover_color
             } else {
                 color
@@ -1017,12 +1069,11 @@ impl Gizmo {
             ), // YZ
         ] {
             let handle_id = handle.id();
-            let color =
-                if self.state.active == Some(handle_id) || self.state.hovered == Some(handle_id) {
-                    mix_alpha(self.config.hover_color, 0.85)
-                } else {
-                    base_color
-                };
+            let color = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(self.config.hover_color, 0.85)
+            } else {
+                base_color
+            };
 
             let quad = translate_plane_quad_world(origin, u, v, off, size);
             for (a, b) in [
@@ -1066,8 +1117,7 @@ impl Gizmo {
         let half = length_world * 0.08;
         let base = mix_alpha(self.config.hover_color, 0.65);
         let handle_id = TranslateHandle::Screen.id();
-        let color = if self.state.active == Some(handle_id) || self.state.hovered == Some(handle_id)
-        {
+        let color = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
             mix_alpha(self.config.hover_color, 1.0)
         } else {
             base
@@ -1119,7 +1169,7 @@ impl Gizmo {
                 continue;
             }
             let (u, v) = plane_basis(axis_dir);
-            let c = if self.state.active == Some(handle) || self.state.hovered == Some(handle) {
+            let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
                 self.config.hover_color
             } else {
                 color
@@ -1169,7 +1219,7 @@ impl Gizmo {
             ((axes[1], self.config.y_color), HandleId(2)),
             ((axes[2], self.config.z_color), HandleId(3)),
         ] {
-            let c = if self.state.active == Some(handle) || self.state.hovered == Some(handle) {
+            let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
                 self.config.hover_color
             } else {
                 color
@@ -1202,7 +1252,7 @@ impl Gizmo {
         // Uniform scale box at the origin (screen-facing).
         let handle = HandleId(7);
         let base = mix_alpha(self.config.hover_color, 0.65);
-        let c = if self.state.active == Some(handle) || self.state.hovered == Some(handle) {
+        let c = if self.is_handle_highlighted(GizmoMode::Scale, handle) {
             self.config.hover_color
         } else {
             base
@@ -1231,7 +1281,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
-    ) -> Option<HandleId> {
+    ) -> Option<PickHit> {
         let length_world = axis_length_world(
             view_projection,
             viewport,
@@ -1241,14 +1291,14 @@ impl Gizmo {
         )
         .unwrap_or(1.0);
 
-        let mut best: Option<(HandleId, f32)> = None;
-        let mut consider = |handle: HandleId, d: f32| {
-            if !d.is_finite() {
+        let mut best: Option<PickHit> = None;
+        let mut consider = |handle: HandleId, score: f32| {
+            if !score.is_finite() {
                 return;
             }
             match best {
-                Some((_, best_d)) if d >= best_d => {}
-                _ => best = Some((handle, d)),
+                Some(best) if score >= best.score => {}
+                _ => best = Some(PickHit { handle, score }),
             }
         };
 
@@ -1306,7 +1356,7 @@ impl Gizmo {
             }
         }
 
-        best.map(|(h, _)| h)
+        best
     }
 
     fn pick_scale_handle(
@@ -1316,7 +1366,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
-    ) -> Option<HandleId> {
+    ) -> Option<PickHit> {
         let length_world = axis_length_world(
             view_projection,
             viewport,
@@ -1326,14 +1376,14 @@ impl Gizmo {
         )
         .unwrap_or(1.0);
 
-        let mut best: Option<(HandleId, f32)> = None;
-        let mut consider = |handle: HandleId, d: f32| {
-            if !d.is_finite() {
+        let mut best: Option<PickHit> = None;
+        let mut consider = |handle: HandleId, score: f32| {
+            if !score.is_finite() {
                 return;
             }
             match best {
-                Some((_, best_d)) if d >= best_d => {}
-                _ => best = Some((handle, d)),
+                Some(best) if score >= best.score => {}
+                _ => best = Some(PickHit { handle, score }),
             }
         };
 
@@ -1370,7 +1420,30 @@ impl Gizmo {
             }
         }
 
-        best.map(|(h, _)| h)
+        best
+    }
+
+    fn pick_universal_handle(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+    ) -> Option<(PickHit, GizmoMode)> {
+        let translate = self
+            .pick_translate_handle(view_projection, viewport, origin, cursor, axes)
+            .map(|h| (h, GizmoMode::Translate));
+        let rotate = self
+            .pick_rotate_axis(view_projection, viewport, origin, cursor, axes)
+            .map(|h| (h, GizmoMode::Rotate));
+
+        match (translate, rotate) {
+            (Some(a), Some(b)) => Some(if a.0.score <= b.0.score { a } else { b }),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
+        }
     }
 
     fn pick_rotate_axis(
@@ -1380,7 +1453,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
-    ) -> Option<HandleId> {
+    ) -> Option<PickHit> {
         let radius_world = axis_length_world(
             view_projection,
             viewport,
@@ -1390,7 +1463,7 @@ impl Gizmo {
         )?;
 
         let segments: usize = 64;
-        let mut best: Option<(HandleId, f32)> = None;
+        let mut best: Option<PickHit> = None;
 
         for &(axis_dir, handle) in &[
             (axes[0], HandleId(1)),
@@ -1428,8 +1501,8 @@ impl Gizmo {
                     let d = distance_point_to_segment_px(cursor, prev.screen, p.screen);
                     if d <= self.config.pick_radius_px {
                         match best {
-                            Some((_, best_d)) if d >= best_d => {}
-                            _ => best = Some((handle, d)),
+                            Some(best) if d >= best.score => {}
+                            _ => best = Some(PickHit { handle, score: d }),
                         }
                     }
                 }
@@ -1439,7 +1512,7 @@ impl Gizmo {
             }
         }
 
-        best.map(|(h, _)| h)
+        best
     }
 }
 

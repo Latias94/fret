@@ -694,6 +694,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 app.request_redraw(window);
             }
             Event::KeyDown {
+                key: fret_core::KeyCode::KeyU,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.gizmo.config.mode = GizmoMode::Universal;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
                 key: fret_core::KeyCode::KeyL,
                 repeat: false,
                 ..
