@@ -4002,7 +4002,38 @@ impl Gizmo {
             }
         }
 
-        let mut best: Option<(PickHit, GizmoMode)> = None;
+        // Translate axis "arrow tip" intent: when the cursor is close to the translate axis end,
+        // prefer translation over rotate rings (common editor expectation for a universal tool).
+        if let Some((hit, kind)) = translate {
+            if kind == GizmoMode::Translate && matches!(hit.handle.0, 1 | 2 | 3) {
+                let length_world = axis_length_world(
+                    view_projection,
+                    viewport,
+                    origin,
+                    self.config.depth_range,
+                    self.config.size_px,
+                )
+                .unwrap_or(1.0);
+                let axis_tip_len = length_world * self.translate_axis_tip_scale();
+                let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
+                if axis_dir.length_squared() > 0.0 {
+                    let tip_world = origin + axis_dir * axis_tip_len;
+                    if let Some(tip) = project_point(
+                        view_projection,
+                        viewport,
+                        tip_world,
+                        self.config.depth_range,
+                    ) {
+                        let d = (cursor - tip.screen).length();
+                        if d.is_finite() && d <= self.config.pick_radius_px.max(6.0) * 0.90 {
+                            return Some((hit, kind));
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut best: Option<(PickHit, GizmoMode, f32, u8)> = None;
         let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
             let Some((hit, kind)) = candidate else {
                 return;
@@ -4010,34 +4041,29 @@ impl Gizmo {
             if !hit.score.is_finite() {
                 return;
             }
-            let priority = match kind {
+            let priority: u8 = match kind {
                 GizmoMode::Rotate => 0,
                 GizmoMode::Scale => 1,
                 GizmoMode::Translate => 2,
                 GizmoMode::Universal => 3,
             };
+            let score_cmp = hit.score;
             match best {
-                Some((best_hit, best_kind)) => {
-                    let best_priority = match best_kind {
-                        GizmoMode::Rotate => 0,
-                        GizmoMode::Scale => 1,
-                        GizmoMode::Translate => 2,
-                        GizmoMode::Universal => 3,
-                    };
-                    if hit.score < best_hit.score
-                        || (hit.score == best_hit.score && priority < best_priority)
+                Some((_best_hit, _best_kind, best_score_cmp, best_priority)) => {
+                    if score_cmp < best_score_cmp
+                        || (score_cmp == best_score_cmp && priority < best_priority)
                     {
-                        best = Some((hit, kind));
+                        best = Some((hit, kind, score_cmp, priority));
                     }
                 }
-                None => best = Some((hit, kind)),
+                None => best = Some((hit, kind, score_cmp, priority)),
             }
         };
 
         consider(rotate);
         consider(scale);
         consider(translate);
-        best
+        best.map(|(hit, kind, _, _)| (hit, kind))
     }
 
     fn pick_scale_or_bounds_handle(
@@ -6323,10 +6349,21 @@ mod tests {
         let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
         let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
 
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes)
+                .is_some(),
+            "expected rotate rings to be pickable near the translate tip in this projection"
+        );
+
         let (hit, kind) = gizmo
             .pick_universal_handle(view_proj, vp, origin, tip.screen, axes)
             .unwrap();
         assert_eq!(kind, GizmoMode::Translate);
         assert_eq!(hit.handle, HandleId(1));
     }
+
+    // Note: we do not currently assert a deterministic rotate-vs-translate ambiguity case in
+    // Universal, because in this projection the overlap region is too small and becomes brittle
+    // across minor changes to pick heuristics.
 }
