@@ -103,6 +103,24 @@ impl<'a> EncodeState<'a> {
             clip_count: clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
             output_is_srgb: self.output_is_srgb,
             _pad: [0; 3],
+            mask_viewport_origin: [0.0, 0.0],
+            mask_viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+        });
+        uniform_index
+    }
+
+    pub(super) fn push_effect_uniform_snapshot(&mut self, mask_viewport: ScissorRect) -> u32 {
+        let uniform_index = self.uniforms.len() as u32;
+        let w = mask_viewport.w.max(1) as f32;
+        let h = mask_viewport.h.max(1) as f32;
+        self.uniforms.push(ViewportUniform {
+            viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+            clip_head: self.clip_head,
+            clip_count: self.clip_count.min(Self::MAX_CLIP_STACK_DEPTH),
+            output_is_srgb: self.output_is_srgb,
+            _pad: [0; 3],
+            mask_viewport_origin: [mask_viewport.x as f32, mask_viewport.y as f32],
+            mask_viewport_size: [w, h],
         });
         uniform_index
     }

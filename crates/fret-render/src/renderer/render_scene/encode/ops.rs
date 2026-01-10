@@ -50,11 +50,12 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             state.flush_quad_batch();
 
             let scissor = effect_scissor(state, bounds);
+            let uniform_index = state.push_effect_uniform_snapshot(scissor);
             state.effect_markers.push(EffectMarker {
                 draw_ix: state.ordered_draws.len(),
                 kind: EffectMarkerKind::Push {
                     scissor,
-                    uniform_index: state.current_uniform_index,
+                    uniform_index,
                     mode,
                     chain,
                     quality,

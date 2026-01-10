@@ -670,33 +670,6 @@ impl RenderPlan {
                                     None,
                                 );
 
-                                let composite_mask = if let Some(mask_target) =
-                                    choose_clip_mask_target(
-                                        viewport_size,
-                                        scope.scissor,
-                                        intermediate_budget_bytes,
-                                        scope.quality,
-                                    ) {
-                                    let mask_size = mask_target_size_in_viewport_rect(
-                                        viewport_size,
-                                        scope.scissor,
-                                        mask_target,
-                                    );
-                                    passes.push(RenderPlanPass::ClipMask(ClipMaskPass {
-                                        dst: mask_target,
-                                        dst_size: mask_size,
-                                        dst_scissor: None,
-                                        uniform_index: scope.uniform_index,
-                                        viewport_rect: scope.scissor,
-                                    }));
-                                    Some(MaskRef {
-                                        target: mask_target,
-                                        size: mask_size,
-                                        viewport_rect: scope.scissor,
-                                    })
-                                } else {
-                                    None
-                                };
                                 passes.push(RenderPlanPass::CompositePremul(CompositePremulPass {
                                     src: content_target,
                                     dst: scope.parent_target,
@@ -704,7 +677,7 @@ impl RenderPlan {
                                     dst_size: viewport_size,
                                     dst_scissor: None,
                                     mask_uniform_index: Some(scope.uniform_index),
-                                    mask: composite_mask,
+                                    mask: None,
                                     load: wgpu::LoadOp::Load,
                                 }));
 
@@ -2009,13 +1982,9 @@ mod tests {
     }
 
     #[test]
-    fn compile_for_scene_filter_content_degrades_clip_mask_resolution_by_budget() {
+    fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
         let viewport_size = (101, 99);
         let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
-        let half_size = downsampled_size(viewport_size, 2);
-        let quarter_size = downsampled_size(viewport_size, 4);
-        let half_budget = estimate_texture_bytes(half_size, wgpu::TextureFormat::R8Unorm, 1);
-        let quarter_budget = estimate_texture_bytes(quarter_size, wgpu::TextureFormat::R8Unorm, 1);
 
         let make_encoding = |quality: fret_core::EffectQuality| {
             let mut encoding = SceneEncoding::default();
@@ -2038,17 +2007,9 @@ mod tests {
             encoding
         };
 
-        for (budget, quality, expected_mask_target) in [
-            (
-                half_budget,
-                fret_core::EffectQuality::Auto,
-                PlanTarget::Mask1,
-            ),
-            (
-                quarter_budget,
-                fret_core::EffectQuality::Auto,
-                PlanTarget::Mask2,
-            ),
+        for (budget, quality) in [
+            (0, fret_core::EffectQuality::Auto),
+            (u64::MAX, fret_core::EffectQuality::Auto),
         ] {
             let plan = RenderPlan::compile_for_scene(
                 &make_encoding(quality),
@@ -2061,20 +2022,12 @@ mod tests {
             );
 
             let core = strip_releases(&plan.passes);
-            let Some(mask_pass) = core.iter().find_map(|p| {
-                let RenderPlanPass::ClipMask(p) = p else {
-                    return None;
-                };
-                Some(*p)
-            }) else {
-                panic!("expected ClipMask pass");
-            };
-            assert_eq!(mask_pass.dst, expected_mask_target);
-            assert_eq!(
-                mask_pass.dst_size,
-                mask_target_size(viewport_size, expected_mask_target)
+            assert!(
+                !core
+                    .iter()
+                    .any(|p| matches!(p, RenderPlanPass::ClipMask(_))),
+                "FilterContent composite must not treat effect bounds as a clip mask"
             );
-            assert_eq!(mask_pass.dst_scissor, None);
 
             let Some(composite) = core.iter().find_map(|p| {
                 let RenderPlanPass::CompositePremul(p) = p else {
@@ -2084,7 +2037,10 @@ mod tests {
             }) else {
                 panic!("expected CompositePremul pass");
             };
-            assert_eq!(composite.mask.unwrap().target, expected_mask_target);
+            assert!(
+                composite.mask.is_none(),
+                "FilterContent composite must not use a mask texture"
+            );
         }
     }
 

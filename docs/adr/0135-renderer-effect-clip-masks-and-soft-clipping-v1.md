@@ -130,9 +130,9 @@ Rationale:
 1) Render children inside the effect group into an offscreen intermediate.
 2) Apply the effect chain to the intermediate using:
    - `bounds` intersected with the current scissor (to bound computation),
-   - and the soft clip mask (to ensure rounded overflow-hidden correctness, especially for blur).
+   - optionally (future): a soft clip mask to improve edge quality for blur-like filters near rounded boundaries.
 3) Composite back to the parent target using premultiplied alpha over (ADR 0040),
-   applying the **clip mask** (but not treating `bounds` as a clip).
+   applying the effective clip stack (but not treating `bounds` as a clip).
 
 Key property:
 
@@ -221,8 +221,12 @@ This is a renderer-internal refactor and does not change `SceneOp`.
   would dominate the remaining budget.
 - Quad rendering, clip-mask generation, and clip-evaluating masked fullscreen passes share a single analytic SDF +
   coverage foundation (fwidth-scaled AA), keeping rounded corners and soft clip coverage consistent (ADR 0030).
-- `ScaleNearest` and `CompositePremul` can sample the clip mask (`MaskRef`) to gate writes without per-pixel clip-stack iteration.
-- Mask-sampling shaders map viewport pixel coordinates into the mask texture dimensions, enabling tiered masks.
+- Viewport-scoped clip masks are generated and sampled using an explicit `mask_viewport_origin` + `mask_viewport_size`
+  (effect scissor rect) carried in the per-scope uniform, so tiered masks map deterministically even when the effect
+  region is offset within the window.
+- `ScaleNearest` and scissored writeback passes can sample the clip mask (`MaskRef`) to gate writes without per-pixel
+  clip-stack iteration. `FilterContent` composite currently uses clip-stack sampling (no mask texture) because `bounds`
+  is computation-only and the composite covers the full viewport.
 - `RenderPlan` inserts `ClipMaskPass` opportunistically under `intermediate_budget_bytes`, otherwise falls back to clip-stack sampling via `mask_uniform_index`.
 
 Remaining v1 follow-ups:

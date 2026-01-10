@@ -63,6 +63,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -603,6 +605,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -649,8 +653,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let sample = textureLoad(src_texture, vec2<i32>(i32(sx), i32(sy)), 0);
   let mdims_u = textureDimensions(mask_texture);
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(sample.rgb * mask, mask);
 }
@@ -672,6 +682,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -732,8 +744,8 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
   let x = floor(pos.x) + 0.5;
   let y = floor(pos.y) + 0.5;
-  let scale = viewport.viewport_size / params.dst_size;
-  return clip_alpha(vec2<f32>(x, y) * scale);
+  let scale = viewport.mask_viewport_size / params.dst_size;
+  return clip_alpha(viewport.mask_viewport_origin + vec2<f32>(x, y) * scale);
 }
 "#;
 
@@ -942,6 +954,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1015,8 +1029,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 
   let mdims_u = textureDimensions(mask_texture);
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(rgb * a * mask, mask);
 }
@@ -1414,6 +1434,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1489,8 +1511,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let out = c0 + c1 + c2 + c3 + c4;
   let mdims_u = textureDimensions(mask_texture);
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(out.rgb * mask, mask);
 }
@@ -1512,6 +1540,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1587,8 +1617,14 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let out = c0 + c1 + c2 + c3 + c4;
   let mdims_u = textureDimensions(mask_texture);
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   return vec4<f32>(out.rgb * mask, mask);
 }
@@ -1743,6 +1779,8 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -1806,8 +1844,14 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let y = i32(floor(input.pixel_pos.y));
   let mdims_u = textureDimensions(mask_texture);
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let mx = clamp(i32(floor((f32(x) + 0.5) * mdims.x / viewport.viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor((f32(y) + 0.5) * mdims.y / viewport.viewport_size.y)), 0, i32(mdims_u.y) - 1);
+  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
+  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
+  if (local_x < 0.0 || local_y < 0.0 ||
+      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
+    return vec4<f32>(0.0);
+  }
+  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
+  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
   let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   let sample = textureSample(tex, tex_sampler, input.uv);
   let o = clamp(input.opacity, 0.0, 1.0);

@@ -19,6 +19,13 @@ pub(super) struct ViewportUniform {
     pub(super) clip_count: u32,
     pub(super) output_is_srgb: u32,
     pub(super) _pad: [u32; 3],
+    /// The viewport-space rect that mask textures are scoped to (top-left origin in pixels).
+    ///
+    /// For non-effect draws this is the full viewport. For effect scopes this is the effect
+    /// scissor rect so viewport-scoped mask targets can be generated and sampled correctly.
+    pub(super) mask_viewport_origin: [f32; 2],
+    /// The viewport-space size of the rect that mask textures are scoped to (in pixels).
+    pub(super) mask_viewport_size: [f32; 2],
 }
 
 #[repr(C)]

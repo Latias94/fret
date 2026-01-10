@@ -220,8 +220,8 @@ This section is intentionally lightweight and should be updated as work lands.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
-    - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by effect writeback/composite passes.
-    - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter of the effect viewport rect) with deterministic sampling.
+    - Clip mask texture substrate exists (`Mask0`, `R8Unorm`) and can be sampled by scissored effect writeback passes.
+    - Clip mask now supports tiered resolutions (`Mask0/Mask1/Mask2`: full/half/quarter of the effect viewport rect) with deterministic sampling (origin-aware mapping).
     - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
       forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
     - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
