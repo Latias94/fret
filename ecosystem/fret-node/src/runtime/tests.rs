@@ -340,3 +340,25 @@ fn store_selector_subscription_dedupes_and_tracks_graph_and_view_projections() {
     assert_eq!(node_counts.borrow().as_slice(), &[3]);
     assert_eq!(selection_counts.borrow().as_slice(), &[1]);
 }
+
+#[test]
+fn store_selector_diff_provides_prev_and_next() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let deltas: Rc<RefCell<Vec<(usize, usize)>>> = Rc::new(RefCell::new(Vec::new()));
+    let deltas2 = deltas.clone();
+    store.subscribe_selector_diff(
+        |s| s.view_state.selected_nodes.len(),
+        move |prev, next| deltas2.borrow_mut().push((*prev, *next)),
+    );
+
+    store.set_selection(vec![a], Vec::new(), Vec::new());
+    store.set_selection(vec![a], Vec::new(), Vec::new());
+    store.set_selection(Vec::new(), Vec::new(), Vec::new());
+
+    assert_eq!(deltas.borrow().as_slice(), &[(0, 1), (1, 0)]);
+}

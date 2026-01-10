@@ -53,7 +53,7 @@ struct SelectorSubscription {
     token: SubscriptionToken,
     compute: Box<dyn for<'a> Fn(NodeGraphStoreSnapshot<'a>) -> Box<dyn std::any::Any>>,
     equals: Box<dyn Fn(&dyn std::any::Any, &dyn std::any::Any) -> bool>,
-    callback: Box<dyn FnMut(&dyn std::any::Any)>,
+    callback: Box<dyn FnMut(&dyn std::any::Any, &dyn std::any::Any)>,
     last: Box<dyn std::any::Any>,
 }
 
@@ -133,6 +133,18 @@ impl NodeGraphStore {
     where
         T: Clone + PartialEq + 'static,
     {
+        self.subscribe_selector_diff(selector, move |_prev, next| on_change(next))
+    }
+
+    /// Subscribes to a derived projection and receives both the previous and next values.
+    pub fn subscribe_selector_diff<T>(
+        &mut self,
+        selector: impl for<'a> Fn(NodeGraphStoreSnapshot<'a>) -> T + 'static,
+        mut on_change: impl FnMut(&T, &T) + 'static,
+    ) -> SubscriptionToken
+    where
+        T: Clone + PartialEq + 'static,
+    {
         let token = SubscriptionToken::new(self.next_subscription);
         self.next_subscription = self.next_subscription.saturating_add(1).max(1);
 
@@ -153,9 +165,10 @@ impl NodeGraphStore {
                 let b = b.downcast_ref::<T>().expect("selector type mismatch");
                 a == b
             }),
-            callback: Box::new(move |v| {
-                let v = v.downcast_ref::<T>().expect("selector type mismatch");
-                on_change(v);
+            callback: Box::new(move |prev, next| {
+                let prev = prev.downcast_ref::<T>().expect("selector type mismatch");
+                let next = next.downcast_ref::<T>().expect("selector type mismatch");
+                on_change(prev, next);
             }),
             last: Box::new(initial),
         });
@@ -391,7 +404,7 @@ impl NodeGraphStore {
             if !changed {
                 continue;
             }
-            (sub.callback)(&*next);
+            (sub.callback)(&*sub.last, &*next);
             sub.last = next;
         }
     }
