@@ -444,9 +444,12 @@ High-level layering (ADR 0135):
     - selection align/distribute commands: `node_graph.align_*`, `node_graph.distribute_{x,y}`
     - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
 
-- [ ] **Roving focus / a11y semantics**
+- [~] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`
-  - fret-node: needs baseline semantics for nodes, ports, edges, and minimap/controls
+  - fret-node:
+    - `Tab` / `Shift+Tab` focus-cycle nodes (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `Ctrl/Cmd+Tab` focus-cycle edges (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - TODO: semantic focus nodes (ARIA-like), ports focus path, and minimap/controls focus
 
 ---
 

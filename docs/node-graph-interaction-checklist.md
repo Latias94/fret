@@ -201,7 +201,8 @@ Invariants:
 - (todo) Edge hit-testing uses a larger interaction width than the visual stroke width.
 - (todo) Hovering an edge highlights it (without changing selection).
 - (todo) Selecting an edge is deterministic and undo/redo does not affect selection state unexpectedly.
-- (prototype) Keyboard edge focus: `Ctrl/Cmd+Tab` cycles focus/selection across edges (when enabled).
+- (done) Keyboard edge focus: `Ctrl/Cmd+Tab` cycles focus/selection across edges (when enabled).
+- (done) Keyboard node focus: `Tab` / `Shift+Tab` cycles focus/selection across nodes.
 - (prototype) Focus anchors: focused/selected edge shows endpoint anchors (reconnect affordance).
 - (prototype) Anchor reconnect: click an edge endpoint anchor and drag to reconnect.
 - (prototype) Anchor hover: hovering an anchor highlights it and uses pointer cursor.
