@@ -19,9 +19,8 @@ use std::sync::Arc;
 use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
-    PointerRegionProps, RenderTransformProps, SemanticsProps, SizeStyle, SpinnerProps,
-    SvgIconProps, TextProps,
+    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Overflow, PointerRegionProps,
+    SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -719,29 +718,11 @@ impl Tooltip {
                     opening,
                 );
 
-                let overlay_layout = LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-
-                vec![cx.opacity_props(
-                    OpacityProps {
-                        layout: overlay_layout.clone(),
-                        opacity,
-                    },
-                    move |cx| {
-                        vec![cx.render_transform_props(
-                            RenderTransformProps {
-                                layout: overlay_layout,
-                                transform,
-                            },
-                            move |_cx| vec![wrapper],
-                        )]
-                    },
+                vec![overlay_motion::wrap_opacity_and_render_transform(
+                    cx,
+                    opacity,
+                    transform,
+                    vec![wrapper],
                 )]
             });
 

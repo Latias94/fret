@@ -5,10 +5,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, RenderTransformProps,
-    SemanticsProps, SizeStyle, TextProps,
-};
+use fret_ui::element::{AnyElement, ContainerProps, Overflow, SemanticsProps, TextProps};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -403,29 +400,11 @@ impl Popover {
                         },
                     );
 
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let overlay_content = cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout.clone(),
-                            opacity,
-                        },
-                        move |cx| {
-                            let wrapper = cx.render_transform_props(
-                                RenderTransformProps {
-                                    layout: opacity_layout,
-                                    transform,
-                                },
-                                move |_cx| vec![wrapper],
-                            );
-                            vec![wrapper]
-                        },
+                    let overlay_content = overlay_motion::wrap_opacity_and_render_transform(
+                        cx,
+                        opacity,
+                        transform,
+                        vec![wrapper],
                     );
 
                     if modal {
@@ -719,7 +698,7 @@ mod tests {
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
-    use fret_ui::element::PressableProps;
+    use fret_ui::element::{LayoutStyle, Length, PressableProps};
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 

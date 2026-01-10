@@ -4,9 +4,9 @@ use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsR
 use fret_core::{TextWrap, Transform2D};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
-    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
-    TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
+    PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -978,42 +978,32 @@ impl NavigationMenu {
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
 
-                                            let from = cx.opacity_props(
-                                                OpacityProps {
+                                            let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                                                cx,
+                                                layer_layout,
+                                                from_opacity,
+                                                RenderTransformProps {
                                                     layout: layer_layout,
-                                                    opacity: from_opacity,
+                                                    transform: Transform2D::translation(Point::new(
+                                                        Px(from_dx),
+                                                        Px(0.0),
+                                                    )),
                                                 },
-                                                move |cx| {
-                                                    let layer = cx.render_transform_props(
-                                                        RenderTransformProps {
-                                                            layout: layer_layout,
-                                                            transform: Transform2D::translation(
-                                                                Point::new(Px(from_dx), Px(0.0)),
-                                                            ),
-                                                        },
-                                                        move |_cx| from_children.clone(),
-                                                    );
-                                                    vec![layer]
-                                                },
+                                                from_children.clone(),
                                             );
 
-                                            let to = cx.opacity_props(
-                                                OpacityProps {
+                                            let to = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                                                cx,
+                                                layer_layout,
+                                                to_opacity,
+                                                RenderTransformProps {
                                                     layout: layer_layout,
-                                                    opacity: to_opacity,
+                                                    transform: Transform2D::translation(Point::new(
+                                                        Px(to_dx),
+                                                        Px(0.0),
+                                                    )),
                                                 },
-                                                move |cx| {
-                                                    let layer = cx.render_transform_props(
-                                                        RenderTransformProps {
-                                                            layout: layer_layout,
-                                                            transform: Transform2D::translation(
-                                                                Point::new(Px(to_dx), Px(0.0)),
-                                                            ),
-                                                        },
-                                                        move |_cx| to_children.clone(),
-                                                    );
-                                                    vec![layer]
-                                                },
+                                                to_children.clone(),
                                             );
 
                                             vec![from, to]

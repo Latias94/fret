@@ -4,10 +4,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, Size};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
-use fret_ui::element::{
-    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, PointerRegionProps,
-    RenderTransformProps, SizeStyle,
-};
+use fret_ui::element::{AnyElement, HoverRegionProps, Overflow, PointerRegionProps};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
@@ -472,15 +469,6 @@ impl HoverCard {
                     opening,
                 );
 
-                let overlay_layout = LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-
                 let pointer_down_on_content_model = pointer_down_on_content.clone();
                 let content_for_panel = content.clone();
                 let wrapper = cx.hover_region(
@@ -556,20 +544,11 @@ impl HoverCard {
                     },
                 );
 
-                vec![cx.opacity_props(
-                    OpacityProps {
-                        layout: overlay_layout.clone(),
-                        opacity,
-                    },
-                    move |cx| {
-                        vec![cx.render_transform_props(
-                            RenderTransformProps {
-                                layout: overlay_layout,
-                                transform,
-                            },
-                            move |_cx| vec![wrapper],
-                        )]
-                    },
+                vec![overlay_motion::wrap_opacity_and_render_transform(
+                    cx,
+                    opacity,
+                    transform,
+                    vec![wrapper],
                 )]
             });
 

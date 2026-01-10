@@ -6,8 +6,8 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, RenderTransformProps, SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
+    RenderTransformProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -223,27 +223,22 @@ impl AlertDialog {
                     let barrier_children = vec![barrier_fill];
                     let open_for_children = self.open.clone();
 
-                    vec![cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout,
-                            opacity,
+                    let content = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                        cx,
+                        opacity_layout,
+                        opacity,
+                        RenderTransformProps {
+                            layout: content_layout,
+                            transform: zoom,
                         },
-                        move |cx| {
-                            let content = cx.render_transform_props(
-                                RenderTransformProps {
-                                    layout: content_layout,
-                                    transform: zoom,
-                                },
-                                move |_cx| vec![wrapper],
-                            );
-                            radix_alert_dialog::alert_dialog_modal_layer_children(
-                                cx,
-                                open_for_children.clone(),
-                                barrier_children,
-                                content,
-                            )
-                        },
-                    )]
+                        vec![wrapper],
+                    );
+                    radix_alert_dialog::alert_dialog_modal_layer_children(
+                        cx,
+                        open_for_children.clone(),
+                        barrier_children,
+                        content,
+                    )
                 });
 
                 if let Some(content_element) = content_element_for_trigger.get() {
