@@ -2264,7 +2264,7 @@ impl NodeGraphCanvas {
                 let r2 = r * r;
                 let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
 
-                let mut best: Option<(PortId, f32, bool, u32)> = None;
+                let mut best: Option<(PortId, f32, u32)> = None;
                 index.query_ports(pos, r, scratch);
                 scratch.sort_unstable();
                 scratch.dedup();
@@ -2275,33 +2275,31 @@ impl NodeGraphCanvas {
                     let Some(handle) = geom.ports.get(&port_id) else {
                         continue;
                     };
+                    if handle.dir != desired_dir {
+                        continue;
+                    }
                     let d2 = Self::distance_sq_point_to_rect(pos, handle.bounds);
                     if d2 > r2 {
                         continue;
                     }
-                    let prefer_opposite = handle.dir == desired_dir;
                     let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
                     match best {
-                        Some((best_id, best_d2, best_prefer, best_rank)) => {
+                        Some((best_id, best_d2, best_rank)) => {
                             if d2 + eps < best_d2 {
-                                best = Some((port_id, d2, prefer_opposite, rank));
+                                best = Some((port_id, d2, rank));
                             } else if (d2 - best_d2).abs() <= eps {
-                                if prefer_opposite && !best_prefer {
-                                    best = Some((port_id, d2, prefer_opposite, rank));
-                                } else if prefer_opposite == best_prefer {
-                                    if rank > best_rank {
-                                        best = Some((port_id, d2, prefer_opposite, rank));
-                                    } else if rank == best_rank && port_id < best_id {
-                                        best = Some((port_id, d2, prefer_opposite, rank));
-                                    }
+                                if rank > best_rank {
+                                    best = Some((port_id, d2, rank));
+                                } else if rank == best_rank && port_id < best_id {
+                                    best = Some((port_id, d2, rank));
                                 }
                             }
                         }
-                        None => best = Some((port_id, d2, prefer_opposite, rank)),
+                        None => best = Some((port_id, d2, rank)),
                     }
                 }
 
-                best.map(|(id, _, _, _)| id)
+                best.map(|(id, _, _)| id)
             }
         }
     }
@@ -7301,6 +7299,7 @@ mod tests {
     };
 
     mod connect_conformance;
+    mod hit_testing_conformance;
     mod interaction_conformance;
     mod perf_cache;
 
