@@ -855,6 +855,68 @@ fn append_cube_triangles(out: &mut Vec<Vertex>, transform: Transform3d, color: [
     }
 }
 
+fn pick_unit_cube_t(ray: fret_gizmo::Ray3d, transform: Transform3d) -> Option<f32> {
+    let inv_rot = transform.rotation.inverse();
+    let scale = transform.scale;
+    if !scale.is_finite() {
+        return None;
+    }
+    if scale.x.abs() < 1e-6 || scale.y.abs() < 1e-6 || scale.z.abs() < 1e-6 {
+        return None;
+    }
+
+    let origin_local = inv_rot * (ray.origin - transform.translation);
+    let dir_local = inv_rot * ray.dir;
+    let origin_local = origin_local / scale;
+    let dir_local = dir_local / scale;
+
+    let min = Vec3::splat(-0.4);
+    let max = Vec3::splat(0.4);
+
+    let mut t_min = f32::NEG_INFINITY;
+    let mut t_max = f32::INFINITY;
+
+    for axis in 0..3 {
+        let o = origin_local[axis];
+        let d = dir_local[axis];
+        if d.abs() < 1e-8 {
+            if o < min[axis] || o > max[axis] {
+                return None;
+            }
+            continue;
+        }
+
+        let mut t1 = (min[axis] - o) / d;
+        let mut t2 = (max[axis] - o) / d;
+        if t1 > t2 {
+            std::mem::swap(&mut t1, &mut t2);
+        }
+        t_min = t_min.max(t1);
+        t_max = t_max.min(t2);
+        if t_max < t_min {
+            return None;
+        }
+    }
+
+    let t = if t_min >= 0.0 { t_min } else { t_max };
+    (t.is_finite() && t >= 0.0).then_some(t)
+}
+
+fn pick_target_id(ray: fret_gizmo::Ray3d, targets: &[GizmoTarget3d]) -> Option<GizmoTargetId> {
+    let mut best_id: Option<GizmoTargetId> = None;
+    let mut best_t = f32::INFINITY;
+    for t in targets {
+        let Some(hit_t) = pick_unit_cube_t(ray, t.transform) else {
+            continue;
+        };
+        if hit_t < best_t {
+            best_t = hit_t;
+            best_id = Some(t.id);
+        }
+    }
+    best_id
+}
+
 fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     let (w, h) = size;
     let aspect = (w.max(1) as f32) / (h.max(1) as f32);
@@ -947,12 +1009,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     input.dragging = false;
                     input.cancel = true;
 
-                    if m.selection.is_empty() {
-                        m.selection.push(m.active_target);
-                    }
-                    if !m.selection.contains(&m.active_target) {
-                        m.active_target = m.selection[0];
-                    }
                     let selected: Vec<GizmoTarget3d> = m
                         .targets
                         .iter()
@@ -1271,12 +1327,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Left,
                     ..
-                } => (true, true),
-                ViewportInputKind::PointerMove { buttons, .. } => {
-                    // Some platforms can produce inconsistent "buttons" state for move events.
-                    // Prefer to keep dragging latched until an explicit PointerUp arrives.
-                    (false, m.input.dragging || buttons.left)
-                }
+                } => (false, false),
+                ViewportInputKind::PointerMove { .. } => (false, m.input.dragging),
                 ViewportInputKind::PointerUp {
                     button: fret_core::MouseButton::Left,
                     ..
@@ -1294,11 +1346,87 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
 
-            let (drag_started, dragging) = if is_navigating {
+            let (mut drag_started, mut dragging) = if is_navigating {
                 (false, false)
             } else {
                 (drag_started, dragging)
             };
+
+            let view_projection = camera_view_projection(m.viewport_px, m.camera);
+            let viewport = ViewportRect::new(
+                Vec2::ZERO,
+                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
+            );
+
+            if let ViewportInputKind::PointerDown {
+                button: fret_core::MouseButton::Left,
+                modifiers,
+                ..
+            } = event.kind
+                && hovered
+            {
+                let selected: Vec<GizmoTarget3d> = m
+                    .targets
+                    .iter()
+                    .copied()
+                    .filter(|t| m.selection.contains(&t.id))
+                    .collect();
+
+                let hover_input = GizmoInput {
+                    cursor_px,
+                    hovered: true,
+                    drag_started: false,
+                    dragging: false,
+                    snap: modifiers.shift,
+                    cancel: false,
+                };
+                let _ = m.gizmo.update(
+                    view_projection,
+                    viewport,
+                    hover_input,
+                    m.active_target,
+                    &selected,
+                );
+
+                let over_handle = m.gizmo.state.hovered.is_some();
+                if over_handle {
+                    drag_started = true;
+                    dragging = true;
+                } else if let Some(ray) = fret_gizmo::ray_from_screen(
+                    view_projection,
+                    viewport,
+                    cursor_px,
+                    m.gizmo.config.depth_range,
+                ) {
+                    let hit = pick_target_id(ray, &m.targets);
+                    match (hit, modifiers.shift) {
+                        (Some(id), true) => {
+                            if let Some(pos) = m.selection.iter().position(|v| *v == id) {
+                                if m.selection.len() > 1 {
+                                    m.selection.remove(pos);
+                                    if m.active_target == id {
+                                        m.active_target = m.selection[0];
+                                    }
+                                } else {
+                                    m.active_target = id;
+                                }
+                            } else {
+                                m.selection.push(id);
+                                m.active_target = id;
+                            }
+                        }
+                        (Some(id), false) => {
+                            m.selection.clear();
+                            m.selection.push(id);
+                            m.active_target = id;
+                        }
+                        (None, false) => {
+                            m.selection.clear();
+                        }
+                        (None, true) => {}
+                    }
+                }
+            }
 
             m.input = GizmoInput {
                 cursor_px,
@@ -1308,19 +1436,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 snap,
                 cancel: false,
             };
-
-            let view_projection = camera_view_projection(m.viewport_px, m.camera);
-            let viewport = ViewportRect::new(
-                Vec2::ZERO,
-                Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
-            );
-
-            if m.selection.is_empty() {
-                m.selection.push(m.active_target);
-            }
-            if !m.selection.contains(&m.active_target) {
-                m.active_target = m.selection[0];
-            }
 
             let selected: Vec<GizmoTarget3d> = m
                 .targets
@@ -1432,15 +1547,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .read(app, |_app, m| {
                 let view_proj = camera_view_projection(size, m.camera);
 
-                let selection = if m.selection.is_empty() {
-                    vec![m.active_target]
-                } else {
-                    m.selection.clone()
-                };
+                let selection = m.selection.clone();
                 let active_target = if selection.contains(&m.active_target) {
                     m.active_target
                 } else {
-                    selection[0]
+                    selection.first().copied().unwrap_or(m.active_target)
                 };
 
                 let gizmo_targets: Vec<GizmoTarget3d> = m
