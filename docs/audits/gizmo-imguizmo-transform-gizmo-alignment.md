@@ -125,7 +125,7 @@ Fret's current contract:
 | Translate "depth" (move toward/away camera) | No (not explicit) | No (not in core modes) | **Not implemented** | Optional future feature (sometimes called "dolly" translation). Not required for parity with these two references. |
 | Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Ring drawing + pick based on distance-to-segment. `draw_rotate_rings`, `pick_rotate_axis`. |
 | Rotate around view axis (screen ring) | Yes (`ROTATE_SCREEN`) | Yes (`RotateView`) | **Aligned** | `show_view_axis_ring` + handle id 8, rendered as an outer ring (`view_axis_ring_radius_scale`). `pick_rotate_axis` view ring path, `begin_rotate_drag` view-axis mode. |
-| Arcball rotation | No | Yes (`Arcball`) | **Not implemented** | transform-gizmo supports trackball rotation; Fret does not. |
+| Arcball rotation | No | Yes (`Arcball`) | **Aligned (basic)** | Fret supports arcball free-rotation in `GizmoMode::Rotate` via `GizmoConfig::show_arcball` and emits `GizmoResult::Arcball { delta, total }` (quat-based), matching transform-gizmo’s contract shape. |
 | Scale axis X/Y/Z | Yes | Yes | **Aligned** | Axis scaling is supported and axis picking matches the rendered end boxes (not the whole shaft). `pick_scale_handle`, `begin_scale_drag`. |
 | Scale uniform (center handle) | Partial (via `SCALEU`/center) | Yes (`ScaleUniform`) | **Aligned** | Center uniform handle id 7, with pivot-respecting translation compensation. |
 | Scale plane XY/XZ/YZ | No | Yes (`ScaleXY/XZ/YZ`) | **Aligned** | Plane scale handles (XY/XZ/YZ) are supported in `Scale` mode. `pick_scale_handle` + `begin_scale_drag` + scale update path. |
