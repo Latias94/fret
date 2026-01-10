@@ -541,7 +541,7 @@ pub struct SelectPopperVars {
 }
 
 pub fn select_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
-    Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0))
+    popper::popper_desired_width(outer, anchor, min_width)
 }
 
 /// Compute Radix-like "select popper vars" (`--radix-select-*`) for recipes.
@@ -560,11 +560,8 @@ pub fn select_popper_vars(
     min_width: Px,
     placement: popper::PopperContentPlacement,
 ) -> SelectPopperVars {
-    let desired_w = select_popper_desired_width(outer, anchor, min_width);
-    let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
-    let layout = popper::popper_content_layout_sized(outer, anchor, probe_desired, placement);
-    let metrics = popper::popper_available_metrics(outer, anchor, &layout, placement.direction);
-
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
     SelectPopperVars {
         available_width: metrics.available_width,
         available_height: metrics.available_height,

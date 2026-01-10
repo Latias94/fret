@@ -7,7 +7,7 @@
 //! and hover overlay request wiring. Visual styling, motion, and arrow rendering belong in higher
 //! layers (e.g. shadcn recipes).
 
-use fret_core::{Px, Rect, Size};
+use fret_core::{Px, Rect};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
@@ -125,7 +125,7 @@ pub struct HoverCardPopperVars {
 }
 
 pub fn hover_card_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
-    Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0))
+    popper::popper_desired_width(outer, anchor, min_width)
 }
 
 /// Compute Radix-like "hover card popper vars" (`--radix-hover-card-*`) for recipes.
@@ -144,11 +144,8 @@ pub fn hover_card_popper_vars(
     min_width: Px,
     placement: popper::PopperContentPlacement,
 ) -> HoverCardPopperVars {
-    let desired_w = hover_card_popper_desired_width(outer, anchor, min_width);
-    let probe_desired = Size::new(desired_w, outer.size.height);
-    let layout = popper::popper_content_layout_sized(outer, anchor, probe_desired, placement);
-    let metrics = popper::popper_available_metrics(outer, anchor, &layout, placement.direction);
-
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
     HoverCardPopperVars {
         available_width: metrics.available_width,
         available_height: metrics.available_height,
@@ -162,7 +159,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::Point;
+    use fret_core::{Point, Size};
 
     #[test]
     fn hover_card_root_open_model_uses_controlled_model() {

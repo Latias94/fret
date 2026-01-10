@@ -281,6 +281,32 @@ pub fn popper_available_metrics(
     }
 }
 
+pub fn popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0))
+}
+
+/// Compute Radix-like `size()` middleware metrics for a `PopperContentPlacement`.
+///
+/// Radix uses Floating UI's `size()` middleware to expose:
+/// - `--radix-popper-available-width`
+/// - `--radix-popper-available-height`
+/// - `--radix-popper-anchor-width`
+/// - `--radix-popper-anchor-height`
+///
+/// In Fret, we expose the same concepts as `PopperAvailableMetrics`. This helper computes them
+/// without requiring callers to duplicate the "probe layout" step.
+pub fn popper_available_metrics_for_placement(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: PopperContentPlacement,
+) -> PopperAvailableMetrics {
+    let desired_w = popper_desired_width(outer, anchor, min_width);
+    let probe_desired = Size::new(desired_w, outer.size.height);
+    let layout = popper_content_layout_sized(outer, anchor, probe_desired, placement);
+    popper_available_metrics(outer, anchor, &layout, placement.direction)
+}
+
 /// Computes an anchored popper layout (rect + optional arrow) with deterministic flip/clamp rules.
 pub fn popper_layout_sized(
     outer: Rect,

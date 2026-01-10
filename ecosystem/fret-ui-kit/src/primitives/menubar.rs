@@ -7,7 +7,7 @@
 //! In Fret the shared menu content/submenu behavior lives in `crate::primitives::menu`; this module
 //! exists as a Radix-named facade for consumers that want to align their mental model with Radix.
 
-use fret_core::{Px, Rect, Size};
+use fret_core::{Px, Rect};
 
 use crate::primitives::popper;
 
@@ -30,7 +30,7 @@ pub struct MenubarPopperVars {
 }
 
 pub fn menubar_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
-    Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0))
+    popper::popper_desired_width(outer, anchor, min_width)
 }
 
 /// Compute Radix-like "menubar popper vars" (`--radix-menubar-*`) for recipes.
@@ -49,11 +49,8 @@ pub fn menubar_popper_vars(
     min_width: Px,
     placement: popper::PopperContentPlacement,
 ) -> MenubarPopperVars {
-    let desired_w = menubar_popper_desired_width(outer, anchor, min_width);
-    let probe_desired = Size::new(desired_w, outer.size.height);
-    let layout = popper::popper_content_layout_sized(outer, anchor, probe_desired, placement);
-    let metrics = popper::popper_available_metrics(outer, anchor, &layout, placement.direction);
-
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
     MenubarPopperVars {
         available_width: metrics.available_width,
         available_height: metrics.available_height,
@@ -66,7 +63,7 @@ pub fn menubar_popper_vars(
 mod tests {
     use super::*;
 
-    use fret_core::Point;
+    use fret_core::{Point, Size};
 
     #[test]
     fn menubar_popper_vars_available_height_tracks_flipped_side_space() {
