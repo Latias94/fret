@@ -7,7 +7,11 @@
 //! This module provides reusable math for those effects so component wrappers don't drift.
 
 use fret_core::{Edges, Point, Px, Rect, Transform2D};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, OpacityProps, RenderTransformProps, SizeStyle,
+};
 use fret_ui::overlay_placement::Side;
+use fret_ui::{ElementContext, UiHost};
 
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
 
@@ -20,6 +24,58 @@ pub const SHADCN_MOTION_TICKS_500: u64 = 30;
 /// shadcn/ui v4 default easing curve (`ease-out`-ish).
 pub fn shadcn_ease(x: f32) -> f32 {
     crate::headless::easing::SHADCN_EASE.sample(x)
+}
+
+fn fullscreen_motion_layout() -> LayoutStyle {
+    LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Wraps interactive overlay content in opacity + render-transform layers.
+///
+/// In DOM/CSS, transforms affect pointer targeting (hit-testing follows the visual position). Fret
+/// models that explicitly via `RenderTransform`, which participates in hit-testing and pointer
+/// coordinate mapping.
+///
+/// Use this wrapper for overlay motion that should remain interactive while animating. For
+/// paint-only transforms (spinners, arrows), prefer `VisualTransform`.
+pub fn wrap_opacity_and_render_transform<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity: f32,
+    transform: Transform2D,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = fullscreen_motion_layout();
+    wrap_opacity_and_render_transform_with_layouts(
+        cx,
+        layout.clone(),
+        opacity,
+        RenderTransformProps { layout, transform },
+        children,
+    )
+}
+
+/// Like [`wrap_opacity_and_render_transform`], but allows customizing layouts.
+pub fn wrap_opacity_and_render_transform_with_layouts<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    opacity_layout: LayoutStyle,
+    opacity: f32,
+    transform_props: RenderTransformProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.opacity_props(
+        OpacityProps {
+            layout: opacity_layout,
+            opacity,
+        },
+        move |cx| vec![cx.render_transform_props(transform_props, move |_cx| children)],
+    )
 }
 
 pub fn shadcn_slide_insets(side: Side) -> Edges {
