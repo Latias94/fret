@@ -11,7 +11,8 @@ mod math;
 
 pub use gizmo::{
     DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode, GizmoOrientation,
-    GizmoPhase, GizmoResult, GizmoState, GizmoUpdate, HandleId, Line3d, Transform3d, Triangle3d,
+    GizmoPhase, GizmoPivotMode, GizmoResult, GizmoState, GizmoTarget3d, GizmoTargetId, GizmoUpdate,
+    HandleId, Line3d, Transform3d, Triangle3d,
 };
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
