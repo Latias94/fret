@@ -494,7 +494,7 @@ struct Gizmo3dDemoModel {
 
 impl Default for Gizmo3dDemoModel {
     fn default() -> Self {
-        let mut gizmo_cfg = GizmoConfig::default();
+        let mut gizmo_cfg = GizmoConfig::editor_default();
         gizmo_cfg.translate_snap_step = Some(0.25);
         gizmo_cfg.bounds_snap_step = Some(Vec3::splat(0.5));
         gizmo_cfg.show_bounds = true;

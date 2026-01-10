@@ -282,6 +282,35 @@ impl Default for GizmoConfig {
     }
 }
 
+impl GizmoConfig {
+    /// Returns a more editor-friendly baseline configuration.
+    ///
+    /// `Default` stays conservative; this opt-in preset biases toward "easy to hit" and
+    /// "readable at a glance" in typical game-editor viewports.
+    pub fn editor_default() -> Self {
+        let mut cfg = Self::default();
+        cfg.size_px = 112.0;
+        cfg.pick_radius_px = 12.0;
+        cfg.line_thickness_px = 8.0;
+        cfg.bounds_handle_size_px = 14.0;
+        cfg
+    }
+
+    /// Scales pixel-based knobs when the host's cursor/viewport units are logical "points".
+    ///
+    /// Pass the platform scale factor (e.g. pixels-per-point / device pixel ratio) so gizmo
+    /// visuals and picking remain consistent across DPI settings.
+    pub fn scale_for_pixels_per_point(mut self, pixels_per_point: f32) -> Self {
+        let s = pixels_per_point.clamp(0.1, 16.0);
+        self.size_px *= s;
+        self.pick_radius_px *= s;
+        self.line_thickness_px *= s;
+        self.drag_start_threshold_px *= s;
+        self.bounds_handle_size_px *= s;
+        self
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoInput {
     pub cursor_px: Vec2,
