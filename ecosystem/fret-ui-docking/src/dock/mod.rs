@@ -75,17 +75,22 @@ pub trait DockViewportOverlayHooks: Send + Sync + 'static {
         );
     }
 
+    /// Legacy overlay hook: prefer `paint_with_layout(...)` for new code.
+    ///
+    /// Default implementation is a no-op to keep implementations minimal when the overlay hook is
+    /// unused.
     #[allow(clippy::too_many_arguments)]
     fn paint(
         &self,
-        theme: fret_ui::ThemeSnapshot,
-        window: fret_core::AppWindowId,
-        panel: &PanelKey,
-        viewport: ViewportPanel,
-        mapping: ViewportMapping,
-        draw_rect: Rect,
-        scene: &mut Scene,
-    );
+        _theme: fret_ui::ThemeSnapshot,
+        _window: fret_core::AppWindowId,
+        _panel: &PanelKey,
+        _viewport: ViewportPanel,
+        _mapping: ViewportMapping,
+        _draw_rect: Rect,
+        _scene: &mut Scene,
+    ) {
+    }
 }
 
 pub fn create_dock_space_node<H: UiHost>(
