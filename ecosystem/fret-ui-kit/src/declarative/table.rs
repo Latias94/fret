@@ -1286,6 +1286,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             ..Default::default()
                                                                                         },
                                                                                         |cx| {
+                                                                                            let col_widths: Vec<Px> = cols
+                                                                                                .iter()
+                                                                                                .map(|col| {
+                                                                                                    resolve_column_width(
+                                                                                                        col,
+                                                                                                        &state_value,
+                                                                                                        &props,
+                                                                                                    )
+                                                                                                })
+                                                                                                .collect();
                                                                                             let background_row =
                                                                                                 stack::hstack(
                                                                                                     cx,
@@ -1295,12 +1305,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                         .items(Items::Stretch),
                                                                                                     |cx| {
                                                                                                         cols.iter()
-                                                                                                            .map(|col| {
-                                                                                                                let col_w = resolve_column_width(
-                                                                                                                    col,
-                                                                                                                    &state_value,
-                                                                                                                    &props,
-                                                                                                                );
+                                                                                                            .zip(col_widths.iter().copied())
+                                                                                                            .map(|(_col, col_w)| {
                                                                                                                 cx.container(
                                                                                                                     ContainerProps {
                                                                                                                         border: Edges {
@@ -1358,12 +1364,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             .items(Items::Center),
                                                                                                         |cx| {
                                                                                                             cols.iter()
-                                                                                                                .map(|col| {
-                                                                                                                    let col_w = resolve_column_width(
-                                                                                                                        col,
-                                                                                                                        &state_value,
-                                                                                                                        &props,
-                                                                                                                    );
+                                                                                                                .zip(col_widths.iter().copied())
+                                                                                                                .map(|(col, col_w)| {
 
                                                                                                                     let is_label_target = col
                                                                                                                         .id
@@ -1672,6 +1674,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                 ..Default::default()
                                                                             },
                                                                             |cx| {
+                                                                                let col_widths: Vec<Px> = cols
+                                                                                    .iter()
+                                                                                    .map(|col| {
+                                                                                        resolve_column_width(
+                                                                                            col,
+                                                                                            &state_value,
+                                                                                            &props,
+                                                                                        )
+                                                                                    })
+                                                                                    .collect();
                                                                                 let background_row = stack::hstack(
                                                                                     cx,
                                                                                     stack::HStackProps::default()
@@ -1680,12 +1692,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                         .items(Items::Stretch),
                                                                                     |cx| {
                                                                                         cols.iter()
-                                                                                            .map(|col| {
-                                                                                                let col_w = resolve_column_width(
-                                                                                                    col,
-                                                                                                    &state_value,
-                                                                                                    &props,
-                                                                                                );
+                                                                                            .zip(col_widths.iter().copied())
+                                                                                            .map(|(_col, col_w)| {
                                                                                                 cx.container(
                                                                                                     ContainerProps {
                                                                                                         border: Edges {
@@ -1743,12 +1751,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                 .items(Items::Center),
                                                                                             |cx| {
                                                                                                 cols.iter()
-                                                                                                    .map(|col| {
-                                                                                                        let col_w = resolve_column_width(
-                                                                                                            col,
-                                                                                                            &state_value,
-                                                                                                            &props,
-                                                                                                        );
+                                                                                                    .zip(col_widths.iter().copied())
+                                                                                                    .map(|(col, col_w)| {
                                                                                                         cx.container(
                                                                                                             ContainerProps {
                                                                                                                 padding: Edges::symmetric(
