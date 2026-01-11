@@ -52,6 +52,16 @@ struct ScatterBucketBuild {
     indices_by_bucket: Vec<Vec<u32>>,
 }
 
+#[derive(Debug, Clone)]
+struct BarBucketBuild {
+    series: SeriesId,
+    visual_map: crate::ids::VisualMapId,
+    bucket_count: u16,
+    next_view_index: usize,
+    rects_by_bucket: Vec<Vec<Rect>>,
+    indices_by_bucket: Vec<Vec<u32>>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct MarksStage {
     series_index: usize,
@@ -69,6 +79,7 @@ pub struct MarksStage {
     bar_next_index: usize,
     bar_rects_start: usize,
     bar_node_index: Option<usize>,
+    bar_bucket_build: Option<BarBucketBuild>,
     finalized: bool,
     dirty: bool,
     last_series_count: usize,
@@ -140,6 +151,7 @@ impl MarksStage {
         self.bar_next_index = 0;
         self.bar_rects_start = 0;
         self.bar_node_index = None;
+        self.bar_bucket_build = None;
         self.finalized = false;
         self.dirty = false;
         self.bounds = None;
@@ -272,6 +284,7 @@ impl MarksStage {
                 self.scatter_bucket_build = None;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
+                self.bar_bucket_build = None;
             }
 
             if self.bounds.is_none() {
@@ -483,6 +496,7 @@ impl MarksStage {
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
+                self.bar_bucket_build = None;
                 self.bounds = None;
                 continue;
             };
@@ -571,6 +585,7 @@ impl MarksStage {
                     self.bar_next_index = 0;
                     self.bar_rects_start = 0;
                     self.bar_node_index = None;
+                    self.bar_bucket_build = None;
                     self.bounds = None;
                     scratch.clear();
                     continue;
@@ -744,6 +759,7 @@ impl MarksStage {
                     self.bar_next_index = 0;
                     self.bar_rects_start = 0;
                     self.bar_node_index = None;
+                    self.bar_bucket_build = None;
                     self.bounds = None;
                     scratch.clear();
                     continue;
@@ -852,6 +868,7 @@ impl MarksStage {
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
+                self.bar_bucket_build = None;
                 self.bounds = None;
                 scratch.clear();
                 continue;
@@ -912,6 +929,269 @@ impl MarksStage {
 
                     (category_window, value_window)
                 };
+
+                if let Some(visual_map_id) = model.visual_map_by_series.get(&series.id).copied() {
+                    let Some(vm) = model.visual_maps.get(&visual_map_id).copied() else {
+                        return false;
+                    };
+                    let selected_range = state
+                        .visual_map_range
+                        .get(&visual_map_id)
+                        .copied()
+                        .unwrap_or(vm.initial_range);
+                    let selected_piece_mask = state
+                        .visual_map_piece_mask
+                        .get(&visual_map_id)
+                        .copied()
+                        .unwrap_or(vm.initial_piece_mask);
+
+                    let Some(dataset) = model.datasets.get(&series.dataset) else {
+                        return false;
+                    };
+                    let Some(vm_col) = dataset.fields.get(&vm.field).copied() else {
+                        return false;
+                    };
+                    let Some(vm_values) = table.column_f64(vm_col) else {
+                        return false;
+                    };
+
+                    let total_buckets = vm.buckets as usize * 2;
+                    let rebuild = match self.bar_bucket_build.as_ref() {
+                        Some(b) => {
+                            b.series != series.id
+                                || b.visual_map != visual_map_id
+                                || b.bucket_count != vm.buckets
+                        }
+                        None => true,
+                    };
+                    if rebuild {
+                        self.bar_bucket_build = Some(BarBucketBuild {
+                            series: series.id,
+                            visual_map: visual_map_id,
+                            bucket_count: vm.buckets,
+                            next_view_index: 0,
+                            rects_by_bucket: vec![Vec::default(); total_buckets],
+                            indices_by_bucket: vec![Vec::default(); total_buckets],
+                        });
+                    }
+                    let Some(build) = self.bar_bucket_build.as_mut() else {
+                        return false;
+                    };
+
+                    let row_end = selection.view_len(table.row_count);
+                    while build.next_view_index < row_end {
+                        let points_budget = budget.take_points(4096) as usize;
+                        if points_budget == 0 {
+                            return false;
+                        }
+
+                        let chunk_end = (build.next_view_index + points_budget).min(row_end);
+
+                        let cat_span = category_window.span();
+                        let band_px = if is_vertical {
+                            (viewport.size.width.0 as f64 / cat_span.max(1.0)).max(1.0)
+                        } else {
+                            (viewport.size.height.0 as f64 / cat_span.max(1.0)).max(1.0)
+                        };
+                        let mut bar_thickness_px = (layout.width_cat * band_px).max(1.0) as f32;
+                        let mut slot_offset_px: Option<f64> = None;
+
+                        if let Some(BarWidthSpec::Px(px)) = layout.bar_width {
+                            let slot_count = layout.slot_count.max(1) as usize;
+                            let slot_index = (layout.slot_index as usize).min(slot_count - 1);
+                            let group_width_px =
+                                (1.0 - layout.bar_category_gap).clamp(0.0, 1.0) * band_px;
+                            let mut bar_w_px = px.max(1.0);
+                            let mut gap_px = bar_w_px * layout.bar_gap;
+                            let mut total_px = (slot_count as f64) * bar_w_px
+                                + (slot_count.saturating_sub(1) as f64) * gap_px;
+
+                            if group_width_px.is_finite()
+                                && group_width_px > 0.0
+                                && total_px > group_width_px
+                            {
+                                let scale = group_width_px / total_px;
+                                bar_w_px *= scale;
+                                gap_px *= scale;
+                                total_px = group_width_px;
+                            }
+
+                            let group_left_px = -0.5 * total_px;
+                            let slot_left_px =
+                                group_left_px + (slot_index as f64) * (bar_w_px + gap_px);
+                            slot_offset_px = Some(slot_left_px + 0.5 * bar_w_px);
+                            bar_thickness_px = bar_w_px.max(1.0) as f32;
+                        }
+
+                        let data_len = x.len().min(y0.len()).min(vm_values.len());
+                        for view_index in build.next_view_index..chunk_end {
+                            let Some(i) = selection.get_raw_index(data_len, view_index) else {
+                                continue;
+                            };
+
+                            let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                            let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                            if !xi.is_finite() || !yi.is_finite() {
+                                continue;
+                            }
+                            if !view_x_filter.contains(xi) {
+                                continue;
+                            }
+
+                            let (cat_v, value_v0) = if is_vertical { (xi, yi) } else { (yi, xi) };
+
+                            let (value_top, value_base) = if let Some(arrays) = &stack_arrays {
+                                let base = arrays.base.get(i).copied().unwrap_or(f64::NAN);
+                                let top = arrays.stacked.get(i).copied().unwrap_or(f64::NAN);
+                                (top, base)
+                            } else {
+                                (value_v0, 0.0)
+                            };
+                            if !value_top.is_finite() || !value_base.is_finite() {
+                                continue;
+                            }
+
+                            let cat_span = category_window.span();
+                            let val_span = value_window.span();
+                            let t_cat = ((cat_v - category_window.min) / cat_span).clamp(0.0, 1.0);
+                            let t_val = ((value_top - value_window.min) / val_span).clamp(0.0, 1.0);
+                            let t_val0 =
+                                ((value_base - value_window.min) / val_span).clamp(0.0, 1.0);
+
+                            let rect = if is_vertical {
+                                let mut px_x =
+                                    viewport.origin.x.0 + (t_cat as f32) * viewport.size.width.0;
+                                if let Some(offset_px) = slot_offset_px {
+                                    px_x += offset_px as f32;
+                                } else {
+                                    let x_center = cat_v + layout.offset_cat;
+                                    let t_center = ((x_center - category_window.min) / cat_span)
+                                        .clamp(0.0, 1.0);
+                                    px_x = viewport.origin.x.0
+                                        + (t_center as f32) * viewport.size.width.0;
+                                }
+
+                                let px_y = viewport.origin.y.0
+                                    + (1.0 - (t_val as f32)) * viewport.size.height.0;
+                                let px_y0 = viewport.origin.y.0
+                                    + (1.0 - (t_val0 as f32)) * viewport.size.height.0;
+
+                                let top = px_y.min(px_y0);
+                                let bottom = px_y.max(px_y0);
+                                let h = (bottom - top).max(1.0);
+
+                                Rect::new(
+                                    Point::new(Px(px_x - 0.5 * bar_thickness_px), Px(top)),
+                                    fret_core::Size::new(Px(bar_thickness_px), Px(h)),
+                                )
+                            } else {
+                                let mut px_y = viewport.origin.y.0
+                                    + (1.0 - (t_cat as f32)) * viewport.size.height.0;
+                                if let Some(offset_px) = slot_offset_px {
+                                    px_y -= offset_px as f32;
+                                } else {
+                                    let y_center = cat_v + layout.offset_cat;
+                                    let t_center = ((y_center - category_window.min) / cat_span)
+                                        .clamp(0.0, 1.0);
+                                    px_y = viewport.origin.y.0
+                                        + (1.0 - (t_center as f32)) * viewport.size.height.0;
+                                }
+
+                                let px_x =
+                                    viewport.origin.x.0 + (t_val as f32) * viewport.size.width.0;
+                                let px_x0 =
+                                    viewport.origin.x.0 + (t_val0 as f32) * viewport.size.width.0;
+                                let left = px_x.min(px_x0);
+                                let right = px_x.max(px_x0);
+                                let w = (right - left).max(1.0);
+
+                                Rect::new(
+                                    Point::new(Px(left), Px(px_y - 0.5 * bar_thickness_px)),
+                                    fret_core::Size::new(Px(w), Px(bar_thickness_px)),
+                                )
+                            };
+
+                            let bucket = crate::visual_map::eval_bucket_for_value(
+                                &vm,
+                                selected_range,
+                                selected_piece_mask,
+                                vm_values.get(i).copied().unwrap_or(f64::NAN),
+                            );
+                            let bucket_key = bucket.bucket as usize
+                                + if bucket.in_range {
+                                    0
+                                } else {
+                                    vm.buckets as usize
+                                };
+
+                            build.rects_by_bucket[bucket_key].push(rect);
+                            build.indices_by_bucket[bucket_key].push(i as u32);
+                        }
+
+                        build.next_view_index = chunk_end;
+                    }
+
+                    let required_marks = build
+                        .rects_by_bucket
+                        .iter()
+                        .filter(|r| !r.is_empty())
+                        .count();
+                    if required_marks > 0 {
+                        if budget.take_marks(required_marks as u32) != required_marks as u32 {
+                            return false;
+                        }
+
+                        let base_order = self.series_index as u32;
+                        for (bucket_key, rects) in build.rects_by_bucket.iter_mut().enumerate() {
+                            if rects.is_empty() {
+                                continue;
+                            }
+
+                            let indices = std::mem::take(&mut build.indices_by_bucket[bucket_key]);
+                            let rects = std::mem::take(rects);
+                            let range = marks
+                                .arena
+                                .extend_rects_with_indices(rects.into_iter(), indices);
+
+                            let paint_bucket = (bucket_key % (vm.buckets as usize)) as u16;
+                            let in_range = bucket_key < (vm.buckets as usize);
+
+                            marks.nodes.push(MarkNode {
+                                id: series_mark_id(series.id, 16 + bucket_key as u64),
+                                parent: None,
+                                layer: crate::ids::LayerId(1),
+                                order: MarkOrderKey(base_order.saturating_mul(2)),
+                                kind: MarkKind::Rect,
+                                source_series: Some(series.id),
+                                payload: MarkPayloadRef::Rect(MarkRectRef {
+                                    rects: range.clone(),
+                                    fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
+                                    opacity_mul: (!in_range).then_some(vm.out_of_range_opacity),
+                                    stroke: None,
+                                }),
+                            });
+
+                            stats.points_emitted += (range.end - range.start) as u64;
+                            stats.marks_emitted += 1;
+                        }
+
+                        marks.revision.bump();
+                    }
+
+                    self.series_index += 1;
+                    self.cursor.next_index = 0;
+                    self.scatter_next_index = 0;
+                    self.scatter_points_start = 0;
+                    self.scatter_node_index = None;
+                    self.scatter_bucket_build = None;
+                    self.bar_next_index = 0;
+                    self.bar_rects_start = 0;
+                    self.bar_node_index = None;
+                    self.bar_bucket_build = None;
+                    self.bounds = None;
+                    scratch.clear();
+                    continue;
+                }
 
                 if self.bar_node_index.is_none() {
                     if budget.take_marks(1) == 0 {
@@ -1105,6 +1385,7 @@ impl MarksStage {
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
+                self.bar_bucket_build = None;
                 self.bounds = None;
                 scratch.clear();
                 continue;
@@ -1363,6 +1644,7 @@ impl MarksStage {
             self.bar_next_index = 0;
             self.bar_rects_start = 0;
             self.bar_node_index = None;
+            self.bar_bucket_build = None;
             self.bounds = None;
             scratch.clear();
         }

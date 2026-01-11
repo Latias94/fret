@@ -269,9 +269,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 ### Styling & theming
 
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
-- `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter-only v1 buckets).
+- `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter + bar v1 buckets).
   - Evidence: `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
-  - Notes: v1 includes continuous + piecewise controller UI and scatter-only bucket coloring; multi-channel mapping is future work.
+  - Notes: v1 includes continuous + piecewise controller UI and scatter/bar bucket coloring; multi-channel mapping is future work.
 
 ## Known Gaps vs ECharts (High Value)
 

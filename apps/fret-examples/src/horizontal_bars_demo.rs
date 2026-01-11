@@ -11,9 +11,11 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
-use delinea::ids::{AxisId, FieldId, StackId};
-use delinea::{AxisKind, AxisPointerTrigger, AxisScale, SeriesKind};
-use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
+use delinea::ids::{AxisId, FieldId, StackId, VisualMapId};
+use delinea::{AxisKind, AxisPointerTrigger, AxisScale, SeriesKind, VisualMapMode};
+use delinea::{
+    ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec, VisualMapSpec,
+};
 use fret_chart::retained::ChartCanvas;
 
 struct HorizontalBarsDemoWindowState {
@@ -104,7 +106,17 @@ impl HorizontalBarsDemoDriver {
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,
             }),
-            visual_maps: vec![],
+            visual_maps: vec![VisualMapSpec {
+                id: VisualMapId::new(1),
+                mode: VisualMapMode::Continuous,
+                series: vec![series_c_id],
+                field: x_c_field,
+                domain: (-80.0, 80.0),
+                initial_range: Some((-20.0, 20.0)),
+                initial_piece_mask: None,
+                buckets: 8,
+                out_of_range_opacity: 0.25,
+            }],
             series: vec![
                 SeriesSpec {
                     id: series_a_id,

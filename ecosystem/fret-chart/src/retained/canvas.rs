@@ -172,6 +172,7 @@ pub struct ChartCanvas {
     brush_drag: Option<BoxZoomDrag>,
     slider_drag: Option<DataZoomSliderDrag>,
     visual_map_drag: Option<VisualMapDrag>,
+    visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
     linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
     output_model: Option<Model<ChartCanvasOutput>>,
@@ -224,6 +225,7 @@ impl ChartCanvas {
             brush_drag: None,
             slider_drag: None,
             visual_map_drag: None,
+            visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
             linked_brush_model: None,
             output_model: None,
@@ -2613,13 +2615,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if *pointer_type == PointerType::Mouse
-                    && *button == MouseButton::Left
                     && cx.captured.is_none()
                     && self.pan_drag.is_none()
                     && self.box_zoom_drag.is_none()
                     && self.brush_drag.is_none()
                     && self.slider_drag.is_none()
                     && let Some((vm_id, vm, track)) = self.visual_map_track_at(*position)
+                    && (*button == MouseButton::Left
+                        || (vm.mode == delinea::VisualMapMode::Piecewise
+                            && *button == MouseButton::Right))
                 {
                     let domain = Self::visual_map_domain_window(vm);
                     let click_value =
@@ -2637,12 +2641,59 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             delinea::visual_map::bucket_index_for_value(&vm, click_value) as u32;
                         let bit = 1u64 << bucket.min(63);
                         let current = self.current_visual_map_piece_mask(vm_id, vm);
-                        let next = (current ^ bit) & full_mask;
+
+                        let wants_reset = (*button == MouseButton::Right
+                            && !modifiers.alt
+                            && !modifiers.ctrl
+                            && !modifiers.meta
+                            && !modifiers.alt_gr)
+                            || (*button == MouseButton::Left && *click_count == 2);
+                        if wants_reset {
+                            self.engine.apply_action(Action::SetVisualMapPieceMask {
+                                visual_map: vm_id,
+                                mask: None,
+                            });
+                            self.visual_map_piece_anchor = None;
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+
+                        let is_selected = ((current >> bucket) & 1) == 1;
+
+                        let mut next = current;
+                        if modifiers.shift {
+                            if let Some((anchor_vm, anchor_bucket)) = self.visual_map_piece_anchor
+                                && anchor_vm == vm_id
+                            {
+                                let lo = anchor_bucket.min(bucket);
+                                let hi = anchor_bucket.max(bucket).min(buckets.saturating_sub(1));
+                                let width = hi.saturating_sub(lo).saturating_add(1);
+                                let range_mask = if width >= 64 {
+                                    u64::MAX
+                                } else {
+                                    ((1u64 << width) - 1) << lo
+                                } & full_mask;
+
+                                if is_selected {
+                                    next &= !range_mask;
+                                } else {
+                                    next |= range_mask;
+                                }
+                            } else {
+                                next ^= bit;
+                            }
+                        } else {
+                            next ^= bit;
+                        }
+                        next &= full_mask;
                         let mask = (next != full_mask).then_some(next);
                         self.engine.apply_action(Action::SetVisualMapPieceMask {
                             visual_map: vm_id,
                             mask,
                         });
+                        self.visual_map_piece_anchor = Some((vm_id, bucket));
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();

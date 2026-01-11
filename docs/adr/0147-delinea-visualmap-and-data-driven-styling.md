@@ -148,7 +148,7 @@ P0:
 P1:
 
 - [~] Add a `fret-chart` VisualMap controller UI (continuous + piecewise) with improved affordances (labels, reset, drag gestures).
-- Extend mapping to point size (scatter) and bar fill (categorical).
+- [~] Extend mapping to point size (scatter) and bar fill.
 - Evaluate whether `MarkArena` should gain optional per-item attribute streams once a GPU-instanced
   path exists.
 
