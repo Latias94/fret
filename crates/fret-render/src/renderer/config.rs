@@ -164,6 +164,17 @@ impl Renderer {
             return 1;
         }
 
+        // Temporary safety valve: the MSAA path intermediate + composite pipeline has been observed
+        // to produce invisible output on some Vulkan drivers. Until the root cause is fixed, prefer
+        // the non-MSAA path pipeline on Vulkan to preserve correctness.
+        //
+        // Set `FRET_ALLOW_VULKAN_PATH_MSAA=1` to opt back into the MSAA path pipeline for testing.
+        if self.adapter.get_info().backend == wgpu::Backend::Vulkan
+            && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
+        {
+            return 1;
+        }
+
         let features = self.adapter.get_texture_format_features(format);
         if !features
             .allowed_usages

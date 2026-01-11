@@ -1308,6 +1308,7 @@ dependencies = [
  "fret-runtime",
  "objc",
  "pollster",
+ "renderdog",
  "serde_json",
  "slotmap",
  "subsecond",
@@ -1317,6 +1318,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "wgpu",
+ "windows-sys 0.61.2",
  "winit",
 ]
 
@@ -3102,6 +3104,26 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "renderdog"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c6f06682acf8feb377c7c5241b8f616ce67c45517901dce5c600bd446fb8dd6"
+dependencies = [
+ "bitflags 2.10.0",
+ "libc",
+ "libloading",
+ "renderdog-sys",
+ "thiserror 2.0.17",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "renderdog-sys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d04e482831d226b2e0646a3628a49caf3c6bdfd0613ed122968996c9eee3f7f2"
 
 [[package]]
 name = "resvg"

@@ -1,6 +1,32 @@
 use super::super::*;
 
 impl Renderer {
+    pub(in crate::renderer) fn ensure_path_composite_vertex_buffer(
+        &mut self,
+        device: &wgpu::Device,
+        required_vertices: usize,
+    ) {
+        if required_vertices == 0 {
+            return;
+        }
+
+        if self.path_composite_vertex_capacity >= required_vertices {
+            return;
+        }
+
+        let next_capacity = required_vertices
+            .next_power_of_two()
+            .max(self.path_composite_vertex_capacity.max(64 * 6));
+
+        self.path_composite_vertices = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret path composite vertices"),
+            size: (next_capacity * std::mem::size_of::<ViewportVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.path_composite_vertex_capacity = next_capacity;
+    }
+
     pub(in crate::renderer) fn ensure_path_intermediate(
         &mut self,
         device: &wgpu::Device,
@@ -20,23 +46,7 @@ impl Renderer {
             return;
         }
 
-        let resolved_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret path intermediate resolved"),
-            size: wgpu::Extent3d {
-                width: viewport_size.0,
-                height: viewport_size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        let resolved_view = resolved_texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-        let msaa_view = if sample_count > 1 {
+        let (msaa_texture, msaa_view) = if sample_count > 1 {
             let msaa_texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("fret path intermediate msaa"),
                 size: wgpu::Extent3d {
@@ -51,33 +61,84 @@ impl Renderer {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 view_formats: &[],
             });
-            Some(msaa_texture.create_view(&wgpu::TextureViewDescriptor::default()))
+            let msaa_view = msaa_texture.create_view(&wgpu::TextureViewDescriptor::default());
+            (Some(msaa_texture), Some(msaa_view))
         } else {
-            None
+            (None, None)
         };
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret path intermediate bind group"),
-            layout: &self.viewport_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&resolved_view),
-                },
-            ],
-        });
 
         self.path_intermediate = Some(PathIntermediate {
             size: viewport_size,
             format,
             sample_count,
-            resolved_view,
+            _msaa_texture: msaa_texture,
             msaa_view,
-            bind_group,
         });
+    }
+
+    pub(in crate::renderer) fn ensure_path_composite_target(
+        &mut self,
+        device: &wgpu::Device,
+        index: usize,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+    ) {
+        let needs_rebuild = self
+            .path_composite_targets
+            .get(index)
+            .is_none_or(|cur| cur.size != viewport_size || cur.format != format);
+        if !needs_rebuild {
+            return;
+        }
+
+        let make_target = || {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("fret path composite target"),
+                size: wgpu::Extent3d {
+                    width: viewport_size.0,
+                    height: viewport_size.1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("fret path composite target bind group"),
+                layout: &self.viewport_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Sampler(&self.viewport_sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                ],
+            });
+
+            PathCompositeTarget {
+                size: viewport_size,
+                format,
+                _texture: texture,
+                view,
+                bind_group,
+            }
+        };
+
+        if index >= self.path_composite_targets.len() {
+            while self.path_composite_targets.len() < index {
+                self.path_composite_targets.push(make_target());
+            }
+            self.path_composite_targets.push(make_target());
+        } else {
+            self.path_composite_targets[index] = make_target();
+        }
     }
 }

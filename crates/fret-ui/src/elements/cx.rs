@@ -183,6 +183,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Use this after mutating state/models in response to input. For frame-driven updates
     /// (animations, progressive rendering), prefer `request_animation_frame()` or
     /// `begin_continuous_frames()`.
+    ///
+    /// This is not a timer: callers that need continuous progression must keep requesting frames.
     pub fn request_frame(&mut self) {
         self.app.request_redraw(self.window);
     }
@@ -190,6 +192,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// Request the next animation frame for this window.
     ///
     /// Use this for frame-driven updates that must advance without input events.
+    ///
+    /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
+    /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));

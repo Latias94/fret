@@ -48,8 +48,10 @@ type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
 mod no_services;
+mod renderdoc_capture;
 
 use no_services::NoUiServices;
+use renderdoc_capture::RenderDocCapture;
 
 #[cfg(windows)]
 pub fn ime_msg_hook(msg: *const std::ffi::c_void) -> bool {
@@ -866,6 +868,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     external_drop: NativeExternalDrop,
 
+    renderdoc: Option<RenderDocCapture>,
+
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,
     #[cfg(feature = "hotpatch-subsecond")]
@@ -906,6 +910,32 @@ struct RectF64 {
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
+
+    fn init_renderdoc_if_needed(&mut self) {
+        if self.renderdoc.is_some() {
+            return;
+        }
+
+        let enabled = std::env::var_os("FRET_RENDERDOC")
+            .filter(|v| !v.is_empty())
+            .is_some()
+            || std::env::var_os("FRET_RENDERDOC_DLL")
+                .filter(|v| !v.is_empty())
+                .is_some();
+
+        if !enabled {
+            return;
+        }
+
+        self.renderdoc = RenderDocCapture::try_init();
+        if self.renderdoc.is_some() {
+            tracing::info!("renderdoc capture enabled");
+        } else {
+            tracing::warn!(
+                "renderdoc capture requested but renderdoc API is unavailable (set FRET_RENDERDOC_DLL to renderdoc.dll path)"
+            );
+        }
+    }
 
     fn virtual_desktop_bounds(window: &dyn Window) -> Option<MonitorRectF64> {
         let mut monitors = window.available_monitors();
@@ -1151,6 +1181,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             external_drop: NativeExternalDrop::default(),
+            renderdoc: None,
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]

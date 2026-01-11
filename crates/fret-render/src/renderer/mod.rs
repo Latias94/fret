@@ -98,7 +98,9 @@ pub struct Renderer {
     path_vertex_capacity: usize,
 
     path_intermediate: Option<PathIntermediate>,
+    path_composite_targets: Vec<PathCompositeTarget>,
     path_composite_vertices: wgpu::Buffer,
+    path_composite_vertex_capacity: usize,
 
     text_system: TextSystem,
 

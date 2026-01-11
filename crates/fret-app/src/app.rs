@@ -241,6 +241,12 @@ impl App {
     ///
     /// This records a pending redraw request which the runner will translate into an actual
     /// platform `request_redraw` call at a deterministic point in the event loop.
+    ///
+    /// Notes:
+    /// - This is a one-shot request and may be coalesced by the runner or the platform.
+    /// - This does not imply continuous frame progression. For animations or any behavior that
+    ///   needs to advance without input events, use `Effect::RequestAnimationFrame` (typically via
+    ///   `Cx::request_animation_frame()`), and re-issue it each frame while active.
     pub fn request_redraw(&mut self, window: AppWindowId) {
         self.redraw_requests.insert(window);
     }

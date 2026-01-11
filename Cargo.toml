@@ -43,6 +43,8 @@ webbrowser = "1.0.4"
 wgpu = "28.0.0"
 winit = "0.31.0-beta.2"
 naga = "28.0.0"
+renderdog = "0.2.0"
+renderdog-automation = "0.2.0"
 uuid = { version = "1", features = ["v4", "v5", "serde", "js"] }
 lyon = "1"
 glam = "0.29"

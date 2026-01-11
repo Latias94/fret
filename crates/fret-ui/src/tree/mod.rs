@@ -388,6 +388,7 @@ pub struct UiTree<H: UiHost> {
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: Option<NodeId>,
+    last_pointer_move_hit: Option<NodeId>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -427,6 +428,7 @@ impl<H: UiHost> Default for UiTree<H> {
             base_layer: None,
             focus: None,
             captured: None,
+            last_pointer_move_hit: None,
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,
@@ -571,6 +573,8 @@ impl<H: UiHost> UiTree<H> {
     /// Call this **before** clearing `scene` for the next frame.
     ///
     /// Important:
+    /// - This method is destructive: it swaps the scene op storage into the UI tree. Do not call
+    ///   it more than once for the same `Scene` before `Scene::clear()`.
     /// - `scene` must contain the previous frame ops that were produced by **this** `UiTree`.
     /// - The paint cache records absolute op index ranges into the previous frame ops vector, so
     ///   sharing a single `Scene` across multiple `UiTree`s is not compatible with paint-cache

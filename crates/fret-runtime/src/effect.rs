@@ -96,8 +96,13 @@ pub enum Effect {
     /// Use this for frame-driven updates (animations, progressive rendering) where the UI must
     /// keep repainting even if there are no new input events.
     ///
-    /// Runners/backends should schedule a redraw and keep advancing the frame counter while these
-    /// requests are being issued.
+    /// This is a one-shot request. Runners/backends should schedule a redraw and keep advancing
+    /// the frame counter while these requests are being issued.
+    ///
+    /// Platform mapping:
+    /// - Web backends typically map this to `requestAnimationFrame`.
+    /// - Desktop backends typically translate this into a "redraw on the next event-loop turn"
+    ///   request (and may coalesce multiple requests).
     RequestAnimationFrame(AppWindowId),
     SetTimer {
         window: Option<AppWindowId>,

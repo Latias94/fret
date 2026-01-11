@@ -127,6 +127,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         };
 
+        // RenderDoc must be loaded/injected before the graphics API is initialized to reliably
+        // hook Vulkan/D3D. Initialize capture integration before we create the wgpu context.
+        self.init_renderdoc_if_needed();
+
         let (context, surface) =
             match std::mem::replace(&mut self.config.wgpu_init, WgpuInit::CreateDefault) {
                 WgpuInit::CreateDefault => {
@@ -553,6 +557,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
 
                 {
+                    self.init_renderdoc_if_needed();
+                    let capturing = self
+                        .renderdoc
+                        .as_mut()
+                        .is_some_and(|r| r.begin_capture_if_requested());
+
                     let (Some(context), Some(renderer)) =
                         (self.context.as_ref(), self.renderer.as_mut())
                     else {
@@ -666,6 +676,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         cmd_buffers
                     });
 
+                    if capturing && let Some(r) = self.renderdoc.as_mut() {
+                        r.end_capture();
+                    }
+
                     if let Err(err) = draw_result {
                         match err {
                             fret_render::RenderError::SurfaceAcquireFailed {
@@ -710,6 +724,31 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                     mapped
                 };
+
+                if mapped.iter().any(|evt| {
+                    matches!(
+                        evt,
+                        Event::KeyDown {
+                            key: fret_core::KeyCode::F12,
+                            ..
+                        }
+                    )
+                }) {
+                    if let Some(r) = self.renderdoc.as_mut() {
+                        r.request_capture();
+                        self.app.request_redraw(app_window);
+                    } else if std::env::var_os("FRET_RENDERDOC")
+                        .filter(|v| !v.is_empty())
+                        .is_some()
+                        || std::env::var_os("FRET_RENDERDOC_DLL")
+                            .filter(|v| !v.is_empty())
+                            .is_some()
+                    {
+                        tracing::warn!(
+                            "renderdoc capture requested but renderdoc was not initialized (restart with renderdoc.dll available)"
+                        );
+                    }
+                }
 
                 // ADR 0072 (proposed): Escape cancels an active cross-window dock drag session.
                 if mapped.iter().any(|evt| {
@@ -901,6 +940,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
+
+        // `Effect::RequestAnimationFrame(window)` is a one-shot "please give me another frame"
+        // request. On some platforms (notably Windows), calling `Window::request_redraw()` from
+        // inside a `RedrawRequested` handler may not reliably schedule another `RedrawRequested`
+        // without an additional wake-up.
+        //
+        // To make RAF semantics robust and input-independent, we also request redraw here, right
+        // before the event loop goes idle.
+        for &window in &self.raf_windows {
+            if let Some(state) = self.windows.get(window) {
+                state.window.request_redraw();
+            }
+        }
 
         let wants_raf = !self.raf_windows.is_empty();
         self.raf_windows.clear();
