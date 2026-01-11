@@ -291,14 +291,6 @@ pub(super) struct PathIntermediate {
     pub(super) bind_group: wgpu::BindGroup,
 }
 
-pub(super) struct PathCompositeTarget {
-    pub(super) size: (u32, u32),
-    pub(super) format: wgpu::TextureFormat,
-    pub(super) _texture: wgpu::Texture,
-    pub(super) view: wgpu::TextureView,
-    pub(super) bind_group: wgpu::BindGroup,
-}
-
 pub(super) enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),

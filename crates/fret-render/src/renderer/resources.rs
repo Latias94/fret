@@ -293,7 +293,6 @@ impl Renderer {
             path_vertex_buffer_index: 0,
             path_vertex_capacity,
             path_intermediate: None,
-            path_composite_targets: Vec::new(),
             path_composite_vertices,
             path_composite_vertex_capacity,
             text_system,
