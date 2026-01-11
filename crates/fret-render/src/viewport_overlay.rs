@@ -1,5 +1,8 @@
 use glam::Mat4;
 
+mod immediate_3d;
+pub use immediate_3d::*;
+
 #[derive(Debug, Clone, Copy)]
 pub struct ViewportOverlay3dContext {
     pub view_proj: Mat4,

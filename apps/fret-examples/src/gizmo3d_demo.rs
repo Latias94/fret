@@ -18,7 +18,10 @@ use fret_launch::{
     record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
-use fret_render::viewport_overlay::ViewportOverlay3dContext;
+use fret_render::viewport_overlay::{
+    Overlay3dLineVertex, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
+    ViewportOverlay3dContext,
+};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
@@ -422,28 +425,8 @@ impl Default for OrbitCamera {
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct Vertex {
-    pos: [f32; 3],
-    color: [f32; 4],
-}
-
-unsafe impl bytemuck::Zeroable for Vertex {}
-unsafe impl bytemuck::Pod for Vertex {}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct LineVertex {
-    a: [f32; 3],
-    b: [f32; 3],
-    t: f32,
-    side: f32,
-    color: [f32; 4],
-}
-
-unsafe impl bytemuck::Zeroable for LineVertex {}
-unsafe impl bytemuck::Pod for LineVertex {}
+type Vertex = Overlay3dVertex;
+type LineVertex = Overlay3dLineVertex;
 
 const CAMERA_NEAR: f32 = 0.05;
 const CAMERA_FAR: f32 = 50.0;
@@ -457,16 +440,7 @@ fn ortho_half_height_to_distance(ortho_half_height: f32) -> f32 {
     (ortho_half_height.max(0.0) / (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.05)
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct Uniforms {
-    view_proj: [[f32; 4]; 4],
-    /// x = viewport_w_px, y = viewport_h_px, z = line_thickness_px, w = unused
-    viewport_and_thickness: [f32; 4],
-}
-
-unsafe impl bytemuck::Zeroable for Uniforms {}
-unsafe impl bytemuck::Pod for Uniforms {}
+type Uniforms = Overlay3dUniforms;
 
 fn push_thick_line_quad(out: &mut Vec<LineVertex>, a: [f32; 3], b: [f32; 3], color: [f32; 4]) {
     // Two triangles (6 vertices) for a screen-space thick line quad.
@@ -524,13 +498,7 @@ struct Gizmo3dDemoTarget {
 }
 
 struct Gizmo3dDemoGpu {
-    uniform: wgpu::Buffer,
-    bind_group: wgpu::BindGroup,
-    tri_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
-    thick_line_depth_pipeline: wgpu::RenderPipeline,
-    thick_line_always_pipeline: wgpu::RenderPipeline,
+    overlay: Overlay3dPipelines,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1120,11 +1088,7 @@ struct OverlayDrawBuffer {
 
 #[derive(Clone)]
 struct Gizmo3dDemoViewportOverlayWindow {
-    bind_group: wgpu::BindGroup,
-    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
-    thick_line_depth_pipeline: wgpu::RenderPipeline,
-    thick_line_always_pipeline: wgpu::RenderPipeline,
+    overlay: Overlay3dPipelines,
     solid_test: Option<OverlayDrawBuffer>,
     solid_ghost: Option<OverlayDrawBuffer>,
     solid_always: Option<OverlayDrawBuffer>,
@@ -1148,11 +1112,7 @@ impl Gizmo3dDemoViewportOverlayService {
         self.per_viewport
             .entry((window, target))
             .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
-                bind_group: gpu.bind_group.clone(),
-                gizmo_solid_depth_pipeline: gpu.gizmo_solid_depth_pipeline.clone(),
-                gizmo_solid_always_pipeline: gpu.gizmo_solid_always_pipeline.clone(),
-                thick_line_depth_pipeline: gpu.thick_line_depth_pipeline.clone(),
-                thick_line_always_pipeline: gpu.thick_line_always_pipeline.clone(),
+                overlay: gpu.overlay.clone(),
                 solid_test: None,
                 solid_ghost: None,
                 solid_always: None,
@@ -1212,37 +1172,37 @@ impl Gizmo3dDemoViewportOverlayService {
             return;
         };
 
-        pass.set_bind_group(0, &overlays.bind_group, &[]);
+        pass.set_bind_group(0, &overlays.overlay.bind_group, &[]);
 
         if let Some(buf) = &overlays.solid_ghost {
-            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_pipeline(&overlays.overlay.solid_always_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
         if let Some(buf) = &overlays.line_ghost {
-            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_pipeline(&overlays.overlay.thick_line_always_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
 
         if let Some(buf) = &overlays.solid_test {
-            pass.set_pipeline(&overlays.gizmo_solid_depth_pipeline);
+            pass.set_pipeline(&overlays.overlay.solid_depth_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
         if let Some(buf) = &overlays.line_test {
-            pass.set_pipeline(&overlays.thick_line_depth_pipeline);
+            pass.set_pipeline(&overlays.overlay.thick_line_depth_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
 
         if let Some(buf) = &overlays.solid_always {
-            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
+            pass.set_pipeline(&overlays.overlay.solid_always_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
         if let Some(buf) = &overlays.line_always {
-            pass.set_pipeline(&overlays.thick_line_always_pipeline);
+            pass.set_pipeline(&overlays.overlay.thick_line_always_pipeline);
             pass.set_vertex_buffer(0, buf.buffer.slice(..));
             pass.draw(0..buf.vertex_count, 0..1);
         }
@@ -1438,12 +1398,22 @@ impl Gizmo3dDemoDriver {
             return;
         }
 
-        let shader = context
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("gizmo3d demo shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    r#"
+        state.gpu = Some(Gizmo3dDemoGpu {
+            overlay: Overlay3dPipelines::new(
+                &context.device,
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::TextureFormat::Depth24Plus,
+            ),
+        });
+
+        #[cfg(any())]
+        {
+            let shader = context
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("gizmo3d demo shader"),
+                    source: wgpu::ShaderSource::Wgsl(
+                        r#"
 struct Globals {
   view_proj: mat4x4f,
   viewport_and_thickness: vec4f,
@@ -1512,277 +1482,279 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
   return in.color;
 }
 "#
-                    .into(),
-                ),
+                        .into(),
+                    ),
+                });
+
+            let uniform = context.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("gizmo3d demo view_proj uniform"),
+                size: std::mem::size_of::<Uniforms>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
 
-        let uniform = context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("gizmo3d demo view_proj uniform"),
-            size: std::mem::size_of::<Uniforms>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+            let bind_group_layout =
+                context
+                    .device
+                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                        label: Some("gizmo3d demo bgl"),
+                        entries: &[wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::VERTEX,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }],
+                    });
 
-        let bind_group_layout =
-            context
+            let bind_group = context
                 .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("gizmo3d demo bgl"),
-                    entries: &[wgpu::BindGroupLayoutEntry {
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("gizmo3d demo bind group"),
+                    layout: &bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
+                        resource: uniform.as_entire_binding(),
                     }],
                 });
 
-        let bind_group = context
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("gizmo3d demo bind group"),
-                layout: &bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                }],
-            });
+            let pipeline_layout =
+                context
+                    .device
+                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                        label: Some("gizmo3d demo pipeline layout"),
+                        bind_group_layouts: &[&bind_group_layout],
+                        immediate_size: 0,
+                    });
 
-        let pipeline_layout =
-            context
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("gizmo3d demo pipeline layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
+            let vertex_layout = wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<Vertex>() as u64,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
+            };
 
-        let vertex_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Vertex>() as u64,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
-        };
+            let line_vertex_layout = wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<LineVertex>() as u64,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &wgpu::vertex_attr_array![
+                    0 => Float32x3, // a
+                    1 => Float32x3, // b
+                    2 => Float32,   // t
+                    3 => Float32,   // side
+                    4 => Float32x4  // color
+                ],
+            };
 
-        let line_vertex_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<LineVertex>() as u64,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![
-                0 => Float32x3, // a
-                1 => Float32x3, // b
-                2 => Float32,   // t
-                3 => Float32,   // side
-                4 => Float32x4  // color
-            ],
-        };
+            let depth_state = wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth24Plus,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::LessEqual,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            };
 
-        let depth_state = wgpu::DepthStencilState {
-            format: wgpu::TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: wgpu::CompareFunction::LessEqual,
-            stencil: wgpu::StencilState::default(),
-            bias: wgpu::DepthBiasState::default(),
-        };
-
-        let tri_pipeline = context
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("gizmo3d demo tri pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main_tri"),
-                    buffers: &[vertex_layout.clone()],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    ..Default::default()
-                },
-                depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-
-        let gizmo_solid_depth_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo gizmo solid depth pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_tri"),
-                        buffers: &[vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        depth_write_enabled: false,
-                        bias: wgpu::DepthBiasState {
-                            constant: -2,
-                            slope_scale: -1.0,
-                            clamp: 0.0,
+            let tri_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo tri pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
                         },
-                        ..depth_state.clone()
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-
-        let gizmo_solid_always_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo gizmo solid always pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_tri"),
-                        buffers: &[vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        format: wgpu::TextureFormat::Depth24Plus,
-                        depth_write_enabled: false,
-                        depth_compare: wgpu::CompareFunction::Always,
-                        stencil: wgpu::StencilState::default(),
-                        bias: wgpu::DepthBiasState::default(),
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-
-        let thick_line_depth_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo thick line depth pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_thick_line"),
-                        buffers: &[line_vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        depth_write_enabled: false,
-                        // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
-                        bias: wgpu::DepthBiasState {
-                            constant: -2,
-                            slope_scale: -1.0,
-                            clamp: 0.0,
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
                         },
-                        ..depth_state.clone()
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
+                        depth_stencil: Some(depth_state.clone()),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
 
-        let thick_line_always_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo thick line always pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_thick_line"),
-                        buffers: &[line_vertex_layout],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        format: wgpu::TextureFormat::Depth24Plus,
-                        depth_write_enabled: false,
-                        depth_compare: wgpu::CompareFunction::Always,
-                        stencil: wgpu::StencilState::default(),
-                        bias: wgpu::DepthBiasState::default(),
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
+            let gizmo_solid_depth_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo gizmo solid depth pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            depth_write_enabled: false,
+                            bias: wgpu::DepthBiasState {
+                                constant: -2,
+                                slope_scale: -1.0,
+                                clamp: 0.0,
+                            },
+                            ..depth_state.clone()
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
 
-        state.gpu = Some(Gizmo3dDemoGpu {
-            uniform,
-            bind_group,
-            tri_pipeline,
-            gizmo_solid_depth_pipeline,
-            gizmo_solid_always_pipeline,
-            thick_line_depth_pipeline,
-            thick_line_always_pipeline,
-        });
+            let gizmo_solid_always_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo gizmo solid always pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            format: wgpu::TextureFormat::Depth24Plus,
+                            depth_write_enabled: false,
+                            depth_compare: wgpu::CompareFunction::Always,
+                            stencil: wgpu::StencilState::default(),
+                            bias: wgpu::DepthBiasState::default(),
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let thick_line_depth_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo thick line depth pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_thick_line"),
+                            buffers: &[line_vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            depth_write_enabled: false,
+                            // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
+                            bias: wgpu::DepthBiasState {
+                                constant: -2,
+                                slope_scale: -1.0,
+                                clamp: 0.0,
+                            },
+                            ..depth_state.clone()
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let thick_line_always_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo thick line always pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_thick_line"),
+                            buffers: &[line_vertex_layout],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            format: wgpu::TextureFormat::Depth24Plus,
+                            depth_write_enabled: false,
+                            depth_compare: wgpu::CompareFunction::Always,
+                            stencil: wgpu::StencilState::default(),
+                            bias: wgpu::DepthBiasState::default(),
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let _ = (
+                uniform,
+                bind_group,
+                tri_pipeline,
+                gizmo_solid_depth_pipeline,
+                gizmo_solid_always_pipeline,
+                thick_line_depth_pipeline,
+                thick_line_always_pipeline,
+            );
+        }
     }
 
     fn handle_undo_redo_shortcut(
@@ -3431,7 +3403,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
         context
             .queue
-            .write_buffer(&gpu.uniform, 0, bytemuck::bytes_of(&uniforms));
+            .write_buffer(&gpu.overlay.uniform, 0, bytemuck::bytes_of(&uniforms));
 
         let mut cube_verts: Vec<Vertex> = Vec::new();
         for t in &scene_targets {
@@ -3687,8 +3659,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             });
 
             if let Some(cube_vb) = &cube_vb {
-                pass.set_bind_group(0, &gpu.bind_group, &[]);
-                pass.set_pipeline(&gpu.tri_pipeline);
+                pass.set_bind_group(0, &gpu.overlay.bind_group, &[]);
+                pass.set_pipeline(&gpu.overlay.tri_pipeline);
                 pass.set_vertex_buffer(0, cube_vb.slice(..));
                 pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
             }
