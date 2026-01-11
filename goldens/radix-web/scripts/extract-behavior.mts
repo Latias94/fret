@@ -52,6 +52,7 @@ type DomNode = {
   tag: string
   path: number[]
   attrs: Record<string, string>
+  rect?: { x: number; y: number; w: number; h: number }
   text?: string
   children: DomNode[]
 }
@@ -288,6 +289,20 @@ async function snapshotDom(page: puppeteer.Page): Promise<{
         attrs: attrWhitelist(el),
         children: builtChildren,
       };
+
+      try {
+        const r = el.getBoundingClientRect();
+        // We intentionally keep viewport-relative rects so they can be compared to Fret window
+        // coordinates without additional normalization.
+        node.rect = {
+          x: r.x,
+          y: r.y,
+          w: r.width,
+          h: r.height,
+        };
+      } catch {
+        // ignore
+      }
 
       const txt = textOf(el);
       if (txt) node.text = txt;
