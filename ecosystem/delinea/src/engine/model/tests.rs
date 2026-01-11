@@ -83,10 +83,12 @@ fn visual_map_accepts_series_binding() {
 
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(1),
+        mode: crate::spec::VisualMapMode::Continuous,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: Some((0.2, 0.8)),
+        initial_piece_mask: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });
@@ -106,19 +108,23 @@ fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
 
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(1),
+        mode: crate::spec::VisualMapMode::Continuous,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: None,
+        initial_piece_mask: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });
     spec.visual_maps.push(VisualMapSpec {
         id: crate::ids::VisualMapId::new(2),
+        mode: crate::spec::VisualMapMode::Continuous,
         series: vec![series_id],
         field: y_field,
         domain: (0.0, 1.0),
         initial_range: None,
+        initial_piece_mask: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });

@@ -54,6 +54,7 @@ pub struct ChartStyle {
     pub axis_band_y: Px,
     pub visual_map_band_x: Px,
     pub visual_map_padding: Px,
+    pub visual_map_item_gap: Px,
     pub visual_map_corner_radius: Px,
     pub visual_map_track_color: Color,
     pub visual_map_range_fill: Color,
@@ -143,6 +144,7 @@ impl Default for ChartStyle {
             axis_band_y: Px(36.0),
             visual_map_band_x: Px(22.0),
             visual_map_padding: Px(6.0),
+            visual_map_item_gap: Px(8.0),
             visual_map_corner_radius: Px(4.0),
             visual_map_track_color: Color {
                 r: 1.0,
@@ -329,6 +331,7 @@ impl ChartStyle {
         let axis_band_y = pick_metric(theme, "metric.chart.axis.band.y", Px(36.0));
         let visual_map_band_x = pick_metric(theme, "metric.chart.visualmap.band.x", Px(22.0));
         let visual_map_padding = pick_metric(theme, "metric.chart.visualmap.pad", Px(6.0));
+        let visual_map_item_gap = pick_metric(theme, "metric.chart.visualmap.item.gap", Px(8.0));
         let visual_map_corner_radius =
             pick_metric(theme, "metric.chart.visualmap.corner_radius", Px(4.0));
 
@@ -414,6 +417,7 @@ impl ChartStyle {
             axis_band_y,
             visual_map_band_x,
             visual_map_padding,
+            visual_map_item_gap,
             visual_map_corner_radius,
             visual_map_track_color,
             visual_map_range_fill,

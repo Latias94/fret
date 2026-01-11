@@ -1181,27 +1181,71 @@ impl ChartCanvas {
         delinea::engine::axis::data_at_px(extent, y_from_bottom, 0.0, height)
     }
 
-    fn visual_map_track(
+    fn visual_map_tracks(
         &self,
+    ) -> Vec<(
+        delinea::VisualMapId,
+        delinea::engine::model::VisualMapModel,
+        Rect,
+    )> {
+        let Some(band) = self.last_layout.visual_map else {
+            return Vec::new();
+        };
+        if band.size.width.0 <= 0.0 || band.size.height.0 <= 0.0 {
+            return Vec::new();
+        }
+
+        let maps: Vec<(delinea::VisualMapId, delinea::engine::model::VisualMapModel)> = self
+            .engine
+            .model()
+            .visual_maps
+            .iter()
+            .map(|(id, vm)| (*id, *vm))
+            .collect();
+        if maps.is_empty() {
+            return Vec::new();
+        }
+
+        let gap = self.style.visual_map_item_gap.0.max(0.0);
+        let pad = self.style.visual_map_padding.0.max(0.0);
+
+        let total_gap = gap * (maps.len().saturating_sub(1) as f32);
+        let item_h = ((band.size.height.0 - total_gap) / (maps.len() as f32)).max(1.0);
+
+        let mut y = band.origin.y.0;
+        let mut out = Vec::with_capacity(maps.len());
+        for (id, vm) in maps {
+            let item = Rect::new(
+                Point::new(band.origin.x, Px(y)),
+                Size::new(band.size.width, Px(item_h)),
+            );
+            y += item_h + gap;
+
+            let track = Rect::new(
+                Point::new(Px(item.origin.x.0 + pad), Px(item.origin.y.0 + pad)),
+                Size::new(
+                    Px((item.size.width.0 - 2.0 * pad).max(1.0)),
+                    Px((item.size.height.0 - 2.0 * pad).max(1.0)),
+                ),
+            );
+            if track.size.width.0 > 0.0 && track.size.height.0 > 0.0 {
+                out.push((id, vm, track));
+            }
+        }
+        out
+    }
+
+    fn visual_map_track_at(
+        &self,
+        position: Point,
     ) -> Option<(
         delinea::VisualMapId,
         delinea::engine::model::VisualMapModel,
         Rect,
     )> {
-        let (&id, &vm) = self.engine.model().visual_maps.iter().next()?;
-        let rect = self.last_layout.visual_map?;
-        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
-            return None;
-        }
-        let pad = self.style.visual_map_padding.0.max(0.0);
-        let inner = Rect::new(
-            Point::new(Px(rect.origin.x.0 + pad), Px(rect.origin.y.0 + pad)),
-            Size::new(
-                Px((rect.size.width.0 - 2.0 * pad).max(1.0)),
-                Px((rect.size.height.0 - 2.0 * pad).max(1.0)),
-            ),
-        );
-        Some((id, vm, inner))
+        self.visual_map_tracks()
+            .into_iter()
+            .find(|(_, _, track)| track.contains(position))
     }
 
     fn visual_map_domain_window(vm: delinea::engine::model::VisualMapModel) -> DataWindow {
@@ -1231,6 +1275,28 @@ impl ChartCanvas {
             },
             None => domain,
         }
+    }
+
+    fn current_visual_map_piece_mask(
+        &self,
+        id: delinea::VisualMapId,
+        vm: delinea::engine::model::VisualMapModel,
+    ) -> u64 {
+        let buckets = vm.buckets.clamp(1, 64) as u32;
+        let full_mask = if buckets >= 64 {
+            u64::MAX
+        } else {
+            (1u64 << buckets) - 1
+        };
+        self.engine
+            .state()
+            .visual_map_piece_mask
+            .get(&id)
+            .copied()
+            .flatten()
+            .or(vm.initial_piece_mask)
+            .unwrap_or(full_mask)
+            & full_mask
     }
 
     fn visual_map_y_at_value(track: Rect, domain: DataWindow, value: f64) -> f32 {
@@ -1517,100 +1583,145 @@ impl ChartCanvas {
     }
 
     fn draw_visual_map<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
-        let Some((vm_id, vm, track)) = self.visual_map_track() else {
+        let tracks = self.visual_map_tracks();
+        if tracks.is_empty() {
             return;
-        };
-
-        let domain = Self::visual_map_domain_window(vm);
-        let window = self.current_visual_map_window(vm_id, vm);
-
-        let order = DrawOrder(self.style.draw_order.0.saturating_add(8_600));
-
-        cx.scene.push(SceneOp::Quad {
-            order,
-            rect: track,
-            background: self.style.visual_map_track_color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(self.style.visual_map_corner_radius),
-        });
-
-        // Render a lightweight ramp using the bucket palette. This is not ECharts parity yet
-        // (no multi-channel mapping), but provides a stable continuous controller affordance.
-        let buckets = vm.buckets.max(1) as u32;
-        let inset = 1.0f32;
-        let ramp_rect = Rect::new(
-            Point::new(Px(track.origin.x.0 + inset), Px(track.origin.y.0 + inset)),
-            Size::new(
-                Px((track.size.width.0 - 2.0 * inset).max(1.0)),
-                Px((track.size.height.0 - 2.0 * inset).max(1.0)),
-            ),
-        );
-        let ramp_h = ramp_rect.size.height.0.max(1.0);
-        let segment_h = (ramp_h / buckets as f32).max(1.0);
-        let ramp_alpha = 0.35f32;
-        for i in 0..buckets {
-            let y1 = ramp_rect.origin.y.0 + ramp_h - (i as f32) * segment_h;
-            let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
-            let h = (y1 - y0).max(1.0);
-
-            let mut c = self.paint_color(delinea::PaintId(i as u64));
-            c.a *= ramp_alpha;
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(order.0.saturating_add(1)),
-                rect: Rect::new(
-                    Point::new(ramp_rect.origin.x, Px(y0)),
-                    Size::new(ramp_rect.size.width, Px(h)),
-                ),
-                background: c,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(0.0)),
-            });
         }
 
-        let y_min = Self::visual_map_y_at_value(track, domain, window.min);
-        let y_max = Self::visual_map_y_at_value(track, domain, window.max);
-        let top = y_max.min(y_min);
-        let bottom = y_max.max(y_min);
+        for (i, (vm_id, vm, track)) in tracks.into_iter().enumerate() {
+            let order = DrawOrder(
+                self.style
+                    .draw_order
+                    .0
+                    .saturating_add(8_600)
+                    .saturating_add((i as u32).saturating_mul(20)),
+            );
 
-        let win_rect = Rect::new(
-            Point::new(track.origin.x, Px(top)),
-            Size::new(track.size.width, Px((bottom - top).max(1.0))),
-        );
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(order.0.saturating_add(2)),
-            rect: win_rect,
-            background: self.style.visual_map_range_fill,
-            border: Edges::all(self.style.selection_stroke_width),
-            border_color: self.style.visual_map_range_stroke,
-            corner_radii: Corners::all(self.style.visual_map_corner_radius),
-        });
+            cx.scene.push(SceneOp::Quad {
+                order,
+                rect: track,
+                background: self.style.visual_map_track_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(self.style.visual_map_corner_radius),
+            });
 
-        let handle_h = 2.0f32.max(self.style.selection_stroke_width.0);
-        let handle_color = self.style.visual_map_handle_color;
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(order.0.saturating_add(3)),
-            rect: Rect::new(
-                Point::new(track.origin.x, Px(y_min - 0.5 * handle_h)),
-                Size::new(track.size.width, Px(handle_h)),
-            ),
-            background: handle_color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
-        });
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(order.0.saturating_add(4)),
-            rect: Rect::new(
-                Point::new(track.origin.x, Px(y_max - 0.5 * handle_h)),
-                Size::new(track.size.width, Px(handle_h)),
-            ),
-            background: handle_color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
-        });
+            let buckets = vm.buckets.max(1) as u32;
+            let inset = 1.0f32;
+            let ramp_rect = Rect::new(
+                Point::new(Px(track.origin.x.0 + inset), Px(track.origin.y.0 + inset)),
+                Size::new(
+                    Px((track.size.width.0 - 2.0 * inset).max(1.0)),
+                    Px((track.size.height.0 - 2.0 * inset).max(1.0)),
+                ),
+            );
+            let ramp_h = ramp_rect.size.height.0.max(1.0);
+            let segment_h = (ramp_h / buckets as f32).max(1.0);
+
+            match vm.mode {
+                delinea::VisualMapMode::Continuous => {
+                    // Render a lightweight ramp using the bucket palette. This is not ECharts parity yet
+                    // (no multi-channel mapping), but provides a stable continuous controller affordance.
+                    let ramp_alpha = 0.35f32;
+                    for bucket in 0..buckets {
+                        let y1 = ramp_rect.origin.y.0 + ramp_h - (bucket as f32) * segment_h;
+                        let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
+                        let h = (y1 - y0).max(1.0);
+
+                        let mut c = self.paint_color(delinea::PaintId(bucket as u64));
+                        c.a *= ramp_alpha;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order.0.saturating_add(1)),
+                            rect: Rect::new(
+                                Point::new(ramp_rect.origin.x, Px(y0)),
+                                Size::new(ramp_rect.size.width, Px(h)),
+                            ),
+                            background: c,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+
+                    let domain = Self::visual_map_domain_window(vm);
+                    let window = self.current_visual_map_window(vm_id, vm);
+
+                    let y_min = Self::visual_map_y_at_value(track, domain, window.min);
+                    let y_max = Self::visual_map_y_at_value(track, domain, window.max);
+                    let top = y_max.min(y_min);
+                    let bottom = y_max.max(y_min);
+
+                    let win_rect = Rect::new(
+                        Point::new(track.origin.x, Px(top)),
+                        Size::new(track.size.width, Px((bottom - top).max(1.0))),
+                    );
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(2)),
+                        rect: win_rect,
+                        background: self.style.visual_map_range_fill,
+                        border: Edges::all(self.style.selection_stroke_width),
+                        border_color: self.style.visual_map_range_stroke,
+                        corner_radii: Corners::all(self.style.visual_map_corner_radius),
+                    });
+
+                    let handle_h = 2.0f32.max(self.style.selection_stroke_width.0);
+                    let handle_color = self.style.visual_map_handle_color;
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(3)),
+                        rect: Rect::new(
+                            Point::new(track.origin.x, Px(y_min - 0.5 * handle_h)),
+                            Size::new(track.size.width, Px(handle_h)),
+                        ),
+                        background: handle_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(order.0.saturating_add(4)),
+                        rect: Rect::new(
+                            Point::new(track.origin.x, Px(y_max - 0.5 * handle_h)),
+                            Size::new(track.size.width, Px(handle_h)),
+                        ),
+                        background: handle_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+                delinea::VisualMapMode::Piecewise => {
+                    let mask = self.current_visual_map_piece_mask(vm_id, vm);
+                    let ramp_alpha_selected = 0.55f32;
+                    let ramp_alpha_unselected = 0.12f32;
+                    for bucket in 0..buckets {
+                        let y1 = ramp_rect.origin.y.0 + ramp_h - (bucket as f32) * segment_h;
+                        let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
+                        let h = (y1 - y0).max(1.0);
+
+                        let selected = ((mask >> (bucket as u32)) & 1) == 1;
+                        let alpha = if selected {
+                            ramp_alpha_selected
+                        } else {
+                            ramp_alpha_unselected
+                        };
+
+                        let mut c = self.paint_color(delinea::PaintId(bucket as u64));
+                        c.a *= alpha;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order.0.saturating_add(1)),
+                            rect: Rect::new(
+                                Point::new(ramp_rect.origin.x, Px(y0)),
+                                Size::new(ramp_rect.size.width, Px(h)),
+                            ),
+                            background: c,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+            }
+        }
     }
 
     fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -2508,19 +2619,42 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && self.box_zoom_drag.is_none()
                     && self.brush_drag.is_none()
                     && self.slider_drag.is_none()
-                    && let Some((vm_id, vm, track)) = self.visual_map_track()
-                    && track.contains(*position)
+                    && let Some((vm_id, vm, track)) = self.visual_map_track_at(*position)
                 {
                     let domain = Self::visual_map_domain_window(vm);
+                    let click_value =
+                        delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
+
+                    if vm.mode == delinea::VisualMapMode::Piecewise {
+                        let buckets = vm.buckets.clamp(1, 64) as u32;
+                        let full_mask = if buckets >= 64 {
+                            u64::MAX
+                        } else {
+                            (1u64 << buckets) - 1
+                        };
+
+                        let bucket =
+                            delinea::visual_map::bucket_index_for_value(&vm, click_value) as u32;
+                        let bit = 1u64 << bucket.min(63);
+                        let current = self.current_visual_map_piece_mask(vm_id, vm);
+                        let next = (current ^ bit) & full_mask;
+                        let mask = (next != full_mask).then_some(next);
+                        self.engine.apply_action(Action::SetVisualMapPieceMask {
+                            visual_map: vm_id,
+                            mask,
+                        });
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
                     let current_window = self.current_visual_map_window(vm_id, vm);
 
                     let handle_hit = 8.0f32;
                     let y_min = Self::visual_map_y_at_value(track, domain, current_window.min);
                     let y_max = Self::visual_map_y_at_value(track, domain, current_window.max);
                     let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
-
-                    let click_value =
-                        delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
 
                     let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit {
                         (SliderDragKind::HandleMin, current_window)
@@ -4302,10 +4436,12 @@ mod tests {
         let series_id = spec.series[0].id;
         spec.visual_maps.push(VisualMapSpec {
             id: VisualMapId::new(1),
+            mode: delinea::VisualMapMode::Continuous,
             series: vec![series_id],
             field: y_field,
             domain: (-1.0, 1.0),
             initial_range: Some((-0.25, 0.75)),
+            initial_piece_mask: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
         });
@@ -4388,9 +4524,9 @@ mod tests {
         let layout = canvas.compute_layout(bounds);
         canvas.last_layout = layout;
 
-        let (_id, _vm, track) = canvas
-            .visual_map_track()
-            .expect("expected a visual map track");
+        let tracks = canvas.visual_map_tracks();
+        assert_eq!(tracks.len(), 1);
+        let (_id, _vm, track) = tracks[0];
         let outer = canvas
             .last_layout
             .visual_map

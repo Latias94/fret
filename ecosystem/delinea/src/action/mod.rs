@@ -95,6 +95,11 @@ pub enum Action {
         visual_map: VisualMapId,
         range: Option<(f64, f64)>,
     },
+    SetVisualMapPieceMask {
+        visual_map: VisualMapId,
+        /// When `None`, all buckets are treated as selected.
+        mask: Option<u64>,
+    },
     SetSeriesVisible {
         series: SeriesId,
         visible: bool,

@@ -49,6 +49,7 @@ pub struct ChartState {
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
     pub visual_map_range:
         BTreeMap<crate::ids::VisualMapId, Option<crate::engine::model::VisualMapRange>>,
+    pub visual_map_piece_mask: BTreeMap<crate::ids::VisualMapId, Option<u64>>,
     pub hover_px: Option<Point>,
     pub brush_selection_2d: Option<BrushSelection2D>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
@@ -530,6 +531,24 @@ impl ChartEngine {
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
+            Action::SetVisualMapPieceMask { visual_map, mask } => {
+                let mask = mask.and_then(|m| {
+                    let Some(vm) = self.model.visual_maps.get(&visual_map).copied() else {
+                        return Some(m);
+                    };
+                    let buckets = vm.buckets.clamp(1, 64) as u32;
+                    let full_mask = if buckets >= 64 {
+                        u64::MAX
+                    } else {
+                        (1u64 << buckets) - 1
+                    };
+                    let m = m & full_mask;
+                    (m != full_mask).then_some(m)
+                });
+                self.state.visual_map_piece_mask.insert(visual_map, mask);
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
                 self.state.revision.bump();
@@ -560,6 +579,9 @@ impl ChartEngine {
     fn init_visual_map_state(&mut self) {
         for (id, map) in &self.model.visual_maps {
             self.state.visual_map_range.insert(*id, map.initial_range);
+            self.state
+                .visual_map_piece_mask
+                .insert(*id, map.initial_piece_mask);
         }
     }
 

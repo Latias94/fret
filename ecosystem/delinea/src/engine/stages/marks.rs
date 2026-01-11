@@ -585,6 +585,11 @@ impl MarksStage {
                         .get(&visual_map_id)
                         .copied()
                         .unwrap_or(vm.initial_range);
+                    let selected_piece_mask = state
+                        .visual_map_piece_mask
+                        .get(&visual_map_id)
+                        .copied()
+                        .unwrap_or(vm.initial_piece_mask);
 
                     let Some(dataset) = model.datasets.get(&series.dataset) else {
                         return false;
@@ -667,6 +672,7 @@ impl MarksStage {
                             let bucket = crate::visual_map::eval_bucket_for_value(
                                 &vm,
                                 selected_range,
+                                selected_piece_mask,
                                 vm_values.get(i).copied().unwrap_or(f64::NAN),
                             );
                             let bucket_key = bucket.bucket as usize

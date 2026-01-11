@@ -77,6 +77,7 @@ We define an extensible token namespace for chart styling:
 - `metric.chart.axis.tick.length`
 - `metric.chart.visualmap.band.x`
 - `metric.chart.visualmap.pad`
+- `metric.chart.visualmap.item.gap`
 - `metric.chart.visualmap.corner_radius`
 - `metric.chart.scatter.point_radius`
 - `metric.chart.hover.point_size`

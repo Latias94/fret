@@ -210,10 +210,21 @@ impl Default for DataZoomYSpec {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum VisualMapMode {
+    /// ECharts-like continuous visualMap (`type: "continuous"`).
+    #[default]
+    Continuous,
+    /// ECharts-like piecewise visualMap (`type: "piecewise"`).
+    Piecewise,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct VisualMapSpec {
     pub id: VisualMapId,
+    pub mode: VisualMapMode,
     /// Explicit series targets (v1: we only support series binding, not dataset-wide binding).
     pub series: Vec<SeriesId>,
     /// Input dimension (dataset field id).
@@ -222,6 +233,10 @@ pub struct VisualMapSpec {
     pub domain: (f64, f64),
     /// Optional initial selected range (used for inRange/outOfRange classification).
     pub initial_range: Option<(f64, f64)>,
+    /// Optional initial piecewise selection mask. Bit `i` selects bucket `i` (v1: up to 64 buckets).
+    ///
+    /// When `None`, all buckets are treated as selected.
+    pub initial_piece_mask: Option<u64>,
     /// Bounded bucket count used for v1 batch-friendly rendering.
     pub buckets: u16,
     /// Opacity multiplier applied to out-of-range items.
@@ -232,10 +247,12 @@ impl Default for VisualMapSpec {
     fn default() -> Self {
         Self {
             id: VisualMapId::new(0),
+            mode: VisualMapMode::Continuous,
             series: Vec::default(),
             field: FieldId::new(0),
             domain: (0.0, 1.0),
             initial_range: None,
+            initial_piece_mask: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
         }

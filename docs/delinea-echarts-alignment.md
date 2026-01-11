@@ -164,12 +164,16 @@ reference demo for validating these scenarios on desktop + wasm.
   - If either bound is locked, window panning via slider drag is disabled.
   - If `LockMin` is present, the min-handle drag is disabled.
   - If `LockMax` is present, the max-handle drag is disabled.
-- VisualMap (continuous controller, v1):
+- VisualMap controllers (v1):
   - Rendered when the model has at least one `VisualMapSpec`.
   - Control UI lives in a dedicated right-side band (outside the plot clip).
-  - Drag inside the selected window pans the range; drag the min/max handles resizes.
-  - Clicking outside the window jumps the selection and continues as a pan drag.
-  - Writes `Action::SetVisualMapRange` into `ChartState.visual_map_range`.
+  - Continuous:
+    - Drag inside the selected window pans the range; drag the min/max handles resizes.
+    - Clicking outside the window jumps the selection and continues as a pan drag.
+    - Writes `Action::SetVisualMapRange` into `ChartState.visual_map_range`.
+  - Piecewise:
+    - Clicking a bucket toggles its selection (inRange/outOfRange).
+    - Writes `Action::SetVisualMapPieceMask` into `ChartState.visual_map_piece_mask`.
 
 ### Lock toggles and view reset/fit
 
@@ -267,17 +271,17 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
 - `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter-only v1 buckets).
   - Evidence: `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
-  - Notes: v1 includes a continuous controller UI and scatter-only bucket coloring; piecewise mode and multi-channel mapping are future work.
+  - Notes: v1 includes continuous + piecewise controller UI and scatter-only bucket coloring; multi-channel mapping is future work.
 
 ## Known Gaps vs ECharts (High Value)
 
 - DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors).
 - Category axis indexing under zoom for non-bar series.
-- VisualMap: piecewise mode and additional channels (size, stroke width, etc.).
+- VisualMap: additional channels (size, stroke width, etc.) and multi-series targeting parity.
 - Rich tooltip formatting and series-specific default formatting.
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Harden VisualMap semantics (multi-map routing, piecewise mode, and multi-channel mapping) on top of the v1 controller UI.
+1. P0: Harden VisualMap semantics (multi-channel mapping and multi-series targeting parity) on top of the v1 controller UI.
 2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
 3. P1: Append/update semantics (ECharts `appendData`) on top of the dataset storage/index contract (ADR 0140), with explicit budgeting and determinism requirements.

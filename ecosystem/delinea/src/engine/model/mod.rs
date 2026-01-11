@@ -475,9 +475,11 @@ impl VisualMapRange {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VisualMapModel {
     pub id: VisualMapId,
+    pub mode: crate::spec::VisualMapMode,
     pub field: FieldId,
     pub domain: VisualMapDomain,
     pub initial_range: Option<VisualMapRange>,
+    pub initial_piece_mask: Option<u64>,
     pub buckets: u16,
     pub out_of_range_opacity: f32,
 }
@@ -519,6 +521,18 @@ fn apply_visual_maps(
             0.25
         };
 
+        let initial_piece_mask = match map.mode {
+            crate::spec::VisualMapMode::Continuous => None,
+            crate::spec::VisualMapMode::Piecewise => {
+                let full_mask = if buckets >= 64 {
+                    u64::MAX
+                } else {
+                    (1u64 << buckets) - 1
+                };
+                map.initial_piece_mask.map(|m| m & full_mask)
+            }
+        };
+
         for series_id in &map.series {
             if !model.series.contains_key(series_id) {
                 return Err(ModelError::MissingReference {
@@ -552,9 +566,11 @@ fn apply_visual_maps(
             map.id,
             VisualMapModel {
                 id: map.id,
+                mode: map.mode,
                 field: map.field,
                 domain,
                 initial_range,
+                initial_piece_mask,
                 buckets,
                 out_of_range_opacity,
             },

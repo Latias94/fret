@@ -119,7 +119,7 @@ Interactive visualMap controllers (continuous range slider / piecewise toggles) 
 headless actions:
 
 - `Action::SetVisualMapRange { visual_map, range: Option<(f64, f64)> }`
-- `Action::SetVisualMapPieces { visual_map, selected: BitSetLike }` (exact shape deferred)
+- `Action::SetVisualMapPieceMask { visual_map, mask: Option<u64> }` (v1: bucket bitmask; `None` means “all selected”)
 
 These actions:
 
@@ -147,7 +147,7 @@ P0:
 
 P1:
 
-- [~] Add a `fret-chart` VisualMap controller UI (continuous: implemented; piecewise: pending).
+- [~] Add a `fret-chart` VisualMap controller UI (continuous + piecewise) with improved affordances (labels, reset, drag gestures).
 - Extend mapping to point size (scatter) and bar fill (categorical).
 - Evaluate whether `MarkArena` should gain optional per-item attribute streams once a GPU-instanced
   path exists.
