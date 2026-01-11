@@ -75,6 +75,7 @@ patterns:
 - `select-scrollable` (available-height clamping + scrolling)
 - `scroll-area-demo`
 - `slider-demo`
+- `separator-demo`
 - `textarea-demo`
 
 Goldens live at: `goldens/shadcn-web/v4/new-york-v4/<name>.json`.
