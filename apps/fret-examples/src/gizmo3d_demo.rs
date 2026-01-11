@@ -903,6 +903,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
         out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
         out.push_str("  O: toggle depth mode (depth test / on top)\n");
+        out.push_str("  D: toggle Universal dolly handle (coarse Universal only)\n");
         out.push_str("  Y: cycle theme (Fret/Godot/HardHacker)\n");
         out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
@@ -928,6 +929,10 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Gizmo: depth_mode={:?}\n",
             self.gizmo.config.depth_mode
+        ));
+        out.push_str(&format!(
+            "Gizmo: universal_includes_translate_depth={}\n",
+            self.gizmo.config.universal_includes_translate_depth
         ));
         out.push_str(&format!(
             "Theme preset: {}\n",
@@ -2222,6 +2227,20 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         DepthMode::Test => DepthMode::Always,
                         DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
                     };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyD,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.universal_includes_translate_depth =
+                        !m.gizmo.config.universal_includes_translate_depth;
                 });
                 app.request_redraw(window);
             }
