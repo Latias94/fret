@@ -19,7 +19,7 @@ use fret_launch::{
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
-    Overlay3dLineVertex, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
+    Overlay3dBatch, Overlay3dLineVertex, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
     ViewportOverlay3dContext,
 };
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
@@ -1081,20 +1081,9 @@ struct Gizmo3dDemoService {
 }
 
 #[derive(Clone)]
-struct OverlayDrawBuffer {
-    buffer: wgpu::Buffer,
-    vertex_count: u32,
-}
-
-#[derive(Clone)]
 struct Gizmo3dDemoViewportOverlayWindow {
     overlay: Overlay3dPipelines,
-    solid_test: Option<OverlayDrawBuffer>,
-    solid_ghost: Option<OverlayDrawBuffer>,
-    solid_always: Option<OverlayDrawBuffer>,
-    line_test: Option<OverlayDrawBuffer>,
-    line_ghost: Option<OverlayDrawBuffer>,
-    line_always: Option<OverlayDrawBuffer>,
+    batch: Overlay3dBatch,
 }
 
 #[derive(Default)]
@@ -1113,12 +1102,7 @@ impl Gizmo3dDemoViewportOverlayService {
             .entry((window, target))
             .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
                 overlay: gpu.overlay.clone(),
-                solid_test: None,
-                solid_ghost: None,
-                solid_always: None,
-                line_test: None,
-                line_ghost: None,
-                line_always: None,
+                batch: Overlay3dBatch::default(),
             })
     }
 
@@ -1127,85 +1111,33 @@ impl Gizmo3dDemoViewportOverlayService {
         window: AppWindowId,
         target: RenderTargetId,
         gpu: &Gizmo3dDemoGpu,
-        solid_vb_test: Option<wgpu::Buffer>,
-        solid_count_test: u32,
-        solid_vb_ghost: Option<wgpu::Buffer>,
-        solid_count_ghost: u32,
-        solid_vb_always: Option<wgpu::Buffer>,
-        solid_count_always: u32,
-        line_vb_test: Option<wgpu::Buffer>,
-        line_count_test: u32,
-        line_vb_ghost: Option<wgpu::Buffer>,
-        line_count_ghost: u32,
-        line_vb_always: Option<wgpu::Buffer>,
-        line_count_always: u32,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        solid_test: &[Vertex],
+        solid_ghost: &[Vertex],
+        solid_always: &[Vertex],
+        line_test: &[LineVertex],
+        line_ghost: &[LineVertex],
+        line_always: &[LineVertex],
     ) {
         let entry = self.ensure_entry(window, target, gpu);
-        entry.solid_test = solid_vb_test.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_test,
-        });
-        entry.solid_ghost = solid_vb_ghost.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_ghost,
-        });
-        entry.solid_always = solid_vb_always.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_always,
-        });
-        entry.line_test = line_vb_test.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_test,
-        });
-        entry.line_ghost = line_vb_ghost.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_ghost,
-        });
-        entry.line_always = line_vb_always.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_always,
-        });
+        entry.batch.upload(
+            device,
+            queue,
+            solid_test,
+            solid_ghost,
+            solid_always,
+            line_test,
+            line_ghost,
+            line_always,
+        );
     }
 
     fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
         let Some(overlays) = self.per_viewport.get(&(window, target)) else {
             return;
         };
-
-        pass.set_bind_group(0, &overlays.overlay.bind_group, &[]);
-
-        if let Some(buf) = &overlays.solid_ghost {
-            pass.set_pipeline(&overlays.overlay.solid_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_ghost {
-            pass.set_pipeline(&overlays.overlay.thick_line_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-
-        if let Some(buf) = &overlays.solid_test {
-            pass.set_pipeline(&overlays.overlay.solid_depth_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_test {
-            pass.set_pipeline(&overlays.overlay.thick_line_depth_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-
-        if let Some(buf) = &overlays.solid_always {
-            pass.set_pipeline(&overlays.overlay.solid_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_always {
-            pass.set_pipeline(&overlays.overlay.thick_line_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
+        overlays.batch.record(&overlays.overlay, pass);
     }
 }
 
@@ -3542,86 +3474,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
         }
 
-        let solid_vb_test = (!solid_verts_test.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (test)"),
-                    contents: bytemuck::cast_slice(&solid_verts_test),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let solid_vb_ghost = (!solid_verts_ghost.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (ghost)"),
-                    contents: bytemuck::cast_slice(&solid_verts_ghost),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let solid_vb_always = (!solid_verts_always.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (always)"),
-                    contents: bytemuck::cast_slice(&solid_verts_always),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-
-        let line_vb_test = (!line_verts_test.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (test)"),
-                    contents: bytemuck::cast_slice(&line_verts_test),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let line_vb_ghost = (!line_verts_ghost.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (ghost)"),
-                    contents: bytemuck::cast_slice(&line_verts_ghost),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let line_vb_always = (!line_verts_always.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (always)"),
-                    contents: bytemuck::cast_slice(&line_verts_always),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-
-        let solid_count_test = solid_verts_test.len().min(u32::MAX as usize) as u32;
-        let solid_count_ghost = solid_verts_ghost.len().min(u32::MAX as usize) as u32;
-        let solid_count_always = solid_verts_always.len().min(u32::MAX as usize) as u32;
-        let line_count_test = line_verts_test.len().min(u32::MAX as usize) as u32;
-        let line_count_ghost = line_verts_ghost.len().min(u32::MAX as usize) as u32;
-        let line_count_always = line_verts_always.len().min(u32::MAX as usize) as u32;
-
         app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
             svc.update_buffers(
                 window,
                 target_id,
                 gpu,
-                solid_vb_test.clone(),
-                solid_count_test,
-                solid_vb_ghost.clone(),
-                solid_count_ghost,
-                solid_vb_always.clone(),
-                solid_count_always,
-                line_vb_test.clone(),
-                line_count_test,
-                line_vb_ghost.clone(),
-                line_count_ghost,
-                line_vb_always.clone(),
-                line_count_always,
+                &context.device,
+                &context.queue,
+                &solid_verts_test,
+                &solid_verts_ghost,
+                &solid_verts_always,
+                &line_verts_test,
+                &line_verts_ghost,
+                &line_verts_always,
             );
         });
 

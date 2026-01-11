@@ -36,6 +36,163 @@ pub struct Overlay3dPipelines {
     pub thick_line_always_pipeline: wgpu::RenderPipeline,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct Overlay3dBatch {
+    solid_test: Overlay3dBatchSlot<Overlay3dVertex>,
+    solid_ghost: Overlay3dBatchSlot<Overlay3dVertex>,
+    solid_always: Overlay3dBatchSlot<Overlay3dVertex>,
+    line_test: Overlay3dBatchSlot<Overlay3dLineVertex>,
+    line_ghost: Overlay3dBatchSlot<Overlay3dLineVertex>,
+    line_always: Overlay3dBatchSlot<Overlay3dLineVertex>,
+}
+
+impl Overlay3dBatch {
+    pub fn upload(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        solid_test: &[Overlay3dVertex],
+        solid_ghost: &[Overlay3dVertex],
+        solid_always: &[Overlay3dVertex],
+        line_test: &[Overlay3dLineVertex],
+        line_ghost: &[Overlay3dLineVertex],
+        line_always: &[Overlay3dLineVertex],
+    ) {
+        self.solid_test
+            .upload(device, queue, "fret overlay3d solid vb (test)", solid_test);
+        self.solid_ghost.upload(
+            device,
+            queue,
+            "fret overlay3d solid vb (ghost)",
+            solid_ghost,
+        );
+        self.solid_always.upload(
+            device,
+            queue,
+            "fret overlay3d solid vb (always)",
+            solid_always,
+        );
+        self.line_test.upload(
+            device,
+            queue,
+            "fret overlay3d thick line vb (test)",
+            line_test,
+        );
+        self.line_ghost.upload(
+            device,
+            queue,
+            "fret overlay3d thick line vb (ghost)",
+            line_ghost,
+        );
+        self.line_always.upload(
+            device,
+            queue,
+            "fret overlay3d thick line vb (always)",
+            line_always,
+        );
+    }
+
+    pub fn record<'rp>(&self, pipelines: &Overlay3dPipelines, pass: &mut wgpu::RenderPass<'rp>) {
+        pass.set_bind_group(0, &pipelines.bind_group, &[]);
+
+        if self.solid_ghost.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.solid_always_pipeline);
+            pass.set_vertex_buffer(0, self.solid_ghost.buffer_slice());
+            pass.draw(0..self.solid_ghost.vertex_count, 0..1);
+        }
+        if self.line_ghost.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, self.line_ghost.buffer_slice());
+            pass.draw(0..self.line_ghost.vertex_count, 0..1);
+        }
+
+        if self.solid_test.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.solid_depth_pipeline);
+            pass.set_vertex_buffer(0, self.solid_test.buffer_slice());
+            pass.draw(0..self.solid_test.vertex_count, 0..1);
+        }
+        if self.line_test.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.thick_line_depth_pipeline);
+            pass.set_vertex_buffer(0, self.line_test.buffer_slice());
+            pass.draw(0..self.line_test.vertex_count, 0..1);
+        }
+
+        if self.solid_always.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.solid_always_pipeline);
+            pass.set_vertex_buffer(0, self.solid_always.buffer_slice());
+            pass.draw(0..self.solid_always.vertex_count, 0..1);
+        }
+        if self.line_always.vertex_count > 0 {
+            pass.set_pipeline(&pipelines.thick_line_always_pipeline);
+            pass.set_vertex_buffer(0, self.line_always.buffer_slice());
+            pass.draw(0..self.line_always.vertex_count, 0..1);
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Overlay3dBatchSlot<T> {
+    buffer: Option<wgpu::Buffer>,
+    capacity_bytes: u64,
+    vertex_count: u32,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> Default for Overlay3dBatchSlot<T> {
+    fn default() -> Self {
+        Self {
+            buffer: None,
+            capacity_bytes: 0,
+            vertex_count: 0,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: Pod> Overlay3dBatchSlot<T> {
+    fn upload(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, label: &str, data: &[T]) {
+        self.vertex_count = data.len().min(u32::MAX as usize) as u32;
+        if self.vertex_count == 0 {
+            return;
+        }
+
+        let bytes = bytemuck::cast_slice(data);
+        let needed = bytes.len() as u64;
+        self.ensure_capacity(device, label, needed);
+
+        if let Some(buffer) = self.buffer.as_ref() {
+            queue.write_buffer(buffer, 0, bytes);
+        }
+    }
+
+    fn ensure_capacity(&mut self, device: &wgpu::Device, label: &str, needed: u64) {
+        if self.buffer.is_some() && self.capacity_bytes >= needed {
+            return;
+        }
+
+        let min_capacity = 256u64;
+        let mut cap = needed.max(min_capacity);
+        if let Some(next) = cap.checked_next_power_of_two() {
+            cap = next;
+        }
+
+        self.capacity_bytes = cap;
+        self.buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some(label),
+            size: cap,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        }));
+    }
+
+    fn buffer_slice(&self) -> wgpu::BufferSlice<'_> {
+        self.buffer
+            .as_ref()
+            .expect("overlay3d batch buffer is missing")
+            .slice(..)
+    }
+}
+
 impl Overlay3dPipelines {
     pub fn new(
         device: &wgpu::Device,
