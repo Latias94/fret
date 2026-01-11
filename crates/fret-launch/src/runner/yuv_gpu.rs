@@ -102,9 +102,9 @@ pub(crate) fn write_nv12_rect(
     y_plane: &[u8],
     uv_bytes_per_row: u32,
     uv_plane: &[u8],
-) -> Result<(), String> {
+) -> Result<u64, String> {
     if rect.w == 0 || rect.h == 0 {
-        return Ok(());
+        return Ok(0);
     }
     if rect.x >= planes.size.0 || rect.y >= planes.size.1 {
         return Err("rect out of bounds".to_string());
@@ -141,6 +141,7 @@ pub(crate) fn write_nv12_rect(
             depth_or_array_layers: 1,
         },
     );
+    let mut uploaded_bytes = (y_bpr as u64).saturating_mul(rect.h as u64);
 
     // UV plane upload (2 bytes per pixel, half resolution).
     let x_uv = rect.x / 2;
@@ -148,7 +149,7 @@ pub(crate) fn write_nv12_rect(
     let w_uv = rect.w.div_ceil(2);
     let h_uv = rect.h.div_ceil(2);
     if w_uv == 0 || h_uv == 0 {
-        return Ok(());
+        return Ok(uploaded_bytes);
     }
     if x_uv.saturating_add(w_uv) > planes.chroma_size.0
         || y_uv.saturating_add(h_uv) > planes.chroma_size.1
@@ -190,7 +191,9 @@ pub(crate) fn write_nv12_rect(
         },
     );
 
-    Ok(())
+    uploaded_bytes = uploaded_bytes.saturating_add((uv_bpr as u64).saturating_mul(h_uv as u64));
+
+    Ok(uploaded_bytes)
 }
 
 #[repr(C)]

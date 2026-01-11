@@ -196,10 +196,11 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingNv12DemoSta
         if state.frame % state.perf_every == 0 {
             if let Some(snapshot) = app.global::<fret_core::StreamingUploadPerfSnapshot>() {
                 println!(
-                    "streaming_perf frame={} seen={} applied={} upload_bytes={} pending={} yuv_us={} yuv_out_bytes={}",
+                    "streaming_perf frame={} seen={} applied={} upload_budgeted={} upload_applied={} pending={} yuv_us={} yuv_out_bytes={}",
                     state.frame,
                     snapshot.update_effects_seen,
                     snapshot.update_effects_applied,
+                    snapshot.upload_bytes_budgeted,
                     snapshot.upload_bytes_applied,
                     snapshot.pending_updates,
                     snapshot.yuv_convert_us,

@@ -950,6 +950,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn apply_streaming_image_update_rgba8(
         &mut self,
+        stats: &mut super::streaming_upload::StreamingUploadStats,
         window: Option<fret_core::AppWindowId>,
         token: fret_core::ImageUpdateToken,
         image: fret_core::ImageId,
@@ -1197,7 +1198,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let needs_replace =
             entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
-        if needs_replace {
+        let applied_upload_bytes = if needs_replace {
             let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
             if !is_full_update {
                 tracing::warn!(
@@ -1224,18 +1225,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 return;
             }
 
-            let uploaded = if bytes_per_row == width.saturating_mul(4)
+            let (applied_upload_bytes, uploaded) = if bytes_per_row == width.saturating_mul(4)
                 && bytes.len()
                     == (width as usize)
                         .saturating_mul(height as usize)
                         .saturating_mul(4)
             {
-                fret_render::upload_rgba8_image(
-                    &context.device,
-                    &context.queue,
-                    (width, height),
-                    bytes,
-                    color_space,
+                (
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        width.saturating_mul(4),
+                    ),
+                    fret_render::upload_rgba8_image(
+                        &context.device,
+                        &context.queue,
+                        (width, height),
+                        bytes,
+                        color_space,
+                    ),
                 )
             } else {
                 let uploaded = fret_render::create_rgba8_image_storage(
@@ -1250,7 +1257,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     bytes_per_row,
                     bytes,
                 );
-                uploaded
+                (
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        bytes_per_row,
+                    ),
+                    uploaded,
+                )
             };
 
             let view = uploaded
@@ -1287,6 +1300,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             entry.uploaded = uploaded;
             entry.alpha_mode = alpha_mode;
             entry.nv12_planes = None;
+            applied_upload_bytes
         } else {
             entry.uploaded.write_region(
                 &context.queue,
@@ -1295,7 +1309,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 bytes_per_row,
                 bytes,
             );
-        }
+            super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(rect, bytes_per_row)
+        };
+        stats.upload_bytes_applied = stats
+            .upload_bytes_applied
+            .saturating_add(applied_upload_bytes);
 
         if self.config.streaming_update_ack_enabled {
             let target = window
@@ -1582,7 +1600,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let t0 = std::time::Instant::now();
-        if let Err(_message) = super::yuv_gpu::write_nv12_rect(
+        let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
             &context.queue,
             planes,
             rect,
@@ -1590,7 +1608,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             y_plane,
             uv_bytes_per_row,
             uv_plane,
-        ) {
+        ) else {
             if self.config.streaming_update_ack_enabled {
                 let target = window
                     .or(self.main_window)
@@ -1607,7 +1625,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
             return true;
-        }
+        };
+
+        stats.upload_bytes_applied = stats.upload_bytes_applied.saturating_add(uploaded_bytes);
 
         converter.convert_rect_into(
             &context.device,
@@ -3135,6 +3155,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         alpha_mode,
                     } => {
                         self.apply_streaming_image_update_rgba8(
+                            &mut stats,
                             window,
                             token,
                             image,
@@ -3206,6 +3227,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     .saturating_add(rgba.len() as u64);
 
                                 self.apply_streaming_image_update_rgba8(
+                                    &mut stats,
                                     window,
                                     token,
                                     image,
@@ -3283,6 +3305,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     .saturating_add(rgba.len() as u64);
 
                                 self.apply_streaming_image_update_rgba8(
+                                    &mut stats,
                                     window,
                                     token,
                                     image,
@@ -3477,6 +3500,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || stats.update_effects_applied > 0
                 || stats.update_effects_delayed_budget > 0
                 || stats.update_effects_dropped_staging > 0
+                || stats.upload_bytes_budgeted > 0
                 || stats.upload_bytes_applied > 0
                 || stats.pending_updates > 0
                 || stats.pending_staging_bytes > 0
@@ -3493,6 +3517,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     update_effects_applied: u64::from(stats.update_effects_applied),
                     update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
                     update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                    upload_bytes_budgeted: stats.upload_bytes_budgeted,
                     upload_bytes_applied: stats.upload_bytes_applied,
                     pending_updates: u64::from(stats.pending_updates),
                     pending_staging_bytes: stats.pending_staging_bytes,
@@ -3516,6 +3541,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     applied = stats.update_effects_applied,
                     delayed_budget = stats.update_effects_delayed_budget,
                     dropped_staging = stats.update_effects_dropped_staging,
+                    upload_bytes_budgeted = stats.upload_bytes_budgeted,
                     upload_bytes_applied = stats.upload_bytes_applied,
                     upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
                     staging_budget_bytes = stats.staging_budget_bytes,

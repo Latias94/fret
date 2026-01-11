@@ -14,6 +14,9 @@ pub(crate) struct StreamingUploadStats {
     pub update_effects_delayed_budget: u32,
     pub update_effects_dropped_staging: u32,
     pub upload_budget_bytes_per_frame: u64,
+    /// Estimated bytes used for budget decisions this frame.
+    pub upload_bytes_budgeted: u64,
+    /// Actual bytes uploaded by applied updates this frame (filled by the runner apply stage).
     pub upload_bytes_applied: u64,
     pub staging_budget_bytes: u64,
     pub pending_updates: u32,
@@ -89,13 +92,11 @@ fn round_up(value: u32, align: u32) -> u32 {
     value.div_ceil(align).saturating_mul(align)
 }
 
-fn estimate_rgba8_upload_bytes(
-    width: u32,
-    height: u32,
-    update_rect_px: Option<RectPx>,
-    bytes_per_row: u32,
-) -> u64 {
-    let rect = update_rect_or_full(width, height, update_rect_px);
+pub(crate) fn estimate_rgba8_upload_bytes_for_rect(rect: RectPx, bytes_per_row: u32) -> u64 {
+    if rect.is_empty() {
+        return 0;
+    }
+
     let row_bytes = rect.w.saturating_mul(4);
     let aligned_row_bytes = round_up(row_bytes, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
     let effective_bpr = if bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0 {
@@ -104,6 +105,16 @@ fn estimate_rgba8_upload_bytes(
         aligned_row_bytes.max(row_bytes)
     };
     (effective_bpr as u64).saturating_mul(rect.h as u64)
+}
+
+fn estimate_rgba8_upload_bytes(
+    width: u32,
+    height: u32,
+    update_rect_px: Option<RectPx>,
+    bytes_per_row: u32,
+) -> u64 {
+    let rect = update_rect_or_full(width, height, update_rect_px);
+    estimate_rgba8_upload_bytes_for_rect(rect, bytes_per_row)
 }
 
 fn estimate_upload_bytes(effect: &Effect) -> u64 {
@@ -528,8 +539,8 @@ impl StreamingUploadQueue {
                             applied_any = true;
                             stats.update_effects_applied =
                                 stats.update_effects_applied.saturating_add(1);
-                            stats.upload_bytes_applied =
-                                stats.upload_bytes_applied.saturating_add(upload_bytes);
+                            stats.upload_bytes_budgeted =
+                                stats.upload_bytes_budgeted.saturating_add(upload_bytes);
                             out.push(effect);
                         }
                         other => out.push(other),

@@ -324,6 +324,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         &mut self,
         window: &dyn Window,
         gfx: &mut GfxState,
+        stats: &mut super::streaming_upload::StreamingUploadStats,
         target_window: Option<AppWindowId>,
         token: fret_core::ImageUpdateToken,
         image: fret_core::ImageId,
@@ -484,6 +485,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let needs_replace =
             entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
+        let mut applied_upload_bytes: Option<u64> = None;
         if needs_replace {
             let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
             if !is_full_update {
@@ -509,6 +511,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         .saturating_mul(height as usize)
                         .saturating_mul(4)
             {
+                applied_upload_bytes = Some(
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        width.saturating_mul(4),
+                    ),
+                );
                 fret_render::upload_rgba8_image(
                     &gfx.ctx.device,
                     &gfx.ctx.queue,
@@ -517,6 +525,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     color_space,
                 )
             } else {
+                applied_upload_bytes = Some(
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        bytes_per_row,
+                    ),
+                );
                 let uploaded = fret_render::create_rgba8_image_storage(
                     &gfx.ctx.device,
                     (width, height),
@@ -566,7 +580,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 bytes_per_row,
                 bytes,
             );
+            applied_upload_bytes = Some(
+                super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(rect, bytes_per_row),
+            );
         }
+
+        let applied_upload_bytes = applied_upload_bytes.unwrap_or(0);
+        stats.upload_bytes_applied = stats
+            .upload_bytes_applied
+            .saturating_add(applied_upload_bytes);
 
         if self.config.streaming_update_ack_enabled {
             self.pending_events
@@ -765,7 +787,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let t0 = std::time::Instant::now();
-        if let Err(_message) = super::yuv_gpu::write_nv12_rect(
+        let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
             &gfx.ctx.queue,
             planes,
             rect,
@@ -773,7 +795,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             y_plane,
             uv_bytes_per_row,
             uv_plane,
-        ) {
+        ) else {
             if self.config.streaming_update_ack_enabled {
                 self.pending_events.push(Event::ImageUpdateDropped {
                     token,
@@ -782,7 +804,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 });
             }
             return true;
-        }
+        };
+
+        stats.upload_bytes_applied = stats.upload_bytes_applied.saturating_add(uploaded_bytes);
 
         converter.convert_rect_into(
             &gfx.ctx.device,
@@ -857,6 +881,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || stats.update_effects_applied > 0
                 || stats.update_effects_delayed_budget > 0
                 || stats.update_effects_dropped_staging > 0
+                || stats.upload_bytes_budgeted > 0
                 || stats.upload_bytes_applied > 0
                 || stats.pending_updates > 0
                 || stats.pending_staging_bytes > 0
@@ -873,6 +898,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     update_effects_applied: u64::from(stats.update_effects_applied),
                     update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
                     update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                    upload_bytes_budgeted: stats.upload_bytes_budgeted,
                     upload_bytes_applied: stats.upload_bytes_applied,
                     pending_updates: u64::from(stats.pending_updates),
                     pending_staging_bytes: stats.pending_staging_bytes,
@@ -896,6 +922,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     applied = stats.update_effects_applied,
                     delayed_budget = stats.update_effects_delayed_budget,
                     dropped_staging = stats.update_effects_dropped_staging,
+                    upload_bytes_budgeted = stats.upload_bytes_budgeted,
                     upload_bytes_applied = stats.upload_bytes_applied,
                     upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
                     staging_budget_bytes = stats.staging_budget_bytes,
@@ -1034,6 +1061,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     self.apply_streaming_image_update_rgba8(
                         window,
                         gfx,
+                        &mut stats,
                         target_window,
                         token,
                         image,
@@ -1108,6 +1136,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             self.apply_streaming_image_update_rgba8(
                                 window,
                                 gfx,
+                                &mut stats,
                                 target_window,
                                 token,
                                 image,
@@ -1178,6 +1207,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             self.apply_streaming_image_update_rgba8(
                                 window,
                                 gfx,
+                                &mut stats,
                                 target_window,
                                 token,
                                 image,
@@ -1266,6 +1296,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             || stats.update_effects_applied > 0
             || stats.update_effects_delayed_budget > 0
             || stats.update_effects_dropped_staging > 0
+            || stats.upload_bytes_budgeted > 0
             || stats.upload_bytes_applied > 0
             || stats.pending_updates > 0
             || stats.pending_staging_bytes > 0
@@ -1282,6 +1313,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 update_effects_applied: u64::from(stats.update_effects_applied),
                 update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
                 update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                upload_bytes_budgeted: stats.upload_bytes_budgeted,
                 upload_bytes_applied: stats.upload_bytes_applied,
                 pending_updates: u64::from(stats.pending_updates),
                 pending_staging_bytes: stats.pending_staging_bytes,
@@ -1305,6 +1337,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 applied = stats.update_effects_applied,
                 delayed_budget = stats.update_effects_delayed_budget,
                 dropped_staging = stats.update_effects_dropped_staging,
+                upload_bytes_budgeted = stats.upload_bytes_budgeted,
                 upload_bytes_applied = stats.upload_bytes_applied,
                 upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
                 staging_budget_bytes = stats.staging_budget_bytes,

@@ -111,6 +111,8 @@ Notes on the NV12 GPU path (`FRET_STREAMING_GPU_YUV=1`):
 - Currently only accelerates `Effect::ImageUpdateNv12` into `Rgba8UnormSrgb` image storage (sRGB) and forces
   `AlphaMode::Opaque` for the target image.
 - `StreamingUploadPerfSnapshot.yuv_convert_us` measures CPU-side work (plane repack + command encoding), not GPU time.
+- `StreamingUploadPerfSnapshot.upload_bytes_budgeted` reflects the conservative estimate used for budgets, while
+  `upload_bytes_applied` reflects actual CPU->GPU uploads performed by the applied path.
 - A quick sanity check is that `streaming_nv12_demo` should show a significantly smaller `yuv_us` vs CPU fallback.
 
 If you need structured logs from the runner:
