@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use fret_core::{Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size};
 use fret_ui::retained_bridge::Widget as _;
 
+use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
@@ -835,4 +836,104 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s == "move_end:PanScroll:Ended"));
     let _ = snapshot;
+}
+
+#[test]
+fn double_click_background_zoom_emits_move_start_and_move_end() {
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(Graph::default());
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.zoom_on_double_click = true;
+    });
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.event(
+        &mut cx,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s == "move_start:ZoomDoubleClick"));
+    assert!(got.iter().any(|s| s == "move_end:ZoomDoubleClick:Ended"));
+}
+
+#[test]
+fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(Graph::default());
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.zoom_on_scroll = false;
+        s.interaction.pan_on_scroll = true;
+        s.interaction.pan_on_scroll_speed = 1.0;
+        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+    });
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+
+    let pos = Point::new(Px(100.0), Px(100.0));
+    {
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: pos,
+                delta: Point::new(Px(20.0), Px(0.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.zoom_on_scroll = true;
+        s.interaction.zoom_on_scroll_speed = 1.0;
+        s.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+        s.interaction.pan_on_scroll = false;
+    });
+
+    {
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: pos,
+                delta: Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    let got = log.borrow().clone();
+    let pan_end = got
+        .iter()
+        .position(|s| s == "move_end:PanScroll:Ended")
+        .expect("pan scroll ended");
+    let zoom_start = got
+        .iter()
+        .position(|s| s == "move_start:ZoomWheel")
+        .expect("zoom wheel started");
+    assert!(pan_end < zoom_start);
 }
