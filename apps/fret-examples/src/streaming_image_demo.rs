@@ -1,8 +1,8 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorSpace, Px, Rect, RectPx,
-    SceneOp, Size,
+    AlphaMode, AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorInfo, Px, Rect,
+    RectPx, SceneOp, Size,
 };
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext};
 
@@ -60,7 +60,7 @@ fn create_window_state(
         width: image_size.0,
         height: image_size.1,
         bytes,
-        color_space: ImageColorSpace::Srgb,
+        color_space: fret_core::ImageColorSpace::Srgb,
     });
 
     StreamingImageDemoState {
@@ -177,7 +177,8 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoSt
             update_rect_px: Some(RectPx::new(bar_x, 0, bar_w, state.image_size.1)),
             bytes_per_row: bar_w * 4,
             bytes,
-            color_space: ImageColorSpace::Srgb,
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
         });
 
         app.push_effect(Effect::RequestAnimationFrame(window));

@@ -508,7 +508,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     update_rect_px,
                     bytes_per_row,
                     bytes,
-                    color_space,
+                    color_info,
+                    alpha_mode: _,
                 } => {
                     if let Some(target_window) = target_window
                         && target_window != self.app_window
@@ -592,11 +593,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let color_space = match color_space {
-                        fret_runtime::ImageColorSpace::Srgb => fret_render::ImageColorSpace::Srgb,
-                        fret_runtime::ImageColorSpace::Linear => {
-                            fret_render::ImageColorSpace::Linear
-                        }
+                    let color_space = match color_info.encoding {
+                        fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+                        fret_core::ImageEncoding::Linear => fret_render::ImageColorSpace::Linear,
                     };
 
                     let row_bytes = rect.w.saturating_mul(4);
@@ -725,6 +724,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
 
                     window.request_redraw();
+                }
+                Effect::ImageUpdateNv12 { token, image, .. }
+                | Effect::ImageUpdateI420 { token, image, .. } => {
+                    if self.config.streaming_update_ack_enabled {
+                        self.pending_events.push(Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::Unsupported,
+                        });
+                    }
                 }
                 Effect::ImageUnregister { image } => {
                     self.uploaded_images.remove(&image);

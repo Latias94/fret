@@ -5,8 +5,8 @@ use crate::{
     TimerToken,
 };
 use fret_core::{
-    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorSpace, ImageId,
-    Rect, RectPx, WindowAnchor,
+    AlphaMode, AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorInfo,
+    ImageColorSpace, ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::CommandId;
@@ -96,7 +96,40 @@ pub enum Effect {
         update_rect_px: Option<RectPx>,
         bytes_per_row: u32,
         bytes: Vec<u8>,
-        color_space: ImageColorSpace,
+        color_info: ImageColorInfo,
+        alpha_mode: AlphaMode,
+    },
+    ImageUpdateNv12 {
+        window: Option<AppWindowId>,
+        token: ImageUpdateToken,
+        image: ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<RectPx>,
+        y_bytes_per_row: u32,
+        y_plane: Vec<u8>,
+        uv_bytes_per_row: u32,
+        uv_plane: Vec<u8>,
+        color_info: ImageColorInfo,
+        alpha_mode: AlphaMode,
+    },
+    ImageUpdateI420 {
+        window: Option<AppWindowId>,
+        token: ImageUpdateToken,
+        image: ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<RectPx>,
+        y_bytes_per_row: u32,
+        y_plane: Vec<u8>,
+        u_bytes_per_row: u32,
+        u_plane: Vec<u8>,
+        v_bytes_per_row: u32,
+        v_plane: Vec<u8>,
+        color_info: ImageColorInfo,
+        alpha_mode: AlphaMode,
     },
     ImageUnregister {
         image: fret_core::ImageId,

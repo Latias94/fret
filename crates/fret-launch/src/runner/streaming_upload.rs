@@ -56,6 +56,17 @@ struct PendingUpdate {
 fn staging_bytes_for_effect(effect: &Effect) -> u64 {
     match effect {
         Effect::ImageUpdateRgba8 { bytes, .. } => bytes.len() as u64,
+        Effect::ImageUpdateNv12 {
+            y_plane, uv_plane, ..
+        } => (y_plane.len() as u64).saturating_add(uv_plane.len() as u64),
+        Effect::ImageUpdateI420 {
+            y_plane,
+            u_plane,
+            v_plane,
+            ..
+        } => (y_plane.len() as u64)
+            .saturating_add(u_plane.len() as u64)
+            .saturating_add(v_plane.len() as u64),
         _ => 0,
     }
 }
@@ -98,6 +109,15 @@ fn estimate_upload_bytes(effect: &Effect) -> u64 {
             ..
         } => estimate_rgba8_upload_bytes(*width, *height, *update_rect_px, *bytes_per_row),
         _ => 0,
+    }
+}
+
+fn streaming_update_token_and_image(effect: &Effect) -> Option<(ImageUpdateToken, ImageId)> {
+    match effect {
+        Effect::ImageUpdateRgba8 { token, image, .. }
+        | Effect::ImageUpdateNv12 { token, image, .. }
+        | Effect::ImageUpdateI420 { token, image, .. } => Some((*token, *image)),
+        _ => None,
     }
 }
 
@@ -168,6 +188,18 @@ impl StreamingUploadQueue {
                 stream_generation,
                 ..
             } => (*window, *image, *stream_generation),
+            Effect::ImageUpdateNv12 {
+                window,
+                image,
+                stream_generation,
+                ..
+            } => (*window, *image, *stream_generation),
+            Effect::ImageUpdateI420 {
+                window,
+                image,
+                stream_generation,
+                ..
+            } => (*window, *image, *stream_generation),
             _ => return,
         };
 
@@ -196,10 +228,7 @@ impl StreamingUploadQueue {
 
         let (prev_bucket, prev_staging, prev_window_hint, prev_token) = if let Some(prev) = prev {
             stats.update_effects_replaced = stats.update_effects_replaced.saturating_add(1);
-            let token = match &prev.effect {
-                Effect::ImageUpdateRgba8 { token, .. } => Some(*token),
-                _ => None,
-            };
+            let token = streaming_update_token_and_image(&prev.effect).map(|t| t.0);
             (
                 Some(prev.window_bucket),
                 prev.staging_bytes,
@@ -276,7 +305,8 @@ impl StreamingUploadQueue {
                     stats.update_effects_dropped_staging =
                         stats.update_effects_dropped_staging.saturating_add(1);
                     if ack_enabled
-                        && let Effect::ImageUpdateRgba8 { token, image, .. } = removed.effect
+                        && let Some((token, image)) =
+                            streaming_update_token_and_image(&removed.effect)
                     {
                         self.pending_acks.push(StreamingUploadAck {
                             window_hint: removed.window_hint,
@@ -296,6 +326,7 @@ impl StreamingUploadQueue {
         &mut self,
         per_window_upload_budget_bytes: u64,
         stats: &mut StreamingUploadStats,
+        ack_enabled: bool,
     ) -> Vec<Effect> {
         let mut out: Vec<Effect> = Vec::new();
         if self.pending.is_empty() {
@@ -322,6 +353,32 @@ impl StreamingUploadQueue {
                     continue;
                 };
                 if entry.seq != seq {
+                    continue;
+                }
+
+                let is_supported = matches!(entry.effect, Effect::ImageUpdateRgba8 { .. });
+                if !is_supported {
+                    let removed = self.pending.remove(&key);
+                    if let Some(removed) = removed {
+                        if let Some(bytes) =
+                            self.pending_staging_bytes.get_mut(&removed.window_bucket)
+                        {
+                            *bytes = bytes.saturating_sub(removed.staging_bytes);
+                        }
+                        if ack_enabled
+                            && let Some((token, image)) =
+                                streaming_update_token_and_image(&removed.effect)
+                        {
+                            self.pending_acks.push(StreamingUploadAck {
+                                window_hint: removed.window_hint,
+                                token,
+                                image,
+                                kind: StreamingUploadAckKind::Dropped(
+                                    ImageUpdateDropReason::Unsupported,
+                                ),
+                            });
+                        }
+                    }
                     continue;
                 }
 
@@ -380,7 +437,9 @@ impl StreamingUploadQueue {
         let mut out: Vec<Effect> = Vec::with_capacity(effects.len());
         for effect in effects {
             match effect {
-                Effect::ImageUpdateRgba8 { .. } => {
+                Effect::ImageUpdateRgba8 { .. }
+                | Effect::ImageUpdateNv12 { .. }
+                | Effect::ImageUpdateI420 { .. } => {
                     stats.update_effects_seen = stats.update_effects_seen.saturating_add(1);
                     self.enqueue_update(effect, &mut stats, ack_enabled);
                 }
@@ -391,7 +450,8 @@ impl StreamingUploadQueue {
         self.enforce_staging_budget(per_window_staging_budget_bytes, &mut stats, ack_enabled);
 
         let pending_before = self.pending.len() as u32;
-        let mut applied = self.drain_updates_for_frame(per_window_upload_budget_bytes, &mut stats);
+        let mut applied =
+            self.drain_updates_for_frame(per_window_upload_budget_bytes, &mut stats, ack_enabled);
         out.append(&mut applied);
 
         let pending_after = self.pending.len() as u32;
@@ -426,7 +486,8 @@ mod tests {
             update_rect_px: None,
             bytes_per_row: 8,
             bytes: vec![fill; 16],
-            color_space: fret_runtime::ImageColorSpace::Srgb,
+            color_info: fret_core::ImageColorInfo::srgb_rgba(),
+            alpha_mode: fret_core::AlphaMode::Opaque,
         }
     }
 

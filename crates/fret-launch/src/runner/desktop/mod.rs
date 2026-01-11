@@ -2463,7 +2463,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         update_rect_px,
                         bytes_per_row,
                         bytes,
-                        color_space,
+                        color_info,
+                        alpha_mode: _,
                     } => {
                         let Some(context) = self.context.as_ref() else {
                             if self.config.streaming_update_ack_enabled {
@@ -2615,11 +2616,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let color_space = match color_space {
-                            fret_runtime::ImageColorSpace::Srgb => {
-                                fret_render::ImageColorSpace::Srgb
-                            }
-                            fret_runtime::ImageColorSpace::Linear => {
+                        let color_space = match color_info.encoding {
+                            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+                            fret_core::ImageEncoding::Linear => {
                                 fret_render::ImageColorSpace::Linear
                             }
                         };
@@ -2797,6 +2796,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         } else {
                             for (_id, state) in self.windows.iter() {
                                 state.window.request_redraw();
+                            }
+                        }
+                    }
+                    Effect::ImageUpdateNv12 {
+                        window,
+                        token,
+                        image,
+                        ..
+                    }
+                    | Effect::ImageUpdateI420 {
+                        window,
+                        token,
+                        image,
+                        ..
+                    } => {
+                        if self.config.streaming_update_ack_enabled {
+                            let target = window
+                                .or(self.main_window)
+                                .or_else(|| self.windows.keys().next());
+                            if let Some(target) = target {
+                                self.deliver_window_event_now(
+                                    target,
+                                    &Event::ImageUpdateDropped {
+                                        token,
+                                        image,
+                                        reason: fret_core::ImageUpdateDropReason::Unsupported,
+                                    },
+                                );
                             }
                         }
                     }

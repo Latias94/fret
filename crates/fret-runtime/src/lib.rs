@@ -34,9 +34,12 @@ pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font
 pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;
-pub use fret_core::ImageColorSpace;
 pub use fret_core::ImageUpdateToken;
 pub use fret_core::ImageUploadToken;
+pub use fret_core::{
+    AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
+    ImageEncoding, TransferFunction, YuvMatrix,
+};
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{
     InputContext, InputDispatchPhase, KeyChord, Platform, format_chord, format_sequence,

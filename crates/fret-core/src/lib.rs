@@ -38,7 +38,10 @@ pub use ids::{
     ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId,
     TimerToken,
 };
-pub use image::ImageColorSpace;
+pub use image::{
+    AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
+    ImageEncoding, TransferFunction, YuvMatrix,
+};
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
