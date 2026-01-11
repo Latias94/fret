@@ -161,6 +161,16 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.size.lg.icon_button.size".to_string())
         .or_insert(40.0);
 
+    // Tooltip defaults in the upstream registry:
+    // - `sideOffset={4}`
+    // - Arrow uses `h-2 w-2` (8px)
+    metrics
+        .entry("component.tooltip.side_offset".to_string())
+        .or_insert(4.0);
+    metrics
+        .entry("component.tooltip.arrow_size".to_string())
+        .or_insert(8.0);
+
     if let Some(ring) = colors.get("ring").cloned() {
         if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
             colors.insert("ring/50".to_string(), ring_50);
