@@ -7105,6 +7105,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     || (snapshot.interaction.space_to_pan
                         && self.interaction.pan_activation_key_held)
                 {
+                    self.bump_viewport_move_debounce(
+                        cx.app,
+                        cx.window,
+                        &snapshot,
+                        ViewportMoveKind::ScrollPan,
+                    );
                     let mode = snapshot.interaction.pan_on_scroll_mode;
                     let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
                     let dy_for_shift = delta.y.0;

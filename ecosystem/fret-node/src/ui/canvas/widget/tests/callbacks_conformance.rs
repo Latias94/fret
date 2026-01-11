@@ -781,3 +781,56 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     assert!(got.iter().any(|s| s == "move_end:Zoom:Ended"));
     let _ = snapshot;
 }
+
+#[test]
+fn wheel_pan_emits_move_start_and_debounced_move_end() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.zoom_on_scroll = false;
+        s.interaction.pan_on_scroll = true;
+        s.interaction.pan_on_scroll_speed = 1.0;
+        s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+    });
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let pos = Point::new(Px(100.0), Px(100.0));
+    canvas.event(
+        &mut cx,
+        &Event::Pointer(PointerEvent::Wheel {
+            position: pos,
+            delta: Point::new(Px(20.0), Px(0.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s == "move_start:ScrollPan"));
+
+    let token = canvas
+        .interaction
+        .viewport_move_debounce
+        .as_ref()
+        .expect("debounce timer")
+        .timer;
+
+    canvas.event(&mut cx, &Event::Timer { token });
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s == "move_end:ScrollPan:Ended"));
+    let _ = snapshot;
+}

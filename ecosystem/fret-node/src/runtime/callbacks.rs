@@ -31,6 +31,7 @@ pub struct DeleteChange {
 pub enum ViewportMoveKind {
     Pan,
     Zoom,
+    ScrollPan,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
