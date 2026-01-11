@@ -6090,10 +6090,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if !matches!(
-                    key,
-                    fret_core::KeyCode::Delete | fret_core::KeyCode::Backspace
-                ) {
+                if !snapshot.interaction.delete_key.matches(*key) {
                     return;
                 }
 
@@ -8397,6 +8394,58 @@ mod tests {
         assert!((after.zoom - 1.18).abs() <= 1.0e-4);
         assert!((after.pan.x - -15.254).abs() <= 1.0e-3);
         assert!((after.pan.y - -15.254).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn delete_key_defaults_to_backspace() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        {
+            let mut cx = event_cx(&mut host, &mut services, bounds);
+            cx.window = Some(AppWindowId::default());
+            canvas.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Delete,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+        assert!(
+            host.effects.is_empty(),
+            "Delete should not dispatch delete-selection by default (XYFlow default is Backspace)"
+        );
+
+        {
+            let mut cx = event_cx(&mut host, &mut services, bounds);
+            cx.window = Some(AppWindowId::default());
+            canvas.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Backspace,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+        assert!(
+            host.effects.iter().any(|e| matches!(
+                e,
+                Effect::Command { command, .. }
+                    if *command == CommandId::from(crate::ui::commands::CMD_NODE_GRAPH_DELETE_SELECTION)
+            )),
+            "Backspace should dispatch delete-selection by default"
+        );
     }
 
     #[test]

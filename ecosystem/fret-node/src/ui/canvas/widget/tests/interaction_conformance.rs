@@ -217,7 +217,7 @@ fn shift_clicking_a_node_does_not_clear_selection() {
     let mut services = NullServices::default();
     let mut cx = event_cx(&mut host, &mut services, bounds);
 
-    let pos = Point::new(Px(10.0), Px(10.0));
+    let pos = Point::new(Px(20.0), Px(10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,

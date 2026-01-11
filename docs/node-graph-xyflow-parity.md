@@ -622,6 +622,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - stable command IDs + registration: `ecosystem/fret-node/src/ui/commands.rs`
     - canvas behavior: `ecosystem/fret-node/src/ui/canvas/widget.rs` (copy/cut/paste/duplicate/delete/select-all + arrow-key nudge)
     - selection align/distribute commands: `node_graph.align_*`, `node_graph.distribute_{x,y}`
+    - key policy parity:
+      - `deleteKeyCode`: `NodeGraphInteractionState.delete_key` (default: Backspace)
+      - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
+      - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
     - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
 
 - [~] **Roving focus / a11y semantics**

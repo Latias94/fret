@@ -271,6 +271,34 @@ impl Default for NodeGraphModifierKey {
     }
 }
 
+/// Delete key binding for removing the current selection (XyFlow `deleteKeyCode`).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphDeleteKey {
+    /// Delete is disabled.
+    None,
+    /// Use Backspace (XyFlow default).
+    #[default]
+    Backspace,
+    /// Use Delete.
+    Delete,
+    /// Accept either Backspace or Delete.
+    BackspaceOrDelete,
+}
+
+impl NodeGraphDeleteKey {
+    pub fn matches(self, key: fret_core::KeyCode) -> bool {
+        use fret_core::KeyCode;
+
+        match self {
+            Self::None => false,
+            Self::Backspace => key == KeyCode::Backspace,
+            Self::Delete => key == KeyCode::Delete,
+            Self::BackspaceOrDelete => matches!(key, KeyCode::Backspace | KeyCode::Delete),
+        }
+    }
+}
+
 /// Auto-pan tuning for drag/connect/focus workflows.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphAutoPanTuning {
@@ -470,6 +498,12 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_multi_selection_key")]
     pub multi_selection_key: NodeGraphModifierKey,
 
+    /// Key used to delete the current selection (XyFlow `deleteKeyCode`).
+    ///
+    /// Default: Backspace.
+    #[serde(default)]
+    pub delete_key: NodeGraphDeleteKey,
+
     /// Background click distance threshold in screen pixels (XyFlow `paneClickDistance`).
     ///
     /// This controls when a background drag transitions from a "click" into an interaction
@@ -593,6 +627,7 @@ impl Default for NodeGraphInteractionState {
             selection_on_drag: false,
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
+            delete_key: NodeGraphDeleteKey::default(),
             pane_click_distance: default_pane_click_distance(),
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
