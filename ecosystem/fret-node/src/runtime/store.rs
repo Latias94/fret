@@ -408,7 +408,7 @@ impl NodeGraphStore {
         let mut scratch = self.graph.clone();
         let committed = self.apply_to_graph(&mut scratch, tx)?;
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
@@ -430,7 +430,7 @@ impl NodeGraphStore {
         let mut scratch = self.graph.clone();
         let committed = apply_transaction_with_profile(&mut scratch, profile, tx)?;
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
@@ -471,7 +471,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -503,7 +503,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -533,7 +533,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -565,7 +565,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
-        self.lookups.rebuild_from(&self.graph);
+        self.lookups.apply_transaction(&self.graph, &committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
