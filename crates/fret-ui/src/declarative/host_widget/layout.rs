@@ -419,6 +419,7 @@ impl ElementHostWidget {
                         )
                     })
                     .and_then(|node| cx.tree.debug_node_bounds(node))
+                    .filter(|bounds| *bounds != Rect::default())
                     .unwrap_or(props.anchor);
 
                 #[cfg(feature = "layout-engine-v2")]
