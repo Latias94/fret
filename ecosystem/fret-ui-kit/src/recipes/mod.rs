@@ -1,4 +1,5 @@
 pub mod control;
+pub mod effect_recipe;
 pub mod glass;
 pub mod input;
 pub mod menu_list;
