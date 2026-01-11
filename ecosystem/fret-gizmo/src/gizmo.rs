@@ -150,6 +150,13 @@ pub struct GizmoConfig {
     pub depth_mode: DepthMode,
     pub depth_range: DepthRange,
     pub size_px: f32,
+    /// Optional clamp for the world-space gizmo size derived from `size_px`.
+    ///
+    /// When set, the pixel-to-world mapping used by `size_px`-derived geometry (axis length,
+    /// ring radii, etc) is clamped to the provided `[min, max]` range in world units. This is a
+    /// stylistic control to avoid extreme world-space gizmo sizes at very near/far camera
+    /// distances while preserving the default "constant screen size" behavior when unset.
+    pub size_world_clamp: Option<(f32, f32)>,
     pub pick_radius_px: f32,
     pub line_thickness_px: f32,
     pub drag_start_threshold_px: f32,
@@ -239,6 +246,7 @@ impl Default for GizmoConfig {
             depth_mode: DepthMode::Test,
             depth_range: DepthRange::default(),
             size_px: 96.0,
+            size_world_clamp: None,
             pick_radius_px: 10.0,
             line_thickness_px: 6.0,
             drag_start_threshold_px: 3.0,
@@ -750,6 +758,40 @@ impl Gizmo {
         1.0
     }
 
+    fn size_length_world(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> Option<f32> {
+        let length_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            self.config.size_px,
+        )?;
+
+        let Some((a, b)) = self.config.size_world_clamp else {
+            return Some(length_world);
+        };
+        if !a.is_finite() || !b.is_finite() {
+            return Some(length_world);
+        }
+        let (min_world, max_world) = if a <= b { (a, b) } else { (b, a) };
+        Some(length_world.clamp(min_world.max(0.0), max_world.max(0.0)))
+    }
+
+    fn size_length_world_or_one(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> f32 {
+        self.size_length_world(view_projection, viewport, origin)
+            .unwrap_or(1.0)
+    }
+
     fn axis_is_masked(&self, axis_index: usize) -> bool {
         self.config
             .axis_mask
@@ -786,13 +828,7 @@ impl Gizmo {
         if !self.config.allow_axis_flip {
             return axes;
         }
-        let Some(length_world) = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        ) else {
+        let Some(length_world) = self.size_length_world(view_projection, viewport, origin) else {
             return axes;
         };
 
@@ -1608,15 +1644,9 @@ impl Gizmo {
                 }
             }
             GizmoMode::Scale => {
-                let length_world = axis_length_world(
-                    view_projection,
-                    viewport,
-                    self.state.drag_origin,
-                    self.config.depth_range,
-                    self.config.size_px,
-                )
-                .unwrap_or(1.0)
-                .max(1e-6);
+                let length_world = self
+                    .size_length_world_or_one(view_projection, viewport, self.state.drag_origin)
+                    .max(1e-6);
 
                 let total_vec = |total_factor: f32| -> Vec3 {
                     if self.state.drag_scale_is_uniform {
@@ -2532,15 +2562,9 @@ impl Gizmo {
             }
         }
 
-        let min_extent = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0)
-        .max(1e-6)
+        let min_extent = self
+            .size_length_world_or_one(view_projection, viewport, origin)
+            .max(1e-6)
             * 0.25;
 
         if !min_v.is_finite() || !max_v.is_finite() {
@@ -3079,14 +3103,7 @@ impl Gizmo {
         axes: [Vec3; 3],
     ) -> Vec<Line3d> {
         let mut out = Vec::new();
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
         let head_len = length_world * 0.18;
         let shaft_len = (length_world - head_len).max(length_world * 0.2);
@@ -3131,14 +3148,7 @@ impl Gizmo {
         origin: Vec3,
         axes: [Vec3; 3],
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let off = length_world * 0.15;
         let size = length_world * 0.25;
@@ -3209,14 +3219,7 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let Some(view_dir) =
             view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
@@ -3255,14 +3258,7 @@ impl Gizmo {
         include_planes: bool,
         include_screen: bool,
     ) -> Vec<Triangle3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let head_len = length_world * 0.18;
         let head_radius = length_world * 0.07;
@@ -3438,14 +3434,7 @@ impl Gizmo {
                 )
             };
 
-        let radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let radius_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let segments: usize = 64;
         let mut out = Vec::with_capacity(segments * 3);
@@ -3525,15 +3514,7 @@ impl Gizmo {
                 let axis_dir = (-view_dir).normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let r = axis_length_world(
-                        view_projection,
-                        viewport,
-                        origin,
-                        self.config.depth_range,
-                        self.config.size_px * self.config.arcball_radius_scale,
-                    )
-                    .unwrap_or(radius_world * self.config.arcball_radius_scale)
-                    .max(1e-6);
+                    let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
 
                     let handle = Self::ROTATE_ARCBALL_HANDLE;
                     let base = Color {
@@ -3585,15 +3566,9 @@ impl Gizmo {
                 return GizmoDrawList3d::default();
             }
 
-            let radius_world = axis_length_world(
-                view_projection,
-                viewport,
-                origin,
-                self.config.depth_range,
-                self.config.size_px * self.config.arcball_radius_scale,
-            )
-            .unwrap_or(1.0)
-            .max(1e-6);
+            let radius_world = (self.size_length_world_or_one(view_projection, viewport, origin)
+                * self.config.arcball_radius_scale)
+                .max(1e-6);
 
             let outline = mix_alpha(self.config.hover_color, 0.65);
             let fill = mix_alpha(self.config.hover_color, 0.10);
@@ -3616,15 +3591,9 @@ impl Gizmo {
             return GizmoDrawList3d::default();
         }
 
-        let base_radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0)
-        .max(1e-6);
+        let base_radius_world = self
+            .size_length_world_or_one(view_projection, viewport, origin)
+            .max(1e-6);
         let radius_world = if active == Self::ROTATE_VIEW_HANDLE {
             (base_radius_world * self.config.view_axis_ring_radius_scale).max(1e-6)
         } else {
@@ -3781,14 +3750,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             .map(plane_basis)
@@ -3939,14 +3901,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Triangle3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             .map(plane_basis)
@@ -4112,14 +4067,7 @@ impl Gizmo {
         include_planes: bool,
         include_screen: bool,
     ) -> Option<PickHit> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
 
         // Picking priority ladder (editor UX):
@@ -4300,14 +4248,7 @@ impl Gizmo {
         include_uniform: bool,
         include_planes: bool,
     ) -> Option<PickHit> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
 
         // Picking priority ladder (editor UX):
         // 1) Uniform scale at origin (within radius, always win)
@@ -4500,14 +4441,7 @@ impl Gizmo {
         // prefer translation over rotate rings (common editor expectation for a universal tool).
         if let Some((hit, kind)) = translate {
             if kind == GizmoMode::Translate && matches!(hit.handle.0, 1 | 2 | 3) {
-                let length_world = axis_length_world(
-                    view_projection,
-                    viewport,
-                    origin,
-                    self.config.depth_range,
-                    self.config.size_px,
-                )
-                .unwrap_or(1.0);
+                let length_world = self.size_length_world_or_one(view_projection, viewport, origin);
                 let axis_tip_len = length_world * self.translate_axis_tip_scale();
                 let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
@@ -4699,14 +4633,8 @@ impl Gizmo {
                     && ops.contains(GizmoOps::translate_axis())
                     && matches!(hit.handle.0, 1 | 2 | 3)
                 {
-                    let length_world = axis_length_world(
-                        view_projection,
-                        viewport,
-                        origin,
-                        self.config.depth_range,
-                        self.config.size_px,
-                    )
-                    .unwrap_or(1.0);
+                    let length_world =
+                        self.size_length_world_or_one(view_projection, viewport, origin);
                     let axis_tip_len = length_world * self.translate_axis_tip_scale();
                     let axis_dir =
                         axes_flipped[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
@@ -4990,13 +4918,7 @@ impl Gizmo {
                 )
             };
 
-        let radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )?;
+        let radius_world = self.size_length_world(view_projection, viewport, origin)?;
 
         let segments: usize = 64;
         let mut best_axis: Option<PickHit> = None;
