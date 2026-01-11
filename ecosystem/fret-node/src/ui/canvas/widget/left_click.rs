@@ -250,7 +250,16 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 let this = &*canvas;
                 this.graph
                     .read_ref(cx.app, |graph| {
-                        NodeGraphCanvas::yank_edges_from_port(graph, port)
+                        let mut edges = NodeGraphCanvas::yank_edges_from_port(graph, port);
+                        edges.retain(|(edge_id, endpoint, _fixed)| {
+                            NodeGraphCanvas::edge_endpoint_is_reconnectable(
+                                graph,
+                                &snapshot.interaction,
+                                *edge_id,
+                                *endpoint,
+                            )
+                        });
+                        edges
                     })
                     .ok()
                     .unwrap_or_default()

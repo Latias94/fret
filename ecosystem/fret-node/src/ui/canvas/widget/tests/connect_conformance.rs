@@ -183,6 +183,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             to: old_in,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 

@@ -261,6 +261,7 @@ mod tests {
                 to: b_in,
                 selectable: None,
                 deletable: None,
+                reconnectable: None,
             },
         );
 
@@ -458,6 +459,7 @@ impl GraphFragment {
                 to: port_map[&old_edge.to],
                 selectable: old_edge.selectable,
                 deletable: old_edge.deletable,
+                reconnectable: old_edge.reconnectable,
             };
             tx.push(GraphOp::AddEdge {
                 id: new_edge_id,

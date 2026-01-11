@@ -107,8 +107,7 @@ fn update_edge_anchor_cursor<H: UiHost>(
     _position: Point,
     _zoom: f32,
 ) {
-    if !snapshot.interaction.edges_reconnectable
-        || canvas.interaction.node_drag.is_some()
+    if canvas.interaction.node_drag.is_some()
         || canvas.interaction.node_resize.is_some()
         || canvas.interaction.wire_drag.is_some()
         || canvas.interaction.edge_drag.is_some()

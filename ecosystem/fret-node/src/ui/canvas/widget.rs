@@ -2788,10 +2788,6 @@ impl NodeGraphCanvas {
         zoom: f32,
         scratch: &mut Vec<EdgeId>,
     ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
-        if !snapshot.interaction.edges_reconnectable {
-            return None;
-        }
-
         let z = zoom.max(1.0e-6);
         let half =
             (0.5 * Self::EDGE_FOCUS_ANCHOR_SIZE_SCREEN + Self::EDGE_FOCUS_ANCHOR_PAD_SCREEN) / z;
@@ -2806,6 +2802,11 @@ impl NodeGraphCanvas {
             let Some(edge) = graph.edges.get(&edge_id) else {
                 continue;
             };
+            let (allow_source, allow_target) =
+                Self::edge_reconnectable_flags(edge, &snapshot.interaction);
+            if !allow_source && !allow_target {
+                continue;
+            }
             let Some(from) = geom.port_center(edge.from) else {
                 continue;
             };
@@ -2832,8 +2833,12 @@ impl NodeGraphCanvas {
                     }
                 };
 
-            consider(a0, r0, EdgeEndpoint::From, edge.to);
-            consider(a1, r1, EdgeEndpoint::To, edge.from);
+            if allow_source {
+                consider(a0, r0, EdgeEndpoint::From, edge.to);
+            }
+            if allow_target {
+                consider(a1, r1, EdgeEndpoint::To, edge.from);
+            }
         }
 
         best.map(|(id, endpoint, fixed, _)| (id, endpoint, fixed))
@@ -4186,6 +4191,42 @@ impl NodeGraphCanvas {
             return false;
         };
         edge.deletable.unwrap_or(true)
+    }
+
+    fn edge_reconnectable_flags(
+        edge: &crate::core::Edge,
+        interaction: &NodeGraphInteractionState,
+    ) -> (bool, bool) {
+        match edge.reconnectable {
+            Some(crate::core::EdgeReconnectable::Bool(false)) => (false, false),
+            Some(crate::core::EdgeReconnectable::Bool(true)) => (true, true),
+            Some(crate::core::EdgeReconnectable::Endpoint(
+                crate::core::EdgeReconnectableEndpoint::Source,
+            )) => (true, false),
+            Some(crate::core::EdgeReconnectable::Endpoint(
+                crate::core::EdgeReconnectableEndpoint::Target,
+            )) => (false, true),
+            None => {
+                let allow = interaction.edges_reconnectable;
+                (allow, allow)
+            }
+        }
+    }
+
+    fn edge_endpoint_is_reconnectable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+    ) -> bool {
+        let Some(edge) = graph.edges.get(&edge) else {
+            return false;
+        };
+        let (allow_source, allow_target) = Self::edge_reconnectable_flags(edge, interaction);
+        match endpoint {
+            EdgeEndpoint::From => allow_source,
+            EdgeEndpoint::To => allow_target,
+        }
     }
 
     fn node_is_selectable(
@@ -7133,13 +7174,24 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 .unwrap_or_default()
         };
 
-        let edge_anchor_target_id = (snapshot.interaction.edges_reconnectable).then(|| {
-            self.interaction.focused_edge.or_else(|| {
-                (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0])
-            })
-        });
+        let edge_anchor_target_id = self
+            .interaction
+            .focused_edge
+            .or_else(|| (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0]))
+            .filter(|edge_id| {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        let edge = g.edges.get(edge_id)?;
+                        let (allow_source, allow_target) =
+                            Self::edge_reconnectable_flags(edge, &snapshot.interaction);
+                        Some(allow_source || allow_target)
+                    })
+                    .ok()
+                    .flatten()
+                    .unwrap_or(false)
+            });
         let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
-            edge_anchor_target_id.flatten().and_then(|id| {
+            edge_anchor_target_id.and_then(|id| {
                 render
                     .edges
                     .iter()
@@ -7772,7 +7824,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         if let Some((route, from, to, color)) = edge_anchor_target {
             let (a0, a1) = Self::edge_focus_anchor_centers(route, from, to, zoom);
-            let target_edge_id = edge_anchor_target_id.flatten();
+            let target_edge_id = edge_anchor_target_id;
+            let (allow_from, allow_to) = target_edge_id
+                .and_then(|edge_id| {
+                    self.graph
+                        .read_ref(cx.app, |g| {
+                            let edge = g.edges.get(&edge_id)?;
+                            Some(Self::edge_reconnectable_flags(edge, &snapshot.interaction))
+                        })
+                        .ok()
+                        .flatten()
+                })
+                .unwrap_or((false, false));
 
             let z = zoom.max(1.0e-6);
             let border_base = Px(Self::EDGE_FOCUS_ANCHOR_BORDER_SCREEN / z);
@@ -7790,6 +7853,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             };
 
             for (endpoint, center) in [(EdgeEndpoint::From, a0), (EdgeEndpoint::To, a1)] {
+                if (endpoint == EdgeEndpoint::From && !allow_from)
+                    || (endpoint == EdgeEndpoint::To && !allow_to)
+                {
+                    continue;
+                }
                 let rect = Self::edge_focus_anchor_rect(center, zoom);
                 let r = Px(0.5 * rect.size.width.0);
                 let hovered = self
@@ -9483,6 +9551,7 @@ mod tests {
                 to: p_in1,
                 selectable: None,
                 deletable: None,
+                reconnectable: None,
             },
         );
         graph.edges.insert(
@@ -9493,6 +9562,7 @@ mod tests {
                 to: p_in2,
                 selectable: None,
                 deletable: None,
+                reconnectable: None,
             },
         );
 
@@ -9895,6 +9965,7 @@ mod tests {
                 to: p_in,
                 selectable: None,
                 deletable: None,
+                reconnectable: None,
             },
         );
         graph.edges.insert(
@@ -9905,6 +9976,7 @@ mod tests {
                 to: p_in,
                 selectable: Some(false),
                 deletable: None,
+                reconnectable: None,
             },
         );
 
@@ -10037,6 +10109,7 @@ mod tests {
                 to: b_in,
                 selectable: None,
                 deletable: Some(false),
+                reconnectable: None,
             },
         );
 

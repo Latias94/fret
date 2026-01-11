@@ -32,6 +32,21 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
         return true;
     }
 
+    let primary_draggable = canvas
+        .graph
+        .read_ref(cx.app, |g| {
+            NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, pending.primary)
+        })
+        .ok()
+        .unwrap_or(false);
+    if !primary_draggable {
+        canvas.interaction.pending_node_drag = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     canvas.interaction.pending_node_drag = None;
 
     if pending.select_action != PendingNodeSelectAction::None {
@@ -60,6 +75,12 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
         })
         .ok()
         .unwrap_or_default();
+    if start_nodes.is_empty() {
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: pending.primary,
         nodes: start_nodes,

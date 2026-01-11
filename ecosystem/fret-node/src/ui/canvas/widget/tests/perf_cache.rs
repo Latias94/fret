@@ -182,6 +182,7 @@ fn make_graph_two_nodes_one_edge() -> Graph {
             kind: EdgeKind::Data,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 

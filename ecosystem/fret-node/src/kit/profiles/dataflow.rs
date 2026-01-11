@@ -357,6 +357,7 @@ mod tests {
                     to: in0,
                     selectable: None,
                     deletable: None,
+                    reconnectable: None,
                 },
             }],
         };

@@ -567,7 +567,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node: reconnect implemented; conversion picker insertion exists in domain demo
     - interactive update anchors exist (drawn for focused/selected edges) and have higher hover/click priority than edge strokes
     - anchor click selects the edge; dragging the anchor beyond threshold enters reconnect (prevents “click starts reconnect” surprises)
-    - gating: `NodeGraphInteractionState.edges_reconnectable`
+    - gating:
+      - global: `NodeGraphInteractionState.edges_reconnectable` (XyFlow `edgesReconnectable`)
+      - per-edge override: `Edge.reconnectable` (XyFlow `edge.reconnectable: boolean | 'source' | 'target'`)
+        - XyFlow resolution: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/index.tsx`
+        - XyFlow endpoint gating: `repo-ref/xyflow/packages/react/src/components/EdgeWrapper/EdgeUpdateAnchors.tsx`
+        - fret-node model: `ecosystem/fret-node/src/core/model.rs` (`Edge.reconnectable: Option<EdgeReconnectable>`)
+        - fret-node enforcement:
+          - anchor hit-testing: `NodeGraphCanvas::hit_edge_focus_anchor` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+          - reconnect drag threshold: `ecosystem/fret-node/src/ui/canvas/widget/edge_drag.rs`
+          - ctrl-yank filtering: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
+        - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
   - TODO: parity knobs:
     - cancel behavior:
       - [x] Escape / focus loss cancels active reconnect/connect drags: `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`

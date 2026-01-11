@@ -1,8 +1,9 @@
 use fret_core::{Modifiers, MouseButtons, Point, Px, Rect, Size};
 
 use crate::core::{
-    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
-    Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable, EdgeReconnectableEndpoint,
+    Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+    PortKind,
 };
 use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
@@ -96,6 +97,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 
@@ -961,7 +963,7 @@ fn node_drag_does_not_start_when_node_draggable_is_false() {
     let mut services = NullServices::default();
     let mut cx = event_cx(&mut host, &mut services, bounds);
 
-    let pos = Point::new(Px(20.0), Px(10.0));
+    let pos = Point::new(Px(5.0), Px(2.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -1015,7 +1017,7 @@ fn node_drag_does_not_start_when_nodes_draggable_is_false() {
     let mut services = NullServices::default();
     let mut cx = event_cx(&mut host, &mut services, bounds);
 
-    let pos = Point::new(Px(20.0), Px(10.0));
+    let pos = Point::new(Px(5.0), Px(2.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -1384,6 +1386,296 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
             assert_eq!(*fixed, to);
         }
         other => panic!("unexpected wire drag kind: {other:?}"),
+    }
+}
+
+#[test]
+fn edge_reconnect_drag_cancels_when_endpoint_not_reconnectable() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, edge, from, _to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge must exist")
+        .reconnectable = Some(EdgeReconnectable::Endpoint(
+        EdgeReconnectableEndpoint::Target,
+    ));
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let from_center = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.interaction.edge_drag = Some(EdgeDrag {
+        edge,
+        start_pos: from_center,
+    });
+
+    let t = snapshot.interaction.connection_drag_threshold.max(1.0);
+    let pos_big = Point::new(Px(from_center.x.0 + t + 1.0), from_center.y);
+    assert!(edge_drag::handle_edge_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos_big,
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.wire_drag.is_none());
+    assert!(canvas.interaction.edge_drag.is_none());
+    assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
+fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disabled() {
+    let mut host = TestUiHostImpl::default();
+
+    let (mut graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge must exist")
+        .reconnectable = Some(EdgeReconnectable::Endpoint(
+        EdgeReconnectableEndpoint::Source,
+    ));
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.edges_reconnectable = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let route = canvas
+        .graph
+        .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
+        .unwrap_or_default();
+    let (a0, a1) =
+        NodeGraphCanvas::edge_focus_anchor_centers(route, from_center, to_center, snapshot.zoom);
+
+    let (derived, index) = canvas.canvas_derived(&host, &snapshot);
+    let hit_source = canvas
+        .graph
+        .read_ref(&host, |g| {
+            let mut scratch: Vec<EdgeId> = Vec::new();
+            canvas.hit_edge_focus_anchor(
+                g,
+                &snapshot,
+                derived.as_ref(),
+                index.as_ref(),
+                a0,
+                snapshot.zoom,
+                &mut scratch,
+            )
+        })
+        .ok()
+        .flatten();
+    assert!(hit_source.is_some_and(|(id, ep, _)| id == edge && ep == EdgeEndpoint::From));
+
+    let hit_target = canvas
+        .graph
+        .read_ref(&host, |g| {
+            let mut scratch: Vec<EdgeId> = Vec::new();
+            canvas.hit_edge_focus_anchor(
+                g,
+                &snapshot,
+                derived.as_ref(),
+                index.as_ref(),
+                a1,
+                snapshot.zoom,
+                &mut scratch,
+            )
+        })
+        .ok()
+        .flatten();
+    assert!(hit_target.is_none(), "target anchor should be disabled");
+}
+
+#[test]
+fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disabled() {
+    let mut host = TestUiHostImpl::default();
+
+    let (mut graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge must exist")
+        .reconnectable = Some(EdgeReconnectable::Endpoint(
+        EdgeReconnectableEndpoint::Target,
+    ));
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.edges_reconnectable = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let route = canvas
+        .graph
+        .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
+        .unwrap_or_default();
+    let (a0, a1) =
+        NodeGraphCanvas::edge_focus_anchor_centers(route, from_center, to_center, snapshot.zoom);
+
+    let (derived, index) = canvas.canvas_derived(&host, &snapshot);
+    let hit_source = canvas
+        .graph
+        .read_ref(&host, |g| {
+            let mut scratch: Vec<EdgeId> = Vec::new();
+            canvas.hit_edge_focus_anchor(
+                g,
+                &snapshot,
+                derived.as_ref(),
+                index.as_ref(),
+                a0,
+                snapshot.zoom,
+                &mut scratch,
+            )
+        })
+        .ok()
+        .flatten();
+    assert!(hit_source.is_none(), "source anchor should be disabled");
+
+    let hit_target = canvas
+        .graph
+        .read_ref(&host, |g| {
+            let mut scratch: Vec<EdgeId> = Vec::new();
+            canvas.hit_edge_focus_anchor(
+                g,
+                &snapshot,
+                derived.as_ref(),
+                index.as_ref(),
+                a1,
+                snapshot.zoom,
+                &mut scratch,
+            )
+        })
+        .ok()
+        .flatten();
+    assert!(hit_target.is_some_and(|(id, ep, _)| id == edge && ep == EdgeEndpoint::To));
+}
+
+#[test]
+fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
+    let mut host = TestUiHostImpl::default();
+
+    let (mut graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge must exist")
+        .reconnectable = Some(EdgeReconnectable::Bool(false));
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.edges_reconnectable = true;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let route = canvas
+        .graph
+        .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
+        .unwrap_or_default();
+    let (a0, a1) =
+        NodeGraphCanvas::edge_focus_anchor_centers(route, from_center, to_center, snapshot.zoom);
+
+    let (derived, index) = canvas.canvas_derived(&host, &snapshot);
+    for anchor in [a0, a1] {
+        let hit = canvas
+            .graph
+            .read_ref(&host, |g| {
+                let mut scratch: Vec<EdgeId> = Vec::new();
+                canvas.hit_edge_focus_anchor(
+                    g,
+                    &snapshot,
+                    derived.as_ref(),
+                    index.as_ref(),
+                    anchor,
+                    snapshot.zoom,
+                    &mut scratch,
+                )
+            })
+            .ok()
+            .flatten();
+        assert!(hit.is_none(), "anchors should be disabled");
+    }
+}
+
+#[test]
+fn edge_reconnectable_none_follows_global_gate_for_anchors() {
+    let mut host = TestUiHostImpl::default();
+
+    let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.edges_reconnectable = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let route = canvas
+        .graph
+        .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
+        .unwrap_or_default();
+    let (a0, a1) =
+        NodeGraphCanvas::edge_focus_anchor_centers(route, from_center, to_center, snapshot.zoom);
+
+    let (derived, index) = canvas.canvas_derived(&host, &snapshot);
+    for anchor in [a0, a1] {
+        let hit = canvas
+            .graph
+            .read_ref(&host, |g| {
+                let mut scratch: Vec<EdgeId> = Vec::new();
+                canvas.hit_edge_focus_anchor(
+                    g,
+                    &snapshot,
+                    derived.as_ref(),
+                    index.as_ref(),
+                    anchor,
+                    snapshot.zoom,
+                    &mut scratch,
+                )
+            })
+            .ok()
+            .flatten();
+        assert!(hit.is_none(), "anchors should be disabled");
     }
 }
 

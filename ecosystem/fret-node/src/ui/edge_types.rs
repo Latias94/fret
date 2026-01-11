@@ -190,6 +190,7 @@ mod tests {
                 to: in_port,
                 selectable: None,
                 deletable: None,
+                reconnectable: None,
             },
         );
 

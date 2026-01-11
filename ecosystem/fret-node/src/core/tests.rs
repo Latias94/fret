@@ -79,6 +79,7 @@ fn validate_rejects_edge_with_wrong_direction() {
             to: in_b,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 

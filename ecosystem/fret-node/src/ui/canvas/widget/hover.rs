@@ -15,8 +15,7 @@ pub(super) fn update_hover_edge<H: UiHost>(
     zoom: f32,
 ) {
     let mut new_hover_anchor: Option<(EdgeId, EdgeEndpoint)> = None;
-    if snapshot.interaction.edges_reconnectable
-        && canvas.interaction.wire_drag.is_none()
+    if canvas.interaction.wire_drag.is_none()
         && canvas.interaction.edge_drag.is_none()
         && canvas.interaction.node_drag.is_none()
         && canvas.interaction.node_resize.is_none()

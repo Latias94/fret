@@ -279,6 +279,7 @@ fn plan_reconnect_preserves_edge_id() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 
@@ -365,6 +366,7 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -375,6 +377,7 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 
@@ -541,6 +544,7 @@ fn plan_split_edge_by_inserting_node_preserves_edge_id() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 
@@ -648,6 +652,7 @@ fn plan_reconnect_rejects_duplicate_connection() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -658,6 +663,7 @@ fn plan_reconnect_rejects_duplicate_connection() {
             to: inn,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 

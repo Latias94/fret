@@ -12,10 +12,6 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     position: Point,
     zoom: f32,
 ) -> bool {
-    if !snapshot.interaction.edges_reconnectable {
-        return false;
-    }
-
     let Some(drag) = canvas.interaction.edge_drag.clone() else {
         return false;
     };
@@ -44,6 +40,24 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     let Some((endpoint, fixed)) = reconnect else {
         return false;
     };
+    let endpoint_allowed = canvas
+        .graph
+        .read_ref(cx.app, |graph| {
+            NodeGraphCanvas::edge_endpoint_is_reconnectable(
+                graph,
+                &snapshot.interaction,
+                drag.edge,
+                endpoint,
+            )
+        })
+        .ok()
+        .unwrap_or(false);
+    if !endpoint_allowed {
+        canvas.interaction.edge_drag = None;
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
 
     canvas.interaction.edge_drag = None;
     canvas.interaction.hover_edge = None;

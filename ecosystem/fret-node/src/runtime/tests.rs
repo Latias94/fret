@@ -90,6 +90,7 @@ fn make_graph() -> (
             to: in_port,
             selectable: None,
             deletable: None,
+            reconnectable: None,
         },
     );
 
@@ -217,6 +218,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     to: in_port,
                     selectable: None,
                     deletable: None,
+                    reconnectable: None,
                 },
             },
             GraphOp::SetEdgeEndpoints {
@@ -238,6 +240,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     to: in_port,
                     selectable: None,
                     deletable: None,
+                    reconnectable: None,
                 },
             },
         ],
