@@ -61,6 +61,11 @@ We define an extensible token namespace for chart styling:
 - `chart.legend.text`
 - `chart.selection.fill`
 - `chart.selection.stroke`
+- VisualMap (continuous controller; v1):
+  - `chart.visualmap.track`
+  - `chart.visualmap.range.fill`
+  - `chart.visualmap.range.stroke`
+  - `chart.visualmap.handle`
 
 **Metrics** (pixel-based; keys may optionally live under `metric.*`)
 
@@ -70,6 +75,9 @@ We define an extensible token namespace for chart styling:
 - `metric.chart.axis.band.y`
 - `metric.chart.axis.line.width`
 - `metric.chart.axis.tick.length`
+- `metric.chart.visualmap.band.x`
+- `metric.chart.visualmap.pad`
+- `metric.chart.visualmap.corner_radius`
 - `metric.chart.scatter.point_radius`
 - `metric.chart.hover.point_size`
 - `metric.chart.tooltip.padding.x`

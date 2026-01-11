@@ -137,16 +137,17 @@ These actions:
 
 P0:
 
-- Add `VisualMapSpec` + ids + action surface to `delinea` without wiring to rendering (compile-only).
-- Add unit tests for:
+- [x] Add `VisualMapSpec` + ids + action surface to `delinea` (v1: series binding + buckets + selected range state).
+- [~] Add unit tests for:
   - deterministic bucket assignment,
   - `inRange/outOfRange` opacity application,
   - budgeted stepping over large data.
-- Add initial `fret-chart` adapter support for `PaletteIndex` keys (token-driven).
+  (v1 includes spec validation tests; full mapping tests are still pending.)
+- [x] Add initial `fret-chart` adapter support for palette-driven marks (via `PaintId`) and opacity scaling.
 
 P1:
 
-- Add a `fret-chart` VisualMap controller UI (continuous + piecewise).
+- [~] Add a `fret-chart` VisualMap controller UI (continuous: implemented; piecewise: pending).
 - Extend mapping to point size (scatter) and bar fill (categorical).
 - Evaluate whether `MarkArena` should gain optional per-item attribute streams once a GPU-instanced
   path exists.
@@ -158,4 +159,3 @@ P1:
   - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMap\\visualEncoding.ts`
   - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapContinuous.ts`
   - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\visualMapPiecewise.ts`
-

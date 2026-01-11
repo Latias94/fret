@@ -111,6 +111,16 @@ struct DataZoomSliderDrag {
     start_window: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct VisualMapDrag {
+    visual_map: delinea::VisualMapId,
+    kind: SliderDragKind,
+    track: Rect,
+    domain: DataWindow,
+    start_window: DataWindow,
+    start_value: f64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisRegion {
     Plot,
@@ -131,6 +141,7 @@ struct ChartLayout {
     plot: Rect,
     x_axes: Vec<AxisBandLayout>,
     y_axes: Vec<AxisBandLayout>,
+    visual_map: Option<Rect>,
 }
 
 pub struct ChartCanvas {
@@ -160,6 +171,7 @@ pub struct ChartCanvas {
     box_zoom_drag: Option<BoxZoomDrag>,
     brush_drag: Option<BoxZoomDrag>,
     slider_drag: Option<DataZoomSliderDrag>,
+    visual_map_drag: Option<VisualMapDrag>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
     linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
     output_model: Option<Model<ChartCanvasOutput>>,
@@ -211,6 +223,7 @@ impl ChartCanvas {
             box_zoom_drag: None,
             brush_drag: None,
             slider_drag: None,
+            visual_map_drag: None,
             axis_extent_cache: BTreeMap::default(),
             linked_brush_model: None,
             output_model: None,
@@ -327,6 +340,13 @@ impl ChartCanvas {
         let axis_band_x = self.style.axis_band_x.0.max(0.0);
         let axis_band_y = self.style.axis_band_y.0.max(0.0);
 
+        let has_visual_map = !self.engine.model().visual_maps.is_empty();
+        let visual_map_band_x = if has_visual_map {
+            self.style.visual_map_band_x.0.max(0.0)
+        } else {
+            0.0
+        };
+
         let active_grid = self
             .primary_axes()
             .and_then(|(x_axis, _)| self.engine.model().axes.get(&x_axis).map(|a| a.grid));
@@ -359,7 +379,7 @@ impl ChartCanvas {
         let top_total = axis_band_y * (x_top.len() as f32);
         let bottom_total = axis_band_y * (x_bottom.len() as f32);
 
-        let plot_w = (inner.size.width.0 - left_total - right_total).max(0.0);
+        let plot_w = (inner.size.width.0 - left_total - right_total - visual_map_band_x).max(0.0);
         let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
 
         let plot = Rect::new(
@@ -430,11 +450,20 @@ impl ChartCanvas {
             });
         }
 
+        let visual_map = (visual_map_band_x > 0.0).then(|| {
+            let x0 = plot.origin.x.0 + plot.size.width.0 + axis_band_x * (y_right.len() as f32);
+            Rect::new(
+                Point::new(Px(x0), plot.origin.y),
+                Size::new(Px(visual_map_band_x), plot.size.height),
+            )
+        });
+
         ChartLayout {
             bounds,
             plot,
             x_axes,
             y_axes,
+            visual_map,
         }
     }
 
@@ -1152,6 +1181,69 @@ impl ChartCanvas {
         delinea::engine::axis::data_at_px(extent, y_from_bottom, 0.0, height)
     }
 
+    fn visual_map_track(
+        &self,
+    ) -> Option<(
+        delinea::VisualMapId,
+        delinea::engine::model::VisualMapModel,
+        Rect,
+    )> {
+        let (&id, &vm) = self.engine.model().visual_maps.iter().next()?;
+        let rect = self.last_layout.visual_map?;
+        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
+            return None;
+        }
+        let pad = self.style.visual_map_padding.0.max(0.0);
+        let inner = Rect::new(
+            Point::new(Px(rect.origin.x.0 + pad), Px(rect.origin.y.0 + pad)),
+            Size::new(
+                Px((rect.size.width.0 - 2.0 * pad).max(1.0)),
+                Px((rect.size.height.0 - 2.0 * pad).max(1.0)),
+            ),
+        );
+        Some((id, vm, inner))
+    }
+
+    fn visual_map_domain_window(vm: delinea::engine::model::VisualMapModel) -> DataWindow {
+        DataWindow {
+            min: vm.domain.min,
+            max: vm.domain.max,
+        }
+    }
+
+    fn current_visual_map_window(
+        &self,
+        id: delinea::VisualMapId,
+        vm: delinea::engine::model::VisualMapModel,
+    ) -> DataWindow {
+        let domain = Self::visual_map_domain_window(vm);
+        match self
+            .engine
+            .state()
+            .visual_map_range
+            .get(&id)
+            .copied()
+            .flatten()
+        {
+            Some(r) => DataWindow {
+                min: r.min,
+                max: r.max,
+            },
+            None => domain,
+        }
+    }
+
+    fn visual_map_y_at_value(track: Rect, domain: DataWindow, value: f64) -> f32 {
+        let mut domain = domain;
+        domain.clamp_non_degenerate();
+        let span = domain.span();
+        if !span.is_finite() || span <= 0.0 {
+            return track.origin.y.0 + track.size.height.0;
+        }
+        let t = ((value - domain.min) / span).clamp(0.0, 1.0) as f32;
+        track.origin.y.0 + (1.0 - t) * track.size.height.0
+    }
+
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
         if self.axis_is_fixed(x_axis).is_none() {
             self.set_data_window_x(x_axis, None);
@@ -1422,6 +1514,103 @@ impl ChartCanvas {
 
             y += row_h + gap;
         }
+    }
+
+    fn draw_visual_map<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some((vm_id, vm, track)) = self.visual_map_track() else {
+            return;
+        };
+
+        let domain = Self::visual_map_domain_window(vm);
+        let window = self.current_visual_map_window(vm_id, vm);
+
+        let order = DrawOrder(self.style.draw_order.0.saturating_add(8_600));
+
+        cx.scene.push(SceneOp::Quad {
+            order,
+            rect: track,
+            background: self.style.visual_map_track_color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(self.style.visual_map_corner_radius),
+        });
+
+        // Render a lightweight ramp using the bucket palette. This is not ECharts parity yet
+        // (no multi-channel mapping), but provides a stable continuous controller affordance.
+        let buckets = vm.buckets.max(1) as u32;
+        let inset = 1.0f32;
+        let ramp_rect = Rect::new(
+            Point::new(Px(track.origin.x.0 + inset), Px(track.origin.y.0 + inset)),
+            Size::new(
+                Px((track.size.width.0 - 2.0 * inset).max(1.0)),
+                Px((track.size.height.0 - 2.0 * inset).max(1.0)),
+            ),
+        );
+        let ramp_h = ramp_rect.size.height.0.max(1.0);
+        let segment_h = (ramp_h / buckets as f32).max(1.0);
+        let ramp_alpha = 0.35f32;
+        for i in 0..buckets {
+            let y1 = ramp_rect.origin.y.0 + ramp_h - (i as f32) * segment_h;
+            let y0 = (y1 - segment_h).max(ramp_rect.origin.y.0);
+            let h = (y1 - y0).max(1.0);
+
+            let mut c = self.paint_color(delinea::PaintId(i as u64));
+            c.a *= ramp_alpha;
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(order.0.saturating_add(1)),
+                rect: Rect::new(
+                    Point::new(ramp_rect.origin.x, Px(y0)),
+                    Size::new(ramp_rect.size.width, Px(h)),
+                ),
+                background: c,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
+        let y_min = Self::visual_map_y_at_value(track, domain, window.min);
+        let y_max = Self::visual_map_y_at_value(track, domain, window.max);
+        let top = y_max.min(y_min);
+        let bottom = y_max.max(y_min);
+
+        let win_rect = Rect::new(
+            Point::new(track.origin.x, Px(top)),
+            Size::new(track.size.width, Px((bottom - top).max(1.0))),
+        );
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(order.0.saturating_add(2)),
+            rect: win_rect,
+            background: self.style.visual_map_range_fill,
+            border: Edges::all(self.style.selection_stroke_width),
+            border_color: self.style.visual_map_range_stroke,
+            corner_radii: Corners::all(self.style.visual_map_corner_radius),
+        });
+
+        let handle_h = 2.0f32.max(self.style.selection_stroke_width.0);
+        let handle_color = self.style.visual_map_handle_color;
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(order.0.saturating_add(3)),
+            rect: Rect::new(
+                Point::new(track.origin.x, Px(y_min - 0.5 * handle_h)),
+                Size::new(track.size.width, Px(handle_h)),
+            ),
+            background: handle_color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(order.0.saturating_add(4)),
+            rect: Rect::new(
+                Point::new(track.origin.x, Px(y_max - 0.5 * handle_h)),
+                Size::new(track.size.width, Px(handle_h)),
+            ),
+            background: handle_color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
     }
 
     fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -2072,6 +2261,31 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if cx.captured == Some(cx.node) {
+                    if let Some(drag) = self.visual_map_drag
+                        && Self::is_button_held(MouseButton::Left, *buttons)
+                    {
+                        let current_value = delinea::engine::axis::data_at_y_in_rect(
+                            drag.domain,
+                            position.y.0,
+                            drag.track,
+                        );
+                        let delta_value = current_value - drag.start_value;
+                        let window = Self::slider_window_after_delta(
+                            drag.domain,
+                            drag.start_window,
+                            delta_value,
+                            drag.kind,
+                        );
+                        self.engine.apply_action(Action::SetVisualMapRange {
+                            visual_map: drag.visual_map,
+                            range: Some((window.min, window.max)),
+                        });
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
                     if let Some(drag) = self.slider_drag
                         && Self::is_button_held(MouseButton::Left, *buttons)
                     {
@@ -2281,6 +2495,67 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         visible: !visible,
                     });
                     self.legend_hover = Some(series);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if *pointer_type == PointerType::Mouse
+                    && *button == MouseButton::Left
+                    && cx.captured.is_none()
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && self.brush_drag.is_none()
+                    && self.slider_drag.is_none()
+                    && let Some((vm_id, vm, track)) = self.visual_map_track()
+                    && track.contains(*position)
+                {
+                    let domain = Self::visual_map_domain_window(vm);
+                    let current_window = self.current_visual_map_window(vm_id, vm);
+
+                    let handle_hit = 8.0f32;
+                    let y_min = Self::visual_map_y_at_value(track, domain, current_window.min);
+                    let y_max = Self::visual_map_y_at_value(track, domain, current_window.max);
+                    let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
+
+                    let click_value =
+                        delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
+
+                    let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit {
+                        (SliderDragKind::HandleMin, current_window)
+                    } else if (position.y.0 - y_max).abs() <= handle_hit {
+                        (SliderDragKind::HandleMax, current_window)
+                    } else if position.y.0 >= top && position.y.0 <= bottom {
+                        (SliderDragKind::Pan, current_window)
+                    } else {
+                        let center = (current_window.min + current_window.max) * 0.5;
+                        let delta = click_value - center;
+                        (
+                            SliderDragKind::Pan,
+                            Self::slider_window_after_delta(
+                                domain,
+                                current_window,
+                                delta,
+                                SliderDragKind::Pan,
+                            ),
+                        )
+                    };
+
+                    self.engine.apply_action(Action::SetVisualMapRange {
+                        visual_map: vm_id,
+                        range: Some((start_window.min, start_window.max)),
+                    });
+                    self.visual_map_drag = Some(VisualMapDrag {
+                        visual_map: vm_id,
+                        kind,
+                        track,
+                        domain,
+                        start_window,
+                        start_value: click_value,
+                    });
+
+                    cx.capture_pointer(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -2834,6 +3109,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         self.engine.apply_action(Action::ClearBrushSelection);
                     }
 
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.visual_map_drag.is_some() && *button == MouseButton::Left {
+                    self.visual_map_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -3652,6 +3938,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         cx.scene.push(SceneOp::PopClip);
 
+        self.draw_visual_map(cx);
+
         if let Some(axis_pointer) = axis_pointer {
             let tooltip_lines = &axis_pointer.tooltip.lines;
             if tooltip_lines.is_empty() {
@@ -3797,10 +4085,10 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId, VisualMapId};
     use delinea::{
         AxisKind, AxisPosition, AxisRange, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
-        SeriesEncode, SeriesKind, SeriesSpec,
+        SeriesEncode, SeriesKind, SeriesSpec, VisualMapSpec,
     };
 
     #[test]
@@ -4008,6 +4296,22 @@ mod tests {
         }
     }
 
+    fn multi_axis_visual_map_spec() -> ChartSpec {
+        let mut spec = multi_axis_spec();
+        let y_field = spec.series[0].encode.y;
+        let series_id = spec.series[0].id;
+        spec.visual_maps.push(VisualMapSpec {
+            id: VisualMapId::new(1),
+            series: vec![series_id],
+            field: y_field,
+            domain: (-1.0, 1.0),
+            initial_range: Some((-0.25, 0.75)),
+            buckets: 8,
+            out_of_range_opacity: 0.25,
+        });
+        spec
+    }
+
     #[test]
     fn primary_axes_skip_hidden_series() {
         let mut canvas = ChartCanvas::new(multi_axis_spec()).expect("spec should be valid");
@@ -4044,6 +4348,55 @@ mod tests {
         let (x, y) = canvas.active_axes(&layout).expect("expected active axes");
         assert_eq!(x, AxisId::new(1));
         assert_eq!(y, AxisId::new(3));
+    }
+
+    #[test]
+    fn visual_map_y_mapping_respects_domain_endpoints() {
+        let track = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(8.0), Px(100.0)),
+        );
+        let domain = DataWindow {
+            min: 0.0,
+            max: 10.0,
+        };
+
+        let bottom = track.origin.y.0 + track.size.height.0;
+        assert_eq!(
+            ChartCanvas::visual_map_y_at_value(track, domain, 0.0),
+            bottom
+        );
+        assert_eq!(
+            ChartCanvas::visual_map_y_at_value(track, domain, 10.0),
+            track.origin.y.0
+        );
+    }
+
+    #[test]
+    fn visual_map_track_applies_style_padding() {
+        let mut canvas =
+            ChartCanvas::new(multi_axis_visual_map_spec()).expect("spec should be valid");
+        let mut style = ChartStyle::default();
+        style.visual_map_band_x = Px(80.0);
+        style.visual_map_padding = Px(10.0);
+        canvas.set_style(style);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+        let layout = canvas.compute_layout(bounds);
+        canvas.last_layout = layout;
+
+        let (_id, _vm, track) = canvas
+            .visual_map_track()
+            .expect("expected a visual map track");
+        let outer = canvas
+            .last_layout
+            .visual_map
+            .expect("expected a visual map band rect");
+        assert_eq!(track.origin.x.0, outer.origin.x.0 + 10.0);
+        assert_eq!(track.origin.y.0, outer.origin.y.0 + 10.0);
     }
 
     #[test]
