@@ -21,6 +21,6 @@ pub use math::{
     unproject_point,
 };
 pub use view_gizmo::{
-    ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoState,
-    ViewGizmoUpdate,
+    ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoSnap,
+    ViewGizmoState, ViewGizmoUpdate,
 };

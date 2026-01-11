@@ -59,6 +59,78 @@ impl ViewGizmoFace {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ViewGizmoSnap {
+    /// Direction from the camera towards the pivot in world axes.
+    ///
+    /// Each component is in `{-1, 0, 1}` and at least one component is non-zero.
+    pub view_dir: [i8; 3],
+}
+
+impl ViewGizmoSnap {
+    pub const fn new(view_dir: [i8; 3]) -> Option<Self> {
+        let ok = (view_dir[0] >= -1 && view_dir[0] <= 1)
+            && (view_dir[1] >= -1 && view_dir[1] <= 1)
+            && (view_dir[2] >= -1 && view_dir[2] <= 1)
+            && !(view_dir[0] == 0 && view_dir[1] == 0 && view_dir[2] == 0);
+        if ok { Some(Self { view_dir }) } else { None }
+    }
+
+    pub const fn from_face(face: ViewGizmoFace) -> Self {
+        // Face normal points away from the cube center; view_dir points from the camera towards
+        // the pivot, so it is `-normal`.
+        match face {
+            ViewGizmoFace::PosX => Self {
+                view_dir: [-1, 0, 0],
+            },
+            ViewGizmoFace::NegX => Self {
+                view_dir: [1, 0, 0],
+            },
+            ViewGizmoFace::PosY => Self {
+                view_dir: [0, -1, 0],
+            },
+            ViewGizmoFace::NegY => Self {
+                view_dir: [0, 1, 0],
+            },
+            ViewGizmoFace::PosZ => Self {
+                view_dir: [0, 0, -1],
+            },
+            ViewGizmoFace::NegZ => Self {
+                view_dir: [0, 0, 1],
+            },
+        }
+    }
+
+    pub fn face(self) -> Option<ViewGizmoFace> {
+        match self.view_dir {
+            [-1, 0, 0] => Some(ViewGizmoFace::PosX),
+            [1, 0, 0] => Some(ViewGizmoFace::NegX),
+            [0, -1, 0] => Some(ViewGizmoFace::PosY),
+            [0, 1, 0] => Some(ViewGizmoFace::NegY),
+            [0, 0, -1] => Some(ViewGizmoFace::PosZ),
+            [0, 0, 1] => Some(ViewGizmoFace::NegZ),
+            _ => None,
+        }
+    }
+
+    pub fn view_dir_vec3(self) -> Vec3 {
+        let v = Vec3::new(
+            self.view_dir[0] as f32,
+            self.view_dir[1] as f32,
+            self.view_dir[2] as f32,
+        );
+        v.normalize_or_zero()
+    }
+
+    pub fn up_vec3(self) -> Vec3 {
+        match self.view_dir {
+            [0, -1, 0] => Vec3::Z,
+            [0, 1, 0] => Vec3::NEG_Z,
+            _ => Vec3::Y,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewGizmoConfig {
     /// Screen-space anchor corner (viewport coordinates are top-left origin).
@@ -69,6 +141,15 @@ pub struct ViewGizmoConfig {
     pub size_px: f32,
     /// Additional hit padding in pixels for easier interaction.
     pub pick_padding_px: f32,
+    /// Local-space threshold used to resolve face/edge/corner snaps.
+    ///
+    /// Values near `1.0` require clicking very close to edges/corners, while values near `0.0`
+    /// make edges/corners too easy to hit.
+    pub snap_feature_threshold: f32,
+    /// Drag distance threshold (in pixels) to treat the interaction as orbit rather than click.
+    pub drag_threshold_px: f32,
+    /// Orbit sensitivity expressed in radians per pixel.
+    pub orbit_sensitivity_radians_per_px: f32,
     /// Depth range convention used by the camera projection.
     pub depth_range: DepthRange,
     /// Unprojected depth used to place the gizmo in front of the camera (`[0, 1]`).
@@ -88,6 +169,9 @@ impl Default for ViewGizmoConfig {
             margin_px: Vec2::new(16.0, 16.0),
             size_px: 84.0,
             pick_padding_px: 6.0,
+            snap_feature_threshold: 0.78,
+            drag_threshold_px: 3.0,
+            orbit_sensitivity_radians_per_px: 0.008,
             depth_range: DepthRange::ZeroToOne,
             z01: 0.08,
             face_color: Color {
@@ -141,10 +225,14 @@ pub struct ViewGizmoInput {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewGizmoUpdate {
     HoverChanged {
-        hovered: Option<ViewGizmoFace>,
+        hovered: Option<ViewGizmoSnap>,
+    },
+    OrbitDelta {
+        delta_yaw_radians: f32,
+        delta_pitch_radians: f32,
     },
     SnapView {
-        face: ViewGizmoFace,
+        snap: ViewGizmoSnap,
         view_dir: Vec3,
         up: Vec3,
     },
@@ -152,7 +240,13 @@ pub enum ViewGizmoUpdate {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct ViewGizmoState {
-    pub hovered_face: Option<ViewGizmoFace>,
+    pub hovered: Option<ViewGizmoSnap>,
+    pub drag_active: bool,
+    pub drag_orbiting: bool,
+    pub drag_start_cursor_px: Vec2,
+    pub drag_last_cursor_px: Vec2,
+    pub drag_total_delta_px: Vec2,
+    pub drag_start_snap: Option<ViewGizmoSnap>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -175,23 +269,68 @@ impl ViewGizmo {
         viewport: ViewportRect,
         input: ViewGizmoInput,
     ) -> Option<ViewGizmoUpdate> {
-        let prev_hover = self.state.hovered_face;
+        let threshold_px = self.config.drag_threshold_px.max(0.0);
+
+        if input.drag_started && input.dragging && input.hovered {
+            if let Some(snap) = self.pick_snap(view_projection, viewport, input.cursor_px) {
+                self.state.drag_active = true;
+                self.state.drag_orbiting = false;
+                self.state.drag_start_cursor_px = input.cursor_px;
+                self.state.drag_last_cursor_px = input.cursor_px;
+                self.state.drag_total_delta_px = Vec2::ZERO;
+                self.state.drag_start_snap = Some(snap);
+                self.state.hovered = None;
+                return Some(ViewGizmoUpdate::HoverChanged { hovered: None });
+            }
+        }
+
+        let drag_ended = self.state.drag_active && !input.dragging;
+        if self.state.drag_active && input.dragging {
+            let delta_px = input.cursor_px - self.state.drag_last_cursor_px;
+            self.state.drag_last_cursor_px = input.cursor_px;
+            self.state.drag_total_delta_px += delta_px;
+
+            if !self.state.drag_orbiting && self.state.drag_total_delta_px.length() >= threshold_px
+            {
+                self.state.drag_orbiting = true;
+            }
+
+            if self.state.drag_orbiting {
+                let sens = self.config.orbit_sensitivity_radians_per_px.max(0.0);
+                return Some(ViewGizmoUpdate::OrbitDelta {
+                    delta_yaw_radians: -delta_px.x * sens,
+                    delta_pitch_radians: -delta_px.y * sens,
+                });
+            }
+
+            return None;
+        }
+
+        if drag_ended {
+            let click = self.state.drag_total_delta_px.length() < threshold_px;
+            let snap = self.state.drag_start_snap;
+            self.state.drag_active = false;
+            self.state.drag_orbiting = false;
+            self.state.drag_start_snap = None;
+
+            if click {
+                if let Some(snap) = snap {
+                    return Some(ViewGizmoUpdate::SnapView {
+                        snap,
+                        view_dir: snap.view_dir_vec3(),
+                        up: snap.up_vec3(),
+                    });
+                }
+            }
+        }
+
+        let prev_hover = self.state.hovered;
         let hovered = if input.hovered {
-            self.pick_face(view_projection, viewport, input.cursor_px)
+            self.pick_snap(view_projection, viewport, input.cursor_px)
         } else {
             None
         };
-        self.state.hovered_face = hovered;
-
-        if input.drag_started && input.dragging {
-            if let Some(face) = hovered {
-                return Some(ViewGizmoUpdate::SnapView {
-                    face,
-                    view_dir: face.view_dir(),
-                    up: face.default_up(),
-                });
-            }
-        }
+        self.state.hovered = hovered;
 
         (prev_hover != hovered).then_some(ViewGizmoUpdate::HoverChanged { hovered })
     }
@@ -217,7 +356,7 @@ impl ViewGizmo {
         let face_color = self.config.face_color;
         out.triangles.extend(cube_faces(corners, face_color));
 
-        if let Some(face) = self.state.hovered_face {
+        if let Some(face) = self.state.hovered.and_then(|s| s.face()) {
             out.triangles
                 .extend(hover_face(corners, face, self.config.hover_color));
         }
@@ -232,12 +371,12 @@ impl ViewGizmo {
         out
     }
 
-    fn pick_face(
+    fn pick_snap(
         &self,
         view_projection: Mat4,
         viewport: ViewportRect,
         cursor_px: Vec2,
-    ) -> Option<ViewGizmoFace> {
+    ) -> Option<ViewGizmoSnap> {
         let ray = ray_from_screen(
             view_projection,
             viewport,
@@ -253,7 +392,9 @@ impl ViewGizmo {
 
         let t = ray_aabb_intersect(ray.origin, ray.dir, aabb)?;
         let hit = ray.origin + ray.dir * t;
-        face_from_hit(center, hit)
+        let local = (hit - center) / half;
+        let threshold = self.config.snap_feature_threshold.clamp(0.0, 1.0);
+        snap_from_local(local, threshold)
     }
 
     fn cube_params(
@@ -487,31 +628,28 @@ fn ray_aabb_intersect(origin: Vec3, dir: Vec3, aabb: Aabb3) -> Option<f32> {
     (t.is_finite() && t >= 0.0).then_some(t)
 }
 
-fn face_from_hit(center: Vec3, hit: Vec3) -> Option<ViewGizmoFace> {
-    let d = hit - center;
-    if !d.is_finite() {
+fn snap_component(v: f32, threshold: f32) -> i8 {
+    if v.abs() >= threshold {
+        if v >= 0.0 { 1 } else { -1 }
+    } else {
+        0
+    }
+}
+
+fn snap_from_local(local: Vec3, threshold: f32) -> Option<ViewGizmoSnap> {
+    if !local.is_finite() {
         return None;
     }
-    let ad = d.abs();
-    if ad.x >= ad.y && ad.x >= ad.z {
-        Some(if d.x >= 0.0 {
-            ViewGizmoFace::PosX
-        } else {
-            ViewGizmoFace::NegX
-        })
-    } else if ad.y >= ad.x && ad.y >= ad.z {
-        Some(if d.y >= 0.0 {
-            ViewGizmoFace::PosY
-        } else {
-            ViewGizmoFace::NegY
-        })
-    } else {
-        Some(if d.z >= 0.0 {
-            ViewGizmoFace::PosZ
-        } else {
-            ViewGizmoFace::NegZ
-        })
-    }
+    let threshold = threshold.clamp(0.0, 1.0);
+    // `local` is in `[-1, 1]` and is expected to lie on the AABB surface. Convert the hit location
+    // into a 6/12/8-way direction by snapping components near +/-1.
+    let sx = snap_component(local.x, threshold);
+    let sy = snap_component(local.y, threshold);
+    let sz = snap_component(local.z, threshold);
+
+    // A face hit always has at least one component at +/-1.
+    let view_dir = [-sx, -sy, -sz];
+    ViewGizmoSnap::new(view_dir)
 }
 
 #[cfg(test)]
@@ -594,10 +732,10 @@ mod tests {
                 "hover update should be either None or HoverChanged"
             );
             assert_eq!(
-                gizmo.state.hovered_face,
-                Some(expected),
+                gizmo.state.hovered,
+                Some(ViewGizmoSnap::from_face(expected)),
                 "eye={eye:?} center={center:?} expected={expected:?} hovered={:?}",
-                gizmo.state.hovered_face
+                gizmo.state.hovered
             );
         }
     }
@@ -613,20 +751,38 @@ mod tests {
         let expected = face_from_camera_position(eye, center);
         let cursor = Vec2::new(400.0, 300.0);
 
-        let input = ViewGizmoInput {
+        let input_down = ViewGizmoInput {
             cursor_px: cursor,
             hovered: true,
             drag_started: true,
             dragging: true,
         };
-        let update = gizmo.update(view_proj, vp, input).unwrap();
+        let _ = gizmo.update(view_proj, vp, input_down);
+
+        let input_up = ViewGizmoInput {
+            cursor_px: cursor,
+            hovered: true,
+            drag_started: false,
+            dragging: false,
+        };
+        let update = gizmo.update(view_proj, vp, input_up).unwrap();
         match update {
-            ViewGizmoUpdate::SnapView { face, view_dir, up } => {
-                assert_eq!(face, expected);
-                assert!((view_dir - expected.view_dir()).length() < 1e-6);
-                assert!((up - expected.default_up()).length() < 1e-6);
+            ViewGizmoUpdate::SnapView { snap, view_dir, up } => {
+                assert_eq!(snap, ViewGizmoSnap::from_face(expected));
+                assert!((view_dir - snap.view_dir_vec3()).length() < 1e-6);
+                assert!((up - snap.up_vec3()).length() < 1e-6);
             }
             _ => panic!("expected SnapView"),
-        }
+        };
+    }
+
+    #[test]
+    fn snap_from_local_produces_edge_and_corner_directions() {
+        let threshold = 0.78;
+        let corner = snap_from_local(Vec3::new(1.0, 0.9, 0.9), threshold).unwrap();
+        assert_eq!(corner.view_dir, [-1, -1, -1]);
+
+        let edge = snap_from_local(Vec3::new(1.0, 0.9, 0.2), threshold).unwrap();
+        assert_eq!(edge.view_dir, [-1, -1, 0]);
     }
 }

@@ -209,7 +209,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
 | Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Rotate rings use a separate view-angle fade window (`rotate_ring_fade_dot`) to avoid edge-on rings stealing interaction. |
-| View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Partially aligned (basic)** | Fret provides a minimal `ViewGizmo` (cube) with hover + face click -> axis view intent output (`ecosystem/fret-gizmo/src/view_gizmo.rs`). Missing: corners/edges (iso), drag orbit, compass labels, orthographic toggle, and camera smoothing policy. |
+| View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Partially aligned (basic)** | Fret provides `ViewGizmo` (cube) with hover + face/edge/corner click -> view intent, plus drag orbit output (`ecosystem/fret-gizmo/src/view_gizmo.rs`). Missing: compass labels, orthographic toggle, and higher-level camera smoothing policy (host-side). |
 | Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
 
 ## What to align next (recommended order)
