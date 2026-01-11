@@ -148,7 +148,7 @@ Fret's current contract:
 | Pivot at selection center | External | Yes | **Aligned** | `GizmoPivotMode::Center` uses the **selection world AABB center** when bounds are available via `GizmoTarget3d::local_bounds` (editor convention), otherwise it falls back to the average of target translations. See `pivot_origin(...)` and `selection_world_aabb(...)` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Multiple targets updated per drag | External | Yes | **Aligned** | `GizmoUpdate.updated_targets` returns all updated targets each frame. |
 | Rotation of multiple targets around pivot | External | Yes | **Aligned** | Rotation updates translate+rotate around pivot. `GizmoMode::Rotate` update path. |
-| Scale of multiple targets around pivot | External | Yes | **Partially aligned** | Supported, but the exact policy differs from transform-gizmo's per-mode semantics (no plane scale, no view-axis translate). Needs behavior audit tests. |
+| Scale of multiple targets around pivot | External | Yes | **Aligned (basic)** | Multi-target scale updates both translation (about pivot) and scale factors for axis/plane/uniform: `scale_axis_scales_multiple_targets_about_pivot`, `scale_plane_scales_multiple_targets_about_pivot`, `scale_uniform_scales_multiple_targets_about_pivot` in `ecosystem/fret-gizmo/src/gizmo.rs`. Remaining known gap: TRS-only (no shear) limits "true world-axis scale" for rotated targets. |
 
 ### D) Snapping and precision controls
 

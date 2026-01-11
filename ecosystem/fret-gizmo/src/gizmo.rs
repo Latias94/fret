@@ -7701,6 +7701,141 @@ mod tests {
     }
 
     #[test]
+    fn scale_axis_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        assert!(axis_dir.length_squared() > 0.0);
+        let p_start_world = origin + axis_dir * length_world;
+        let p_move_world = origin + axis_dir * (length_world * 1.35);
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(2.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(1.0, 2.0, 3.0),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!((moved_total.y - 1.0).abs() < 1e-5);
+        assert!((moved_total.z - 1.0).abs() < 1e-5);
+        assert!(moved_total.x > 1.0 + 1e-6);
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(2.0 * moved_total.x, 0.0, 0.0);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(1.0 * moved_total.x, 2.0, 3.0);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
+        );
+
+        // Host may feed back intermediate transforms; returning the cursor should still restore
+        // the original transforms.
+        let moved_targets = moved.updated_targets.clone();
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 5e-3,
+            "total={back_total:?}"
+        );
+
+        for t in &back.updated_targets {
+            let start = targets.iter().find(|s| s.id == t.id).unwrap();
+            assert!(
+                t.transform
+                    .translation
+                    .distance(start.transform.translation)
+                    < 5e-3,
+                "id={:?} translation={:?} start={:?}",
+                t.id,
+                t.transform.translation,
+                start.transform.translation
+            );
+            assert!(
+                t.transform.scale.distance(start.transform.scale) < 5e-3,
+                "id={:?} scale={:?} start={:?}",
+                t.id,
+                t.transform.scale,
+                start.transform.scale
+            );
+        }
+    }
+
+    #[test]
     fn scale_plane_drag_returns_to_one_when_cursor_returns() {
         let mut gizmo = base_gizmo(GizmoMode::Scale);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -7794,6 +7929,138 @@ mod tests {
             "updated={:?}",
             back.updated_targets[0].transform.scale
         );
+    }
+
+    #[test]
+    fn scale_plane_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_screen =
+            project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+        let cursor_start =
+            (quad_screen[0] + quad_screen[1] + quad_screen[2] + quad_screen[3]) * 0.25;
+        let cursor_moved = cursor_start + Vec2::new(30.0, -20.0);
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 2.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(1.5, 2.5, 3.5),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!(moved_total.y.is_finite());
+        assert!((moved_total.z - 1.0).abs() < 1e-5);
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(1.0 * moved_total.x, 2.0 * moved_total.y, 0.0);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(1.5 * moved_total.x, 2.5 * moved_total.y, 3.5);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
+        );
+
+        let moved_targets = moved.updated_targets.clone();
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 5e-3,
+            "total={back_total:?}"
+        );
+
+        for t in &back.updated_targets {
+            let start = targets.iter().find(|s| s.id == t.id).unwrap();
+            assert!(
+                t.transform
+                    .translation
+                    .distance(start.transform.translation)
+                    < 5e-3,
+                "id={:?} translation={:?} start={:?}",
+                t.id,
+                t.transform.translation,
+                start.transform.translation
+            );
+            assert!(
+                t.transform.scale.distance(start.transform.scale) < 5e-3,
+                "id={:?} scale={:?} start={:?}",
+                t.id,
+                t.transform.scale,
+                start.transform.scale
+            );
+        }
     }
 
     #[test]
@@ -8209,6 +8476,95 @@ mod tests {
         assert!(
             (back_total - Vec3::ONE).length() < 1e-3,
             "total={back_total:?}"
+        );
+    }
+
+    #[test]
+    fn scale_uniform_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let p0 = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let (u, v) = plane_basis(view_dir);
+        let dir = (u + v).normalize_or_zero();
+        assert!(dir.length_squared() > 0.0);
+        let p_move_world = origin + dir * (radius_world * 0.6);
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 2.0, 3.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(2.0, 3.0, 4.0),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: p0.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!((moved_total.x - moved_total.y).abs() < 1e-5);
+        assert!((moved_total.x - moved_total.z).abs() < 1e-5);
+        assert!(moved_total.x > 1.0 + 1e-6);
+        let factor = moved_total.x;
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(1.0 * factor, 2.0 * factor, 3.0 * factor);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(2.0 * factor, 3.0 * factor, 4.0 * factor);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
         );
     }
 
