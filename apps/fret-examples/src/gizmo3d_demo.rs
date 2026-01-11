@@ -108,11 +108,19 @@ struct FrameAnim {
     distance: f32,
     yaw_radians: f32,
     pitch_radians: f32,
+    ortho_half_height: f32,
     target_velocity: Vec3,
     distance_velocity: f32,
     yaw_velocity: f32,
     pitch_velocity: f32,
+    ortho_half_height_velocity: f32,
     smooth_time_s: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OrbitProjection {
+    Perspective,
+    Orthographic,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -121,6 +129,8 @@ struct OrbitCamera {
     yaw_radians: f32,
     pitch_radians: f32,
     distance: f32,
+    ortho_half_height: f32,
+    projection: OrbitProjection,
     orbiting: bool,
     panning: bool,
     last_cursor_px: Vec2,
@@ -130,11 +140,14 @@ struct OrbitCamera {
 impl Default for OrbitCamera {
     fn default() -> Self {
         // Roughly matches the previous hard-coded view: eye = (1.6, 1.2, 2.2), target = (0,0,0).
+        let distance = 2.95;
         Self {
             target: Vec3::ZERO,
             yaw_radians: 0.94,
             pitch_radians: 0.42,
-            distance: 2.95,
+            distance,
+            ortho_half_height: distance_to_ortho_half_height(distance),
+            projection: OrbitProjection::Perspective,
             orbiting: false,
             panning: false,
             last_cursor_px: Vec2::ZERO,
@@ -165,6 +178,14 @@ struct LineVertex {
 
 unsafe impl bytemuck::Zeroable for LineVertex {}
 unsafe impl bytemuck::Pod for LineVertex {}
+
+const CAMERA_NEAR: f32 = 0.05;
+const CAMERA_FAR: f32 = 50.0;
+const CAMERA_FOV_Y_RADIANS: f32 = 55.0_f32.to_radians();
+
+fn distance_to_ortho_half_height(distance: f32) -> f32 {
+    (distance.max(0.0) * (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.01)
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -541,18 +562,30 @@ fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     )
     .clamp(-1.55, 1.55);
 
+    camera.ortho_half_height = smooth_damp_f32(
+        camera.ortho_half_height,
+        anim.ortho_half_height,
+        &mut anim.ortho_half_height_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(0.01, 1000.0);
+
     let done = (camera.target - anim.target).length() <= 1e-3
         && (camera.distance - anim.distance).abs() <= 1e-3
         && wrap_angle_pi(camera.yaw_radians - anim.yaw_radians).abs() <= 1e-3
         && (camera.pitch_radians - anim.pitch_radians).abs() <= 1e-3
+        && (camera.ortho_half_height - anim.ortho_half_height).abs() <= 1e-3
         && anim.target_velocity.length() <= 1e-3
-        && anim.distance_velocity.abs() <= 1e-3;
+        && anim.distance_velocity.abs() <= 1e-3
+        && anim.ortho_half_height_velocity.abs() <= 1e-3;
 
     if done {
         camera.target = anim.target;
         camera.distance = anim.distance.clamp(0.2, 25.0);
         camera.yaw_radians = anim.yaw_radians;
         camera.pitch_radians = anim.pitch_radians.clamp(-1.55, 1.55);
+        camera.ortho_half_height = anim.ortho_half_height.clamp(0.01, 1000.0);
         camera.frame_anim = None;
         false
     } else {
@@ -574,22 +607,32 @@ fn frame_aabb(
     let (w, h) = viewport_px;
     let aspect = (w.max(1) as f32) / (h.max(1) as f32);
 
-    let fov_y = 55.0_f32.to_radians();
-    let fov_x = 2.0 * ((fov_y * 0.5).tan() * aspect).atan();
-    let fov = fov_y.min(fov_x).max(0.001);
-
     let margin = 1.25;
-    let dist = (radius * margin) / (fov * 0.5).tan();
+    let (dist, ortho_half_height) = match camera.projection {
+        OrbitProjection::Perspective => {
+            let fov_x = 2.0 * ((CAMERA_FOV_Y_RADIANS * 0.5).tan() * aspect).atan();
+            let fov = CAMERA_FOV_Y_RADIANS.min(fov_x).max(0.001);
+            let dist = (radius * margin) / (fov * 0.5).tan();
+            (dist, camera.ortho_half_height)
+        }
+        OrbitProjection::Orthographic => {
+            let half_h = (radius * margin / aspect.min(1.0)).max(0.01);
+            let dist = camera.distance.max(radius * margin * 2.0);
+            (dist, half_h)
+        }
+    };
 
     camera.frame_anim = Some(FrameAnim {
         target: center,
         distance: dist.clamp(0.2, 25.0),
         yaw_radians: camera.yaw_radians,
         pitch_radians: camera.pitch_radians,
+        ortho_half_height: ortho_half_height.clamp(0.01, 1000.0),
         target_velocity: Vec3::ZERO,
         distance_velocity: 0.0,
         yaw_velocity: 0.0,
         pitch_velocity: 0.0,
+        ortho_half_height_velocity: 0.0,
         smooth_time_s: smooth_time_s.max(1e-4),
     });
 }
@@ -1757,7 +1800,16 @@ fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     );
     let eye = camera.target + dir * distance;
     let view = Mat4::look_at_rh(eye, camera.target, Vec3::Y);
-    let proj = Mat4::perspective_rh(55.0_f32.to_radians(), aspect, 0.05, 50.0);
+    let proj = match camera.projection {
+        OrbitProjection::Perspective => {
+            Mat4::perspective_rh(CAMERA_FOV_Y_RADIANS, aspect, CAMERA_NEAR, CAMERA_FAR)
+        }
+        OrbitProjection::Orthographic => {
+            let half_h = camera.ortho_half_height.max(0.01);
+            let half_w = half_h * aspect.max(1e-6);
+            Mat4::orthographic_rh(-half_w, half_w, -half_h, half_h, CAMERA_NEAR, CAMERA_FAR)
+        }
+    };
     proj * view
 }
 
@@ -2436,6 +2488,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
                             let yaw = m.camera.yaw_radians;
                             let distance = m.camera.distance.max(0.05);
+                            let pan_scale = match m.camera.projection {
+                                OrbitProjection::Perspective => distance,
+                                OrbitProjection::Orthographic => {
+                                    m.camera.ortho_half_height.max(0.05)
+                                }
+                            };
 
                             let dir = Vec3::new(
                                 yaw.cos() * pitch.cos(),
@@ -2449,7 +2507,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
                             if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
                                 let pan = (-right * delta.x + up * delta.y)
-                                    * (distance * pan_sensitivity);
+                                    * (pan_scale * pan_sensitivity);
                                 m.camera.target += pan;
                             }
                         }
@@ -2461,7 +2519,15 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     let zoom_sensitivity = 0.0015;
                     let scroll = delta.y.0;
                     let factor = (-scroll * zoom_sensitivity).exp();
-                    m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                    match m.camera.projection {
+                        OrbitProjection::Perspective => {
+                            m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                        }
+                        OrbitProjection::Orthographic => {
+                            m.camera.ortho_half_height =
+                                (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
+                        }
+                    }
                 }
                 _ => {}
             };
@@ -2560,6 +2626,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             (m.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
                         return rec_to_record;
                     }
+                    Some(ViewGizmoUpdate::ToggleProjection) => {
+                        clear_other_interactions(m);
+                        m.camera.frame_anim = None;
+                        m.camera.projection = match m.camera.projection {
+                            OrbitProjection::Perspective => {
+                                m.camera.ortho_half_height =
+                                    distance_to_ortho_half_height(m.camera.distance);
+                                OrbitProjection::Orthographic
+                            }
+                            OrbitProjection::Orthographic => OrbitProjection::Perspective,
+                        };
+                        return rec_to_record;
+                    }
                     Some(ViewGizmoUpdate::SnapView {
                         snap: _,
                         view_dir,
@@ -2597,10 +2676,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 distance: m.camera.distance,
                                 yaw_radians,
                                 pitch_radians: pitch_radians.clamp(-1.55, 1.55),
+                                ortho_half_height: m.camera.ortho_half_height,
                                 target_velocity: Vec3::ZERO,
                                 distance_velocity: 0.0,
                                 yaw_velocity: 0.0,
                                 pitch_velocity: 0.0,
+                                ortho_half_height_velocity: 0.0,
                                 smooth_time_s: 0.12,
                             });
                         }
