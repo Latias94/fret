@@ -112,7 +112,7 @@ Fret's current contract:
 | Semantic delta output | Partial | Yes (`GizmoResult`) | **Aligned** | `GizmoResult::{Translation,Rotation,Scale}` includes `delta` + `total`. |
 | Multi-target update in one call | External | Yes | **Aligned** | `GizmoUpdate.updated_targets: Vec<GizmoTarget3d>`. |
 | Begin/update/commit/cancel phases | No | Partial (implicit) | **Aligned (Fret-specific)** | `GizmoPhase` enables clean undo grouping; host decides persistence. |
-| "IsOver / IsUsing" queries | Yes (`IsOver`, `IsUsing`) | Yes (`is_focused`, active subgizmo) | **Partially aligned** | Fret exposes `GizmoState { hovered, active }` but no dedicated helper methods yet. |
+| "IsOver / IsUsing" queries | Yes (`IsOver`, `IsUsing`) | Yes (`is_focused`, active subgizmo) | **Aligned** | Fret exposes `GizmoState { hovered, active }` plus helper methods `GizmoState::{is_over,is_using,is_over_handle,is_using_handle}` for the common queries. |
 | Fine-grained operation selection | Yes (bitmask) | Yes (`EnumSet`) | **Not implemented** | Fret currently selects a single coarse mode. |
 
 ### A) Core transform handles

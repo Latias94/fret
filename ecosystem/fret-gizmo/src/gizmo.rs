@@ -453,6 +453,24 @@ pub struct GizmoState {
     drag_total_scale_plane_applied: Vec2,
 }
 
+impl GizmoState {
+    pub fn is_over(&self) -> bool {
+        self.hovered.is_some()
+    }
+
+    pub fn is_using(&self) -> bool {
+        self.active.is_some()
+    }
+
+    pub fn is_over_handle(&self, handle: HandleId) -> bool {
+        self.hovered == Some(handle)
+    }
+
+    pub fn is_using_handle(&self, handle: HandleId) -> bool {
+        self.active == Some(handle)
+    }
+}
+
 impl Default for GizmoState {
     fn default() -> Self {
         Self {
