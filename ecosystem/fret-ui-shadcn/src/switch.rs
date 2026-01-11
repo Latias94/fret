@@ -25,13 +25,13 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 fn switch_track_w(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.switch.track_w")
-        .unwrap_or(Px(36.0))
+        .unwrap_or(Px(32.0))
 }
 
 fn switch_track_h(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.switch.track_h")
-        .unwrap_or(Px(20.0))
+        .unwrap_or(Px(18.4))
 }
 
 fn switch_thumb(theme: &Theme) -> Px {

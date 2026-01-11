@@ -257,6 +257,92 @@ fn web_vs_fret_layout_button_default_height() {
 }
 
 #[test]
+fn web_vs_fret_layout_checkbox_demo_control_size() {
+    let web = read_web_golden("checkbox-demo");
+    let theme = web_theme(&web);
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
+    })
+    .expect("web checkbox");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Checkbox::new(model)
+                .a11y_label("Checkbox")
+                .into_element(cx),
+        ]
+    });
+
+    let checkbox = find_semantics(&snap, SemanticsRole::Checkbox, Some("Checkbox"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret checkbox semantics node");
+
+    assert_close_px(
+        "checkbox width",
+        checkbox.bounds.size.width,
+        web_checkbox.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "checkbox height",
+        checkbox.bounds.size.height,
+        web_checkbox.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_switch_demo_track_size() {
+    let web = read_web_golden("switch-demo");
+    let theme = web_theme(&web);
+    let web_switch = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "switch")
+            && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
+    })
+    .expect("web switch");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Switch::new(model)
+                .a11y_label("Switch")
+                .into_element(cx),
+        ]
+    });
+
+    let switch = find_semantics(&snap, SemanticsRole::Switch, Some("Switch"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Switch, None))
+        .expect("fret switch semantics node");
+
+    assert_close_px(
+        "switch width",
+        switch.bounds.size.width,
+        web_switch.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "switch height",
+        switch.bounds.size.height,
+        web_switch.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_tabs_demo_tab_list_height() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
