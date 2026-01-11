@@ -21,6 +21,28 @@ macro_rules! try_println {
     };
 }
 
+fn parse_env_bool(key: &str) -> Option<bool> {
+    std::env::var_os(key).and_then(|v| match v.to_string_lossy().trim() {
+        "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON" => Some(true),
+        "0" | "false" | "FALSE" | "no" | "NO" | "off" | "OFF" => Some(false),
+        _ => None,
+    })
+}
+
+fn parse_env_u32(key: &str) -> Option<u32> {
+    std::env::var_os(key).and_then(|v| v.to_string_lossy().trim().parse::<u32>().ok())
+}
+
+fn parse_env_quality(key: &str) -> Option<EffectQuality> {
+    std::env::var_os(key).and_then(|v| match v.to_string_lossy().trim() {
+        "auto" | "Auto" | "AUTO" => Some(EffectQuality::Auto),
+        "low" | "Low" | "LOW" => Some(EffectQuality::Low),
+        "medium" | "Medium" | "MEDIUM" => Some(EffectQuality::Medium),
+        "high" | "High" | "HIGH" => Some(EffectQuality::High),
+        _ => None,
+    })
+}
+
 #[derive(Default)]
 struct EffectsDemoDriver;
 
@@ -74,17 +96,17 @@ impl Default for EffectsDemoState {
             .filter(|&v| v > 0);
 
         Self {
-            panel0_enabled: true,
-            panel1_enabled: true,
-            panel2_enabled: true,
+            panel0_enabled: parse_env_bool("FRET_EFFECTS_PANEL0").unwrap_or(true),
+            panel1_enabled: parse_env_bool("FRET_EFFECTS_PANEL1").unwrap_or(true),
+            panel2_enabled: parse_env_bool("FRET_EFFECTS_PANEL2").unwrap_or(true),
 
-            quality: EffectQuality::Auto,
+            quality: parse_env_quality("FRET_EFFECTS_QUALITY").unwrap_or(EffectQuality::Auto),
 
-            panel0_blur_radius_px: 6,
-            panel0_blur_downsample: 2,
+            panel0_blur_radius_px: parse_env_u32("FRET_EFFECTS_BLUR_RADIUS_PX").unwrap_or(6),
+            panel0_blur_downsample: parse_env_u32("FRET_EFFECTS_BLUR_DOWNSAMPLE").unwrap_or(2),
 
-            panel1_pixelate_scale: 8,
-            panel2_pixelate_scale: 6,
+            panel1_pixelate_scale: parse_env_u32("FRET_EFFECTS_P1_PIXELATE_SCALE").unwrap_or(8),
+            panel2_pixelate_scale: parse_env_u32("FRET_EFFECTS_P2_PIXELATE_SCALE").unwrap_or(6),
 
             show_help: true,
             overlay_dirty: true,

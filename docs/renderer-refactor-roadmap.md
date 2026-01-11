@@ -225,6 +225,23 @@ Recommended entry points:
 - `FRET_VLIST_STRESS_AUTO_SCROLL=1 FRET_VLIST_STRESS_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin virtual_list_stress_demo`
 - `FRET_EFFECTS_DEMO_PROFILE=1 FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin effects_demo`
 
+Effects-specific notes:
+
+- Set `FRET_RENDERER_PERF_PIPELINES=1` to also print `renderer_perf_pipelines:` so you can see whether cost is dominated
+  by `fullscreen` postprocess passes and/or `clip_mask` generation.
+- `effects_demo` supports env-driven presets for reproducible captures:
+  - `FRET_EFFECTS_PANEL0` / `FRET_EFFECTS_PANEL1` / `FRET_EFFECTS_PANEL2` (`0|1`)
+  - `FRET_EFFECTS_QUALITY` (`Auto|Low|Medium|High`)
+  - `FRET_EFFECTS_BLUR_RADIUS_PX`, `FRET_EFFECTS_BLUR_DOWNSAMPLE`
+  - `FRET_EFFECTS_P1_PIXELATE_SCALE`, `FRET_EFFECTS_P2_PIXELATE_SCALE`
+
+Example pipeline breakdowns (typical, from `effects_demo`):
+
+- All panels enabled: `quad≈300 text_mask≈60 composite≈60 fullscreen≈660 clip_mask≈120`
+- Only panel0 (backdrop blur): `quad≈180 text_mask≈60 fullscreen≈420 clip_mask≈60`
+- Only panel1 (backdrop pixelate): `quad≈180 text_mask≈60 fullscreen≈180 clip_mask≈60`
+- Only panel2 (filter-content pixelate): `quad≈180 text_mask≈60 composite≈60 fullscreen≈120 clip_mask≈0`
+
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
