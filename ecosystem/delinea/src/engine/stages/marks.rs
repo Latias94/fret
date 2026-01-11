@@ -10,9 +10,9 @@ use crate::engine::lod::{
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
-use crate::ids::MarkId;
 use crate::ids::SeriesId;
 use crate::ids::StackId;
+use crate::ids::series_mark_id;
 use crate::marks::{
     MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPointsRef, MarkPolylineRef, MarkRectRef,
     MarkTree,
@@ -42,6 +42,16 @@ struct StackBoundsBuild {
     x_mapping_window: Option<DataWindowX>,
 }
 
+#[derive(Debug, Clone)]
+struct ScatterBucketBuild {
+    series: SeriesId,
+    visual_map: crate::ids::VisualMapId,
+    bucket_count: u16,
+    next_view_index: usize,
+    points_by_bucket: Vec<Vec<Point>>,
+    indices_by_bucket: Vec<Vec<u32>>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct MarksStage {
     series_index: usize,
@@ -55,6 +65,7 @@ pub struct MarksStage {
     scatter_next_index: usize,
     scatter_points_start: usize,
     scatter_node_index: Option<usize>,
+    scatter_bucket_build: Option<ScatterBucketBuild>,
     bar_next_index: usize,
     bar_rects_start: usize,
     bar_node_index: Option<usize>,
@@ -125,6 +136,7 @@ impl MarksStage {
         self.scatter_next_index = 0;
         self.scatter_points_start = 0;
         self.scatter_node_index = None;
+        self.scatter_bucket_build = None;
         self.bar_next_index = 0;
         self.bar_rects_start = 0;
         self.bar_node_index = None;
@@ -257,6 +269,7 @@ impl MarksStage {
                 self.bounds_accum.reset();
                 self.scatter_points_start = 0;
                 self.scatter_node_index = None;
+                self.scatter_bucket_build = None;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
             }
@@ -537,7 +550,8 @@ impl MarksStage {
                             source_series: Some(series.id),
                             payload: MarkPayloadRef::Points(MarkPointsRef {
                                 points: range.clone(),
-                                fill: Some(crate::ids::PaintId(0)),
+                                fill: None,
+                                opacity_mul: None,
                                 stroke: None,
                             }),
                         });
@@ -553,6 +567,174 @@ impl MarksStage {
                     self.scatter_next_index = 0;
                     self.scatter_points_start = 0;
                     self.scatter_node_index = None;
+                    self.scatter_bucket_build = None;
+                    self.bar_next_index = 0;
+                    self.bar_rects_start = 0;
+                    self.bar_node_index = None;
+                    self.bounds = None;
+                    scratch.clear();
+                    continue;
+                }
+
+                if let Some(visual_map_id) = model.visual_map_by_series.get(&series.id).copied() {
+                    let Some(vm) = model.visual_maps.get(&visual_map_id).copied() else {
+                        return false;
+                    };
+                    let selected_range = state
+                        .visual_map_range
+                        .get(&visual_map_id)
+                        .copied()
+                        .unwrap_or(vm.initial_range);
+
+                    let Some(dataset) = model.datasets.get(&series.dataset) else {
+                        return false;
+                    };
+                    let Some(vm_col) = dataset.fields.get(&vm.field).copied() else {
+                        return false;
+                    };
+                    let Some(vm_values) = table.column_f64(vm_col) else {
+                        return false;
+                    };
+
+                    let total_buckets = vm.buckets as usize * 2;
+                    let rebuild = match self.scatter_bucket_build.as_ref() {
+                        Some(b) => {
+                            b.series != series.id
+                                || b.visual_map != visual_map_id
+                                || b.bucket_count != vm.buckets
+                        }
+                        None => true,
+                    };
+                    if rebuild {
+                        self.scatter_bucket_build = Some(ScatterBucketBuild {
+                            series: series.id,
+                            visual_map: visual_map_id,
+                            bucket_count: vm.buckets,
+                            next_view_index: 0,
+                            points_by_bucket: vec![Vec::default(); total_buckets],
+                            indices_by_bucket: vec![Vec::default(); total_buckets],
+                        });
+                    }
+                    let Some(build) = self.scatter_bucket_build.as_mut() else {
+                        return false;
+                    };
+
+                    let row_end = selection.view_len(table.row_count);
+                    while build.next_view_index < row_end {
+                        let points_budget = budget.take_points(4096) as usize;
+                        if points_budget == 0 {
+                            return false;
+                        }
+
+                        let chunk_end = (build.next_view_index + points_budget).min(row_end);
+
+                        let x_span = x_window.span();
+                        let y_span = y_window.span();
+                        let x_span = if x_span.is_finite() && x_span > 0.0 {
+                            x_span
+                        } else {
+                            1.0
+                        };
+                        let y_span = if y_span.is_finite() && y_span > 0.0 {
+                            y_span
+                        } else {
+                            1.0
+                        };
+
+                        let data_len = x.len().min(y0.len()).min(vm_values.len());
+                        for view_index in build.next_view_index..chunk_end {
+                            let Some(i) = selection.get_raw_index(data_len, view_index) else {
+                                continue;
+                            };
+
+                            let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                            let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                            if !xi.is_finite() || !yi.is_finite() {
+                                continue;
+                            }
+                            if !view_x_filter.contains(xi) {
+                                continue;
+                            }
+
+                            let yi = yi.clamp(y_window.min, y_window.max);
+                            let tx = ((xi - x_window.min) / x_span).clamp(0.0, 1.0);
+                            let ty = ((yi - y_window.min) / y_span).clamp(0.0, 1.0);
+
+                            let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                            let px_y =
+                                viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
+
+                            let bucket = crate::visual_map::eval_bucket_for_value(
+                                &vm,
+                                selected_range,
+                                vm_values.get(i).copied().unwrap_or(f64::NAN),
+                            );
+                            let bucket_key = bucket.bucket as usize
+                                + if bucket.in_range {
+                                    0
+                                } else {
+                                    vm.buckets as usize
+                                };
+
+                            build.points_by_bucket[bucket_key].push(Point::new(Px(px_x), Px(px_y)));
+                            build.indices_by_bucket[bucket_key].push(i as u32);
+                        }
+
+                        build.next_view_index = chunk_end;
+                    }
+
+                    let required_marks = build
+                        .points_by_bucket
+                        .iter()
+                        .filter(|p| !p.is_empty())
+                        .count();
+                    if required_marks > 0 {
+                        if budget.take_marks(required_marks as u32) != required_marks as u32 {
+                            return false;
+                        }
+
+                        let base_order = self.series_index as u32;
+                        for (bucket_key, points) in build.points_by_bucket.iter_mut().enumerate() {
+                            if points.is_empty() {
+                                continue;
+                            }
+                            let indices = std::mem::take(&mut build.indices_by_bucket[bucket_key]);
+                            let points = std::mem::take(points);
+                            let range = marks
+                                .arena
+                                .extend_points_with_indices(points.into_iter(), indices);
+
+                            let paint_bucket = (bucket_key % (vm.buckets as usize)) as u16;
+                            let in_range = bucket_key < (vm.buckets as usize);
+
+                            marks.nodes.push(MarkNode {
+                                id: series_mark_id(series.id, 16 + bucket_key as u64),
+                                parent: None,
+                                layer: crate::ids::LayerId(1),
+                                order: MarkOrderKey(base_order.saturating_mul(2)),
+                                kind: MarkKind::Points,
+                                source_series: Some(series.id),
+                                payload: MarkPayloadRef::Points(MarkPointsRef {
+                                    points: range.clone(),
+                                    fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
+                                    opacity_mul: (!in_range).then_some(vm.out_of_range_opacity),
+                                    stroke: None,
+                                }),
+                            });
+
+                            stats.points_emitted += (range.end - range.start) as u64;
+                            stats.marks_emitted += 1;
+                        }
+
+                        marks.revision.bump();
+                    }
+
+                    self.series_index += 1;
+                    self.cursor.next_index = 0;
+                    self.scatter_next_index = 0;
+                    self.scatter_points_start = 0;
+                    self.scatter_node_index = None;
+                    self.scatter_bucket_build = None;
                     self.bar_next_index = 0;
                     self.bar_rects_start = 0;
                     self.bar_node_index = None;
@@ -580,7 +762,8 @@ impl MarksStage {
                         source_series: Some(series.id),
                         payload: MarkPayloadRef::Points(MarkPointsRef {
                             points: range,
-                            fill: Some(crate::ids::PaintId(0)),
+                            fill: None,
+                            opacity_mul: None,
                             stroke: None,
                         }),
                     });
@@ -659,6 +842,7 @@ impl MarksStage {
                 self.scatter_next_index = 0;
                 self.scatter_points_start = 0;
                 self.scatter_node_index = None;
+                self.scatter_bucket_build = None;
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
@@ -741,7 +925,8 @@ impl MarksStage {
                         source_series: Some(series.id),
                         payload: MarkPayloadRef::Rect(MarkRectRef {
                             rects: range,
-                            fill: Some(crate::ids::PaintId(0)),
+                            fill: None,
+                            opacity_mul: None,
                             stroke: None,
                         }),
                     });
@@ -910,6 +1095,7 @@ impl MarksStage {
                 self.scatter_next_index = 0;
                 self.scatter_points_start = 0;
                 self.scatter_node_index = None;
+                self.scatter_bucket_build = None;
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
@@ -1167,6 +1353,7 @@ impl MarksStage {
             self.scatter_next_index = 0;
             self.scatter_points_start = 0;
             self.scatter_node_index = None;
+            self.scatter_bucket_build = None;
             self.bar_next_index = 0;
             self.bar_rects_start = 0;
             self.bar_node_index = None;
@@ -1193,10 +1380,6 @@ fn merge_axis_window(
             w.clamp_non_degenerate();
         })
         .or_insert(window);
-}
-
-fn series_mark_id(series: crate::ids::SeriesId, variant: u64) -> MarkId {
-    MarkId((series.0 << 3) | (variant & 0x7))
 }
 
 fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {

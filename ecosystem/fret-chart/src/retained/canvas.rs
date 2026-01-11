@@ -51,6 +51,8 @@ struct CachedRect {
     rect: Rect,
     order: u32,
     source_series: Option<delinea::SeriesId>,
+    fill: Option<delinea::PaintId>,
+    opacity_mul: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -58,6 +60,8 @@ struct CachedPoint {
     point: Point,
     order: u32,
     source_series: Option<delinea::SeriesId>,
+    fill: Option<delinea::PaintId>,
+    opacity_mul: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1284,6 +1288,11 @@ impl ChartCanvas {
         palette[order_idx % palette.len()]
     }
 
+    fn paint_color(&self, paint: delinea::PaintId) -> Color {
+        let palette = &self.style.series_palette;
+        palette[(paint.0 as usize) % palette.len()]
+    }
+
     fn legend_series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
         self.legend_item_rects
             .iter()
@@ -1677,7 +1686,7 @@ impl ChartCanvas {
             if (series_kind == Some(delinea::SeriesKind::Band) || is_stacked_area)
                 && let Some(series_id) = node.source_series
             {
-                let variant = (node.id.0 & 0x7) as u8;
+                let variant = delinea::ids::mark_variant(node.id) as u8;
                 let entry = band_ranges.entry(series_id).or_default();
                 let ids = band_mark_ids.entry(series_id).or_default();
                 match variant {
@@ -1872,6 +1881,8 @@ impl ChartCanvas {
                     rect: *rect,
                     order: node.order.0,
                     source_series: node.source_series,
+                    fill: rects.fill,
+                    opacity_mul: rects.opacity_mul.unwrap_or(1.0),
                 });
             }
         }
@@ -1894,6 +1905,8 @@ impl ChartCanvas {
                     point: *p,
                     order: node.order.0,
                     source_series: node.source_series,
+                    fill: points.fill,
+                    opacity_mul: points.opacity_mul.unwrap_or(1.0),
                 });
             }
         }
@@ -3036,10 +3049,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .saturating_add(cached.order.saturating_mul(4));
 
             let mut fill_color = self.style.stroke_color;
-            if let Some(series) = cached.source_series {
+            if let Some(paint) = cached.fill {
+                fill_color = self.paint_color(paint);
+                fill_color.a *= self.style.stroke_color.a;
+            } else if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.stroke_color.a;
             }
+            fill_color.a *= cached.opacity_mul;
             if let Some(series_id) = cached.source_series {
                 let brush_dim = if let Some(brush) = brush
                     && let Some(series) = model.series.get(&series_id)
@@ -3122,7 +3139,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .series
                     .get(&series_id)
                     .is_some_and(|s| s.kind == delinea::SeriesKind::Area && s.stack.is_some())
-                    && (mark_id.0 & 0x7) == 1
+                    && delinea::ids::mark_variant(*mark_id) == 1
             });
             if !suppress_stroke {
                 cx.scene.push(SceneOp::Path {
@@ -3145,10 +3162,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .saturating_add(point_order_bias);
 
             let mut fill_color = self.style.stroke_color;
-            if let Some(series) = cached.source_series {
+            if let Some(paint) = cached.fill {
+                fill_color = self.paint_color(paint);
+                fill_color.a *= self.style.scatter_fill_alpha;
+            } else if let Some(series) = cached.source_series {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.scatter_fill_alpha;
             }
+            fill_color.a *= cached.opacity_mul;
             if let Some(series_id) = cached.source_series {
                 let brush_dim = if let Some(brush) = brush
                     && let Some(series) = model.series.get(&series_id)
@@ -3213,7 +3234,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .saturating_add(cached.order.saturating_mul(4));
 
                 let mut fill_color = self.series_color(series_id);
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                }
                 fill_color.a *= self.style.stroke_color.a;
+                fill_color.a *= cached.opacity_mul;
                 if let Some(hover) = self.legend_hover
                     && cached.source_series.is_some()
                     && cached.source_series != Some(hover)
@@ -3274,7 +3299,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     cached.source_series.is_some_and(|series_id| {
                         model.series.get(&series_id).is_some_and(|s| {
                             s.kind == delinea::SeriesKind::Area && s.stack.is_some()
-                        }) && (mark_id.0 & 0x7) == 1
+                        }) && delinea::ids::mark_variant(*mark_id) == 1
                     });
                 if !suppress_stroke {
                     cx.scene.push(SceneOp::Path {
@@ -3307,7 +3332,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .saturating_add(point_order_bias);
 
                 let mut fill_color = self.series_color(series_id);
+                if let Some(paint) = cached.fill {
+                    fill_color = self.paint_color(paint);
+                }
                 fill_color.a *= self.style.scatter_fill_alpha;
+                fill_color.a *= cached.opacity_mul;
                 if let Some(hover) = self.legend_hover
                     && cached.source_series.is_some()
                     && cached.source_series != Some(hover)
@@ -3939,6 +3968,7 @@ mod tests {
             data_zoom_x: vec![],
             data_zoom_y: vec![],
             axis_pointer: None,
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: SeriesId::new(1),

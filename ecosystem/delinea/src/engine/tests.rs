@@ -60,6 +60,7 @@ fn basic_spec() -> ChartSpec {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             name: None,
@@ -135,6 +136,7 @@ fn bar_emits_rect_batch() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -233,6 +235,7 @@ fn horizontal_bar_emits_rect_batch() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -338,6 +341,7 @@ fn stacked_bar_uses_stack_base() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -492,6 +496,7 @@ fn grouped_bars_have_distinct_x_offsets() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -644,6 +649,7 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -826,6 +832,7 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -2054,6 +2061,7 @@ fn band_emits_two_polylines() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2171,6 +2179,7 @@ fn stacked_area_emits_two_polylines() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2224,7 +2233,7 @@ fn stacked_area_emits_two_polylines() {
         .filter(|n| {
             n.source_series == Some(series_id) && n.kind == crate::marks::MarkKind::Polyline
         })
-        .map(|n| (n.id.0 & 0x7) as u8)
+        .map(|n| crate::ids::mark_variant(n.id) as u8)
         .collect();
 
     assert!(
@@ -2286,6 +2295,7 @@ fn row_range_limits_mark_indices() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2392,6 +2402,7 @@ fn x_window_limits_mark_indices() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2504,6 +2515,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2613,6 +2625,7 @@ fn set_series_visible_hides_marks() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2735,6 +2748,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -2860,6 +2874,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -3010,6 +3025,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
         }],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -3124,6 +3140,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
         }],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -3234,6 +3251,7 @@ fn hover_does_not_rebuild_marks() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: Some(AxisPointerSpec::default()),
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -3336,6 +3354,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
             trigger_distance_px: 50.0,
             throttle_px: 0.0,
         }),
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: Some("MySeries".to_string()),
@@ -3451,6 +3470,7 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
             trigger_distance_px: 0.0,
             throttle_px: 0.0,
         }),
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -3584,6 +3604,7 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
         }),
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -3717,6 +3738,7 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
         }),
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -3845,6 +3867,7 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
             trigger_distance_px: 10_000.0,
             throttle_px: 0.0,
         }),
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: Some("A".to_string()),
@@ -3942,6 +3965,7 @@ fn scatter_emits_point_marks() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: Some("S".to_string()),
@@ -4050,6 +4074,7 @@ fn scatter_large_mode_is_pixel_bounded() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             name: None,
@@ -4208,6 +4233,7 @@ fn stacked_line_series_offsets_y() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_a,
@@ -4342,6 +4368,7 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![
             SeriesSpec {
                 id: series_pos,

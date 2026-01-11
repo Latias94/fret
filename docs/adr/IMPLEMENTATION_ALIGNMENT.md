@@ -14,7 +14,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-10
+- Last updated: 2026-01-11
 - ADR count (numbered): 152
 
 - Aligned: 77
@@ -180,4 +180,4 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0144-delinea-brush-selection-and-output-contract.md`](0144-delinea-brush-selection-and-output-contract.md) | Accepted | Not audited |  |
 | [`0145-delinea-brush-selection-to-row-selection-fast-path.md`](0145-delinea-brush-selection-to-row-selection-fast-path.md) | Accepted | Not audited |  |
 | [`0146-delinea-link-events-for-brush-selection.md`](0146-delinea-link-events-for-brush-selection.md) | Accepted | Not audited |  |
-| [`0147-delinea-visualmap-and-data-driven-styling.md`](0147-delinea-visualmap-and-data-driven-styling.md) | Proposed | Not implemented | ADR only; VisualMap spec/actions/output are not wired yet. |
+| [`0147-delinea-visualmap-and-data-driven-styling.md`](0147-delinea-visualmap-and-data-driven-styling.md) | Proposed | Aligned (with known gaps) | Implemented v1 continuous bucket mapping for scatter marks: `ecosystem/delinea/src/spec/mod.rs`, `ecosystem/delinea/src/engine/stages/marks.rs`, adapter paint resolution in `ecosystem/fret-chart/src/retained/canvas.rs`. Gaps: controller UI, piecewise mode, additional channels, and LOD-aware mapping. |

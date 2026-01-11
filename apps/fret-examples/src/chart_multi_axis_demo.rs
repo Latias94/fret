@@ -12,10 +12,10 @@ use fret_ui::{FixedSplit, UiTree};
 
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
-use delinea::ids::{AxisId, FieldId, LinkGroupId};
+use delinea::ids::{AxisId, FieldId, LinkGroupId, VisualMapId};
 use delinea::{
     Action, ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec,
-    SeriesEncode, SeriesSpec,
+    SeriesEncode, SeriesSpec, VisualMapSpec,
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
 use fret_chart::retained::{ChartCanvas, ChartCanvasOutput};
@@ -190,6 +190,15 @@ impl ChartMultiAxisDemoDriver {
                 },
             ],
             axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![VisualMapSpec {
+                id: VisualMapId::new(1),
+                series: vec![delinea::ids::SeriesId::new(3)],
+                field: y_left_b_field,
+                domain: (-4.0, 4.0),
+                initial_range: Some((-1.0, 1.0)),
+                buckets: 8,
+                out_of_range_opacity: 0.25,
+            }],
             series: vec![
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(1),

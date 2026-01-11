@@ -259,17 +259,19 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 ### Styling & theming
 
 - `[~]` Token-driven chart styling (tracked in `docs/adr/0142-fret-chart-theme-tokens-and-style-resolution.md`).
-- `[ ]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (future; depends on mark metadata + palette policy).
+- `[~]` VisualMap-style data-driven color mapping (ECharts `visualMap`) (scatter-only v1 buckets).
+  - Evidence: `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`, `ecosystem/delinea/src/engine/stages/marks.rs`, `ecosystem/fret-chart/src/retained/canvas.rs`.
+  - Gaps: controller UI, piecewise mode, additional channels, and LOD-aware mapping.
 
 ## Known Gaps vs ECharts (High Value)
 
 - DataZoom Y + 2D zoom UX parity (inside + box zoom + reset behaviors).
 - Category axis indexing under zoom for non-bar series.
-- VisualMap (continuous/piecewise) and declarative color scales.
+- VisualMap: controller UI, piecewise mode, and additional channels (size, stroke width, etc.).
 - Rich tooltip formatting and series-specific default formatting.
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Lock VisualMap semantics for data-driven styling (`docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`), then land a minimal bucketed `color/opacity` implementation for scatter.
+1. P0: Land VisualMap controller UI (continuous) and wire `Action::SetVisualMapRange` from the adapter.
 2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
 3. P1: Append/update semantics (ECharts `appendData`) on top of the dataset storage/index contract (ADR 0140), with explicit budgeting and determinism requirements.

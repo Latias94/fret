@@ -1,7 +1,7 @@
 use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY, WindowSpanAnchor};
-use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
+use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId, VisualMapId};
 use crate::spec::FilterMode;
 use crate::transform::RowRange;
 
@@ -90,6 +90,10 @@ pub enum Action {
         base_y: DataWindowY,
         x: Option<DataWindowX>,
         y: Option<DataWindowY>,
+    },
+    SetVisualMapRange {
+        visual_map: VisualMapId,
+        range: Option<(f64, f64)>,
     },
     SetSeriesVisible {
         series: SeriesId,

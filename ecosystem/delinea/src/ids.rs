@@ -34,6 +34,7 @@ define_id!(TransformId);
 define_id!(StackId);
 define_id!(LinkGroupId);
 define_id!(DataZoomId);
+define_id!(VisualMapId);
 
 define_id!(LayerId);
 define_id!(MarkId);

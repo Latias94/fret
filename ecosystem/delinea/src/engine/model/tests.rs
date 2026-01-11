@@ -5,7 +5,7 @@ use fret_core::{Point, Px, Rect, Size};
 use super::*;
 use crate::spec::{
     AxisKind, AxisSpec, ChartSpec, DataZoomYSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
-    SeriesKind, SeriesSpec,
+    SeriesKind, SeriesSpec, VisualMapSpec,
 };
 
 fn basic_spec() -> ChartSpec {
@@ -54,6 +54,7 @@ fn basic_spec() -> ChartSpec {
         data_zoom_x: vec![],
         data_zoom_y: vec![],
         axis_pointer: None,
+        visual_maps: vec![],
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             name: None,
@@ -72,6 +73,58 @@ fn basic_spec() -> ChartSpec {
             area_baseline: None,
         }],
     }
+}
+
+#[test]
+fn visual_map_accepts_series_binding() {
+    let mut spec = basic_spec();
+    let series_id = spec.series[0].id;
+    let y_field = spec.series[0].encode.y;
+
+    spec.visual_maps.push(VisualMapSpec {
+        id: crate::ids::VisualMapId::new(1),
+        series: vec![series_id],
+        field: y_field,
+        domain: (0.0, 1.0),
+        initial_range: Some((0.2, 0.8)),
+        buckets: 8,
+        out_of_range_opacity: 0.25,
+    });
+
+    let model = ChartModel::from_spec(spec).expect("model should accept a visual_map binding");
+    assert_eq!(
+        model.visual_map_by_series.get(&series_id).copied(),
+        Some(crate::ids::VisualMapId::new(1))
+    );
+}
+
+#[test]
+fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
+    let mut spec = basic_spec();
+    let series_id = spec.series[0].id;
+    let y_field = spec.series[0].encode.y;
+
+    spec.visual_maps.push(VisualMapSpec {
+        id: crate::ids::VisualMapId::new(1),
+        series: vec![series_id],
+        field: y_field,
+        domain: (0.0, 1.0),
+        initial_range: None,
+        buckets: 8,
+        out_of_range_opacity: 0.25,
+    });
+    spec.visual_maps.push(VisualMapSpec {
+        id: crate::ids::VisualMapId::new(2),
+        series: vec![series_id],
+        field: y_field,
+        domain: (0.0, 1.0),
+        initial_range: None,
+        buckets: 8,
+        out_of_range_opacity: 0.25,
+    });
+
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
 }
 
 #[test]

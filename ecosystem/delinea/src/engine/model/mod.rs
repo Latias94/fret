@@ -9,11 +9,12 @@ use thiserror::Error;
 
 use crate::ids::{
     AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId, StackId,
+    VisualMapId,
 };
 use crate::scale::AxisScale;
 use crate::spec::{
     AreaBaseline, AxisKind, AxisPointerTrigger, AxisPosition, AxisRange, FilterMode, SeriesEncode,
-    SeriesKind, StackStrategy,
+    SeriesKind, StackStrategy, VisualMapSpec,
 };
 
 pub use patch::*;
@@ -74,6 +75,8 @@ pub struct ChartModel {
     pub data_zoom_y: BTreeMap<DataZoomId, DataZoomYModel>,
     pub data_zoom_y_by_axis: BTreeMap<AxisId, DataZoomId>,
     pub axis_pointer: Option<AxisPointerModel>,
+    pub visual_maps: BTreeMap<VisualMapId, VisualMapModel>,
+    pub visual_map_by_series: BTreeMap<SeriesId, VisualMapId>,
 
     pub series_order: Vec<SeriesId>,
     pub series: BTreeMap<SeriesId, SeriesModel>,
@@ -94,6 +97,8 @@ impl ChartModel {
             data_zoom_y: BTreeMap::default(),
             data_zoom_y_by_axis: BTreeMap::default(),
             axis_pointer: None,
+            visual_maps: BTreeMap::default(),
+            visual_map_by_series: BTreeMap::default(),
             series_order: Vec::default(),
             series: BTreeMap::default(),
             revs: ModelRevisions::default(),
@@ -264,6 +269,8 @@ impl ChartModel {
             }
         });
 
+        let visual_maps = spec.visual_maps;
+
         let mut series_ids: BTreeSet<SeriesId> = BTreeSet::new();
         for series in spec.series {
             if !series_ids.insert(series.id) {
@@ -377,6 +384,8 @@ impl ChartModel {
             );
         }
 
+        apply_visual_maps(&mut model, visual_maps)?;
+
         let mut stack_groups: BTreeMap<
             StackId,
             (AxisId, AxisId, DatasetId, FieldId, StackStrategy),
@@ -426,6 +435,132 @@ impl ChartModel {
     ) -> Result<PatchReport, ModelError> {
         patch.apply(self, mode)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapDomain {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl VisualMapDomain {
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.min.is_finite() || !self.max.is_finite() || self.max <= self.min {
+            return None;
+        }
+        Some(self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapRange {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl VisualMapRange {
+    pub fn sanitize(self) -> Option<Self> {
+        if !self.min.is_finite() || !self.max.is_finite() {
+            return None;
+        }
+        let (min, max) = if self.max < self.min {
+            (self.max, self.min)
+        } else {
+            (self.min, self.max)
+        };
+        Some(Self { min, max })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct VisualMapModel {
+    pub id: VisualMapId,
+    pub field: FieldId,
+    pub domain: VisualMapDomain,
+    pub initial_range: Option<VisualMapRange>,
+    pub buckets: u16,
+    pub out_of_range_opacity: f32,
+}
+
+fn apply_visual_maps(
+    model: &mut ChartModel,
+    visual_maps: Vec<VisualMapSpec>,
+) -> Result<(), ModelError> {
+    let mut ids: BTreeSet<VisualMapId> = BTreeSet::new();
+    for map in visual_maps {
+        if !ids.insert(map.id) {
+            return Err(ModelError::DuplicateId { kind: "visual_map" });
+        }
+        if map.series.is_empty() {
+            return Err(ModelError::InvalidSpec {
+                reason: "visual_map.series must not be empty",
+            });
+        }
+
+        let domain = VisualMapDomain {
+            min: map.domain.0,
+            max: map.domain.1,
+        }
+        .sanitize()
+        .ok_or(ModelError::InvalidSpec {
+            reason: "visual_map.domain must be finite and non-degenerate",
+        })?;
+
+        let initial_range = map
+            .initial_range
+            .map(|(min, max)| VisualMapRange { min, max })
+            .and_then(VisualMapRange::sanitize);
+
+        let buckets = map.buckets.clamp(1, 64);
+
+        let out_of_range_opacity = if map.out_of_range_opacity.is_finite() {
+            map.out_of_range_opacity.clamp(0.0, 1.0)
+        } else {
+            0.25
+        };
+
+        for series_id in &map.series {
+            if !model.series.contains_key(series_id) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.series",
+                });
+            }
+            let Some(series) = model.series.get(series_id) else {
+                continue;
+            };
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                return Err(ModelError::MissingReference { kind: "dataset" });
+            };
+            if !dataset.fields.contains_key(&map.field) {
+                return Err(ModelError::MissingReference {
+                    kind: "visual_map.field",
+                });
+            }
+
+            if model
+                .visual_map_by_series
+                .insert(*series_id, map.id)
+                .is_some()
+            {
+                return Err(ModelError::InvalidSpec {
+                    reason: "multiple visual_maps target the same series (v1 restriction)",
+                });
+            }
+        }
+
+        model.visual_maps.insert(
+            map.id,
+            VisualMapModel {
+                id: map.id,
+                field: map.field,
+                domain,
+                initial_range,
+                buckets,
+                out_of_range_opacity,
+            },
+        );
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone)]

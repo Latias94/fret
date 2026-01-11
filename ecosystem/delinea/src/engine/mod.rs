@@ -47,6 +47,8 @@ pub struct ChartState {
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
+    pub visual_map_range:
+        BTreeMap<crate::ids::VisualMapId, Option<crate::engine::model::VisualMapRange>>,
     pub hover_px: Option<Point>,
     pub brush_selection_2d: Option<BrushSelection2D>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
@@ -158,7 +160,7 @@ impl ChartEngine {
                 },
             );
         }
-        Ok(Self {
+        let mut engine = Self {
             id,
             model,
             datasets: DatasetStore::default(),
@@ -174,7 +176,9 @@ impl ChartEngine {
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
             brush_link_cache: BrushLinkCache::default(),
-        })
+        };
+        engine.init_visual_map_state();
+        Ok(engine)
     }
 
     pub fn id(&self) -> ChartId {
@@ -520,6 +524,12 @@ impl ChartEngine {
                     self.marks_stage.mark_dirty();
                 }
             }
+            Action::SetVisualMapRange { visual_map, range } => {
+                let range = sanitize_range_option(range);
+                self.state.visual_map_range.insert(visual_map, range);
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
                 self.state.revision.bump();
@@ -544,6 +554,12 @@ impl ChartEngine {
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
+        }
+    }
+
+    fn init_visual_map_state(&mut self) {
+        for (id, map) in &self.model.visual_maps {
+            self.state.visual_map_range.insert(*id, map.initial_range);
         }
     }
 
@@ -1048,6 +1064,13 @@ impl ChartEngine {
         self.output.revision.bump();
         Ok(StepResult { unfinished })
     }
+}
+
+fn sanitize_range_option(
+    range: Option<(f64, f64)>,
+) -> Option<crate::engine::model::VisualMapRange> {
+    let (min, max) = range?;
+    crate::engine::model::VisualMapRange { min, max }.sanitize()
 }
 
 fn rect_contains_point(rect: Rect, point: Point) -> bool {

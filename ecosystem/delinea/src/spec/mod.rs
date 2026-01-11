@@ -1,6 +1,8 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId};
+use crate::ids::{
+    AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId, StackId, VisualMapId,
+};
 use crate::scale::AxisScale;
 
 #[cfg(feature = "serde")]
@@ -17,6 +19,7 @@ pub struct ChartSpec {
     pub data_zoom_x: Vec<DataZoomXSpec>,
     pub data_zoom_y: Vec<DataZoomYSpec>,
     pub axis_pointer: Option<AxisPointerSpec>,
+    pub visual_maps: Vec<VisualMapSpec>,
     pub series: Vec<SeriesSpec>,
 }
 
@@ -203,6 +206,38 @@ impl Default for DataZoomYSpec {
             axis: AxisId::new(0),
             min_value_span: None,
             max_value_span: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct VisualMapSpec {
+    pub id: VisualMapId,
+    /// Explicit series targets (v1: we only support series binding, not dataset-wide binding).
+    pub series: Vec<SeriesId>,
+    /// Input dimension (dataset field id).
+    pub field: FieldId,
+    /// Full domain used for bucket assignment.
+    pub domain: (f64, f64),
+    /// Optional initial selected range (used for inRange/outOfRange classification).
+    pub initial_range: Option<(f64, f64)>,
+    /// Bounded bucket count used for v1 batch-friendly rendering.
+    pub buckets: u16,
+    /// Opacity multiplier applied to out-of-range items.
+    pub out_of_range_opacity: f32,
+}
+
+impl Default for VisualMapSpec {
+    fn default() -> Self {
+        Self {
+            id: VisualMapId::new(0),
+            series: Vec::default(),
+            field: FieldId::new(0),
+            domain: (0.0, 1.0),
+            initial_range: None,
+            buckets: 8,
+            out_of_range_opacity: 0.25,
         }
     }
 }
