@@ -115,6 +115,7 @@ impl HorizontalBarsDemoDriver {
                 initial_range: Some((-20.0, 20.0)),
                 initial_piece_mask: None,
                 point_radius_mul_range: None,
+                opacity_mul_range: Some((0.2, 1.0)),
                 buckets: 8,
                 out_of_range_opacity: 0.25,
             }],

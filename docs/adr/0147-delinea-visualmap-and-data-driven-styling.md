@@ -72,7 +72,7 @@ engine.
 VisualMap can write a small set of channels in v1:
 
 - `color` (primary, most common ECharts usage),
-- `opacity` (often combined with `outOfRange` dimming).
+- `opacity` (often combined with `outOfRange` dimming; v1 supports a per-bucket ramp composed with `out_of_range_opacity`),
 - `point radius multiplier` (scatter-only; bucketized batches, adapter multiplies its base radius).
 
 Future extensions (P1+) may add:
@@ -139,17 +139,14 @@ These actions:
 P0:
 
 - [x] Add `VisualMapSpec` + ids + action surface to `delinea` (v1: series binding + buckets + selected range state).
-- [~] Add unit tests for:
-  - deterministic bucket assignment,
-  - `inRange/outOfRange` opacity application,
-  - budgeted stepping over large data.
-  (v1 includes spec validation tests; full mapping tests are still pending.)
+- [x] Add unit tests for deterministic bucket assignment and opacity composition.
+- [~] Add unit tests for budgeted stepping over large data.
 - [x] Add initial `fret-chart` adapter support for palette-driven marks (via `PaintId`) and opacity scaling.
 
 P1:
 
 - [~] Add a `fret-chart` VisualMap controller UI (continuous + piecewise) with improved affordances (labels, reset, drag gestures).
-- [~] Extend mapping to point size (scatter) and bar fill.
+- [x] Extend mapping to scatter point radius multipliers and bar fill bucket coloring.
 - Evaluate whether `MarkArena` should gain optional per-item attribute streams once a GPU-instanced
   path exists.
 

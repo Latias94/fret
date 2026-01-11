@@ -4502,6 +4502,7 @@ mod tests {
             initial_range: Some((-0.25, 0.75)),
             initial_piece_mask: None,
             point_radius_mul_range: None,
+            opacity_mul_range: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
         });

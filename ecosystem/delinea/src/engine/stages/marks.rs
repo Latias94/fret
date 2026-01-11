@@ -734,6 +734,11 @@ impl MarksStage {
                                 let v = a + t * (b - a);
                                 (v.is_finite() && v > 0.0).then_some(v)
                             });
+                            let opacity_mul = crate::visual_map::opacity_mul_for_bucket(
+                                &vm,
+                                paint_bucket,
+                                in_range,
+                            );
 
                             marks.nodes.push(MarkNode {
                                 id: series_mark_id(series.id, 16 + bucket_key as u64),
@@ -745,7 +750,7 @@ impl MarksStage {
                                 payload: MarkPayloadRef::Points(MarkPointsRef {
                                     points: range.clone(),
                                     fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
-                                    opacity_mul: (!in_range).then_some(vm.out_of_range_opacity),
+                                    opacity_mul,
                                     radius_mul,
                                     stroke: None,
                                 }),
@@ -1164,6 +1169,11 @@ impl MarksStage {
 
                             let paint_bucket = (bucket_key % (vm.buckets as usize)) as u16;
                             let in_range = bucket_key < (vm.buckets as usize);
+                            let opacity_mul = crate::visual_map::opacity_mul_for_bucket(
+                                &vm,
+                                paint_bucket,
+                                in_range,
+                            );
 
                             marks.nodes.push(MarkNode {
                                 id: series_mark_id(series.id, 16 + bucket_key as u64),
@@ -1175,7 +1185,7 @@ impl MarksStage {
                                 payload: MarkPayloadRef::Rect(MarkRectRef {
                                     rects: range.clone(),
                                     fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
-                                    opacity_mul: (!in_range).then_some(vm.out_of_range_opacity),
+                                    opacity_mul,
                                     stroke: None,
                                 }),
                             });

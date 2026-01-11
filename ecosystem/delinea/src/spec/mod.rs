@@ -243,6 +243,12 @@ pub struct VisualMapSpec {
     /// - applied only to point marks (scatter),
     /// - implemented via bucketized batches (no per-item attributes).
     pub point_radius_mul_range: Option<(f32, f32)>,
+    /// Optional opacity multiplier range (unitless, 0..=1) applied to in-range buckets.
+    ///
+    /// v1:
+    /// - computed per bucket (no per-item attributes),
+    /// - composed with `out_of_range_opacity` for out-of-range buckets.
+    pub opacity_mul_range: Option<(f32, f32)>,
     /// Bounded bucket count used for v1 batch-friendly rendering.
     pub buckets: u16,
     /// Opacity multiplier applied to out-of-range items.
@@ -260,6 +266,7 @@ impl Default for VisualMapSpec {
             initial_range: None,
             initial_piece_mask: None,
             point_radius_mul_range: None,
+            opacity_mul_range: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
         }

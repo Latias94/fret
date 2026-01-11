@@ -90,6 +90,7 @@ fn visual_map_accepts_series_binding() {
         initial_range: Some((0.2, 0.8)),
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });
@@ -116,6 +117,7 @@ fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
         initial_range: None,
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });
@@ -128,6 +130,7 @@ fn visual_map_rejects_multiple_maps_targeting_the_same_series() {
         initial_range: None,
         initial_piece_mask: None,
         point_radius_mul_range: None,
+        opacity_mul_range: None,
         buckets: 8,
         out_of_range_opacity: 0.25,
     });

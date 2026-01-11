@@ -48,6 +48,24 @@ pub fn paint_id_for_bucket(bucket: VisualMapBucket) -> PaintId {
     PaintId::new(bucket.bucket as u64)
 }
 
+pub fn opacity_mul_for_bucket(map: &VisualMapModel, bucket: u16, in_range: bool) -> Option<f32> {
+    let mut mul = 1.0f32;
+    if let Some((a, b)) = map.opacity_mul_range {
+        let denom = (map.buckets.saturating_sub(1) as f32).max(1.0);
+        let t = (bucket as f32 / denom).clamp(0.0, 1.0);
+        let v = a + t * (b - a);
+        if v.is_finite() {
+            mul *= v;
+        }
+    }
+
+    if !in_range {
+        mul *= map.out_of_range_opacity;
+    }
+
+    (mul.is_finite() && (mul - 1.0).abs() > f32::EPSILON).then_some(mul.clamp(0.0, 1.0))
+}
+
 fn bucket_index(domain: VisualMapDomain, buckets: f64, value: f64) -> u16 {
     let Some(domain) = domain.sanitize() else {
         return 0;
@@ -86,6 +104,7 @@ mod tests {
             initial_range: None,
             initial_piece_mask: None,
             point_radius_mul_range: None,
+            opacity_mul_range: None,
             buckets: 5,
             out_of_range_opacity: 0.25,
         }
@@ -122,5 +141,17 @@ mod tests {
         let mask = 0b0_01010u64;
         assert!(eval_bucket_for_value(&vm, None, Some(mask), 3.0).in_range);
         assert!(!eval_bucket_for_value(&vm, None, Some(mask), 1.0).in_range);
+    }
+
+    #[test]
+    fn opacity_mul_ramps_and_composes_with_out_of_range() {
+        let mut vm = vm();
+        vm.opacity_mul_range = Some((0.2, 1.0));
+
+        assert_eq!(opacity_mul_for_bucket(&vm, 0, true), Some(0.2));
+        assert_eq!(opacity_mul_for_bucket(&vm, 4, true), None);
+
+        assert_eq!(opacity_mul_for_bucket(&vm, 0, false), Some(0.05));
+        assert_eq!(opacity_mul_for_bucket(&vm, 4, false), Some(0.25));
     }
 }

@@ -481,6 +481,7 @@ pub struct VisualMapModel {
     pub initial_range: Option<VisualMapRange>,
     pub initial_piece_mask: Option<u64>,
     pub point_radius_mul_range: Option<(f32, f32)>,
+    pub opacity_mul_range: Option<(f32, f32)>,
     pub buckets: u16,
     pub out_of_range_opacity: f32,
 }
@@ -541,6 +542,13 @@ fn apply_visual_maps(
             .filter(|(a, b)| *a > 0.0 && *b > 0.0 && (*b - *a).abs() > f32::EPSILON)
             .map(|(a, b)| (a.clamp(0.01, 100.0), b.clamp(0.01, 100.0)));
 
+        let opacity_mul_range = map
+            .opacity_mul_range
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| if b < a { (b, a) } else { (a, b) })
+            .map(|(a, b)| (a.clamp(0.0, 1.0), b.clamp(0.0, 1.0)))
+            .filter(|(a, b)| (*b - *a).abs() > f32::EPSILON);
+
         for series_id in &map.series {
             if !model.series.contains_key(series_id) {
                 return Err(ModelError::MissingReference {
@@ -580,6 +588,7 @@ fn apply_visual_maps(
                 initial_range,
                 initial_piece_mask,
                 point_radius_mul_range,
+                opacity_mul_range,
                 buckets,
                 out_of_range_opacity,
             },
