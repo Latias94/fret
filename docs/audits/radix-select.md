@@ -56,3 +56,11 @@ Fret models Radix Select outcomes by composing:
 
 - Done: Close-on-window-blur/resize is supported in the overlay controller layer and enabled by
   default for Radix Select content overlays.
+
+## Conformance gates
+
+- `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates item-aligned select
+  placement against the Radix Vega web golden (`goldens/radix-web/v4/radix-vega/select-example.select.open-navigate-select.light.json`).
+- Upstream style reference: `repo-ref/ui/apps/v4/public/r/styles/radix-vega/select.json` (`min-w-36`,
+  `position=\"item-aligned\"`).
+- Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
