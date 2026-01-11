@@ -13,6 +13,12 @@ struct StreamingNv12DemoState {
     image_size: (u32, u32),
     frame: u64,
     close_requested: bool,
+    perf_every: u64,
+    auto_exit_frames: Option<u64>,
+}
+
+fn env_u64(name: &str) -> Option<u64> {
+    std::env::var(name).ok()?.parse().ok()
 }
 
 fn generate_solid_rgba8(width: u32, height: u32, rgba: (u8, u8, u8, u8)) -> Vec<u8> {
@@ -97,6 +103,10 @@ fn create_window_state(
         image_size,
         frame: 0,
         close_requested: false,
+        perf_every: env_u64("FRET_DEMO_STREAMING_PERF_EVERY")
+            .unwrap_or(60)
+            .max(1),
+        auto_exit_frames: env_u64("FRET_DEMO_AUTO_EXIT_FRAMES"),
     }
 }
 
@@ -183,6 +193,33 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingNv12DemoSta
     );
 
     if let Some(image) = state.image {
+        if state.frame % state.perf_every == 0 {
+            if let Some(snapshot) = app.global::<fret_core::StreamingUploadPerfSnapshot>() {
+                println!(
+                    "streaming_perf frame={} seen={} applied={} upload_bytes={} pending={} yuv_us={} yuv_out_bytes={}",
+                    state.frame,
+                    snapshot.update_effects_seen,
+                    snapshot.update_effects_applied,
+                    snapshot.upload_bytes_applied,
+                    snapshot.pending_updates,
+                    snapshot.yuv_convert_us,
+                    snapshot.yuv_convert_output_bytes
+                );
+            }
+        }
+
+        if let Some(limit) = state.auto_exit_frames
+            && state.frame >= limit
+            && !state.close_requested
+        {
+            state.close_requested = true;
+            if let Some(image) = state.image.take() {
+                app.push_effect(Effect::ImageUnregister { image });
+            }
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
         scene.push(SceneOp::Image {
             order: DrawOrder(1),
             rect,
