@@ -40,6 +40,15 @@ Notes:
 - Use `EffectLayerProps.quality` (`Auto/Low/Medium/High`) when you need predictable trade-offs; otherwise keep `Auto` and
   rely on budgets + deterministic degradation (ADR 0120).
 
+## Glass recipe template (fret-ui-kit)
+
+For a concrete, token-driven recipe example (suitable as a copy/paste template for your own custom recipes), see:
+
+- Token/resolve/clamp helpers: `ecosystem/fret-ui-kit/src/recipes/glass.rs`
+- Declarative wrapper (feature-gated): `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+
+The `glass_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
+
 ## When to use Tier A instead (video / viewport / NLE-class)
 
 If your "component" wants to do substantial rendering work (custom shaders, video decoding, engine viewports):
@@ -57,4 +66,3 @@ This keeps the UI contracts deterministic and portable, while still enabling adv
   - `FRET_EFFECTS_DEMO_PROFILE=1 FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin effects_demo`
 - RenderDoc workflow: `docs/renderdoc-inspection.md`
 - Practical checklist: `docs/debugging-playbook.md`
-
