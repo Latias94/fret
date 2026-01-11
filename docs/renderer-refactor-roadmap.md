@@ -223,6 +223,7 @@ Recommended entry points:
 - `cargo run -p fret-demo --bin plot_stress_demo -- --frames 600`
 - `FRET_TABLE_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin table_stress_demo`
 - `FRET_VLIST_STRESS_AUTO_SCROLL=1 FRET_VLIST_STRESS_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin virtual_list_stress_demo`
+- `FRET_EFFECTS_DEMO_PROFILE=1 FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin effects_demo`
 
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
