@@ -609,8 +609,8 @@ impl Gizmo3dDemoModel {
         out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
         out.push_str("  L: local/world   P: pivot active/center\n");
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
-        out.push_str("  V: toggle size policy (pixels/bounds)\n");
-        out.push_str("  ; / ': bounds fraction -/+ (Shift: bigger step)\n");
+        out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
+        out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
@@ -1946,9 +1946,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         return;
                     }
                     m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
-                        GizmoSizePolicy::ConstantPixels => GizmoSizePolicy::SelectionBounds {
-                            fraction_of_max_extent: 1.2,
-                        },
+                        GizmoSizePolicy::ConstantPixels => {
+                            GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                                min_fraction_of_max_extent: 0.25,
+                                max_fraction_of_max_extent: 1.50,
+                            }
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
+                            GizmoSizePolicy::SelectionBounds {
+                                fraction_of_max_extent: 1.2,
+                            }
+                        }
                         GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
                     };
                 });
@@ -1965,11 +1973,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    if let GizmoSizePolicy::SelectionBounds {
-                        ref mut fraction_of_max_extent,
-                    } = m.gizmo.config.size_policy
-                    {
-                        *fraction_of_max_extent = (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            ref mut min_fraction_of_max_extent,
+                            max_fraction_of_max_extent,
+                        } => {
+                            *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
+                                .clamp(0.0, max_fraction_of_max_extent);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
                     }
                 });
                 app.request_redraw(window);
@@ -1985,11 +2003,21 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    if let GizmoSizePolicy::SelectionBounds {
-                        ref mut fraction_of_max_extent,
-                    } = m.gizmo.config.size_policy
-                    {
-                        *fraction_of_max_extent = (*fraction_of_max_extent + step).clamp(0.05, 5.0);
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent + step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            min_fraction_of_max_extent,
+                            ref mut max_fraction_of_max_extent,
+                        } => {
+                            *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
+                                .clamp(min_fraction_of_max_extent, 5.0);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
                     }
                 });
                 app.request_redraw(window);
