@@ -6,6 +6,8 @@ pub mod collection_semantics;
 pub mod controllable_state;
 pub mod dismissible;
 pub mod focus_scope;
+#[cfg(feature = "recipes")]
+pub mod glass;
 pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
