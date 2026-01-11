@@ -4,6 +4,13 @@ use glam::{Mat4, Vec2, Vec3};
 use crate::gizmo::{Aabb3, DepthMode, GizmoDrawList3d, Line3d, Triangle3d};
 use crate::math::{DepthRange, ViewportRect, ray_from_screen, unproject_point};
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewGizmoLabel {
+    pub screen_px: Vec2,
+    pub text: &'static str,
+    pub color: Color,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewGizmoAnchor {
     TopLeft,
@@ -16,6 +23,12 @@ impl Default for ViewGizmoAnchor {
     fn default() -> Self {
         Self::TopRight
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewGizmoProjection {
+    Perspective,
+    Orthographic,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -379,6 +392,15 @@ impl ViewGizmo {
     }
 
     pub fn draw(&self, view_projection: Mat4, viewport: ViewportRect) -> GizmoDrawList3d {
+        self.draw_with_projection(view_projection, viewport, ViewGizmoProjection::Perspective)
+    }
+
+    pub fn draw_with_projection(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        projection: ViewGizmoProjection,
+    ) -> GizmoDrawList3d {
         let mut out = GizmoDrawList3d::default();
         let Some((center, half, _world_per_px)) = self.cube_params(view_projection, viewport)
         else {
@@ -407,15 +429,26 @@ impl ViewGizmo {
         }
 
         if self.config.center_button_radius_px > 0.0 {
+            let base_color = match projection {
+                ViewGizmoProjection::Perspective => self.config.edge_color,
+                ViewGizmoProjection::Orthographic => self.config.y_color,
+            };
             let center_button_color = if self.state.hovered_center_button {
                 self.config.hover_color
             } else {
-                self.config.edge_color
+                base_color
             };
             out.lines.extend(cube_edges(
                 cube_corners(center, half * 0.28),
                 center_button_color,
             ));
+
+            if matches!(projection, ViewGizmoProjection::Orthographic) {
+                let mut fill = base_color;
+                fill.a = (fill.a * 0.35).clamp(0.0, 1.0);
+                let c = cube_corners(center, half * 0.26);
+                out.triangles.extend(cube_faces(c, fill));
+            }
         }
 
         for l in &mut out.lines {
@@ -423,6 +456,65 @@ impl ViewGizmo {
         }
         for t in &mut out.triangles {
             t.depth = DepthMode::Always;
+        }
+
+        out
+    }
+
+    pub fn labels(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        projection: ViewGizmoProjection,
+    ) -> Vec<ViewGizmoLabel> {
+        let Some((center, half, _world_per_px)) = self.cube_params(view_projection, viewport)
+        else {
+            return Vec::new();
+        };
+
+        let mut out = Vec::with_capacity(8);
+        let axis_len = half * 1.25;
+        let push =
+            |out: &mut Vec<ViewGizmoLabel>, world: Vec3, text: &'static str, color: Color| {
+                if let Some(p) = crate::math::project_point(
+                    view_projection,
+                    viewport,
+                    world,
+                    self.config.depth_range,
+                ) {
+                    out.push(ViewGizmoLabel {
+                        screen_px: p.screen,
+                        text,
+                        color,
+                    });
+                }
+            };
+
+        push(
+            &mut out,
+            center + Vec3::X * axis_len,
+            "X",
+            self.config.x_color,
+        );
+        push(
+            &mut out,
+            center + Vec3::Y * axis_len,
+            "Y",
+            self.config.y_color,
+        );
+        push(
+            &mut out,
+            center + Vec3::Z * axis_len,
+            "Z",
+            self.config.z_color,
+        );
+
+        if self.config.center_button_radius_px > 0.0 {
+            let text = match projection {
+                ViewGizmoProjection::Perspective => "P",
+                ViewGizmoProjection::Orthographic => "O",
+            };
+            push(&mut out, center, text, self.config.edge_color);
         }
 
         out
