@@ -641,6 +641,25 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    /// Returns the current frame's visual bounds for `node` by applying any ancestor
+    /// `render_transform` matrices (including the node's own transform) to its layout bounds.
+    ///
+    /// This is intended for debugging/tests. It is *not* a stable cross-frame geometry query (see
+    /// `fret_ui::elements::visual_bounds_for_element` for that contract).
+    pub fn debug_node_visual_bounds(&self, node: NodeId) -> Option<Rect> {
+        let _ = self.nodes.get(node)?;
+        let path = self.debug_node_path(node);
+        let mut transform = Transform2D::IDENTITY;
+        for id in path {
+            if let Some(local) = self.node_render_transform(id) {
+                transform = transform.compose(local);
+            }
+        }
+        self.nodes
+            .get(node)
+            .map(|n| rect_aabb_transformed(n.bounds, transform))
+    }
+
     #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn layout_engine_child_local_rect(
         &self,

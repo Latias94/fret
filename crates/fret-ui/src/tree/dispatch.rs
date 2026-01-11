@@ -670,7 +670,20 @@ impl<H: UiHost> UiTree<H> {
             .or(barrier_root)
             .or(Some(default_root))
         } else {
-            self.focus.or(Some(default_root))
+            match event {
+                Event::SetTextSelection { .. } => {
+                    let selection_node = self.window.and_then(|window| {
+                        crate::elements::with_window_state(app, window, |window_state| {
+                            window_state
+                                .active_text_selection()
+                                .and_then(|selection| window_state.node_entry(selection.element))
+                                .map(|entry| entry.node)
+                        })
+                    });
+                    selection_node.or(self.focus).or(Some(default_root))
+                }
+                _ => self.focus.or(Some(default_root)),
+            }
         };
 
         let Some(mut node_id) = target else {
