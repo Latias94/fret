@@ -16,6 +16,17 @@ pub(super) fn handle_panning_move<H: UiHost>(
 
     canvas.stop_pan_inertia_timer(cx.app);
 
+    let zoom = canvas.cached_zoom;
+    let inv_zoom = if zoom.is_finite() && zoom > 0.0 {
+        1.0 / zoom
+    } else {
+        1.0
+    };
+    let delta_canvas = crate::core::CanvasPoint {
+        x: delta.x.0 * inv_zoom,
+        y: delta.y.0 * inv_zoom,
+    };
+
     let now = Instant::now();
     let dt = canvas
         .interaction
@@ -26,8 +37,8 @@ pub(super) fn handle_panning_move<H: UiHost>(
 
     if dt.is_finite() && dt > 0.0 && dt < 0.5 {
         let inst = crate::core::CanvasPoint {
-            x: delta.x.0 / dt,
-            y: delta.y.0 / dt,
+            x: delta_canvas.x / dt,
+            y: delta_canvas.y / dt,
         };
         let alpha = (dt * 24.0).clamp(0.0, 1.0);
         canvas.interaction.pan_velocity = crate::core::CanvasPoint {
@@ -39,8 +50,8 @@ pub(super) fn handle_panning_move<H: UiHost>(
     }
 
     canvas.update_view_state(cx.app, |s| {
-        s.pan.x += delta.x.0;
-        s.pan.y += delta.y.0;
+        s.pan.x += delta_canvas.x;
+        s.pan.y += delta_canvas.y;
     });
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

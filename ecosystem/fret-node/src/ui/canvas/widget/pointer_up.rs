@@ -99,10 +99,7 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         }
 
         if !ops.is_empty() {
-            canvas.history.record(crate::ops::GraphTransaction {
-                label: Some("Resize Node".to_string()),
-                ops,
-            });
+            let _ = canvas.commit_ops(cx.app, cx.window, Some("Resize Node"), ops);
         }
 
         cx.release_pointer_capture();
@@ -123,14 +120,16 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         if let Some(end) = end
             && end != resize.start_rect
         {
-            canvas.history.record(crate::ops::GraphTransaction {
-                label: Some("Resize Group".to_string()),
-                ops: vec![GraphOp::SetGroupRect {
+            let _ = canvas.commit_ops(
+                cx.app,
+                cx.window,
+                Some("Resize Group"),
+                vec![GraphOp::SetGroupRect {
                     id: resize.group,
                     from: resize.start_rect,
                     to: end,
                 }],
-            });
+            );
         }
 
         cx.release_pointer_capture();
@@ -179,10 +178,7 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         ops.append(&mut node_ops);
 
         if !ops.is_empty() {
-            canvas.history.record(crate::ops::GraphTransaction {
-                label: Some("Move Group".to_string()),
-                ops,
-            });
+            let _ = canvas.commit_ops(cx.app, cx.window, Some("Move Group"), ops);
         }
 
         cx.release_pointer_capture();
@@ -294,10 +290,7 @@ pub(super) fn handle_pointer_up<H: UiHost>(
             } else {
                 "Move Nodes"
             };
-            canvas.history.record(crate::ops::GraphTransaction {
-                label: Some(label.to_string()),
-                ops,
-            });
+            let _ = canvas.commit_ops(cx.app, cx.window, Some(label), ops);
         }
         canvas.interaction.pending_node_drag = None;
         canvas.interaction.snap_guides = None;

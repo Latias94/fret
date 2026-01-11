@@ -60,6 +60,7 @@ struct NodeGraphDemoViewStatePersistence {
 #[derive(Default)]
 struct DomainDemoCallbacks {
     commit_count: u64,
+    last_viewport_log_at: Option<Instant>,
 }
 
 impl NodeGraphCallbacks for DomainDemoCallbacks {
@@ -79,12 +80,20 @@ impl NodeGraphCallbacks for DomainDemoCallbacks {
         for change in changes {
             match change {
                 ViewChange::Viewport { pan, zoom } => {
-                    tracing::debug!(
-                        pan_x = pan.x,
-                        pan_y = pan.y,
-                        zoom = *zoom,
-                        "viewport changed"
-                    );
+                    let now = Instant::now();
+                    let should_log = match self.last_viewport_log_at {
+                        Some(prev) => now.duration_since(prev) >= Duration::from_millis(200),
+                        None => true,
+                    };
+                    if should_log {
+                        self.last_viewport_log_at = Some(now);
+                        tracing::info!(
+                            pan_x = pan.x,
+                            pan_y = pan.y,
+                            zoom = *zoom,
+                            "viewport changed"
+                        );
+                    }
                 }
                 ViewChange::Selection {
                     nodes,
