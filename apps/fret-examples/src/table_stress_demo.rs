@@ -577,6 +577,7 @@ impl WinitAppDriver for TableStressDriver {
                                                         overscan: 8,
                                                         column_resize_mode:
                                                             fret_ui_kit::headless::table::ColumnResizeMode::OnEnd,
+                                                        optimize_paint_order: true,
                                                         ..Default::default()
                                                     },
                                                     |_row| None,

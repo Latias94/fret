@@ -208,6 +208,9 @@ This section is intentionally lightweight and should be updated as work lands.
 - A unified renderer-wide perf snapshot exists (ADR 0096): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
   P0 counters (draw calls, pipeline/bind group sets, upload bytes, encode/prepare timing) and is printed by
   `apps/fret-svg-atlas-stress/src/main.rs` and stress demos in `apps/fret-examples/src/` (e.g. `plot_stress_demo.rs`, `table_stress_demo.rs`, `virtual_list_stress_demo.rs`) (`renderer_perf:`).
+- `fret-ui-kit` tables have an opt-in paint-order optimization (`TableViewProps.optimize_paint_order`) that layers
+  cell chrome (borders/backgrounds) separately from cell content, improving quad/text batching in text-heavy workloads.
+  `apps/fret-examples/src/table_stress_demo.rs` enables it for baseline capture.
 
 ## Perf Baseline Capture (Local)
 

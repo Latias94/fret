@@ -125,6 +125,13 @@ pub struct TableViewProps {
     pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
+    /// When enabled, paints table cell backgrounds/borders in a separate layer from cell content.
+    ///
+    /// This is a targeted performance knob intended to reduce renderer pipeline switches for
+    /// text-heavy tables by avoiding per-cell interleaving of quads and text draws.
+    ///
+    /// Note: this may increase UI tree complexity because it introduces an overlay layer per row.
+    pub optimize_paint_order: bool,
 }
 
 impl Default for TableViewProps {
@@ -142,6 +149,7 @@ impl Default for TableViewProps {
             grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
+            optimize_paint_order: false,
         }
     }
 }
@@ -1483,51 +1491,177 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                 |cx: &mut ElementContext<'_, H>,
                                                                  cols: &[&ColumnDef<TData>],
                                                                  scroll_x: Option<ScrollHandle>| {
-                                                                    let row = stack::hstack(
-                                                                        cx,
-                                                                        stack::HStackProps::default()
-                                                                            .gap_x(Space::N0)
-                                                                            .justify(Justify::Start)
-                                                                            .items(Items::Center),
-                                                                        |cx| {
-                                                                            cols.iter()
-                                                                                .map(|col| {
-                                                                                    let col_w = resolve_column_width(
-                                                                                        col,
-                                                                                        &state_value,
-                                                                                        &props,
-                                                                                    );
-                                                                                    cx.container(
-                                                                                        ContainerProps {
-                                                                                            padding: Edges::symmetric(
-                                                                                                cell_px, cell_py,
-                                                                                            ),
-                                                                                            border: Edges {
-                                                                                                right: Px(1.0),
+                                                                    let row = if props.optimize_paint_order {
+                                                                        cx.container(
+                                                                            ContainerProps {
+                                                                                layout: LayoutStyle {
+                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                        height: Length::Fill,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                ..Default::default()
+                                                                            },
+                                                                            |cx| {
+                                                                                let background_row = stack::hstack(
+                                                                                    cx,
+                                                                                    stack::HStackProps::default()
+                                                                                        .gap_x(Space::N0)
+                                                                                        .justify(Justify::Start)
+                                                                                        .items(Items::Stretch),
+                                                                                    |cx| {
+                                                                                        cols.iter()
+                                                                                            .map(|col| {
+                                                                                                let col_w = resolve_column_width(
+                                                                                                    col,
+                                                                                                    &state_value,
+                                                                                                    &props,
+                                                                                                );
+                                                                                                cx.container(
+                                                                                                    ContainerProps {
+                                                                                                        border: Edges {
+                                                                                                            right: Px(1.0),
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        border_color: Some(border),
+                                                                                                        layout: LayoutStyle {
+                                                                                                            size: fret_ui::element::SizeStyle {
+                                                                                                                width: Length::Px(col_w),
+                                                                                                                height: Length::Fill,
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                                                shrink: 0.0,
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    |_| Vec::new(),
+                                                                                                )
+                                                                                            })
+                                                                                            .collect()
+                                                                                    },
+                                                                                );
+
+                                                                                let content_overlay = cx.container(
+                                                                                    ContainerProps {
+                                                                                        layout: LayoutStyle {
+                                                                                            size: fret_ui::element::SizeStyle {
+                                                                                                width: Length::Fill,
+                                                                                                height: Length::Fill,
                                                                                                 ..Default::default()
                                                                                             },
-                                                                                            border_color: Some(border),
-                                                                                            layout: LayoutStyle {
-                                                                                                size: fret_ui::element::SizeStyle {
-                                                                                                    width: Length::Px(col_w),
-                                                                                                    ..Default::default()
-                                                                                                },
-                                                                                                flex: fret_ui::element::FlexItemStyle {
-                                                                                                    shrink: 0.0,
-                                                                                                    ..Default::default()
-                                                                                                },
-                                                                                                ..Default::default()
+                                                                                            position:
+                                                                                                fret_ui::element::PositionStyle::Absolute,
+                                                                                            inset: fret_ui::element::InsetStyle {
+                                                                                                top: Some(Px(0.0)),
+                                                                                                right: Some(Px(0.0)),
+                                                                                                bottom: Some(Px(0.0)),
+                                                                                                left: Some(Px(0.0)),
                                                                                             },
                                                                                             ..Default::default()
                                                                                         },
-                                                                                        |cx| {
-                                                                                            render_cell(cx, &data_row, col)
-                                                                                        },
-                                                                                    )
-                                                                                })
-                                                                                .collect()
-                                                                        },
-                                                                    );
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |cx| {
+                                                                                        vec![stack::hstack(
+                                                                                            cx,
+                                                                                            stack::HStackProps::default()
+                                                                                                .gap_x(Space::N0)
+                                                                                                .justify(Justify::Start)
+                                                                                                .items(Items::Center),
+                                                                                            |cx| {
+                                                                                                cols.iter()
+                                                                                                    .map(|col| {
+                                                                                                        let col_w = resolve_column_width(
+                                                                                                            col,
+                                                                                                            &state_value,
+                                                                                                            &props,
+                                                                                                        );
+                                                                                                        cx.container(
+                                                                                                            ContainerProps {
+                                                                                                                padding: Edges::symmetric(
+                                                                                                                    cell_px,
+                                                                                                                    cell_py,
+                                                                                                                ),
+                                                                                                                layout: LayoutStyle {
+                                                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                                                        width: Length::Px(col_w),
+                                                                                                                        height: Length::Fill,
+                                                                                                                        ..Default::default()
+                                                                                                                    },
+                                                                                                                    flex: fret_ui::element::FlexItemStyle {
+                                                                                                                        shrink: 0.0,
+                                                                                                                        ..Default::default()
+                                                                                                                    },
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            |cx| {
+                                                                                                                render_cell(cx, &data_row, col)
+                                                                                                            },
+                                                                                                        )
+                                                                                                    })
+                                                                                                    .collect()
+                                                                                            },
+                                                                                        )]
+                                                                                    },
+                                                                                );
+
+                                                                                vec![background_row, content_overlay]
+                                                                            },
+                                                                        )
+                                                                    } else {
+                                                                        stack::hstack(
+                                                                            cx,
+                                                                            stack::HStackProps::default()
+                                                                                .gap_x(Space::N0)
+                                                                                .justify(Justify::Start)
+                                                                                .items(Items::Center),
+                                                                            |cx| {
+                                                                                cols.iter()
+                                                                                    .map(|col| {
+                                                                                        let col_w = resolve_column_width(
+                                                                                            col,
+                                                                                            &state_value,
+                                                                                            &props,
+                                                                                        );
+                                                                                        cx.container(
+                                                                                            ContainerProps {
+                                                                                                padding: Edges::symmetric(
+                                                                                                    cell_px, cell_py,
+                                                                                                ),
+                                                                                                border: Edges {
+                                                                                                    right: Px(1.0),
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                border_color: Some(border),
+                                                                                                layout: LayoutStyle {
+                                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                                        width: Length::Px(col_w),
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    flex: fret_ui::element::FlexItemStyle {
+                                                                                                        shrink: 0.0,
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            |cx| {
+                                                                                                render_cell(cx, &data_row, col)
+                                                                                            },
+                                                                                        )
+                                                                                    })
+                                                                                    .collect()
+                                                                            },
+                                                                        )
+                                                                    };
 
                                                                     if let Some(scroll_x) = scroll_x {
                                                                         cx.scroll(
