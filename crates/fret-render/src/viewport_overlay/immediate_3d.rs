@@ -726,6 +726,9 @@ struct VsIn {
 struct VsOut {
   @builtin(position) pos: vec4f,
   @location(0) color: vec4f,
+  // line_uv.x < 0 => non-line (triangle) fragment.
+  // For thick lines: x = t (0..1 along segment), y = side (-1..1 across thickness).
+  @location(1) line_uv: vec2f,
 };
 
 @vertex
@@ -733,6 +736,7 @@ fn vs_main_tri(in: VsIn) -> VsOut {
   var out: VsOut;
   out.pos = globals.view_proj * vec4f(in.pos, 1.0);
   out.color = in.color;
+  out.line_uv = vec2f(-1.0, 0.0);
   return out;
 }
 
@@ -754,27 +758,48 @@ fn vs_main_thick_line(in: LineVsIn) -> VsOut {
 
   let ndc_a = clip_a.xy / clip_a.w;
   let ndc_b = clip_b.xy / clip_b.w;
-  let dir_px = (ndc_b - ndc_a) * viewport;
+  let dir_px = (ndc_b - ndc_a) * viewport * 0.5;
 
   var offset_ndc = vec2f(0.0, 0.0);
+  var cap_ndc = vec2f(0.0, 0.0);
   if dot(dir_px, dir_px) > 1e-8 && thickness_px > 0.0 {
     let dir_px_norm = normalize(dir_px);
     let normal_px = vec2f(-dir_px_norm.y, dir_px_norm.x);
-    offset_ndc = normal_px * (thickness_px / viewport) * 0.5;
+    offset_ndc = normal_px * (thickness_px / viewport);
+    cap_ndc = dir_px_norm * (thickness_px / viewport);
   }
 
   let clip = mix(clip_a, clip_b, in.t);
-  let ndc = clip.xy / clip.w;
+  let ndc_a2 = ndc_a - cap_ndc;
+  let ndc_b2 = ndc_b + cap_ndc;
+  let ndc = mix(ndc_a2, ndc_b2, in.t);
   let ndc_out = ndc + offset_ndc * in.side;
 
   var out: VsOut;
   out.pos = vec4f(ndc_out * clip.w, clip.z, clip.w);
   out.color = in.color;
+  out.line_uv = vec2f(in.t, in.side);
   return out;
 }
 
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4f {
-  return in.color;
+  if in.line_uv.x < 0.0 {
+    return in.color;
+  }
+
+  let thickness_px = globals.viewport_and_thickness.z;
+  let half_px = thickness_px * 0.5;
+  let aa_px = min(1.0, half_px);
+
+  let d_px = abs(in.line_uv.y) * half_px;
+  let edge0 = half_px - aa_px;
+  let side_alpha = 1.0 - smoothstep(edge0, half_px, d_px);
+
+  let t = in.line_uv.x;
+  let du = max(fwidth(t), 1e-5);
+  let end_alpha = smoothstep(0.0, du, t) * smoothstep(0.0, du, 1.0 - t);
+
+  return vec4f(in.color.rgb, in.color.a * side_alpha * end_alpha);
 }
 "#;
