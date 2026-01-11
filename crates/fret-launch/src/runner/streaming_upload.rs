@@ -21,6 +21,11 @@ pub(crate) struct StreamingUploadStats {
     pub staging_budget_bytes: u64,
     pub pending_updates: u32,
     pub pending_staging_bytes: u64,
+
+    pub yuv_conversions_attempted: u32,
+    pub yuv_conversions_applied: u32,
+    pub yuv_convert_us: u64,
+    pub yuv_convert_output_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -411,33 +416,46 @@ impl StreamingUploadQueue {
                             uv_plane,
                             color_info,
                             alpha_mode: _,
-                        } => yuv::nv12_to_rgba8_rect(
-                            width,
-                            height,
-                            update_rect_px,
-                            y_bytes_per_row,
-                            &y_plane,
-                            uv_bytes_per_row,
-                            &uv_plane,
-                            color_info.range,
-                            color_info.matrix,
-                        )
-                        .map(|(rect, bytes)| {
-                            Some(Effect::ImageUpdateRgba8 {
-                                window,
-                                token,
-                                image,
-                                stream_generation,
+                        } => {
+                            stats.yuv_conversions_attempted =
+                                stats.yuv_conversions_attempted.saturating_add(1);
+                            let t0 = std::time::Instant::now();
+                            yuv::nv12_to_rgba8_rect(
                                 width,
                                 height,
-                                update_rect_px: Some(rect),
-                                bytes_per_row: rect.w.saturating_mul(4),
-                                bytes,
-                                color_info: ImageColorInfo::srgb_rgba(),
-                                alpha_mode: AlphaMode::Opaque,
+                                update_rect_px,
+                                y_bytes_per_row,
+                                &y_plane,
+                                uv_bytes_per_row,
+                                &uv_plane,
+                                color_info.range,
+                                color_info.matrix,
+                            )
+                            .map(|(rect, bytes)| {
+                                stats.yuv_convert_us = stats
+                                    .yuv_convert_us
+                                    .saturating_add(t0.elapsed().as_micros() as u64);
+                                stats.yuv_convert_output_bytes = stats
+                                    .yuv_convert_output_bytes
+                                    .saturating_add(bytes.len() as u64);
+                                stats.yuv_conversions_applied =
+                                    stats.yuv_conversions_applied.saturating_add(1);
+                                Some(Effect::ImageUpdateRgba8 {
+                                    window,
+                                    token,
+                                    image,
+                                    stream_generation,
+                                    width,
+                                    height,
+                                    update_rect_px: Some(rect),
+                                    bytes_per_row: rect.w.saturating_mul(4),
+                                    bytes,
+                                    color_info: ImageColorInfo::srgb_rgba(),
+                                    alpha_mode: AlphaMode::Opaque,
+                                })
                             })
-                        })
-                        .map_err(|e| e),
+                            .map_err(|e| e)
+                        }
                         Effect::ImageUpdateI420 {
                             window,
                             token,
@@ -454,35 +472,48 @@ impl StreamingUploadQueue {
                             v_plane,
                             color_info,
                             alpha_mode: _,
-                        } => yuv::i420_to_rgba8_rect(
-                            width,
-                            height,
-                            update_rect_px,
-                            y_bytes_per_row,
-                            &y_plane,
-                            u_bytes_per_row,
-                            &u_plane,
-                            v_bytes_per_row,
-                            &v_plane,
-                            color_info.range,
-                            color_info.matrix,
-                        )
-                        .map(|(rect, bytes)| {
-                            Some(Effect::ImageUpdateRgba8 {
-                                window,
-                                token,
-                                image,
-                                stream_generation,
+                        } => {
+                            stats.yuv_conversions_attempted =
+                                stats.yuv_conversions_attempted.saturating_add(1);
+                            let t0 = std::time::Instant::now();
+                            yuv::i420_to_rgba8_rect(
                                 width,
                                 height,
-                                update_rect_px: Some(rect),
-                                bytes_per_row: rect.w.saturating_mul(4),
-                                bytes,
-                                color_info: ImageColorInfo::srgb_rgba(),
-                                alpha_mode: AlphaMode::Opaque,
+                                update_rect_px,
+                                y_bytes_per_row,
+                                &y_plane,
+                                u_bytes_per_row,
+                                &u_plane,
+                                v_bytes_per_row,
+                                &v_plane,
+                                color_info.range,
+                                color_info.matrix,
+                            )
+                            .map(|(rect, bytes)| {
+                                stats.yuv_convert_us = stats
+                                    .yuv_convert_us
+                                    .saturating_add(t0.elapsed().as_micros() as u64);
+                                stats.yuv_convert_output_bytes = stats
+                                    .yuv_convert_output_bytes
+                                    .saturating_add(bytes.len() as u64);
+                                stats.yuv_conversions_applied =
+                                    stats.yuv_conversions_applied.saturating_add(1);
+                                Some(Effect::ImageUpdateRgba8 {
+                                    window,
+                                    token,
+                                    image,
+                                    stream_generation,
+                                    width,
+                                    height,
+                                    update_rect_px: Some(rect),
+                                    bytes_per_row: rect.w.saturating_mul(4),
+                                    bytes,
+                                    color_info: ImageColorInfo::srgb_rgba(),
+                                    alpha_mode: AlphaMode::Opaque,
+                                })
                             })
-                        })
-                        .map_err(|e| e),
+                            .map_err(|e| e)
+                        }
                         other => Ok(Some(other)),
                     };
 

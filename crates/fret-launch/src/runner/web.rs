@@ -351,6 +351,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 upload_bytes_applied: stats.upload_bytes_applied,
                 pending_updates: u64::from(stats.pending_updates),
                 pending_staging_bytes: stats.pending_staging_bytes,
+                yuv_convert_us: stats.yuv_convert_us,
+                yuv_convert_output_bytes: stats.yuv_convert_output_bytes,
+                yuv_conversions_attempted: u64::from(stats.yuv_conversions_attempted),
+                yuv_conversions_applied: u64::from(stats.yuv_conversions_applied),
             });
         }
         if self.config.streaming_update_ack_enabled {

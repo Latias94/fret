@@ -22,4 +22,11 @@ pub struct StreamingUploadPerfSnapshot {
 
     pub pending_updates: u64,
     pub pending_staging_bytes: u64,
+
+    /// Total time spent in CPU YUV-to-RGBA8 fallback conversions during this frame (microseconds).
+    pub yuv_convert_us: u64,
+    /// Total bytes produced by CPU YUV-to-RGBA8 fallback conversions during this frame.
+    pub yuv_convert_output_bytes: u64,
+    pub yuv_conversions_attempted: u64,
+    pub yuv_conversions_applied: u64,
 }
