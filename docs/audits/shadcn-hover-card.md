@@ -51,3 +51,4 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn hover_card::tests`
+- Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`

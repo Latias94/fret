@@ -34,3 +34,10 @@ Key upstream concepts:
 - Pass: Text selection containment (`hasSelectionRef`) is modeled by tracking the active non-empty
   text selection at the window runtime level and suppressing close while a selection exists in the
   hover card overlay root.
+
+## Conformance gates
+
+- `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates hover-card placement
+  (popper gap + cross-axis delta) against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/hover-card-example.hover-card.hover.light.json`).
+- Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
