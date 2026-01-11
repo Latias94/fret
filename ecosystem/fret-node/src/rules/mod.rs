@@ -9,6 +9,7 @@ use crate::core::{
     Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection,
     PortId, PortKey, PortKind, SymbolId,
 };
+use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{EdgeEndpoints, GraphOp};
 use crate::types::{TypeCompatibility, TypeCompatibilityResult, TypeDesc};
 
@@ -279,7 +280,16 @@ fn disconnect_for_capacity(
 ///
 /// This is a rules-driven decision point used by the UI interaction loop.
 /// The returned ops are intended to be applied as part of a single transaction.
-pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+pub fn plan_connect_with_mode(
+    graph: &Graph,
+    a: PortId,
+    b: PortId,
+    mode: NodeGraphConnectionMode,
+) -> ConnectPlan {
+    if a == b {
+        return ConnectPlan::reject("cannot connect a port to itself");
+    }
+
     let Some(port_a) = graph.ports.get(&a) else {
         return ConnectPlan::reject(format!("missing port: {a:?}"));
     };
@@ -287,17 +297,26 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
         return ConnectPlan::reject(format!("missing port: {b:?}"));
     };
 
-    let (from_id, to_id, from, to) = match (port_a.dir, port_b.dir) {
-        (PortDirection::Out, PortDirection::In) => (a, b, port_a, port_b),
-        (PortDirection::In, PortDirection::Out) => (b, a, port_b, port_a),
-        _ => {
-            return ConnectPlan::reject("ports must have opposite directions (in/out)");
-        }
+    let (from_id, to_id) = match mode {
+        NodeGraphConnectionMode::Strict => match (port_a.dir, port_b.dir) {
+            (PortDirection::Out, PortDirection::In) => (a, b),
+            (PortDirection::In, PortDirection::Out) => (b, a),
+            _ => {
+                return ConnectPlan::reject("ports must have opposite directions (in/out)");
+            }
+        },
+        NodeGraphConnectionMode::Loose => match port_a.dir {
+            PortDirection::Out => (a, b),
+            PortDirection::In => (b, a),
+        },
     };
 
-    if from.node == to.node {
-        return ConnectPlan::reject("cannot connect ports on the same node");
-    }
+    let Some(from) = graph.ports.get(&from_id) else {
+        return ConnectPlan::reject(format!("missing port: {from_id:?}"));
+    };
+    let Some(to) = graph.ports.get(&to_id) else {
+        return ConnectPlan::reject(format!("missing port: {to_id:?}"));
+    };
 
     if from.kind != to.kind {
         return ConnectPlan::reject(format!(
@@ -340,6 +359,11 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
         diagnostics: Vec::new(),
         ops,
     }
+}
+
+/// Plans connecting two ports (strict mode).
+pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    plan_connect_with_mode(graph, a, b, NodeGraphConnectionMode::Strict)
 }
 
 /// Plans connecting two ports with optional type compatibility checks.
@@ -429,10 +453,6 @@ pub fn plan_connect_by_inserting_node(
             return ConnectPlan::reject("ports must have opposite directions (in/out)");
         }
     };
-
-    if from.node == to.node {
-        return ConnectPlan::reject("cannot connect ports on the same node");
-    }
 
     if from.kind != to.kind {
         return ConnectPlan::reject(format!(
@@ -687,11 +707,12 @@ pub fn plan_split_edge_by_inserting_node(
 /// Plans reconnecting one endpoint of an existing edge to a new port.
 ///
 /// This is used for "yank and reattach" workflows where edge identity should be preserved.
-pub fn plan_reconnect_edge(
+pub fn plan_reconnect_edge_with_mode(
     graph: &Graph,
     edge_id: EdgeId,
     endpoint: EdgeEndpoint,
     new_port: PortId,
+    mode: NodeGraphConnectionMode,
 ) -> ConnectPlan {
     let Some(edge) = graph.edges.get(&edge_id) else {
         return ConnectPlan::reject(format!("missing edge: {edge_id:?}"));
@@ -707,6 +728,10 @@ pub fn plan_reconnect_edge(
         EdgeEndpoint::To => (edge.from, new_port),
     };
 
+    if candidate_from == candidate_to {
+        return ConnectPlan::reject("cannot connect a port to itself");
+    }
+
     if candidate_from == old.from && candidate_to == old.to {
         return ConnectPlan::accept();
     }
@@ -718,12 +743,10 @@ pub fn plan_reconnect_edge(
         return ConnectPlan::reject(format!("missing port: {candidate_to:?}"));
     };
 
-    if from.dir != PortDirection::Out || to.dir != PortDirection::In {
+    if mode == NodeGraphConnectionMode::Strict
+        && (from.dir != PortDirection::Out || to.dir != PortDirection::In)
+    {
         return ConnectPlan::reject("ports must be out -> in for reconnection");
-    }
-
-    if from.node == to.node {
-        return ConnectPlan::reject("cannot connect ports on the same node");
     }
 
     if from.kind != to.kind {
@@ -801,6 +824,22 @@ pub fn plan_reconnect_edge(
         diagnostics: Vec::new(),
         ops,
     }
+}
+
+/// Plans reconnecting one endpoint of an existing edge (strict mode).
+pub fn plan_reconnect_edge(
+    graph: &Graph,
+    edge_id: EdgeId,
+    endpoint: EdgeEndpoint,
+    new_port: PortId,
+) -> ConnectPlan {
+    plan_reconnect_edge_with_mode(
+        graph,
+        edge_id,
+        endpoint,
+        new_port,
+        NodeGraphConnectionMode::Strict,
+    )
 }
 
 #[cfg(test)]

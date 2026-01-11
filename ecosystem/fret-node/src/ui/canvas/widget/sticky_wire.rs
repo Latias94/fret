@@ -71,7 +71,12 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
             canvas
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let plan = presenter.plan_connect(graph, from, target);
+                    let plan = presenter.plan_connect(
+                        graph,
+                        from,
+                        target,
+                        snapshot.interaction.connection_mode,
+                    );
                     match plan.decision {
                         ConnectDecision::Accept => Outcome::Apply(plan.ops),
                         ConnectDecision::Reject => {

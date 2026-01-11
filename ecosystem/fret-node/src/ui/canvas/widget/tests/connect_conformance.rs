@@ -7,7 +7,8 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::{NodeGraphConnectionMode, NodeGraphViewState};
+use crate::interaction::NodeGraphConnectionMode;
+use crate::io::NodeGraphViewState;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
@@ -31,7 +32,13 @@ impl NodeGraphPresenter for RejectingConversionPresenter {
         Arc::<str>::from("Port")
     }
 
-    fn plan_connect(&mut self, _graph: &Graph, _a: PortId, _b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        _graph: &Graph,
+        _a: PortId,
+        _b: PortId,
+        _mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         ConnectPlan::reject("connect rejected")
     }
 

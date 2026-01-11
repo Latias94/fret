@@ -2,7 +2,7 @@ use fret_core::{Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
-use crate::io::NodeGraphDragHandleMode;
+use crate::interaction::NodeGraphDragHandleMode;
 use crate::rules::EdgeEndpoint;
 
 use super::super::state::{

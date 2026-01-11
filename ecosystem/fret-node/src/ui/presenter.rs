@@ -7,13 +7,14 @@ use crate::core::{
     CanvasPoint, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
+use crate::interaction::NodeGraphConnectionMode;
 #[cfg(feature = "kit")]
 use crate::kit::profiles::DataflowProfile;
 use crate::ops::GraphOp;
 use crate::profile::GraphProfile;
 use crate::rules::{
-    ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
-    plan_reconnect_edge, plan_split_edge_by_inserting_node,
+    ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect_with_mode,
+    plan_reconnect_edge_with_mode, plan_split_edge_by_inserting_node,
 };
 use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
@@ -566,11 +567,17 @@ pub trait NodeGraphPresenter {
     /// - rejects the connection (diagnostics only),
     /// - accepts it with direct edge changes,
     /// - accepts it with additional ops (e.g. insert conversion nodes).
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         if let Some(profile) = self.profile_mut() {
-            profile.plan_connect(graph, a, b)
+            profile.plan_connect(graph, a, b, mode)
         } else {
-            plan_connect(graph, a, b)
+            plan_connect_with_mode(graph, a, b, mode)
         }
     }
 
@@ -581,8 +588,9 @@ pub trait NodeGraphPresenter {
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: NodeGraphConnectionMode,
     ) -> ConnectPlan {
-        plan_reconnect_edge(graph, edge, endpoint, new_port)
+        plan_reconnect_edge_with_mode(graph, edge, endpoint, new_port, mode)
     }
 
     /// Optional profile hook for typed graphs and edit pipelines.
@@ -604,8 +612,14 @@ pub trait NodeGraphPresenter {
     /// Fast (UI-friendly) connectivity check for previews and hover states.
     ///
     /// Default implementation delegates to `plan_connect` but strips ops.
-    fn can_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        let mut plan = self.plan_connect(graph, a, b);
+    fn can_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        let mut plan = self.plan_connect(graph, a, b, mode);
         plan.ops.clear();
         plan
     }
@@ -619,8 +633,9 @@ pub trait NodeGraphPresenter {
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: NodeGraphConnectionMode,
     ) -> ConnectPlan {
-        let mut plan = self.plan_reconnect_edge(graph, edge, endpoint, new_port);
+        let mut plan = self.plan_reconnect_edge(graph, edge, endpoint, new_port, mode);
         plan.ops.clear();
         plan
     }

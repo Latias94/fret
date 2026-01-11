@@ -1320,7 +1320,7 @@ fn pick_target_port_respects_port_connectable_end() {
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = true;
-        s.interaction.connection_mode = crate::io::NodeGraphConnectionMode::Strict;
+        s.interaction.connection_mode = crate::interaction::NodeGraphConnectionMode::Strict;
     });
 
     let mut canvas = NodeGraphCanvas::new(graph, view);

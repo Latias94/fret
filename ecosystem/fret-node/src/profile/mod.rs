@@ -11,6 +11,7 @@
 mod pipeline;
 
 use crate::core::{EdgeKind, Graph, PortId};
+use crate::interaction::NodeGraphConnectionMode;
 use crate::rules::{ConnectPlan, Diagnostic};
 use crate::types::TypeDesc;
 
@@ -31,7 +32,13 @@ pub trait GraphProfile {
     ///
     /// Implementations should call into `crate::rules` and then enforce extra constraints
     /// (type compatibility, cycle policy, exec/data policy, etc.).
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan;
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: NodeGraphConnectionMode,
+    ) -> ConnectPlan;
 
     /// Validates a graph and returns diagnostics.
     fn validate_graph(&mut self, graph: &Graph) -> Vec<Diagnostic>;

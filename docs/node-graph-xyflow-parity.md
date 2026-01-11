@@ -516,13 +516,24 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [x] **Strict / Loose connection modes**
   - XyFlow: `ConnectionMode` + store `connectionMode`
-  - fret-node: `NodeGraphConnectionMode` and UI toggle command `node_graph.toggle_connection_mode`
+    - strict: only source<->target connections are valid
+    - loose: any handle type can connect; only the exact same handle is invalid
+    - reference: `repo-ref/xyflow/packages/system/src/xyhandle/XYHandle.ts` (`isValidHandle`)
+  - fret-node:
+    - mode: `NodeGraphConnectionMode` in `ecosystem/fret-node/src/interaction/mod.rs` (re-exported by `ecosystem/fret-node/src/io/mod.rs`)
+    - UI:
+      - strict: target picking requires opposite `PortDirection` (`NodeGraphCanvas::pick_target_port`)
+      - loose: target picking allows either direction within radius; when multiple handles overlap, prefers the opposite side
+    - rules:
+      - `plan_connect_with_mode` mirrors XyFlow's strict/loose validity and allows same-node connections (disallow only `port == port`)
+      - `plan_reconnect_edge_with_mode` mirrors the same constraints for edge reconnection
+    - toggle command: `node_graph.toggle_connection_mode`
 
 ## 5.2 Connection radius and hit-testing
 
 - [~] **Connection radius**
   - XyFlow: store `connectionRadius`, used by `XYHandle.getClosestHandle(...)`
-  - fret-node: `NodeGraphStyle.connection_radius` + nearest-port tie-breakers
+  - fret-node: `NodeGraphInteractionState.connection_radius` + nearest-port tie-breakers
 
 - [x] **Deterministic tie-break for multiple candidates**
   - XyFlow: `getClosestHandle(...)` (candidate search is deterministic due to internal ordering)

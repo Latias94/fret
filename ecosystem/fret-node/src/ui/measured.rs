@@ -529,8 +529,14 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         self.inner.on_edge_context_menu_action(graph, edge, action)
     }
 
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        self.inner.plan_connect(graph, a, b)
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        self.inner.plan_connect(graph, a, b, mode)
     }
 
     fn plan_reconnect_edge(
@@ -539,9 +545,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
     ) -> ConnectPlan {
         self.inner
-            .plan_reconnect_edge(graph, edge, endpoint, new_port)
+            .plan_reconnect_edge(graph, edge, endpoint, new_port, mode)
     }
 
     fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
@@ -552,8 +559,14 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         self.inner.type_of_port(graph, port)
     }
 
-    fn can_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        self.inner.can_connect(graph, a, b)
+    fn can_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        self.inner.can_connect(graph, a, b, mode)
     }
 
     fn can_reconnect_edge(
@@ -562,9 +575,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
     ) -> ConnectPlan {
         self.inner
-            .can_reconnect_edge(graph, edge, endpoint, new_port)
+            .can_reconnect_edge(graph, edge, endpoint, new_port, mode)
     }
 
     fn list_conversions(
@@ -724,8 +738,14 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
         self.inner.on_edge_context_menu_action(graph, edge, action)
     }
 
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        self.inner.plan_connect(graph, a, b)
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        self.inner.plan_connect(graph, a, b, mode)
     }
 
     fn plan_reconnect_edge(
@@ -734,9 +754,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
     ) -> ConnectPlan {
         self.inner
-            .plan_reconnect_edge(graph, edge, endpoint, new_port)
+            .plan_reconnect_edge(graph, edge, endpoint, new_port, mode)
     }
 
     fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
@@ -747,8 +768,14 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
         self.inner.type_of_port(graph, port)
     }
 
-    fn can_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        self.inner.can_connect(graph, a, b)
+    fn can_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        self.inner.can_connect(graph, a, b, mode)
     }
 
     fn can_reconnect_edge(
@@ -757,9 +784,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: crate::interaction::NodeGraphConnectionMode,
     ) -> ConnectPlan {
         self.inner
-            .can_reconnect_edge(graph, edge, endpoint, new_port)
+            .can_reconnect_edge(graph, edge, endpoint, new_port, mode)
     }
 
     fn list_conversions(

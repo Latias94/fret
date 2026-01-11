@@ -410,6 +410,7 @@ fn store_does_not_commit_rejected_profile_edits() {
             _graph: &Graph,
             _a: crate::core::PortId,
             _b: crate::core::PortId,
+            _mode: crate::interaction::NodeGraphConnectionMode,
         ) -> ConnectPlan {
             ConnectPlan::reject("not used in this test")
         }

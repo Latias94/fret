@@ -519,7 +519,13 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         out
     }
 
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        _mode: fret_node::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         let Some(port_a) = graph.ports.get(&a) else {
             return ConnectPlan::reject("missing port");
         };

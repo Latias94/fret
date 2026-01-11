@@ -2,10 +2,11 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
+use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{GraphTransaction, apply_transaction};
 use crate::rules::{
     EdgeEndpoint, InsertNodeSpec, plan_connect, plan_connect_by_inserting_node, plan_connect_typed,
-    plan_reconnect_edge, plan_split_edge_by_inserting_node,
+    plan_connect_with_mode, plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
 use crate::types::{DefaultTypeCompatibility, TypeDesc};
 
@@ -81,6 +82,81 @@ fn plan_connect_swaps_in_out() {
 
     let plan = plan_connect(&graph, inn, out);
     assert_eq!(plan.ops.len(), 1);
+}
+
+#[test]
+fn plan_connect_strict_allows_same_node_out_to_in() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+
+    let out = PortId::new();
+    let inn = PortId::new();
+    graph.ports.insert(
+        out,
+        make_port(
+            a,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        inn,
+        make_port(
+            a,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Single,
+        ),
+    );
+
+    let plan = plan_connect(&graph, out, inn);
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Accept);
+    assert!(!plan.ops.is_empty());
+}
+
+#[test]
+fn plan_connect_loose_allows_out_to_out_and_preserves_order() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+
+    let out_a = PortId::new();
+    let out_b = PortId::new();
+    graph.ports.insert(
+        out_a,
+        make_port(
+            a,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        out_b,
+        make_port(
+            b,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+
+    let plan = plan_connect_with_mode(&graph, out_a, out_b, NodeGraphConnectionMode::Loose);
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Accept);
+    assert!(plan
+        .ops
+        .iter()
+        .any(|op| matches!(op, crate::ops::GraphOp::AddEdge { edge, .. } if edge.from == out_a && edge.to == out_b)));
 }
 
 #[test]

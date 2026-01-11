@@ -1,6 +1,7 @@
 use fret_core::{Point, Px};
 
-use crate::io::{NodeGraphConnectionMode, NodeGraphViewState};
+use crate::interaction::NodeGraphConnectionMode;
+use crate::io::NodeGraphViewState;
 
 use super::super::NodeGraphCanvas;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
@@ -92,7 +93,7 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
 }
 
 #[test]
-fn loose_mode_ignores_same_side_ports_when_picking_target() {
+fn loose_mode_prefers_opposite_side_when_handles_overlap() {
     let mut host = TestUiHostImpl::default();
     let (mut graph_value, a, a_in, a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
@@ -174,7 +175,7 @@ fn loose_mode_ignores_same_side_ports_when_picking_target() {
     assert_eq!(
         picked,
         Some(b_in),
-        "expected loose pick to ignore same-side Out and select nearest In within radius"
+        "expected loose pick to prefer opposite-side handle when handles overlap"
     );
 
     let _ = (a, a_in, b);

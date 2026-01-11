@@ -202,7 +202,12 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                         };
                         let mut any_accept = false;
                         for src in sources {
-                            let plan = presenter.plan_connect(&scratch, *src, target);
+                            let plan = presenter.plan_connect(
+                                &scratch,
+                                *src,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             if plan.decision != ConnectDecision::Accept {
                                 continue;
                             }
@@ -217,15 +222,26 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     }
                     WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
                         presenter
-                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target)
+                            .plan_reconnect_edge(
+                                &scratch,
+                                *edge,
+                                *endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            )
                             .decision,
                         ConnectDecision::Accept
                     ),
                     WireDragKind::ReconnectMany { edges } => {
                         let mut any_accept = false;
                         for (edge, endpoint, _fixed) in edges {
-                            let plan =
-                                presenter.plan_reconnect_edge(&scratch, *edge, *endpoint, target);
+                            let plan = presenter.plan_reconnect_edge(
+                                &scratch,
+                                *edge,
+                                *endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             if plan.decision != ConnectDecision::Accept {
                                 continue;
                             }
@@ -400,7 +416,12 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                             let mut toast: Option<(DiagnosticSeverity, Arc<str>)> = None;
 
                             for src in sources {
-                                let plan = presenter.plan_connect(&scratch, src, target);
+                                let plan = presenter.plan_connect(
+                                    &scratch,
+                                    src,
+                                    target,
+                                    snapshot.interaction.connection_mode,
+                                );
                                 match plan.decision {
                                     ConnectDecision::Accept => {
                                         let tx = GraphTransaction {
@@ -591,7 +612,13 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     canvas
                         .graph
                         .read_ref(cx.host(), |graph| {
-                            let plan = presenter.plan_reconnect_edge(graph, edge, endpoint, target);
+                            let plan = presenter.plan_reconnect_edge(
+                                graph,
+                                edge,
+                                endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
                                 ConnectDecision::Reject => {
@@ -641,8 +668,13 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         let mut toast: Option<(DiagnosticSeverity, Arc<str>)> = None;
 
                         for (edge, endpoint, _fixed) in edges {
-                            let plan =
-                                presenter.plan_reconnect_edge(&scratch, edge, endpoint, target);
+                            let plan = presenter.plan_reconnect_edge(
+                                &scratch,
+                                edge,
+                                endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             match plan.decision {
                                 ConnectDecision::Accept => {
                                     let tx = GraphTransaction {

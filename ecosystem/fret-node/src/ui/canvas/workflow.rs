@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use crate::core::{Graph, NodeId, PortDirection, PortId};
+use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 use crate::ui::presenter::NodeGraphPresenter;
@@ -52,6 +53,7 @@ pub(crate) fn plan_wire_drop_insert(
     presenter: &mut dyn NodeGraphPresenter,
     graph: &Graph,
     from: PortId,
+    mode: NodeGraphConnectionMode,
     insert_ops: Vec<GraphOp>,
 ) -> WireDropInsertPlan {
     let created_node = first_added_node_id(&insert_ops);
@@ -128,7 +130,7 @@ pub(crate) fn plan_wire_drop_insert(
             continue;
         }
 
-        let plan = presenter.plan_connect(&scratch, from, port_id);
+        let plan = presenter.plan_connect(&scratch, from, port_id, mode);
         match plan.decision {
             ConnectDecision::Accept => {
                 best_accept = Some(plan.ops);
@@ -255,7 +257,13 @@ mod tests {
             .plan_create_node(&graph, &candidate, CanvasPoint { x: 10.0, y: 20.0 })
             .expect("create ops");
 
-        let planned = plan_wire_drop_insert(&mut presenter, &graph, src_out, insert_ops);
+        let planned = plan_wire_drop_insert(
+            &mut presenter,
+            &graph,
+            src_out,
+            crate::interaction::NodeGraphConnectionMode::Strict,
+            insert_ops,
+        );
         assert!(planned.toast.is_none());
         assert!(planned.created_node.is_some());
         assert!(planned.continue_from.is_some());

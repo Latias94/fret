@@ -50,7 +50,13 @@ impl GraphProfile for DataflowProfile {
         graph.ports.get(&port).and_then(|p| p.ty.clone())
     }
 
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        _mode: crate::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         plan_connect_typed(
             graph,
             a,

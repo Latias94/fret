@@ -17,7 +17,8 @@ use super::edit_queue::NodeGraphEditQueue;
 use super::internals::NodeGraphInternalsStore;
 use super::style::NodeGraphStyle;
 use crate::core::GroupId;
-use crate::io::{NodeGraphConnectionMode, NodeGraphViewState};
+use crate::interaction::NodeGraphConnectionMode;
+use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::{

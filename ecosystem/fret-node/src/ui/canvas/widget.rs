@@ -15,7 +15,8 @@ use crate::core::{
     CanvasPoint, CanvasSize, Edge, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey,
     PortDirection, PortId,
 };
-use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
+use crate::interaction::NodeGraphConnectionMode;
+use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{
     GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction, IdRemapSeed,
     IdRemapper, PasteTuning, apply_transaction,
@@ -2681,9 +2682,7 @@ impl NodeGraphCanvas {
                 let radius_screen = snapshot.interaction.connection_radius;
                 if !radius_screen.is_finite() || radius_screen <= 0.0 {
                     let candidate = self.hit_port(geom, index, pos, zoom, scratch)?;
-                    let port = graph.ports.get(&candidate)?;
                     return (candidate != from
-                        && port.dir == desired_dir
                         && Self::port_is_connectable_end(graph, &snapshot.interaction, candidate))
                     .then_some(candidate);
                 }
@@ -2691,7 +2690,7 @@ impl NodeGraphCanvas {
                 let r2 = r * r;
                 let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
 
-                let mut best: Option<(PortId, f32, u32)> = None;
+                let mut best: Option<(PortId, f32, bool, u32)> = None;
                 index.query_ports(pos, r, scratch);
                 scratch.sort_unstable();
                 scratch.dedup();
@@ -2702,9 +2701,6 @@ impl NodeGraphCanvas {
                     let Some(handle) = geom.ports.get(&port_id) else {
                         continue;
                     };
-                    if handle.dir != desired_dir {
-                        continue;
-                    }
                     if !Self::port_is_connectable_end(graph, &snapshot.interaction, port_id) {
                         continue;
                     }
@@ -2712,24 +2708,29 @@ impl NodeGraphCanvas {
                     if d2 > r2 {
                         continue;
                     }
+                    let prefers_opposite = handle.dir == desired_dir;
                     let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
                     match best {
-                        Some((best_id, best_d2, best_rank)) => {
+                        Some((best_id, best_d2, best_prefers_opposite, best_rank)) => {
                             if d2 + eps < best_d2 {
-                                best = Some((port_id, d2, rank));
+                                best = Some((port_id, d2, prefers_opposite, rank));
                             } else if (d2 - best_d2).abs() <= eps {
-                                if rank > best_rank {
-                                    best = Some((port_id, d2, rank));
+                                if prefers_opposite != best_prefers_opposite {
+                                    if prefers_opposite {
+                                        best = Some((port_id, d2, prefers_opposite, rank));
+                                    }
+                                } else if rank > best_rank {
+                                    best = Some((port_id, d2, prefers_opposite, rank));
                                 } else if rank == best_rank && port_id < best_id {
-                                    best = Some((port_id, d2, rank));
+                                    best = Some((port_id, d2, prefers_opposite, rank));
                                 }
                             }
                         }
-                        None => best = Some((port_id, d2, rank)),
+                        None => best = Some((port_id, d2, prefers_opposite, rank)),
                     }
                 }
 
-                best.map(|(id, _, _)| id)
+                best.map(|(id, _, _, _)| id)
             }
         }
     }
@@ -3443,6 +3444,8 @@ impl NodeGraphCanvas {
                 ContextMenuTarget::ConnectionInsertNodePicker { from, at },
                 NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
+                let mode = self.sync_view_state(cx.app).interaction.connection_mode;
+
                 enum Outcome {
                     Apply(Vec<GraphOp>, Option<GraphNodeId>, Option<PortId>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -3472,7 +3475,11 @@ impl NodeGraphCanvas {
                             };
 
                             let planned = workflow::plan_wire_drop_insert(
-                                presenter, graph, *from, insert_ops,
+                                presenter,
+                                graph,
+                                *from,
+                                mode,
+                                insert_ops,
                             );
                             let toast = planned.toast.clone();
                             (
@@ -4758,6 +4765,9 @@ impl NodeGraphCanvas {
         self.interaction.focused_port_valid = false;
         self.interaction.focused_port_convertible = false;
 
+        let snapshot = self.sync_view_state(host);
+        let mode = snapshot.interaction.connection_mode;
+
         let Some(target) = self.interaction.focused_port else {
             return;
         };
@@ -4780,7 +4790,7 @@ impl NodeGraphCanvas {
                         };
                         let mut any_accept = false;
                         for src in sources {
-                            let plan = presenter.plan_connect(&scratch, *src, target);
+                            let plan = presenter.plan_connect(&scratch, *src, target, mode);
                             if plan.decision != ConnectDecision::Accept {
                                 continue;
                             }
@@ -4795,15 +4805,15 @@ impl NodeGraphCanvas {
                     }
                     WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
                         presenter
-                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target)
+                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target, mode)
                             .decision,
                         ConnectDecision::Accept
                     ),
                     WireDragKind::ReconnectMany { edges } => {
                         let mut any_accept = false;
                         for (edge, endpoint, _fixed) in edges {
-                            let plan =
-                                presenter.plan_reconnect_edge(&scratch, *edge, *endpoint, target);
+                            let plan = presenter
+                                .plan_reconnect_edge(&scratch, *edge, *endpoint, target, mode);
                             if plan.decision != ConnectDecision::Accept {
                                 continue;
                             }
