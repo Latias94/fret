@@ -10,7 +10,7 @@ use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoSizePolicy, GizmoTarget3d,
     GizmoTargetId, Transform3d, ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput,
-    ViewGizmoUpdate, ViewportRect,
+    ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -102,6 +102,98 @@ impl Default for OverlayTextCache {
     }
 }
 
+#[derive(Debug, Default, Clone)]
+struct ViewGizmoLabelCache {
+    last_scale_bits: u32,
+    blob_x: Option<fret_core::TextBlobId>,
+    blob_y: Option<fret_core::TextBlobId>,
+    blob_z: Option<fret_core::TextBlobId>,
+    blob_p: Option<fret_core::TextBlobId>,
+    blob_o: Option<fret_core::TextBlobId>,
+    metrics_x: Option<fret_core::text::TextMetrics>,
+    metrics_y: Option<fret_core::text::TextMetrics>,
+    metrics_z: Option<fret_core::text::TextMetrics>,
+    metrics_p: Option<fret_core::text::TextMetrics>,
+    metrics_o: Option<fret_core::text::TextMetrics>,
+}
+
+impl ViewGizmoLabelCache {
+    fn release_all(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in [
+            self.blob_x.take(),
+            self.blob_y.take(),
+            self.blob_z.take(),
+            self.blob_p.take(),
+            self.blob_o.take(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            services.text().release(blob);
+        }
+        self.metrics_x = None;
+        self.metrics_y = None;
+        self.metrics_z = None;
+        self.metrics_p = None;
+        self.metrics_o = None;
+    }
+
+    fn ensure(&mut self, services: &mut dyn fret_core::UiServices, scale_factor: f32) {
+        let scale_bits = scale_factor.to_bits();
+        if self.last_scale_bits != scale_bits {
+            self.release_all(services);
+            self.last_scale_bits = scale_bits;
+        }
+
+        let style = TextStyle {
+            font: fret_core::FontId::default(),
+            size: Px(12.0),
+            weight: FontWeight::BOLD,
+            slant: fret_core::text::TextSlant::Normal,
+            line_height: Some(Px(14.0)),
+            letter_spacing_em: None,
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+
+        let mut prepare =
+            |text: &'static str,
+             blob: &mut Option<fret_core::TextBlobId>,
+             metrics: &mut Option<fret_core::text::TextMetrics>| {
+                if blob.is_some() && metrics.is_some() {
+                    return;
+                }
+                let (b, m) = services.text().prepare(text, &style, constraints);
+                *blob = Some(b);
+                *metrics = Some(m);
+            };
+
+        prepare("X", &mut self.blob_x, &mut self.metrics_x);
+        prepare("Y", &mut self.blob_y, &mut self.metrics_y);
+        prepare("Z", &mut self.blob_z, &mut self.metrics_z);
+        prepare("P", &mut self.blob_p, &mut self.metrics_p);
+        prepare("O", &mut self.blob_o, &mut self.metrics_o);
+    }
+
+    fn blob_and_metrics(
+        &self,
+        text: &'static str,
+    ) -> Option<(fret_core::TextBlobId, fret_core::text::TextMetrics)> {
+        match text {
+            "X" => self.blob_x.zip(self.metrics_x),
+            "Y" => self.blob_y.zip(self.metrics_y),
+            "Z" => self.blob_z.zip(self.metrics_z),
+            "P" => self.blob_p.zip(self.metrics_p),
+            "O" => self.blob_o.zip(self.metrics_o),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct FrameAnim {
     target: Vec3,
@@ -185,6 +277,10 @@ const CAMERA_FOV_Y_RADIANS: f32 = 55.0_f32.to_radians();
 
 fn distance_to_ortho_half_height(distance: f32) -> f32 {
     (distance.max(0.0) * (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.01)
+}
+
+fn ortho_half_height_to_distance(ortho_half_height: f32) -> f32 {
+    (ortho_half_height.max(0.0) / (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.05)
 }
 
 #[repr(C)]
@@ -1001,9 +1097,11 @@ struct Gizmo3dDemoWindowState {
     plot: fret_runtime::Model<Plot3dModel>,
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
     overlay: OverlayTextCache,
+    view_gizmo_labels: ViewGizmoLabelCache,
     target: Option<Gizmo3dDemoTarget>,
     gpu: Option<Gizmo3dDemoGpu>,
     doc: DocumentId,
+    warmup_frames_remaining: u8,
 }
 
 #[derive(Default)]
@@ -1043,9 +1141,11 @@ impl Gizmo3dDemoDriver {
             plot,
             demo,
             overlay: OverlayTextCache::default(),
+            view_gizmo_labels: ViewGizmoLabelCache::default(),
             target: None,
             gpu: None,
             doc,
+            warmup_frames_remaining: 3,
         }
     }
 
@@ -1827,6 +1927,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
         // the first input event happens to request a redraw.
         app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
         state
     }
 
@@ -2628,15 +2729,49 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                     Some(ViewGizmoUpdate::ToggleProjection) => {
                         clear_other_interactions(m);
-                        m.camera.frame_anim = None;
-                        m.camera.projection = match m.camera.projection {
+                        let target = m.camera.target;
+                        let yaw_radians = m.camera.yaw_radians;
+                        let pitch_radians = m.camera.pitch_radians;
+                        let smooth_time_s = 0.12;
+
+                        match m.camera.projection {
                             OrbitProjection::Perspective => {
-                                m.camera.ortho_half_height =
+                                let ortho_half_height =
                                     distance_to_ortho_half_height(m.camera.distance);
-                                OrbitProjection::Orthographic
+                                m.camera.projection = OrbitProjection::Orthographic;
+                                m.camera.frame_anim = Some(FrameAnim {
+                                    target,
+                                    distance: m.camera.distance,
+                                    yaw_radians,
+                                    pitch_radians,
+                                    ortho_half_height,
+                                    target_velocity: Vec3::ZERO,
+                                    distance_velocity: 0.0,
+                                    yaw_velocity: 0.0,
+                                    pitch_velocity: 0.0,
+                                    ortho_half_height_velocity: 0.0,
+                                    smooth_time_s,
+                                });
                             }
-                            OrbitProjection::Orthographic => OrbitProjection::Perspective,
-                        };
+                            OrbitProjection::Orthographic => {
+                                let distance =
+                                    ortho_half_height_to_distance(m.camera.ortho_half_height);
+                                m.camera.projection = OrbitProjection::Perspective;
+                                m.camera.frame_anim = Some(FrameAnim {
+                                    target,
+                                    distance,
+                                    yaw_radians,
+                                    pitch_radians,
+                                    ortho_half_height: m.camera.ortho_half_height,
+                                    target_velocity: Vec3::ZERO,
+                                    distance_velocity: 0.0,
+                                    yaw_velocity: 0.0,
+                                    pitch_velocity: 0.0,
+                                    ortho_half_height_velocity: 0.0,
+                                    smooth_time_s,
+                                });
+                            }
+                        }
                         return rec_to_record;
                     }
                     Some(ViewGizmoUpdate::SnapView {
@@ -2692,7 +2827,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 }
             }
 
-            if hovered {
+            let over_view_gizmo = m.view_gizmo.state.drag_active
+                || m.view_gizmo.state.hovered.is_some()
+                || m.view_gizmo.state.hovered_center_button;
+            let scene_hovered = hovered && !over_view_gizmo;
+
+            if scene_hovered {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
@@ -2890,7 +3030,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
             m.input = GizmoInput {
                 cursor_px,
-                hovered,
+                hovered: scene_hovered,
                 drag_started,
                 dragging,
                 snap,
@@ -3060,7 +3200,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .draw(view_proj, viewport, active_target, &gizmo_targets)
                 };
                 if marquee.is_none() {
-                    let view_draw = m.view_gizmo.draw(view_proj, viewport);
+                    let projection = match m.camera.projection {
+                        OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+                        OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+                    };
+                    let view_draw = m
+                        .view_gizmo
+                        .draw_with_projection(view_proj, viewport, projection);
                     draw.lines.extend(view_draw.lines);
                     draw.triangles.extend(view_draw.triangles);
                 }
@@ -3487,6 +3633,102 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     },
                 });
             }
+        }
+
+        // View gizmo labels (X/Y/Z + P/O).
+        let viewport = state
+            .plot
+            .read(app, |_app, m| m.viewport)
+            .unwrap_or_default();
+        let (viewport_px, camera, view_gizmo) = state
+            .demo
+            .read(app, |_app, m| {
+                (m.viewport_px, m.camera, m.view_gizmo.clone())
+            })
+            .unwrap_or((
+                (1, 1),
+                OrbitCamera::default(),
+                ViewGizmo::new(ViewGizmoConfig::default()),
+            ));
+
+        let draw_rect = viewport.draw_rect(bounds);
+        let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
+        let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
+        let scale = scale_x.min(scale_y).max(1e-6);
+
+        let view_proj = camera_view_projection(viewport_px, camera);
+        let viewport_rect = ViewportRect::new(
+            Vec2::ZERO,
+            Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
+        );
+        let projection = match camera.projection {
+            OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+            OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+        };
+
+        let labels = view_gizmo.labels(view_proj, viewport_rect, projection);
+        if !labels.is_empty() {
+            state.view_gizmo_labels.ensure(services, scale_factor);
+        }
+
+        for label in labels {
+            let Some((blob, metrics)) = state.view_gizmo_labels.blob_and_metrics(label.text) else {
+                continue;
+            };
+
+            let x = draw_rect.origin.x.0 + label.screen_px.x * scale;
+            let y = draw_rect.origin.y.0 + label.screen_px.y * scale;
+
+            let pad = Px(3.0);
+            let bg = Rect::new(
+                Point::new(
+                    Px(x - metrics.size.width.0 * 0.5 - pad.0),
+                    Px(y - metrics.size.height.0 * 0.5 - pad.0),
+                ),
+                Size::new(
+                    Px(metrics.size.width.0 + pad.0 * 2.0),
+                    Px(metrics.size.height.0 + pad.0 * 2.0),
+                ),
+            );
+
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(49_000),
+                rect: bg,
+                background: Color {
+                    r: 0.06,
+                    g: 0.06,
+                    b: 0.07,
+                    a: 0.55,
+                },
+                border: Edges::all(Px(1.0)),
+                border_color: Color {
+                    r: label.color.r,
+                    g: label.color.g,
+                    b: label.color.b,
+                    a: 0.85,
+                },
+                corner_radii: Corners::all(Px(8.0)),
+            });
+
+            scene.push(SceneOp::Text {
+                order: DrawOrder(49_010),
+                origin: Point::new(
+                    Px(x - metrics.size.width.0 * 0.5),
+                    Px(y - metrics.size.height.0 * 0.5),
+                ),
+                text: blob,
+                color: Color {
+                    r: label.color.r,
+                    g: label.color.g,
+                    b: label.color.b,
+                    a: label.color.a,
+                },
+            });
+        }
+
+        if state.warmup_frames_remaining > 0 {
+            state.warmup_frames_remaining = state.warmup_frames_remaining.saturating_sub(1);
+            app.push_effect(Effect::RequestAnimationFrame(window));
         }
     }
 }
