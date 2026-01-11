@@ -77,6 +77,38 @@ Practical checklist:
    - clip stack head/count and mask viewport origin/size (for masked writebacks),
    - output target(s) at each step (export PNGs).
 
+### 1.5 Debugging streaming image updates (video frames)
+
+When debugging `Effect::ImageUpdate*` ingestion (ADR 0121 / ADR 0126), prefer collecting *both*:
+
+- per-frame counters via `fret_core::StreamingUploadPerfSnapshot`, and
+- (optional) runner debug logs when drops/delays happen.
+
+Useful env vars:
+
+```powershell
+# Update `StreamingUploadPerfSnapshot` and log budget/drops (when relevant).
+$env:FRET_STREAMING_DEBUG="1"
+
+# Demo-only helpers (apps/fret-examples streaming_*_demo.rs).
+$env:FRET_DEMO_STREAMING_PERF_EVERY="60"
+$env:FRET_DEMO_AUTO_EXIT_FRAMES="240"
+```
+
+Run a minimal repro demo:
+
+```powershell
+cargo run -p fret-demo --bin streaming_nv12_demo
+# or:
+cargo run -p fret-demo --bin streaming_i420_demo
+```
+
+If you need structured logs from the runner:
+
+```powershell
+$env:RUST_LOG="fret_launch=debug"
+```
+
 ## 2) Layout debugging
 
 Layout issues are often “correct math, wrong contract”. Prefer to debug at contract boundaries:
