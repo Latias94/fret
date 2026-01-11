@@ -113,15 +113,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 352.828125,
+                                        "y": 246,
+                                        "w": 94.34375,
+                                        "h": 36
+                                      },
                                       "text": "Edit Profile"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 352.828125,
+                                    "y": 246,
+                                    "w": 94.34375,
+                                    "h": 36
+                                  },
                                   "text": "Edit Profile"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Edit Profile"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With FormEdit Profile"
                         },
                         {
@@ -167,12 +191,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 807.46875,
+                                    "y": 246,
+                                    "w": 145.0625,
+                                    "h": 36
+                                  },
                                   "text": "Scrollable Content"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Scrollable Content"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Scrollable ContentScrollable Content"
                         },
                         {
@@ -218,12 +260,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 345,
+                                    "y": 400,
+                                    "w": 110,
+                                    "h": 36
+                                  },
                                   "text": "Sticky Footer"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Sticky Footer"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Sticky FooterSticky Footer"
                         },
                         {
@@ -269,12 +329,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 814.8125,
+                                    "y": 400,
+                                    "w": 130.375,
+                                    "h": 36
+                                  },
                                   "text": "No Close Button"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "No Close Button"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "No Close ButtonNo Close Button"
                         },
                         {
@@ -320,21 +398,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 343.96875,
+                                    "y": 554,
+                                    "w": 112.0625,
+                                    "h": 36
+                                  },
                                   "text": "Chat Settings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Chat Settings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Chat SettingsChat Settings"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -349,9 +463,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -442,7 +568,13 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -452,7 +584,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -538,15 +676,39 @@
                                         "data-state": "open"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 352.828125,
+                                        "y": 246,
+                                        "w": 94.34375,
+                                        "h": 36
+                                      },
                                       "text": "Edit Profile"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 352.828125,
+                                    "y": 246,
+                                    "w": 94.34375,
+                                    "h": 36
+                                  },
                                   "text": "Edit Profile"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Edit Profile"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With FormEdit Profile"
                         },
                         {
@@ -592,12 +754,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 807.46875,
+                                    "y": 246,
+                                    "w": 145.0625,
+                                    "h": 36
+                                  },
                                   "text": "Scrollable Content"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Scrollable Content"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Scrollable ContentScrollable Content"
                         },
                         {
@@ -643,12 +823,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 345,
+                                    "y": 400,
+                                    "w": 110,
+                                    "h": 36
+                                  },
                                   "text": "Sticky Footer"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Sticky Footer"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Sticky FooterSticky Footer"
                         },
                         {
@@ -694,12 +892,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 814.8125,
+                                    "y": 400,
+                                    "w": 130.375,
+                                    "h": 36
+                                  },
                                   "text": "No Close Button"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "No Close Button"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "No Close ButtonNo Close Button"
                         },
                         {
@@ -745,21 +961,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 343.96875,
+                                    "y": 554,
+                                    "w": 112.0625,
+                                    "h": 36
+                                  },
                                   "text": "Chat Settings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Chat Settings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Chat SettingsChat Settings"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -774,7 +1026,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "next-route-announcer",
@@ -784,7 +1042,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -796,7 +1060,13 @@
                 "data-slot": "dialog-overlay",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              }
             },
             {
               "tag": "div",
@@ -833,6 +1103,12 @@
                         "data-slot": "dialog-title"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 440,
+                        "y": 245.75,
+                        "w": 400,
+                        "h": 14
+                      },
                       "text": "Edit profile"
                     },
                     {
@@ -846,9 +1122,21 @@
                         "data-slot": "dialog-description"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 440,
+                        "y": 267.75,
+                        "w": 400,
+                        "h": 40
+                      },
                       "text": "Make changes to your profile here. Click save when you're done. Your profile will be updated immediately."
                     }
                   ],
+                  "rect": {
+                    "x": 440,
+                    "y": 245.75,
+                    "w": 400,
+                    "h": 62
+                  },
                   "text": "Edit profileMake changes to your profile here. Click save when you're done. Your profile will be updated immediately."
                 },
                 {
@@ -886,6 +1174,12 @@
                             "data-slot": "field-label"
                           },
                           "children": [],
+                          "rect": {
+                            "x": 440,
+                            "y": 331.75,
+                            "w": 400,
+                            "h": 19.25
+                          },
                           "text": "Name"
                         },
                         {
@@ -899,9 +1193,21 @@
                           "attrs": {
                             "data-slot": "input"
                           },
-                          "children": []
+                          "children": [],
+                          "rect": {
+                            "x": 440,
+                            "y": 363,
+                            "w": 400,
+                            "h": 36
+                          }
                         }
                       ],
+                      "rect": {
+                        "x": 440,
+                        "y": 331.75,
+                        "w": 400,
+                        "h": 67.25
+                      },
                       "text": "Name"
                     },
                     {
@@ -929,6 +1235,12 @@
                             "data-slot": "field-label"
                           },
                           "children": [],
+                          "rect": {
+                            "x": 440,
+                            "y": 427,
+                            "w": 400,
+                            "h": 19.25
+                          },
                           "text": "Username"
                         },
                         {
@@ -942,12 +1254,30 @@
                           "attrs": {
                             "data-slot": "input"
                           },
-                          "children": []
+                          "children": [],
+                          "rect": {
+                            "x": 440,
+                            "y": 458.25,
+                            "w": 400,
+                            "h": 36
+                          }
                         }
                       ],
+                      "rect": {
+                        "x": 440,
+                        "y": 427,
+                        "w": 400,
+                        "h": 67.25
+                      },
                       "text": "Username"
                     }
                   ],
+                  "rect": {
+                    "x": 440,
+                    "y": 331.75,
+                    "w": 400,
+                    "h": 162.5
+                  },
                   "text": "NameUsername"
                 },
                 {
@@ -971,6 +1301,12 @@
                         "data-slot": "dialog-close"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 647.6875,
+                        "y": 518.25,
+                        "w": 68.484375,
+                        "h": 36
+                      },
                       "text": "Cancel"
                     },
                     {
@@ -984,9 +1320,21 @@
                         "data-slot": "button"
                       },
                       "children": [],
+                      "rect": {
+                        "x": 724.171875,
+                        "y": 518.25,
+                        "w": 115.828125,
+                        "h": 36
+                      },
                       "text": "Save changes"
                     }
                   ],
+                  "rect": {
+                    "x": 440,
+                    "y": 518.25,
+                    "w": 400,
+                    "h": 36
+                  },
                   "text": "CancelSave changes"
                 },
                 {
@@ -999,9 +1347,21 @@
                     "data-slot": "dialog-close"
                   },
                   "children": [],
+                  "rect": {
+                    "x": 816,
+                    "y": 237.75,
+                    "w": 32,
+                    "h": 32
+                  },
                   "text": "Close"
                 }
               ],
+              "rect": {
+                "x": 416,
+                "y": 221.75,
+                "w": 448,
+                "h": 356.5
+              },
               "text": "Edit profileMake changes to your profile here. Click save when you're done. Your profile will be updated immediately.Nam…"
             },
             {
@@ -1013,9 +1373,21 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 0,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1189,15 +1561,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 352.828125,
+                                        "y": 246,
+                                        "w": 94.34375,
+                                        "h": 36
+                                      },
                                       "text": "Edit Profile"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 352.828125,
+                                    "y": 246,
+                                    "w": 94.34375,
+                                    "h": 36
+                                  },
                                   "text": "Edit Profile"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Edit Profile"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With FormEdit Profile"
                         },
                         {
@@ -1243,12 +1639,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 807.46875,
+                                    "y": 246,
+                                    "w": 145.0625,
+                                    "h": 36
+                                  },
                                   "text": "Scrollable Content"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 221,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Scrollable Content"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 185,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Scrollable ContentScrollable Content"
                         },
                         {
@@ -1294,12 +1708,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 345,
+                                    "y": 400,
+                                    "w": 110,
+                                    "h": 36
+                                  },
                                   "text": "Sticky Footer"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Sticky Footer"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Sticky FooterSticky Footer"
                         },
                         {
@@ -1345,12 +1777,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 814.8125,
+                                    "y": 400,
+                                    "w": 130.375,
+                                    "h": 36
+                                  },
                                   "text": "No Close Button"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "No Close Button"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "No Close ButtonNo Close Button"
                         },
                         {
@@ -1396,21 +1846,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 343.96875,
+                                    "y": 554,
+                                    "w": 112.0625,
+                                    "h": 36
+                                  },
                                   "text": "Chat Settings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 529,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Chat Settings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 493,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Chat SettingsChat Settings"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1425,9 +1911,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

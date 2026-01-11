@@ -130,9 +130,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 198,
+                                            "w": 199,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 198,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -170,15 +182,45 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 392,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 392,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 198,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 173,
+                                "w": 448,
+                                "h": 56
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 137,
+                            "w": 448,
+                            "h": 92
+                          },
                           "text": "Basic"
                         },
                         {
@@ -254,9 +296,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 780.5,
+                                            "y": 198,
+                                            "w": 99.5,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 198,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -295,9 +349,21 @@
                                             "aria-label": "Minimum",
                                             "aria-valuenow": "25"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 776.5,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 776.5,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -336,15 +402,45 @@
                                             "aria-label": "Maximum",
                                             "aria-valuenow": "50"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 872,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 872,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 198,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 173,
+                                "w": 448,
+                                "h": 56
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 137,
+                            "w": 448,
+                            "h": 92
+                          },
                           "text": "Range"
                         },
                         {
@@ -420,9 +516,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 240.796875,
+                                            "y": 322,
+                                            "w": 238.8125,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 322,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -461,9 +569,21 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "10"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 239.1875,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 239.1875,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -502,9 +622,21 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "20"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 277.390625,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 277.390625,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -543,15 +675,45 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "70"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 468.390625,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 468.390625,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 322,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 297,
+                                "w": 448,
+                                "h": 210
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 261,
+                            "w": 448,
+                            "h": 246
+                          },
                           "text": "Multiple Thumbs"
                         },
                         {
@@ -642,9 +804,21 @@
                                                 "data-orientation": "vertical",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 402,
+                                                "w": 6,
+                                                "h": 80
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 322,
+                                            "w": 6,
+                                            "h": 160
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -684,11 +858,29 @@
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "50"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 676,
+                                                "y": 394,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 676,
+                                            "y": 394,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 322,
+                                        "w": 6,
+                                        "h": 160
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -741,9 +933,21 @@
                                                 "data-orientation": "vertical",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 711,
+                                                "y": 442,
+                                                "w": 6,
+                                                "h": 40
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 711,
+                                            "y": 322,
+                                            "w": 6,
+                                            "h": 160
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -783,17 +987,53 @@
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "25"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 706,
+                                                "y": 430,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 706,
+                                            "y": 430,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 711,
+                                        "y": 322,
+                                        "w": 6,
+                                        "h": 160
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 322,
+                                    "w": 398,
+                                    "h": 160
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 297,
+                                "w": 448,
+                                "h": 210
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 261,
+                            "w": 448,
+                            "h": 246
+                          },
                           "text": "Vertical"
                         },
                         {
@@ -862,9 +1102,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 603,
+                                            "w": 85.4375,
+                                            "h": 14
+                                          },
                                           "text": "Temperature"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 600,
+                                        "w": 398,
+                                        "h": 20
+                                      },
                                       "text": "Temperature0.3, 0.7"
                                     },
                                     {
@@ -918,9 +1170,21 @@
                                                 "data-orientation": "horizontal",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 320.390625,
+                                                "y": 632,
+                                                "w": 159.21875,
+                                                "h": 6
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 632,
+                                            "w": 398,
+                                            "h": 6
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -961,9 +1225,21 @@
                                                 "aria-label": "Minimum",
                                                 "aria-valuenow": "0.3"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 315.59375,
+                                                "y": 627,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 315.59375,
+                                            "y": 627,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -1004,19 +1280,55 @@
                                                 "aria-label": "Maximum",
                                                 "aria-valuenow": "0.7"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 468.390625,
+                                                "y": 627,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 468.390625,
+                                            "y": 627,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 632,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 600,
+                                    "w": 398,
+                                    "h": 38
+                                  },
                                   "text": "Temperature0.3, 0.7"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 575,
+                                "w": 448,
+                                "h": 88
+                              },
                               "text": "Temperature0.3, 0.7"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 539,
+                            "w": 448,
+                            "h": 124
+                          },
                           "text": "ControlledTemperature0.3, 0.7"
                         },
                         {
@@ -1095,9 +1407,21 @@
                                             "data-disabled": "",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 600,
+                                            "w": 199,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 600,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1135,24 +1459,72 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 872,
+                                            "y": 595,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 872,
+                                        "y": 595,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 600,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 575,
+                                "w": 448,
+                                "h": 88
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 539,
+                            "w": 448,
+                            "h": 124
+                          },
                           "text": "Disabled"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1167,9 +1539,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1448,9 +1832,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 198,
+                                            "w": 206.96875,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 198,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1488,15 +1884,45 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "52"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 399.625,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 399.625,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 198,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 173,
+                                "w": 448,
+                                "h": 56
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 137,
+                            "w": 448,
+                            "h": 92
+                          },
                           "text": "Basic"
                         },
                         {
@@ -1572,9 +1998,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 780.5,
+                                            "y": 198,
+                                            "w": 99.5,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 198,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1613,9 +2051,21 @@
                                             "aria-label": "Minimum",
                                             "aria-valuenow": "25"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 776.5,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 776.5,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1654,15 +2104,45 @@
                                             "aria-label": "Maximum",
                                             "aria-valuenow": "50"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 872,
+                                            "y": 193,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 872,
+                                        "y": 193,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 198,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 173,
+                                "w": 448,
+                                "h": 56
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 137,
+                            "w": 448,
+                            "h": 92
+                          },
                           "text": "Range"
                         },
                         {
@@ -1738,9 +2218,21 @@
                                             "data-orientation": "horizontal",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 240.796875,
+                                            "y": 322,
+                                            "w": 238.8125,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 322,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1779,9 +2271,21 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "10"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 239.1875,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 239.1875,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1820,9 +2324,21 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "20"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 277.390625,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 277.390625,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -1861,15 +2377,45 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "70"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 468.390625,
+                                            "y": 317,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 468.390625,
+                                        "y": 317,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 322,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 297,
+                                "w": 448,
+                                "h": 210
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 261,
+                            "w": 448,
+                            "h": 246
+                          },
                           "text": "Multiple Thumbs"
                         },
                         {
@@ -1960,9 +2506,21 @@
                                                 "data-orientation": "vertical",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 402,
+                                                "w": 6,
+                                                "h": 80
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 322,
+                                            "w": 6,
+                                            "h": 160
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -2002,11 +2560,29 @@
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "50"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 676,
+                                                "y": 394,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 676,
+                                            "y": 394,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 322,
+                                        "w": 6,
+                                        "h": 160
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -2059,9 +2635,21 @@
                                                 "data-orientation": "vertical",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 711,
+                                                "y": 442,
+                                                "w": 6,
+                                                "h": 40
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 711,
+                                            "y": 322,
+                                            "w": 6,
+                                            "h": 160
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -2101,17 +2689,53 @@
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "25"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 706,
+                                                "y": 430,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 706,
+                                            "y": 430,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 711,
+                                        "y": 322,
+                                        "w": 6,
+                                        "h": 160
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 322,
+                                    "w": 398,
+                                    "h": 160
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 297,
+                                "w": 448,
+                                "h": 210
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 261,
+                            "w": 448,
+                            "h": 246
+                          },
                           "text": "Vertical"
                         },
                         {
@@ -2180,9 +2804,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 603,
+                                            "w": 85.4375,
+                                            "h": 14
+                                          },
                                           "text": "Temperature"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 600,
+                                        "w": 398,
+                                        "h": 20
+                                      },
                                       "text": "Temperature0.3, 0.7"
                                     },
                                     {
@@ -2236,9 +2872,21 @@
                                                 "data-orientation": "horizontal",
                                                 "data-slot": "slider-range"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 320.390625,
+                                                "y": 632,
+                                                "w": 159.21875,
+                                                "h": 6
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 632,
+                                            "w": 398,
+                                            "h": 6
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -2279,9 +2927,21 @@
                                                 "aria-label": "Minimum",
                                                 "aria-valuenow": "0.3"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 315.59375,
+                                                "y": 627,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 315.59375,
+                                            "y": 627,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "span",
@@ -2322,19 +2982,55 @@
                                                 "aria-label": "Maximum",
                                                 "aria-valuenow": "0.7"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 468.390625,
+                                                "y": 627,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 468.390625,
+                                            "y": 627,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 632,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 600,
+                                    "w": 398,
+                                    "h": 38
+                                  },
                                   "text": "Temperature0.3, 0.7"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 575,
+                                "w": 448,
+                                "h": 88
+                              },
                               "text": "Temperature0.3, 0.7"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 539,
+                            "w": 448,
+                            "h": 124
+                          },
                           "text": "ControlledTemperature0.3, 0.7"
                         },
                         {
@@ -2413,9 +3109,21 @@
                                             "data-disabled": "",
                                             "data-slot": "slider-range"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 600,
+                                            "w": 199,
+                                            "h": 6
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 600,
+                                        "w": 398,
+                                        "h": 6
+                                      }
                                     },
                                     {
                                       "tag": "span",
@@ -2453,24 +3161,72 @@
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 872,
+                                            "y": 595,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 872,
+                                        "y": 595,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 600,
+                                    "w": 398,
+                                    "h": 6
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 575,
+                                "w": 448,
+                                "h": 88
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 539,
+                            "w": 448,
+                            "h": 124
+                          },
                           "text": "Disabled"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2485,9 +3241,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

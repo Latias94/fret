@@ -99,12 +99,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicOpen"
                         },
                         {
@@ -149,12 +167,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
                                   "text": "Complex Menu"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Complex Menu"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "ComplexComplex Menu"
                         },
                         {
@@ -199,12 +235,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconsOpen"
                         },
                         {
@@ -249,12 +303,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With ShortcutsOpen"
                         },
                         {
@@ -299,12 +371,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With SubmenuOpen"
                         },
                         {
@@ -349,12 +439,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
                                   "text": "Checkboxes"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Checkboxes"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With CheckboxesCheckboxes"
                         },
                         {
@@ -399,12 +507,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
                                   "text": "Notifications"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Notifications"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Checkboxes with IconsNotifications"
                         },
                         {
@@ -449,12 +575,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
                                   "text": "Radio Group"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Radio Group"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Radio GroupRadio Group"
                         },
                         {
@@ -499,12 +643,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
                                   "text": "Payment Method"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Payment Method"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Radio with IconsPayment Method"
                         },
                         {
@@ -549,12 +711,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
                                   "text": "Actions"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Actions"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Destructive ItemsActions"
                         },
                         {
@@ -644,11 +824,29 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
                                       "text": "shadcnshadcn@example.com"
                                     },
                                     {
@@ -701,19 +899,55 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
                                   "text": "shadcnshadcn@example.com"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "shadcnshadcn@example.com"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
@@ -759,21 +993,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
                       "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
                   "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -788,9 +1058,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -956,7 +1238,13 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -966,7 +1254,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -1039,12 +1333,30 @@
                                     "aria-controls": "radix-_r_t_"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicOpen"
                         },
                         {
@@ -1089,12 +1401,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
                                   "text": "Complex Menu"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Complex Menu"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "ComplexComplex Menu"
                         },
                         {
@@ -1139,12 +1469,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconsOpen"
                         },
                         {
@@ -1189,12 +1537,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With ShortcutsOpen"
                         },
                         {
@@ -1239,12 +1605,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With SubmenuOpen"
                         },
                         {
@@ -1289,12 +1673,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
                                   "text": "Checkboxes"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Checkboxes"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With CheckboxesCheckboxes"
                         },
                         {
@@ -1339,12 +1741,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
                                   "text": "Notifications"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Notifications"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Checkboxes with IconsNotifications"
                         },
                         {
@@ -1389,12 +1809,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
                                   "text": "Radio Group"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Radio Group"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Radio GroupRadio Group"
                         },
                         {
@@ -1439,12 +1877,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
                                   "text": "Payment Method"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Payment Method"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Radio with IconsPayment Method"
                         },
                         {
@@ -1489,12 +1945,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
                                   "text": "Actions"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Actions"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Destructive ItemsActions"
                         },
                         {
@@ -1584,11 +2058,29 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
                                       "text": "shadcnshadcn@example.com"
                                     },
                                     {
@@ -1641,19 +2133,55 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
                                   "text": "shadcnshadcn@example.com"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "shadcnshadcn@example.com"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
@@ -1699,21 +2227,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
                       "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
                   "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1728,7 +2292,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "next-route-announcer",
@@ -1738,7 +2308,13 @@
               "attrs": {
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 0,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -1789,6 +2365,12 @@
                             "data-slot": "dropdown-menu-label"
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 153,
+                            "w": 120,
+                            "h": 28
+                          },
                           "text": "My Account"
                         },
                         {
@@ -1807,6 +2389,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 181,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "Profile"
                         },
                         {
@@ -1825,6 +2413,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 213,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "Billing"
                         },
                         {
@@ -1843,9 +2437,21 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 245,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "Settings"
                         }
                       ],
+                      "rect": {
+                        "x": 205,
+                        "y": 153,
+                        "w": 120,
+                        "h": 124
+                      },
                       "text": "My AccountProfileBillingSettings"
                     },
                     {
@@ -1860,7 +2466,13 @@
                         "aria-orientation": "horizontal",
                         "data-slot": "dropdown-menu-separator"
                       },
-                      "children": []
+                      "children": [],
+                      "rect": {
+                        "x": 201,
+                        "y": 281,
+                        "w": 128,
+                        "h": 1
+                      }
                     },
                     {
                       "tag": "div",
@@ -1890,6 +2502,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 286,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "GitHub"
                         },
                         {
@@ -1908,6 +2526,12 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 318,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "Support"
                         },
                         {
@@ -1928,15 +2552,39 @@
                             "data-radix-collection-item": ""
                           },
                           "children": [],
+                          "rect": {
+                            "x": 205,
+                            "y": 350,
+                            "w": 120,
+                            "h": 32
+                          },
                           "text": "API"
                         }
                       ],
+                      "rect": {
+                        "x": 205,
+                        "y": 286,
+                        "w": 120,
+                        "h": 96
+                      },
                       "text": "GitHubSupportAPI"
                     }
                   ],
+                  "rect": {
+                    "x": 201,
+                    "y": 149,
+                    "w": 128,
+                    "h": 237
+                  },
                   "text": "My AccountProfileBillingSettingsGitHubSupportAPI"
                 }
               ],
+              "rect": {
+                "x": 201,
+                "y": 149,
+                "w": 128,
+                "h": 237
+              },
               "text": "My AccountProfileBillingSettingsGitHubSupportAPI"
             },
             {
@@ -1948,9 +2596,21 @@
                 "tabindex": "0",
                 "aria-hidden": "true"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 0,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -2094,12 +2754,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicOpen"
                         },
                         {
@@ -2144,12 +2822,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
                                   "text": "Complex Menu"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Complex Menu"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "ComplexComplex Menu"
                         },
                         {
@@ -2194,12 +2890,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconsOpen"
                         },
                         {
@@ -2244,12 +2958,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With ShortcutsOpen"
                         },
                         {
@@ -2294,12 +3026,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
                                   "text": "Open"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With SubmenuOpen"
                         },
                         {
@@ -2344,12 +3094,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
                                   "text": "Checkboxes"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Checkboxes"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With CheckboxesCheckboxes"
                         },
                         {
@@ -2394,12 +3162,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
                                   "text": "Notifications"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Notifications"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Checkboxes with IconsNotifications"
                         },
                         {
@@ -2444,12 +3230,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
                                   "text": "Radio Group"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Radio Group"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Radio GroupRadio Group"
                         },
                         {
@@ -2494,12 +3298,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
                                   "text": "Payment Method"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Payment Method"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Radio with IconsPayment Method"
                         },
                         {
@@ -2544,12 +3366,30 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
                                   "text": "Actions"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Actions"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With Destructive ItemsActions"
                         },
                         {
@@ -2639,11 +3479,29 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
                                       "text": "shadcnshadcn@example.com"
                                     },
                                     {
@@ -2696,19 +3554,55 @@
                                               "attrs": {
                                                 "data-slot": "avatar-image"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
                                   "text": "shadcnshadcn@example.com"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "shadcnshadcn@example.com"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
@@ -2754,21 +3648,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
                       "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
                   "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2783,9 +3713,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
         },
         "ax": {
           "role": "RootWebArea",

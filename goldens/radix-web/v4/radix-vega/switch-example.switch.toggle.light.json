@@ -132,9 +132,21 @@
                                             "data-state": "unchecked",
                                             "data-slot": "switch-thumb"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 272.59375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 271.40625,
+                                        "w": 32,
+                                        "h": 18.390625
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -151,15 +163,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 245,
+                                        "y": 270.984375,
+                                        "w": 354,
+                                        "h": 19.25
+                                      },
                                       "text": "Airplane Mode"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 270.984375,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Airplane Mode"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 245.984375,
+                                "w": 448,
+                                "h": 141.25
+                              },
                               "text": "Airplane Mode"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 209.984375,
+                            "w": 448,
+                            "h": 177.25
+                          },
                           "text": "BasicAirplane Mode"
                         },
                         {
@@ -251,6 +287,12 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 283.984375,
+                                                "w": 143,
+                                                "h": 19.25
+                                              },
                                               "text": "Share across devices"
                                             },
                                             {
@@ -270,9 +312,21 @@
                                                 "data-slot": "field-description"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 307.234375,
+                                                "w": 328,
+                                                "h": 42
+                                              },
                                               "text": "Focus is shared across devices, and turns off when you leave the app."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 694,
+                                            "y": 283.984375,
+                                            "w": 328,
+                                            "h": 65.25
+                                          },
                                           "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                         },
                                         {
@@ -311,20 +365,56 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1035,
+                                                "y": 285.171875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 1034,
+                                            "y": 283.984375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 682,
+                                        "y": 271.984375,
+                                        "w": 396,
+                                        "h": 89.25
+                                      },
                                       "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 270.984375,
+                                    "w": 398,
+                                    "h": 91.25
+                                  },
                                   "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 245.984375,
+                                "w": 448,
+                                "h": 141.25
+                              },
                               "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 209.984375,
+                            "w": 448,
+                            "h": 177.25
+                          },
                           "text": "With DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the app."
                         },
                         {
@@ -415,9 +505,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 481.421875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 480.234375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -435,9 +537,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 482.421875,
+                                            "w": 148.3125,
+                                            "h": 14
+                                          },
                                           "text": "Disabled (Unchecked)"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 480.234375,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Disabled (Unchecked)"
                                     },
                                     {
@@ -491,9 +605,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 216,
+                                                "y": 547.8125,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 546.625,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -511,18 +637,48 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 548.8125,
+                                            "w": 131.71875,
+                                            "h": 14
+                                          },
                                           "text": "Disabled (Checked)"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 546.625,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Disabled (Checked)"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 480.234375,
+                                    "w": 398,
+                                    "h": 84.78125
+                                  },
                                   "text": "Disabled (Unchecked)Disabled (Checked)"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 455.234375,
+                                "w": 448,
+                                "h": 134.78125
+                              },
                               "text": "Disabled (Unchecked)Disabled (Checked)"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 419.234375,
+                            "w": 448,
+                            "h": 170.78125
+                          },
                           "text": "DisabledDisabled (Unchecked)Disabled (Checked)"
                         },
                         {
@@ -611,9 +767,21 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 682,
+                                                "y": 481.234375,
+                                                "w": 12,
+                                                "h": 12
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 480.234375,
+                                            "w": 24,
+                                            "h": 14
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -631,9 +799,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 713,
+                                            "y": 480.234375,
+                                            "w": 36.484375,
+                                            "h": 14
+                                          },
                                           "text": "Small"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 480.234375,
+                                        "w": 398,
+                                        "h": 14
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -685,9 +865,21 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 682,
+                                                "y": 543.421875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 542.234375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -705,27 +897,75 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 721,
+                                            "y": 544.421875,
+                                            "w": 48.28125,
+                                            "h": 14
+                                          },
                                           "text": "Default"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 542.234375,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Default"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 480.234375,
+                                    "w": 398,
+                                    "h": 80.390625
+                                  },
                                   "text": "SmallDefault"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 455.234375,
+                                "w": 448,
+                                "h": 134.78125
+                              },
                               "text": "SmallDefault"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 419.234375,
+                            "w": 448,
+                            "h": 170.78125
+                          },
                           "text": "SizesSmallDefault"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -740,9 +980,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -962,9 +1214,21 @@
                                             "data-state": "checked",
                                             "data-slot": "switch-thumb"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 216,
+                                            "y": 272.59375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 271.40625,
+                                        "w": 32,
+                                        "h": 18.390625
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -981,15 +1245,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 245,
+                                        "y": 270.984375,
+                                        "w": 354,
+                                        "h": 19.25
+                                      },
                                       "text": "Airplane Mode"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 270.984375,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Airplane Mode"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 245.984375,
+                                "w": 448,
+                                "h": 141.25
+                              },
                               "text": "Airplane Mode"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 209.984375,
+                            "w": 448,
+                            "h": 177.25
+                          },
                           "text": "BasicAirplane Mode"
                         },
                         {
@@ -1081,6 +1369,12 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 283.984375,
+                                                "w": 143,
+                                                "h": 19.25
+                                              },
                                               "text": "Share across devices"
                                             },
                                             {
@@ -1100,9 +1394,21 @@
                                                 "data-slot": "field-description"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 307.234375,
+                                                "w": 328,
+                                                "h": 42
+                                              },
                                               "text": "Focus is shared across devices, and turns off when you leave the app."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 694,
+                                            "y": 283.984375,
+                                            "w": 328,
+                                            "h": 65.25
+                                          },
                                           "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                         },
                                         {
@@ -1141,20 +1447,56 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1035,
+                                                "y": 285.171875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 1034,
+                                            "y": 283.984375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 682,
+                                        "y": 271.984375,
+                                        "w": 396,
+                                        "h": 89.25
+                                      },
                                       "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 270.984375,
+                                    "w": 398,
+                                    "h": 91.25
+                                  },
                                   "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 245.984375,
+                                "w": 448,
+                                "h": 141.25
+                              },
                               "text": "Share across devicesFocus is shared across devices, and turns off when you leave the app."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 209.984375,
+                            "w": 448,
+                            "h": 177.25
+                          },
                           "text": "With DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the app."
                         },
                         {
@@ -1245,9 +1587,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 481.421875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 480.234375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1265,9 +1619,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 482.421875,
+                                            "w": 148.3125,
+                                            "h": 14
+                                          },
                                           "text": "Disabled (Unchecked)"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 480.234375,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Disabled (Unchecked)"
                                     },
                                     {
@@ -1321,9 +1687,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 216,
+                                                "y": 547.8125,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 546.625,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1341,18 +1719,48 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 548.8125,
+                                            "w": 131.71875,
+                                            "h": 14
+                                          },
                                           "text": "Disabled (Checked)"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 546.625,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Disabled (Checked)"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 480.234375,
+                                    "w": 398,
+                                    "h": 84.78125
+                                  },
                                   "text": "Disabled (Unchecked)Disabled (Checked)"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 455.234375,
+                                "w": 448,
+                                "h": 134.78125
+                              },
                               "text": "Disabled (Unchecked)Disabled (Checked)"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 419.234375,
+                            "w": 448,
+                            "h": 170.78125
+                          },
                           "text": "DisabledDisabled (Unchecked)Disabled (Checked)"
                         },
                         {
@@ -1441,9 +1849,21 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 682,
+                                                "y": 481.234375,
+                                                "w": 12,
+                                                "h": 12
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 480.234375,
+                                            "w": 24,
+                                            "h": 14
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1461,9 +1881,21 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 713,
+                                            "y": 480.234375,
+                                            "w": 36.484375,
+                                            "h": 14
+                                          },
                                           "text": "Small"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 480.234375,
+                                        "w": 398,
+                                        "h": 14
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -1515,9 +1947,21 @@
                                                 "data-state": "unchecked",
                                                 "data-slot": "switch-thumb"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 682,
+                                                "y": 543.421875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 542.234375,
+                                            "w": 32,
+                                            "h": 18.390625
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1535,27 +1979,75 @@
                                             "data-slot": "label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 721,
+                                            "y": 544.421875,
+                                            "w": 48.28125,
+                                            "h": 14
+                                          },
                                           "text": "Default"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 542.234375,
+                                        "w": 398,
+                                        "h": 18.390625
+                                      },
                                       "text": "Default"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 480.234375,
+                                    "w": 398,
+                                    "h": 80.390625
+                                  },
                                   "text": "SmallDefault"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 455.234375,
+                                "w": 448,
+                                "h": 134.78125
+                              },
                               "text": "SmallDefault"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 419.234375,
+                            "w": 448,
+                            "h": 170.78125
+                          },
                           "text": "SizesSmallDefault"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "BasicAirplane ModeWith DescriptionShare across devicesFocus is shared across devices, and turns off when you leave the a…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1570,9 +2062,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

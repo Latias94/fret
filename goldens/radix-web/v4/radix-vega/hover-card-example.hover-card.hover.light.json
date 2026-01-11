@@ -110,6 +110,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -128,6 +134,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -146,6 +158,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -164,15 +182,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -218,21 +260,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -247,9 +325,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -387,6 +477,12 @@
                                         "data-state": "open"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -405,6 +501,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -423,6 +525,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -441,15 +549,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -495,21 +627,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -524,7 +692,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -546,12 +720,30 @@
                     "data-slot": "hover-card-content"
                   },
                   "children": [],
+                  "rect": {
+                    "x": 161.4833221435547,
+                    "y": 296.9674987792969,
+                    "w": 255.03334045410156,
+                    "h": 99.62240600585938
+                  },
                   "text": "Hover CardThis hover card appears on the top side of the trigger."
                 }
               ],
+              "rect": {
+                "x": 161,
+                "y": 296,
+                "w": 256,
+                "h": 100
+              },
               "text": "Hover CardThis hover card appears on the top side of the trigger."
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -706,6 +898,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 265.375,
+                                        "y": 400,
+                                        "w": 47.15625,
+                                        "h": 36
+                                      },
                                       "text": "top"
                                     },
                                     {
@@ -724,6 +922,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 328.53125,
+                                        "y": 400,
+                                        "w": 56.46875,
+                                        "h": 36
+                                      },
                                       "text": "right"
                                     },
                                     {
@@ -742,6 +946,12 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 401,
+                                        "y": 400,
+                                        "w": 69.890625,
+                                        "h": 36
+                                      },
                                       "text": "bottom"
                                     },
                                     {
@@ -760,15 +970,39 @@
                                         "data-state": "closed"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 486.890625,
+                                        "y": 400,
+                                        "w": 47.71875,
+                                        "h": 36
+                                      },
                                       "text": "left"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 400,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "toprightbottomleft"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "toprightbottomleft"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Sidestoprightbottomleft"
                         },
                         {
@@ -814,21 +1048,57 @@
                                     "data-state": "closed"
                                   },
                                   "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 400,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
                                   "text": "Open Dialog"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 375,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Open Dialog"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 339,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "In DialogOpen Dialog"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "SidestoprightbottomleftIn DialogOpen Dialog"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -843,7 +1113,13 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             },
             {
               "tag": "div",
@@ -865,12 +1141,30 @@
                     "data-slot": "hover-card-content"
                   },
                   "children": [],
+                  "rect": {
+                    "x": 167.29513549804688,
+                    "y": 300.9180603027344,
+                    "w": 243.40972900390625,
+                    "h": 95.08193969726562
+                  },
                   "text": "Hover CardThis hover card appears on the top side of the trigger."
                 }
               ],
+              "rect": {
+                "x": 161,
+                "y": 296,
+                "w": 256,
+                "h": 100
+              },
               "text": "Hover CardThis hover card appears on the top side of the trigger."
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

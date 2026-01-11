@@ -120,8 +120,11 @@ function writeIfChanged(filePath: string, json: unknown, update: boolean) {
   fs.writeFileSync(filePath, data, "utf8")
 }
 
+const SETTLE_MS = 250
+
 async function sleep(ms: number) {
-  await new Promise((r) => setTimeout(r, ms))
+  const next = ms === 50 ? SETTLE_MS : ms
+  await new Promise((r) => setTimeout(r, next))
 }
 
 function resolveBrowserExecutablePath(): string | undefined {
@@ -399,7 +402,7 @@ async function clickUntilRoleAppears(
     } catch {
       try {
         await page.keyboard.press("Escape")
-        await sleep(50)
+        await sleep(SETTLE_MS)
       } catch {
         // ignore
       }

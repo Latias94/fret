@@ -174,6 +174,12 @@
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 291,
+                                                    "y": 185.5,
+                                                    "w": 109,
+                                                    "h": 29
+                                                  },
                                                   "text": "Explorer"
                                                 },
                                                 {
@@ -201,15 +207,39 @@
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 400,
+                                                    "y": 185.5,
+                                                    "w": 109,
+                                                    "h": 29
+                                                  },
                                                   "text": "Outline"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 182,
+                                                "w": 224,
+                                                "h": 36
+                                              },
                                               "text": "ExplorerOutline"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 288,
+                                            "y": 182,
+                                            "w": 224,
+                                            "h": 36
+                                          },
                                           "text": "ExplorerOutline"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 272,
+                                        "y": 182,
+                                        "w": 256,
+                                        "h": 36
+                                      },
                                       "text": "ExplorerOutline"
                                     },
                                     {
@@ -280,6 +310,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 226,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "components"
                                                 },
                                                 {
@@ -300,9 +336,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 226,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "components"
                                             },
                                             {
@@ -344,6 +392,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 262,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "lib"
                                                 },
                                                 {
@@ -364,9 +418,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 262,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "lib"
                                             },
                                             {
@@ -408,6 +474,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 298,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "hooks"
                                                 },
                                                 {
@@ -428,9 +500,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 298,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "hooks"
                                             },
                                             {
@@ -472,6 +556,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 334,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "types"
                                                 },
                                                 {
@@ -492,9 +582,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 334,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "types"
                                             },
                                             {
@@ -536,6 +638,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 370,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "public"
                                                 },
                                                 {
@@ -556,9 +664,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 370,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "public"
                                             },
                                             {
@@ -578,6 +698,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 406,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "app.tsx"
                                             },
                                             {
@@ -597,6 +723,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 442,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "layout.tsx"
                                             },
                                             {
@@ -616,6 +748,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 478,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "globals.css"
                                             },
                                             {
@@ -635,6 +773,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 514,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "package.json"
                                             },
                                             {
@@ -654,6 +798,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 550,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "tsconfig.json"
                                             },
                                             {
@@ -673,6 +823,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 586,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "README.md"
                                             },
                                             {
@@ -692,21 +848,57 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 622,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": ".gitignore"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 288,
+                                            "y": 226,
+                                            "w": 224,
+                                            "h": 428
+                                          },
                                           "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 272,
+                                        "y": 226,
+                                        "w": 256,
+                                        "h": 428
+                                      },
                                       "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 272,
+                                    "y": 166,
+                                    "w": 256,
+                                    "h": 504
+                                  },
                                   "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 141,
+                                "w": 448,
+                                "h": 554
+                              },
                               "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 105,
+                            "w": 448,
+                            "h": 590
+                          },
                           "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                         },
                         {
@@ -779,6 +971,12 @@
                                             "data-slot": "card-title"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 182,
+                                            "w": 288,
+                                            "h": 21
+                                          },
                                           "text": "Radius"
                                         },
                                         {
@@ -797,9 +995,21 @@
                                             "data-slot": "card-description"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 207,
+                                            "w": 288,
+                                            "h": 20
+                                          },
                                           "text": "Set the corner radius of the element."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 720,
+                                        "y": 182,
+                                        "w": 320,
+                                        "h": 45
+                                      },
                                       "text": "RadiusSet the corner radius of the element."
                                     },
                                     {
@@ -890,6 +1100,12 @@
                                                         "data-slot": "field-label"
                                                       },
                                                       "children": [],
+                                                      "rect": {
+                                                        "x": 735,
+                                                        "y": 242,
+                                                        "w": 58.640625,
+                                                        "h": 1
+                                                      },
                                                       "text": "Radius X"
                                                     },
                                                     {
@@ -910,9 +1126,21 @@
                                                       "attrs": {
                                                         "data-slot": "input"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 736,
+                                                        "y": 243,
+                                                        "w": 118,
+                                                        "h": 36
+                                                      }
                                                     }
                                                   ],
+                                                  "rect": {
+                                                    "x": 736,
+                                                    "y": 243,
+                                                    "w": 118,
+                                                    "h": 36
+                                                  },
                                                   "text": "Radius X"
                                                 },
                                                 {
@@ -954,6 +1182,12 @@
                                                         "data-slot": "field-label"
                                                       },
                                                       "children": [],
+                                                      "rect": {
+                                                        "x": 861,
+                                                        "y": 242,
+                                                        "w": 58.578125,
+                                                        "h": 1
+                                                      },
                                                       "text": "Radius Y"
                                                     },
                                                     {
@@ -974,9 +1208,21 @@
                                                       "attrs": {
                                                         "data-slot": "input"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 862,
+                                                        "y": 243,
+                                                        "w": 118,
+                                                        "h": 36
+                                                      }
                                                     }
                                                   ],
+                                                  "rect": {
+                                                    "x": 862,
+                                                    "y": 243,
+                                                    "w": 118,
+                                                    "h": 36
+                                                  },
                                                   "text": "Radius Y"
                                                 },
                                                 {
@@ -997,9 +1243,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 736,
+                                                "y": 243,
+                                                "w": 244,
+                                                "h": 36
+                                              },
                                               "text": "Radius XRadius Y"
                                             },
                                             {
@@ -1021,30 +1279,84 @@
                                                 "aria-expanded": "false",
                                                 "data-state": "closed"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 988,
+                                                "y": 243,
+                                                "w": 36,
+                                                "h": 36
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 243,
+                                            "w": 288,
+                                            "h": 36
+                                          },
                                           "text": "Radius XRadius Y"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 720,
+                                        "y": 243,
+                                        "w": 320,
+                                        "h": 36
+                                      },
                                       "text": "Radius XRadius Y"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 720,
+                                    "y": 166,
+                                    "w": 320,
+                                    "h": 129
+                                  },
                                   "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 141,
+                                "w": 448,
+                                "h": 554
+                              },
                               "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 105,
+                            "w": 448,
+                            "h": 590
+                          },
                           "text": "SettingsRadiusSet the corner radius of the element.Radius XRadius Y"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1059,9 +1371,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1357,6 +1681,12 @@
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 291,
+                                                    "y": 185.5,
+                                                    "w": 109,
+                                                    "h": 29
+                                                  },
                                                   "text": "Explorer"
                                                 },
                                                 {
@@ -1384,15 +1714,39 @@
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 400,
+                                                    "y": 185.5,
+                                                    "w": 109,
+                                                    "h": 29
+                                                  },
                                                   "text": "Outline"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 182,
+                                                "w": 224,
+                                                "h": 36
+                                              },
                                               "text": "ExplorerOutline"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 288,
+                                            "y": 182,
+                                            "w": 224,
+                                            "h": 36
+                                          },
                                           "text": "ExplorerOutline"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 272,
+                                        "y": 182,
+                                        "w": 256,
+                                        "h": 36
+                                      },
                                       "text": "ExplorerOutline"
                                     },
                                     {
@@ -1463,6 +1817,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 226,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "components"
                                                 },
                                                 {
@@ -1483,9 +1843,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 226,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "components"
                                             },
                                             {
@@ -1527,6 +1899,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 262,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "lib"
                                                 },
                                                 {
@@ -1547,9 +1925,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 262,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "lib"
                                             },
                                             {
@@ -1591,6 +1981,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 298,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "hooks"
                                                 },
                                                 {
@@ -1611,9 +2007,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 298,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "hooks"
                                             },
                                             {
@@ -1655,6 +2063,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 334,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "types"
                                                 },
                                                 {
@@ -1675,9 +2089,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 334,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "types"
                                             },
                                             {
@@ -1719,6 +2145,12 @@
                                                     "data-state": "closed"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 288,
+                                                    "y": 370,
+                                                    "w": 224,
+                                                    "h": 32
+                                                  },
                                                   "text": "public"
                                                 },
                                                 {
@@ -1739,9 +2171,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 370,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "public"
                                             },
                                             {
@@ -1761,6 +2205,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 406,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "app.tsx"
                                             },
                                             {
@@ -1780,6 +2230,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 442,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "layout.tsx"
                                             },
                                             {
@@ -1799,6 +2255,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 478,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "globals.css"
                                             },
                                             {
@@ -1818,6 +2280,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 514,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "package.json"
                                             },
                                             {
@@ -1837,6 +2305,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 550,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "tsconfig.json"
                                             },
                                             {
@@ -1856,6 +2330,12 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 586,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": "README.md"
                                             },
                                             {
@@ -1875,21 +2355,57 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 288,
+                                                "y": 622,
+                                                "w": 224,
+                                                "h": 32
+                                              },
                                               "text": ".gitignore"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 288,
+                                            "y": 226,
+                                            "w": 224,
+                                            "h": 428
+                                          },
                                           "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 272,
+                                        "y": 226,
+                                        "w": 256,
+                                        "h": 428
+                                      },
                                       "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 272,
+                                    "y": 166,
+                                    "w": 256,
+                                    "h": 504
+                                  },
                                   "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 141,
+                                "w": 448,
+                                "h": 554
+                              },
                               "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 105,
+                            "w": 448,
+                            "h": 590
+                          },
                           "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                         },
                         {
@@ -1962,6 +2478,12 @@
                                             "data-slot": "card-title"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 182,
+                                            "w": 288,
+                                            "h": 21
+                                          },
                                           "text": "Radius"
                                         },
                                         {
@@ -1980,9 +2502,21 @@
                                             "data-slot": "card-description"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 207,
+                                            "w": 288,
+                                            "h": 20
+                                          },
                                           "text": "Set the corner radius of the element."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 720,
+                                        "y": 182,
+                                        "w": 320,
+                                        "h": 45
+                                      },
                                       "text": "RadiusSet the corner radius of the element."
                                     },
                                     {
@@ -2073,6 +2607,12 @@
                                                         "data-slot": "field-label"
                                                       },
                                                       "children": [],
+                                                      "rect": {
+                                                        "x": 735,
+                                                        "y": 242,
+                                                        "w": 58.640625,
+                                                        "h": 1
+                                                      },
                                                       "text": "Radius X"
                                                     },
                                                     {
@@ -2093,9 +2633,21 @@
                                                       "attrs": {
                                                         "data-slot": "input"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 736,
+                                                        "y": 243,
+                                                        "w": 118,
+                                                        "h": 36
+                                                      }
                                                     }
                                                   ],
+                                                  "rect": {
+                                                    "x": 736,
+                                                    "y": 243,
+                                                    "w": 118,
+                                                    "h": 36
+                                                  },
                                                   "text": "Radius X"
                                                 },
                                                 {
@@ -2137,6 +2689,12 @@
                                                         "data-slot": "field-label"
                                                       },
                                                       "children": [],
+                                                      "rect": {
+                                                        "x": 861,
+                                                        "y": 242,
+                                                        "w": 58.578125,
+                                                        "h": 1
+                                                      },
                                                       "text": "Radius Y"
                                                     },
                                                     {
@@ -2157,9 +2715,21 @@
                                                       "attrs": {
                                                         "data-slot": "input"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 862,
+                                                        "y": 243,
+                                                        "w": 118,
+                                                        "h": 36
+                                                      }
                                                     }
                                                   ],
+                                                  "rect": {
+                                                    "x": 862,
+                                                    "y": 243,
+                                                    "w": 118,
+                                                    "h": 36
+                                                  },
                                                   "text": "Radius Y"
                                                 },
                                                 {
@@ -2180,9 +2750,21 @@
                                                     "data-state": "closed",
                                                     "data-slot": "collapsible-content"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 0,
+                                                    "y": 0,
+                                                    "w": 0,
+                                                    "h": 0
+                                                  }
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 736,
+                                                "y": 243,
+                                                "w": 244,
+                                                "h": 36
+                                              },
                                               "text": "Radius XRadius Y"
                                             },
                                             {
@@ -2204,30 +2786,84 @@
                                                 "aria-expanded": "false",
                                                 "data-state": "closed"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 988,
+                                                "y": 243,
+                                                "w": 36,
+                                                "h": 36
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 736,
+                                            "y": 243,
+                                            "w": 288,
+                                            "h": 36
+                                          },
                                           "text": "Radius XRadius Y"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 720,
+                                        "y": 243,
+                                        "w": 320,
+                                        "h": 36
+                                      },
                                       "text": "Radius XRadius Y"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 720,
+                                    "y": 166,
+                                    "w": 320,
+                                    "h": 129
+                                  },
                                   "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 141,
+                                "w": 448,
+                                "h": 554
+                              },
                               "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 105,
+                            "w": 448,
+                            "h": 590
+                          },
                           "text": "SettingsRadiusSet the corner radius of the element.Radius XRadius Y"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 800
+                      },
                       "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 800
+                  },
                   "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 800
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2242,9 +2878,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 800,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 800
+          }
         },
         "ax": {
           "role": "RootWebArea",

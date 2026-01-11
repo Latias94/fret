@@ -111,7 +111,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -130,7 +136,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 245,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -149,13 +161,37 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle underline"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 289,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Basic"
                         },
                         {
@@ -213,6 +249,12 @@
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 69.9375,
+                                        "h": 36
+                                      },
                                       "text": "Italic"
                                     },
                                     {
@@ -233,15 +275,39 @@
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 758.9375,
+                                        "y": 109,
+                                        "w": 67.84375,
+                                        "h": 36
+                                      },
                                       "text": "Bold"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "ItalicBold"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "ItalicBold"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "OutlineItalicBold"
                         },
                         {
@@ -299,6 +365,12 @@
                                         "aria-label": "Toggle small"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 267,
+                                        "w": 50.484375,
+                                        "h": 32
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -319,6 +391,12 @@
                                         "aria-label": "Toggle default"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 259.484375,
+                                        "y": 265,
+                                        "w": 66.28125,
+                                        "h": 36
+                                      },
                                       "text": "Default"
                                     },
                                     {
@@ -339,15 +417,39 @@
                                         "aria-label": "Toggle large"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 333.765625,
+                                        "y": 263,
+                                        "w": 59.921875,
+                                        "h": 40
+                                      },
                                       "text": "Large"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 40
+                                  },
                                   "text": "SmallDefaultLarge"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "SmallDefaultLarge"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "SizesSmallDefaultLarge"
                         },
                         {
@@ -416,6 +518,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 263,
+                                            "w": 65.84375,
+                                            "h": 32
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -437,9 +545,21 @@
                                             "aria-label": "Toggle sm"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 263,
+                                            "w": 59.609375,
+                                            "h": 32
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 263,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -471,6 +591,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 311,
+                                            "w": 65.84375,
+                                            "h": 36
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -492,9 +618,21 @@
                                             "aria-label": "Toggle default"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 311,
+                                            "w": 63.609375,
+                                            "h": 36
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 311,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -526,6 +664,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 363,
+                                            "w": 65.84375,
+                                            "h": 40
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -547,18 +691,48 @@
                                             "aria-label": "Toggle lg"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 363,
+                                            "w": 67.609375,
+                                            "h": 40
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 363,
+                                        "w": 398,
+                                        "h": 40
+                                      },
                                       "text": "ButtonToggle"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 140
+                                  },
                                   "text": "ButtonToggleButtonToggleButtonToggle"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "ButtonToggleButtonToggleButtonToggle"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button TextButtonToggleButtonToggleButtonToggle"
                         },
                         {
@@ -626,7 +800,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 521,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -646,9 +826,21 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 521,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 521,
+                                        "w": 398,
+                                        "h": 32
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -678,7 +870,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 569,
+                                            "w": 36,
+                                            "h": 36
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -698,9 +896,21 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle default icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 245,
+                                            "y": 569,
+                                            "w": 36,
+                                            "h": 36
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 569,
+                                        "w": 398,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -730,7 +940,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 621,
+                                            "w": 40,
+                                            "h": 40
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -750,15 +966,45 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 249,
+                                            "y": 621,
+                                            "w": 40,
+                                            "h": 40
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 621,
+                                        "w": 398,
+                                        "h": 40
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 521,
+                                    "w": 398,
+                                    "h": 140
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 496,
+                                "w": 448,
+                                "h": 190
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 460,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button Icon"
                         },
                         {
@@ -827,6 +1073,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 521,
+                                            "w": 81.84375,
+                                            "h": 32
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -848,9 +1100,21 @@
                                             "aria-label": "Toggle sm icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 770.84375,
+                                            "y": 521,
+                                            "w": 79.609375,
+                                            "h": 32
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 521,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -882,6 +1146,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 569,
+                                            "w": 85.84375,
+                                            "h": 36
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -903,9 +1173,21 @@
                                             "aria-label": "Toggle default icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 774.84375,
+                                            "y": 569,
+                                            "w": 83.609375,
+                                            "h": 36
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 569,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -937,6 +1219,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 621,
+                                            "w": 89.84375,
+                                            "h": 40
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -958,18 +1246,48 @@
                                             "aria-label": "Toggle lg icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 778.84375,
+                                            "y": 621,
+                                            "w": 87.609375,
+                                            "h": 40
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 621,
+                                        "w": 398,
+                                        "h": 40
+                                      },
                                       "text": "ButtonToggle"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 521,
+                                    "w": 398,
+                                    "h": 140
+                                  },
                                   "text": "ButtonToggleButtonToggleButtonToggle"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 496,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "ButtonToggleButtonToggleButtonToggle"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 460,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button Icon + TextButtonToggleButtonToggleButtonToggle"
                         },
                         {
@@ -1028,6 +1346,12 @@
                                         "aria-label": "Toggle disabled"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 779,
+                                        "w": 74.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     },
                                     {
@@ -1049,15 +1373,39 @@
                                         "aria-label": "Toggle disabled outline"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 283.1875,
+                                        "y": 779,
+                                        "w": 76.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 779,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "DisabledDisabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 754,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "DisabledDisabled"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 718,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabledDisabled"
                         },
                         {
@@ -1114,7 +1462,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 779,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -1134,24 +1488,66 @@
                                         "aria-label": "Toggle bookmark outline"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 725,
+                                        "y": 779,
+                                        "w": 105.78125,
+                                        "h": 36
+                                      },
                                       "text": "Bookmark"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 779,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "Bookmark"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 754,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Bookmark"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 718,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconBookmark"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 888
+                      },
                       "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 888
+                  },
                   "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 888
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1166,9 +1562,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 888,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 888
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -1466,7 +1874,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle bold"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -1485,7 +1899,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle italic"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 245,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -1504,13 +1924,37 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle underline"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 289,
+                                        "y": 109,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Basic"
                         },
                         {
@@ -1568,6 +2012,12 @@
                                         "aria-label": "Toggle italic"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 69.9375,
+                                        "h": 36
+                                      },
                                       "text": "Italic"
                                     },
                                     {
@@ -1588,15 +2038,39 @@
                                         "aria-label": "Toggle bold"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 758.9375,
+                                        "y": 109,
+                                        "w": 67.84375,
+                                        "h": 36
+                                      },
                                       "text": "Bold"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "ItalicBold"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "ItalicBold"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "OutlineItalicBold"
                         },
                         {
@@ -1654,6 +2128,12 @@
                                         "aria-label": "Toggle small"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 267,
+                                        "w": 50.484375,
+                                        "h": 32
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -1674,6 +2154,12 @@
                                         "aria-label": "Toggle default"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 259.484375,
+                                        "y": 265,
+                                        "w": 66.28125,
+                                        "h": 36
+                                      },
                                       "text": "Default"
                                     },
                                     {
@@ -1694,15 +2180,39 @@
                                         "aria-label": "Toggle large"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 333.765625,
+                                        "y": 263,
+                                        "w": 59.921875,
+                                        "h": 40
+                                      },
                                       "text": "Large"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 40
+                                  },
                                   "text": "SmallDefaultLarge"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "SmallDefaultLarge"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "SizesSmallDefaultLarge"
                         },
                         {
@@ -1771,6 +2281,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 263,
+                                            "w": 65.84375,
+                                            "h": 32
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -1792,9 +2308,21 @@
                                             "aria-label": "Toggle sm"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 263,
+                                            "w": 59.609375,
+                                            "h": 32
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 263,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -1826,6 +2354,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 311,
+                                            "w": 65.84375,
+                                            "h": 36
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -1847,9 +2381,21 @@
                                             "aria-label": "Toggle default"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 311,
+                                            "w": 63.609375,
+                                            "h": 36
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 311,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -1881,6 +2427,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 363,
+                                            "w": 65.84375,
+                                            "h": 40
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -1902,18 +2454,48 @@
                                             "aria-label": "Toggle lg"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 754.84375,
+                                            "y": 363,
+                                            "w": 67.609375,
+                                            "h": 40
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 363,
+                                        "w": 398,
+                                        "h": 40
+                                      },
                                       "text": "ButtonToggle"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 140
+                                  },
                                   "text": "ButtonToggleButtonToggleButtonToggle"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "ButtonToggleButtonToggleButtonToggle"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button TextButtonToggleButtonToggleButtonToggle"
                         },
                         {
@@ -1981,7 +2563,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 521,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -2001,9 +2589,21 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle sm icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 241,
+                                            "y": 521,
+                                            "w": 32,
+                                            "h": 32
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 521,
+                                        "w": 398,
+                                        "h": 32
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -2033,7 +2633,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 569,
+                                            "w": 36,
+                                            "h": 36
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -2053,9 +2659,21 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle default icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 245,
+                                            "y": 569,
+                                            "w": 36,
+                                            "h": 36
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 569,
+                                        "w": 398,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -2085,7 +2703,13 @@
                                           "attrs": {
                                             "data-slot": "button"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 621,
+                                            "w": 40,
+                                            "h": 40
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -2105,15 +2729,45 @@
                                             "data-slot": "toggle",
                                             "aria-label": "Toggle lg icon"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 249,
+                                            "y": 621,
+                                            "w": 40,
+                                            "h": 40
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 621,
+                                        "w": 398,
+                                        "h": 40
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 521,
+                                    "w": 398,
+                                    "h": 140
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 496,
+                                "w": 448,
+                                "h": 190
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 460,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button Icon"
                         },
                         {
@@ -2182,6 +2836,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 521,
+                                            "w": 81.84375,
+                                            "h": 32
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -2203,9 +2863,21 @@
                                             "aria-label": "Toggle sm icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 770.84375,
+                                            "y": 521,
+                                            "w": 79.609375,
+                                            "h": 32
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 521,
+                                        "w": 398,
+                                        "h": 32
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -2237,6 +2909,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 569,
+                                            "w": 85.84375,
+                                            "h": 36
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -2258,9 +2936,21 @@
                                             "aria-label": "Toggle default icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 774.84375,
+                                            "y": 569,
+                                            "w": 83.609375,
+                                            "h": 36
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 569,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "ButtonToggle"
                                     },
                                     {
@@ -2292,6 +2982,12 @@
                                             "data-slot": "button"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 621,
+                                            "w": 89.84375,
+                                            "h": 40
+                                          },
                                           "text": "Button"
                                         },
                                         {
@@ -2313,18 +3009,48 @@
                                             "aria-label": "Toggle lg icon text"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 778.84375,
+                                            "y": 621,
+                                            "w": 87.609375,
+                                            "h": 40
+                                          },
                                           "text": "Toggle"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 621,
+                                        "w": 398,
+                                        "h": 40
+                                      },
                                       "text": "ButtonToggle"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 521,
+                                    "w": 398,
+                                    "h": 140
+                                  },
                                   "text": "ButtonToggleButtonToggleButtonToggle"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 496,
+                                "w": 448,
+                                "h": 190
+                              },
                               "text": "ButtonToggleButtonToggleButtonToggle"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 460,
+                            "w": 448,
+                            "h": 226
+                          },
                           "text": "With Button Icon + TextButtonToggleButtonToggleButtonToggle"
                         },
                         {
@@ -2383,6 +3109,12 @@
                                         "aria-label": "Toggle disabled"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 779,
+                                        "w": 74.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     },
                                     {
@@ -2404,15 +3136,39 @@
                                         "aria-label": "Toggle disabled outline"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 283.1875,
+                                        "y": 779,
+                                        "w": 76.1875,
+                                        "h": 36
+                                      },
                                       "text": "Disabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 779,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "DisabledDisabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 754,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "DisabledDisabled"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 718,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledDisabledDisabled"
                         },
                         {
@@ -2469,7 +3225,13 @@
                                         "data-slot": "toggle",
                                         "aria-label": "Toggle bookmark"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 779,
+                                        "w": 36,
+                                        "h": 36
+                                      }
                                     },
                                     {
                                       "tag": "button",
@@ -2489,24 +3251,66 @@
                                         "aria-label": "Toggle bookmark outline"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 725,
+                                        "y": 779,
+                                        "w": 105.78125,
+                                        "h": 36
+                                      },
                                       "text": "Bookmark"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 779,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "Bookmark"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 754,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "Bookmark"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 718,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconBookmark"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 888
+                      },
                       "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 888
+                  },
                   "text": "BasicOutlineItalicBoldSizesSmallDefaultLargeWith Button TextButtonToggleButtonToggleButtonToggleWith Button IconWith But…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 888
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2521,9 +3325,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 888,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 888
+          }
         },
         "ax": {
           "role": "RootWebArea",
