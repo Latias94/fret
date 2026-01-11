@@ -141,6 +141,17 @@ pub enum GizmoSizePolicy {
     /// Keep the gizmo a constant size in screen pixels (Unity/Godot/Unreal-style default).
     #[default]
     ConstantPixels,
+    /// Compute size from `size_px` (constant-pixels baseline), but clamp the resulting world size
+    /// to a range derived from the selection bounds.
+    ///
+    /// This preserves the "constant screen size" feel in normal cases, while preventing extreme
+    /// world sizes when the selection is very large/small or the camera is very near/far.
+    PixelsClampedBySelectionBounds {
+        /// Minimum allowed gizmo length as `selection_max_extent * min_fraction_of_max_extent`.
+        min_fraction_of_max_extent: f32,
+        /// Maximum allowed gizmo length as `selection_max_extent * max_fraction_of_max_extent`.
+        max_fraction_of_max_extent: f32,
+    },
     /// Size the gizmo as a fraction of the selection's world-space bounds.
     ///
     /// This produces a gizmo that "tracks" the selection scale and camera distance (it is not
@@ -848,6 +859,49 @@ impl Gizmo {
                 self.config.depth_range,
                 self.config.size_px,
             )?,
+            GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                min_fraction_of_max_extent,
+                max_fraction_of_max_extent,
+            } => {
+                let base = axis_length_world(
+                    view_projection,
+                    viewport,
+                    origin,
+                    self.config.depth_range,
+                    self.config.size_px,
+                )?;
+                match Self::selection_world_aabb(targets) {
+                    None => base,
+                    Some(bounds) => {
+                        let extent = (bounds.max - bounds.min).abs();
+                        let max_extent = extent.max_element().max(1e-6);
+
+                        let min_frac = if min_fraction_of_max_extent.is_finite() {
+                            min_fraction_of_max_extent.clamp(0.0, 1000.0)
+                        } else {
+                            0.0
+                        };
+                        let max_frac = if max_fraction_of_max_extent.is_finite() {
+                            max_fraction_of_max_extent.clamp(0.0, 1000.0)
+                        } else {
+                            0.0
+                        };
+                        let (min_frac, max_frac) = if min_frac <= max_frac {
+                            (min_frac, max_frac)
+                        } else {
+                            (max_frac, min_frac)
+                        };
+
+                        let min_world = max_extent * min_frac;
+                        let max_world = max_extent * max_frac;
+                        if max_world <= 1e-6 {
+                            base
+                        } else {
+                            base.clamp(min_world.max(0.0), max_world.max(min_world))
+                        }
+                    }
+                }
+            }
             GizmoSizePolicy::SelectionBounds {
                 fraction_of_max_extent,
             } => {
@@ -2992,7 +3046,8 @@ impl Gizmo {
             GizmoSizePolicy::ConstantPixels => {
                 self.config.size_px * self.config.arcball_radius_scale
             }
-            GizmoSizePolicy::SelectionBounds { .. } => {
+            GizmoSizePolicy::PixelsClampedBySelectionBounds { .. }
+            | GizmoSizePolicy::SelectionBounds { .. } => {
                 let r_world = (size_length_world * self.config.arcball_radius_scale).max(1e-6);
                 axis_segment_len_px(
                     view_projection,
@@ -5323,7 +5378,8 @@ impl Gizmo {
                 GizmoSizePolicy::ConstantPixels => {
                     self.config.size_px * self.config.arcball_radius_scale
                 }
-                GizmoSizePolicy::SelectionBounds { .. } => {
+                GizmoSizePolicy::PixelsClampedBySelectionBounds { .. }
+                | GizmoSizePolicy::SelectionBounds { .. } => {
                     let r_world = (radius_world * self.config.arcball_radius_scale).max(1e-6);
                     // The arcball circle is camera-facing, so any in-plane direction yields a
                     // stable projected radius.
@@ -7891,6 +7947,108 @@ mod tests {
             .unwrap();
         assert_eq!(kind, GizmoMode::Translate);
         assert_eq!(hit.handle, HandleId(1));
+    }
+
+    #[test]
+    fn size_policy_pixels_clamped_by_selection_bounds_clamps_world_length() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.size_policy = GizmoSizePolicy::PixelsClampedBySelectionBounds {
+            min_fraction_of_max_extent: 0.2,
+            max_fraction_of_max_extent: 0.4,
+        };
+        let gizmo = Gizmo::new(config);
+
+        let huge = Aabb3 {
+            min: Vec3::splat(-50.0),
+            max: Vec3::splat(50.0),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(huge),
+        }];
+
+        let base = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let max_extent = (huge.max - huge.min).abs().max_element();
+        let min_world = max_extent * 0.2;
+        let max_world = max_extent * 0.4;
+        let expected = base.clamp(min_world, max_world);
+
+        let length_world = gizmo
+            .size_length_world(view_proj, vp, origin, &targets)
+            .unwrap();
+        assert!(
+            (length_world - expected).abs() < 1e-3,
+            "length_world={length_world} expected={expected}"
+        );
+    }
+
+    #[test]
+    fn size_policy_pixels_clamped_by_selection_bounds_can_clamp_down() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.size_policy = GizmoSizePolicy::PixelsClampedBySelectionBounds {
+            min_fraction_of_max_extent: 0.2,
+            max_fraction_of_max_extent: 0.4,
+        };
+        let gizmo = Gizmo::new(config);
+
+        let tiny = Aabb3 {
+            min: Vec3::splat(-0.05),
+            max: Vec3::splat(0.05),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(tiny),
+        }];
+
+        let base = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let max_extent = (tiny.max - tiny.min).abs().max_element();
+        let min_world = max_extent * 0.2;
+        let max_world = max_extent * 0.4;
+        let expected = base.clamp(min_world, max_world);
+
+        let length_world = gizmo
+            .size_length_world(view_proj, vp, origin, &targets)
+            .unwrap();
+        assert!(
+            (length_world - expected).abs() < 1e-3,
+            "length_world={length_world} expected={expected}"
+        );
     }
 
     // Note: we do not currently assert a deterministic rotate-vs-translate ambiguity case in
