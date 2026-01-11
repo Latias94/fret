@@ -14,7 +14,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-10
+- Last updated: 2026-01-11
 - ADR count (numbered): 152
 
 - Aligned: 77
@@ -180,4 +180,4 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0144-delinea-brush-selection-and-output-contract.md`](0144-delinea-brush-selection-and-output-contract.md) | Accepted | Not audited |  |
 | [`0145-delinea-brush-selection-to-row-selection-fast-path.md`](0145-delinea-brush-selection-to-row-selection-fast-path.md) | Accepted | Not audited |  |
 | [`0146-delinea-link-events-for-brush-selection.md`](0146-delinea-link-events-for-brush-selection.md) | Accepted | Not audited |  |
-| [`0147-effect-recipes-and-tier-selection-v1.md`](0147-effect-recipes-and-tier-selection-v1.md) | Proposed | Partially aligned | Tier B mechanism exists via `EffectLayerProps` (`crates/fret-ui/src/element.rs`) emitting `SceneOp::PushEffect/PopEffect` (ADR 0119) during paint (`crates/fret-ui/src/declarative/mount.rs`). Ecosystem recipes exist for glass + pixelate (`ecosystem/fret-ui-kit/src/recipes/{glass,pixelate}.rs`) with declarative wrappers (`ecosystem/fret-ui-kit/src/declarative/{glass,pixelate}.rs`) and user-facing authoring guidance (`docs/effects-authoring.md`). Tier A embedding is available as a declarative leaf via `ViewportSurfaceProps` (`crates/fret-ui/src/element.rs`) emitting `SceneOp::ViewportSurface` (ADR 0007). |
+| [`0147-effect-recipes-and-tier-selection-v1.md`](0147-effect-recipes-and-tier-selection-v1.md) | Proposed | Partially aligned | Tier B mechanism exists via `EffectLayerProps` (`crates/fret-ui/src/element.rs`) emitting `SceneOp::PushEffect/PopEffect` (ADR 0119) during paint (`crates/fret-ui/src/declarative/mount.rs`). Ecosystem recipes exist for glass + pixelate (`ecosystem/fret-ui-kit/src/recipes/{glass,pixelate}.rs`) with declarative wrappers (`ecosystem/fret-ui-kit/src/declarative/{glass,pixelate}.rs`) and user-facing authoring guidance (`docs/effects-authoring.md`). Tier A embedding is available as a declarative leaf via `ViewportSurfaceProps` (`crates/fret-ui/src/element.rs`) emitting `SceneOp::ViewportSurface` (ADR 0007). For input forwarding, `fret-ui` supports wheel hooks on pointer regions (`crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`), and `fret-ui-kit` provides `viewport_surface_panel` to composite a `RenderTargetId` and forward pointer + wheel as `Effect::ViewportInput` (`ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`). |
