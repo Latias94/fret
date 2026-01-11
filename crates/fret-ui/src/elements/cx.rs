@@ -180,11 +180,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     /// Request a window redraw (one-shot).
     ///
-    /// Use this after mutating state/models in response to input. For frame-driven updates
-    /// (animations, progressive rendering), prefer `request_animation_frame()` or
-    /// `begin_continuous_frames()`.
+    /// Use this after mutating state/models to schedule a repaint.
     ///
-    /// This is not a timer: callers that need continuous progression must keep requesting frames.
+    /// Notes:
+    /// - This does not guarantee frame-driven progression. If you need to advance without input
+    ///   events (animations, progressive rendering), prefer `request_animation_frame()` or
+    ///   `begin_continuous_frames()`.
+    /// - This is not a timer: callers that need continuous progression must keep requesting frames.
     pub fn request_frame(&mut self) {
         self.app.request_redraw(self.window);
     }

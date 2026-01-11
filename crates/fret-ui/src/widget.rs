@@ -81,6 +81,8 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     /// - `request_redraw()` is not a timer. If you need continuous progression without input
     ///   (animations, progressive rendering), you must request the next frame via
     ///   `request_animation_frame()` (or a higher-level continuous-frames helper).
+    /// - A redraw request may be coalesced and does not necessarily wake a sleeping event loop on
+    ///   all platforms. Prefer `request_animation_frame()` for frame-driven progression.
     pub fn request_redraw(&mut self) {
         let Some(window) = self.window else {
             return;

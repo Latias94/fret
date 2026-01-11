@@ -13,8 +13,14 @@ pub enum Effect {
     /// Request a window redraw (one-shot).
     ///
     /// This is the lowest-level redraw primitive. Higher-level UI code typically calls
-    /// `App::request_redraw` or `Cx::request_redraw`, which eventually results in this effect being
-    /// handled by the runner/backend.
+    /// `App::request_redraw` (or `Cx::request_redraw` / `Cx::request_frame`), which eventually
+    /// results in this effect being handled by the runner/backend.
+    ///
+    /// Semantics:
+    /// - This is a one-shot request and may be coalesced by the runner or platform compositor.
+    /// - This does **not** imply continuous frame progression. If you need to keep repainting
+    ///   without input events (animations, progressive rendering), use
+    ///   [`Effect::RequestAnimationFrame`] and re-issue it each frame while active.
     Redraw(AppWindowId),
     Window(WindowRequest),
     Command {

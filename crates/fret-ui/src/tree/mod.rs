@@ -606,6 +606,25 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    /// Returns the node bounds after applying the accumulated `render_transform` stack.
+    ///
+    /// This is intended for debugging and tests that need screen-space geometry for overlay
+    /// placement/hit-testing scenarios. Unlike `debug_node_bounds`, this includes render-time
+    /// transforms such as `Anchored` placement.
+    pub fn debug_node_visual_bounds(&self, node: NodeId) -> Option<Rect> {
+        let bounds = self.nodes.get(node).map(|n| n.bounds)?;
+        let path = self.debug_node_path(node);
+
+        let mut transform = Transform2D::IDENTITY;
+        for id in path {
+            if let Some(local) = self.node_render_transform(id) {
+                transform = transform.compose(local);
+            }
+        }
+
+        Some(rect_aabb_transformed(bounds, transform))
+    }
+
     #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn layout_engine_child_local_rect(
         &self,
