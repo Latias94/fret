@@ -293,6 +293,11 @@ pub struct GizmoConfig {
     /// Note: uniform scaling (handle id 7) remains exclusive to `GizmoMode::Scale` to avoid
     /// center-handle conflicts with view-plane translation.
     pub universal_includes_scale: bool,
+    /// When `true`, `GizmoMode::Universal` includes the dolly (depth) translation handle.
+    ///
+    /// This is a Fret extension: the depth handle is a small ring around the center that moves
+    /// along the camera view direction.
+    pub universal_includes_translate_depth: bool,
     /// When `true` (default), axes may flip direction for better screen-space visibility
     /// (ImGuizmo `AllowAxisFlip` behavior).
     pub allow_axis_flip: bool,
@@ -353,6 +358,7 @@ impl Default for GizmoConfig {
             show_bounds: false,
             bounds_handle_size_px: 12.0,
             universal_includes_scale: true,
+            universal_includes_translate_depth: false,
             allow_axis_flip: true,
             axis_fade_px: (4.0, 18.0),
             plane_fade_px2: (120.0, 520.0),
@@ -2657,6 +2663,14 @@ impl Gizmo {
                     origin,
                     size_length_world,
                 ));
+                if self.config.universal_includes_translate_depth {
+                    out.lines.extend(self.draw_translate_depth(
+                        view_projection,
+                        viewport,
+                        origin,
+                        size_length_world,
+                    ));
+                }
                 out.lines.extend(self.draw_rotate_rings(
                     view_projection,
                     viewport,
@@ -5410,7 +5424,7 @@ impl Gizmo {
                 true,
                 true,
                 true,
-                false,
+                self.config.universal_includes_translate_depth,
             )
             .map(|h| (h, GizmoMode::Translate));
         let rotate = self
@@ -9474,6 +9488,45 @@ mod tests {
             .unwrap();
         assert_eq!(kind, GizmoMode::Translate);
         assert_eq!(hit.handle, HandleId(1));
+    }
+
+    #[test]
+    fn universal_can_pick_translate_depth_when_enabled() {
+        let mut gizmo = base_gizmo(GizmoMode::Universal);
+        gizmo.config.universal_includes_translate_depth = true;
+        gizmo.config.size_px = 120.0;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let (u, _v) = plane_basis(view_dir);
+        let r_world = (length_world * 0.14).max(length_world * 0.08);
+        let ring_px = project_point(
+            view_proj,
+            vp,
+            origin + u.normalize_or_zero() * r_world,
+            gizmo.config.depth_range,
+        )
+        .unwrap()
+        .screen;
+
+        let (hit, kind) = gizmo
+            .pick_universal_handle(view_proj, vp, origin, ring_px, axes, length_world)
+            .unwrap();
+        assert_eq!(kind, GizmoMode::Translate);
+        assert_eq!(hit.handle, TranslateHandle::Depth.id());
     }
 
     #[test]
