@@ -5942,6 +5942,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if *key == fret_core::KeyCode::Escape {
+                    if searcher::handle_searcher_escape(self, cx)
+                        || context_menu::handle_context_menu_escape(self, cx)
+                    {
+                        return;
+                    }
+                    cancel::handle_escape_cancel(self, cx);
+                    return;
+                }
+
+                if searcher::handle_searcher_key_down(self, cx, *key, *modifiers)
+                    || context_menu::handle_context_menu_key_down(self, cx, *key)
+                {
+                    return;
+                }
+
+                if snapshot.interaction.disable_keyboard_a11y {
+                    return;
+                }
+
                 if modifiers.ctrl || modifiers.meta {
                     if *key == fret_core::KeyCode::Tab {
                         let cmd = if modifiers.shift {
@@ -6018,22 +6038,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     };
                     cx.dispatch_command(CommandId::from(cmd));
                     cx.stop_propagation();
-                    return;
-                }
-
-                if *key == fret_core::KeyCode::Escape {
-                    if searcher::handle_searcher_escape(self, cx)
-                        || context_menu::handle_context_menu_escape(self, cx)
-                    {
-                        return;
-                    }
-                    cancel::handle_escape_cancel(self, cx);
-                    return;
-                }
-
-                if searcher::handle_searcher_key_down(self, cx, *key, *modifiers)
-                    || context_menu::handle_context_menu_key_down(self, cx, *key)
-                {
                     return;
                 }
 
@@ -8445,6 +8449,44 @@ mod tests {
                     if *command == CommandId::from(crate::ui::commands::CMD_NODE_GRAPH_DELETE_SELECTION)
             )),
             "Backspace should dispatch delete-selection by default"
+        );
+    }
+
+    #[test]
+    fn disable_keyboard_a11y_blocks_delete_shortcut() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.disable_keyboard_a11y = true;
+            s.interaction.delete_key = crate::io::NodeGraphDeleteKey::BackspaceOrDelete;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+
+        {
+            let mut cx = event_cx(&mut host, &mut services, bounds);
+            cx.window = Some(AppWindowId::default());
+            canvas.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Backspace,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+
+        assert!(
+            host.effects.is_empty(),
+            "delete shortcut should be blocked when disable_keyboard_a11y is enabled"
         );
     }
 

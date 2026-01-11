@@ -504,6 +504,14 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub delete_key: NodeGraphDeleteKey,
 
+    /// Disable keyboard-driven accessibility and shortcut handling (XyFlow `disableKeyboardA11y`).
+    ///
+    /// When enabled, the canvas will avoid handling global keyboard shortcuts and focus traversal.
+    /// Overlay UIs (searcher, context menus) still receive keyboard events, and Escape can still
+    /// cancel in-progress interactions.
+    #[serde(default)]
+    pub disable_keyboard_a11y: bool,
+
     /// Background click distance threshold in screen pixels (XyFlow `paneClickDistance`).
     ///
     /// This controls when a background drag transitions from a "click" into an interaction
@@ -628,6 +636,7 @@ impl Default for NodeGraphInteractionState {
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
             delete_key: NodeGraphDeleteKey::default(),
+            disable_keyboard_a11y: false,
             pane_click_distance: default_pane_click_distance(),
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
