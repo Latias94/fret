@@ -577,6 +577,44 @@ fn web_vs_fret_layout_slider_demo_geometry() {
 }
 
 #[test]
+fn web_vs_fret_layout_textarea_demo_geometry() {
+    let web = read_web_golden("textarea-demo");
+    let theme = web_theme(&web);
+    let web_textarea = find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Textarea::new(model)
+                .a11y_label("Textarea")
+                .into_element(cx),
+        ]
+    });
+
+    let textarea = find_semantics(&snap, SemanticsRole::TextField, Some("Textarea"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::TextField, None))
+        .expect("fret textarea semantics node");
+
+    assert_close_px(
+        "textarea width",
+        textarea.bounds.size.width,
+        web_textarea.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "textarea height",
+        textarea.bounds.size.height,
+        web_textarea.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_tabs_demo_tab_list_height() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
