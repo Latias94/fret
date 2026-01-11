@@ -35,6 +35,7 @@ pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;
 pub use fret_core::ImageColorSpace;
+pub use fret_core::ImageUpdateToken;
 pub use fret_core::ImageUploadToken;
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{

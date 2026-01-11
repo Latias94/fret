@@ -1,6 +1,6 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUploadToken, RenderTargetId, TimerToken, WindowLogicalPosition,
+    ImageId, ImageUpdateToken, ImageUploadToken, RenderTargetId, TimerToken, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -272,6 +272,22 @@ pub enum Event {
         token: ImageUploadToken,
         message: String,
     },
+    /// Optional acknowledgement that a streaming image update was applied.
+    ///
+    /// This is intended for debugging/telemetry surfaces and must be capability-gated by the
+    /// runner to avoid flooding the event loop during video playback (ADR 0126).
+    ImageUpdateApplied {
+        token: ImageUpdateToken,
+        image: ImageId,
+    },
+    /// Optional acknowledgement that a streaming image update was dropped.
+    ///
+    /// See `ImageUpdateApplied` for rationale (ADR 0126).
+    ImageUpdateDropped {
+        token: ImageUpdateToken,
+        image: ImageId,
+        reason: ImageUpdateDropReason,
+    },
     /// Window close button / OS close request was triggered.
     ///
     /// The runner must not close the window immediately; the app/driver may intercept the request
@@ -285,6 +301,16 @@ pub enum Event {
         width: Px,
         height: Px,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ImageUpdateDropReason {
+    Coalesced,
+    StagingBudgetExceeded,
+    UnknownImage,
+    InvalidPayload,
+    RendererNotReady,
+    Unsupported,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

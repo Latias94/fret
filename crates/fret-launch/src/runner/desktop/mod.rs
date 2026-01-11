@@ -1985,11 +1985,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
             let effects = self.app.flush_effects();
-            let (effects, stats) = self.streaming_uploads.process_effects(
+            let (effects, stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
                 effects,
                 self.config.streaming_upload_budget_bytes_per_frame,
                 self.config.streaming_staging_budget_bytes,
+                self.config.streaming_update_ack_enabled,
             );
             if self.config.streaming_perf_snapshot_enabled
                 || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
@@ -2008,6 +2009,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     pending_updates: u64::from(stats.pending_updates),
                     pending_staging_bytes: stats.pending_staging_bytes,
                 });
+            }
+            if self.config.streaming_update_ack_enabled {
+                for ack in acks {
+                    let window = ack
+                        .window_hint
+                        .or(self.main_window)
+                        .or_else(|| self.windows.keys().next());
+                    let Some(window) = window else {
+                        continue;
+                    };
+                    match ack.kind {
+                        super::streaming_upload::StreamingUploadAckKind::Dropped(reason) => {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ImageUpdateDropped {
+                                    token: ack.token,
+                                    image: ack.image,
+                                    reason,
+                                },
+                            );
+                        }
+                    }
+                }
             }
             if (stats.update_effects_delayed_budget > 0
                 || stats.update_effects_dropped_staging > 0
@@ -2431,6 +2455,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     Effect::ImageUpdateRgba8 {
                         window,
+                        token,
                         image,
                         stream_generation,
                         width,
@@ -2441,20 +2466,98 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         color_space,
                     } => {
                         let Some(context) = self.context.as_ref() else {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::RendererNotReady,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         };
                         let Some(renderer) = self.renderer.as_mut() else {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::RendererNotReady,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         };
                         let Some(entry) = self.uploaded_images.get_mut(&image) else {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         };
 
                         if width == 0 || height == 0 {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::InvalidPayload,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
 
                         if stream_generation < entry.stream_generation {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason: fret_core::ImageUpdateDropReason::Coalesced,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
                         entry.stream_generation = stream_generation;
@@ -2462,6 +2565,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         let rect = update_rect_px
                             .unwrap_or_else(|| fret_core::RectPx::full(width, height));
                         if rect.is_empty() {
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::InvalidPayload,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
 
@@ -2477,6 +2596,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 rect = ?rect,
                                 "ignoring ImageUpdateRgba8 with out-of-bounds update rect"
                             );
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::InvalidPayload,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
 
@@ -2497,6 +2632,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 row_bytes,
                                 "ignoring ImageUpdateRgba8 with undersized bytes_per_row"
                             );
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::InvalidPayload,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
 
@@ -2508,6 +2659,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 expected = expected_len,
                                 "ignoring ImageUpdateRgba8 with invalid byte length"
                             );
+                            if self.config.streaming_update_ack_enabled {
+                                let target = window
+                                    .or(self.main_window)
+                                    .or_else(|| self.windows.keys().next());
+                                if let Some(target) = target {
+                                    self.deliver_window_event_now(
+                                        target,
+                                        &Event::ImageUpdateDropped {
+                                            token,
+                                            image,
+                                            reason:
+                                                fret_core::ImageUpdateDropReason::InvalidPayload,
+                                        },
+                                    );
+                                }
+                            }
                             continue;
                         }
 
@@ -2523,6 +2690,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     new_size = ?(width, height),
                                     "ignoring partial ImageUpdateRgba8 while image storage needs replace"
                                 );
+                                if self.config.streaming_update_ack_enabled {
+                                    let target = window
+                                        .or(self.main_window)
+                                        .or_else(|| self.windows.keys().next());
+                                    if let Some(target) = target {
+                                        self.deliver_window_event_now(
+                                            target,
+                                            &Event::ImageUpdateDropped {
+                                                token,
+                                                image,
+                                                reason:
+                                                    fret_core::ImageUpdateDropReason::Unsupported,
+                                            },
+                                        );
+                                    }
+                                }
                                 continue;
                             }
 
@@ -2568,6 +2751,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 },
                             ) {
                                 self.uploaded_images.remove(&image);
+                                if self.config.streaming_update_ack_enabled {
+                                    let target = window
+                                        .or(self.main_window)
+                                        .or_else(|| self.windows.keys().next());
+                                    if let Some(target) = target {
+                                        self.deliver_window_event_now(
+                                            target,
+                                            &Event::ImageUpdateDropped {
+                                                token,
+                                                image,
+                                                reason:
+                                                    fret_core::ImageUpdateDropReason::UnknownImage,
+                                            },
+                                        );
+                                    }
+                                }
                                 continue;
                             }
                             entry.uploaded = uploaded;
@@ -2579,6 +2778,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 bytes_per_row,
                                 &bytes,
                             );
+                        }
+
+                        if self.config.streaming_update_ack_enabled {
+                            let target = window
+                                .or(self.main_window)
+                                .or_else(|| self.windows.keys().next());
+                            if let Some(target) = target {
+                                self.deliver_window_event_now(
+                                    target,
+                                    &Event::ImageUpdateApplied { token, image },
+                                );
+                            }
                         }
 
                         if let Some(state) = window.and_then(|w| self.windows.get(w)) {

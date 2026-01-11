@@ -65,3 +65,6 @@ pub struct ClipboardToken(pub u64);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageUploadToken(pub u64);
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ImageUpdateToken(pub u64);

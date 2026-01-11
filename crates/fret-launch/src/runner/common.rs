@@ -153,6 +153,9 @@ pub struct WinitRunnerConfig {
     pub streaming_staging_budget_bytes: u64,
     /// When enabled, the runner updates `fret_core::StreamingUploadPerfSnapshot` as an app global.
     pub streaming_perf_snapshot_enabled: bool,
+    /// When enabled, the runner may emit `Event::{ImageUpdateApplied,ImageUpdateDropped}` for
+    /// streaming image updates (ADR 0126).
+    pub streaming_update_ack_enabled: bool,
 }
 
 pub enum WgpuInit {
@@ -201,6 +204,7 @@ impl Default for WinitRunnerConfig {
             streaming_upload_budget_bytes_per_frame: 64 * 1024 * 1024,
             streaming_staging_budget_bytes: 128 * 1024 * 1024,
             streaming_perf_snapshot_enabled: false,
+            streaming_update_ack_enabled: false,
         }
     }
 }

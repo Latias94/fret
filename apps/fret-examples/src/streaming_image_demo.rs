@@ -169,6 +169,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoSt
         let bytes = generate_solid_rgba8(bar_w, state.image_size.1, (240, 90, 80, 255));
         app.push_effect(Effect::ImageUpdateRgba8 {
             window: Some(window),
+            token: fret_runtime::ImageUpdateToken(state.frame),
             image,
             stream_generation: 0,
             width: state.image_size.0,

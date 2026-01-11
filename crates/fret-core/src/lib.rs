@@ -35,14 +35,15 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,
+    ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId,
+    TimerToken,
 };
 pub use image::ImageColorSpace;
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
-    ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton, PointerEvent,
-    PointerType, keycode_to_ascii_lowercase,
+    ImageUpdateDropReason, ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers,
+    MouseButton, PointerEvent, PointerType, keycode_to_ascii_lowercase,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};

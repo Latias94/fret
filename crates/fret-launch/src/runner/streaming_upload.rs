@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use fret_core::{AppWindowId, FrameId, ImageId, RectPx};
+use fret_core::{AppWindowId, FrameId, ImageId, ImageUpdateDropReason, ImageUpdateToken, RectPx};
 use fret_runtime::Effect;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -18,20 +18,27 @@ pub(crate) struct StreamingUploadStats {
     pub pending_staging_bytes: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct StreamingUploadAck {
+    pub window_hint: Option<AppWindowId>,
+    pub token: ImageUpdateToken,
+    pub image: ImageId,
+    pub kind: StreamingUploadAckKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StreamingUploadAckKind {
+    Dropped(ImageUpdateDropReason),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct StreamingUpdateKey {
-    window: Option<AppWindowId>,
     image: ImageId,
     stream_generation: u64,
 }
 
-fn update_key(
-    window: Option<AppWindowId>,
-    image: ImageId,
-    stream_generation: u64,
-) -> StreamingUpdateKey {
+fn update_key(image: ImageId, stream_generation: u64) -> StreamingUpdateKey {
     StreamingUpdateKey {
-        window,
         image,
         stream_generation,
     }
@@ -40,6 +47,8 @@ fn update_key(
 #[derive(Debug)]
 struct PendingUpdate {
     seq: u64,
+    window_bucket: Option<AppWindowId>,
+    window_hint: Option<AppWindowId>,
     effect: Effect,
     staging_bytes: u64,
 }
@@ -100,6 +109,7 @@ pub(crate) struct StreamingUploadQueue {
     pending: HashMap<StreamingUpdateKey, PendingUpdate>,
     pending_order: HashMap<Option<AppWindowId>, VecDeque<(StreamingUpdateKey, u64)>>,
     pending_staging_bytes: HashMap<Option<AppWindowId>, u64>,
+    pending_acks: Vec<StreamingUploadAck>,
 }
 
 impl Default for StreamingUploadQueue {
@@ -111,6 +121,7 @@ impl Default for StreamingUploadQueue {
             pending: HashMap::new(),
             pending_order: HashMap::new(),
             pending_staging_bytes: HashMap::new(),
+            pending_acks: Vec::new(),
         }
     }
 }
@@ -126,8 +137,8 @@ impl StreamingUploadQueue {
         }
 
         let mut windows: Vec<AppWindowId> = Vec::new();
-        for key in self.pending.keys() {
-            if let Some(w) = key.window {
+        for update in self.pending.values() {
+            if let Some(w) = update.window_hint {
                 windows.push(w);
             } else {
                 return Some(Vec::new());
@@ -144,42 +155,80 @@ impl StreamingUploadQueue {
         self.used_upload_bytes_this_frame.clear();
     }
 
-    fn enqueue_update(&mut self, effect: Effect, stats: &mut StreamingUploadStats) {
-        let Effect::ImageUpdateRgba8 {
-            window,
-            image,
-            stream_generation,
-            ..
-        } = &effect
-        else {
-            return;
+    fn enqueue_update(
+        &mut self,
+        effect: Effect,
+        stats: &mut StreamingUploadStats,
+        ack_enabled: bool,
+    ) {
+        let (window, image, stream_generation) = match &effect {
+            Effect::ImageUpdateRgba8 {
+                window,
+                image,
+                stream_generation,
+                ..
+            } => (*window, *image, *stream_generation),
+            _ => return,
         };
 
-        let key = update_key(*window, *image, *stream_generation);
+        let key = update_key(image, stream_generation);
         let staging_bytes = staging_bytes_for_effect(&effect);
         let seq = self.next_seq;
         self.next_seq = self.next_seq.saturating_add(1);
 
+        let window_bucket = window;
         let prev = self.pending.insert(
             key,
             PendingUpdate {
                 seq,
+                window_bucket,
+                window_hint: window,
                 effect,
                 staging_bytes,
             },
         );
 
-        let window_bucket = key.window;
         let order = self
             .pending_order
             .entry(window_bucket)
             .or_insert_with(VecDeque::new);
         order.push_back((key, seq));
 
-        let bytes = self.pending_staging_bytes.entry(window_bucket).or_insert(0);
-        if let Some(prev) = prev {
+        let (prev_bucket, prev_staging, prev_window_hint, prev_token) = if let Some(prev) = prev {
             stats.update_effects_replaced = stats.update_effects_replaced.saturating_add(1);
-            *bytes = bytes.saturating_sub(prev.staging_bytes);
+            let token = match &prev.effect {
+                Effect::ImageUpdateRgba8 { token, .. } => Some(*token),
+                _ => None,
+            };
+            (
+                Some(prev.window_bucket),
+                prev.staging_bytes,
+                prev.window_hint,
+                token,
+            )
+        } else {
+            (None, 0, None, None)
+        };
+
+        if ack_enabled && let Some(token) = prev_token {
+            self.pending_acks.push(StreamingUploadAck {
+                window_hint: prev_window_hint,
+                token,
+                image,
+                kind: StreamingUploadAckKind::Dropped(ImageUpdateDropReason::Coalesced),
+            });
+        }
+
+        if let Some(prev_bucket) = prev_bucket
+            && prev_bucket != window_bucket
+            && let Some(prev_bytes) = self.pending_staging_bytes.get_mut(&prev_bucket)
+        {
+            *prev_bytes = prev_bytes.saturating_sub(prev_staging);
+        }
+
+        let bytes = self.pending_staging_bytes.entry(window_bucket).or_insert(0);
+        if prev_bucket == Some(window_bucket) {
+            *bytes = bytes.saturating_sub(prev_staging);
         }
         *bytes = bytes.saturating_add(staging_bytes);
 
@@ -190,6 +239,7 @@ impl StreamingUploadQueue {
         &mut self,
         per_window_staging_budget_bytes: u64,
         stats: &mut StreamingUploadStats,
+        ack_enabled: bool,
     ) {
         if per_window_staging_budget_bytes == 0 {
             return;
@@ -219,11 +269,24 @@ impl StreamingUploadQueue {
                 }
                 let removed = self.pending.remove(&key);
                 if let Some(removed) = removed {
-                    if let Some(bytes) = self.pending_staging_bytes.get_mut(&window) {
+                    if let Some(bytes) = self.pending_staging_bytes.get_mut(&removed.window_bucket)
+                    {
                         *bytes = bytes.saturating_sub(removed.staging_bytes);
                     }
                     stats.update_effects_dropped_staging =
                         stats.update_effects_dropped_staging.saturating_add(1);
+                    if ack_enabled
+                        && let Effect::ImageUpdateRgba8 { token, image, .. } = removed.effect
+                    {
+                        self.pending_acks.push(StreamingUploadAck {
+                            window_hint: removed.window_hint,
+                            token,
+                            image,
+                            kind: StreamingUploadAckKind::Dropped(
+                                ImageUpdateDropReason::StagingBudgetExceeded,
+                            ),
+                        });
+                    }
                 }
             }
         }
@@ -274,7 +337,8 @@ impl StreamingUploadQueue {
 
                 let removed = self.pending.remove(&key);
                 if let Some(removed) = removed {
-                    if let Some(bytes) = self.pending_staging_bytes.get_mut(&window) {
+                    if let Some(bytes) = self.pending_staging_bytes.get_mut(&removed.window_bucket)
+                    {
                         *bytes = bytes.saturating_sub(removed.staging_bytes);
                     }
                     used = used.saturating_add(upload_bytes);
@@ -302,8 +366,10 @@ impl StreamingUploadQueue {
         effects: Vec<Effect>,
         per_window_upload_budget_bytes: u64,
         per_window_staging_budget_bytes: u64,
-    ) -> (Vec<Effect>, StreamingUploadStats) {
+        ack_enabled: bool,
+    ) -> (Vec<Effect>, StreamingUploadStats, Vec<StreamingUploadAck>) {
         self.begin_frame_if_needed(frame_id);
+        self.pending_acks.clear();
 
         let mut stats = StreamingUploadStats {
             upload_budget_bytes_per_frame: per_window_upload_budget_bytes,
@@ -316,13 +382,13 @@ impl StreamingUploadQueue {
             match effect {
                 Effect::ImageUpdateRgba8 { .. } => {
                     stats.update_effects_seen = stats.update_effects_seen.saturating_add(1);
-                    self.enqueue_update(effect, &mut stats);
+                    self.enqueue_update(effect, &mut stats, ack_enabled);
                 }
                 other => out.push(other),
             }
         }
 
-        self.enforce_staging_budget(per_window_staging_budget_bytes, &mut stats);
+        self.enforce_staging_budget(per_window_staging_budget_bytes, &mut stats, ack_enabled);
 
         let pending_before = self.pending.len() as u32;
         let mut applied = self.drain_updates_for_frame(per_window_upload_budget_bytes, &mut stats);
@@ -341,7 +407,7 @@ impl StreamingUploadQueue {
             stats.update_effects_delayed_budget = not_applied_this_turn;
         }
 
-        (out, stats)
+        (out, stats, std::mem::take(&mut self.pending_acks))
     }
 }
 
@@ -352,6 +418,7 @@ mod tests {
     fn update(window: AppWindowId, image: ImageId, stream_generation: u64, fill: u8) -> Effect {
         Effect::ImageUpdateRgba8 {
             window: Some(window),
+            token: ImageUpdateToken(u64::from(fill)),
             image,
             stream_generation,
             width: 2,
@@ -372,7 +439,8 @@ mod tests {
         let e1 = update(w, image, 0, 2);
 
         let mut q = StreamingUploadQueue::default();
-        let (out, stats) = q.process_effects(FrameId(1), vec![e0, e1], u64::MAX, u64::MAX);
+        let (out, stats, _acks) =
+            q.process_effects(FrameId(1), vec![e0, e1], u64::MAX, u64::MAX, false);
         assert_eq!(stats.update_effects_seen, 2);
         assert_eq!(stats.update_effects_replaced, 1);
         assert_eq!(stats.update_effects_applied, 1);
@@ -396,17 +464,18 @@ mod tests {
         let mut q = StreamingUploadQueue::default();
 
         // Budget only allows one upload per frame.
-        let (out, stats) = q.process_effects(FrameId(1), vec![e0, e1, e2], 32, u64::MAX);
+        let (out, stats, _acks) =
+            q.process_effects(FrameId(1), vec![e0, e1, e2], 32, u64::MAX, false);
         assert_eq!(stats.update_effects_seen, 3);
         assert_eq!(stats.update_effects_applied, 1);
         assert!(q.has_pending());
         assert_eq!(out.len(), 1);
 
-        let (out2, stats2) = q.process_effects(FrameId(2), Vec::new(), 32, u64::MAX);
+        let (out2, stats2, _acks2) = q.process_effects(FrameId(2), Vec::new(), 32, u64::MAX, false);
         assert_eq!(stats2.update_effects_applied, 1);
         assert_eq!(out2.len(), 1);
 
-        let (out3, stats3) = q.process_effects(FrameId(3), Vec::new(), 32, u64::MAX);
+        let (out3, stats3, _acks3) = q.process_effects(FrameId(3), Vec::new(), 32, u64::MAX, false);
         assert_eq!(stats3.update_effects_applied, 1);
         assert_eq!(out3.len(), 1);
 
@@ -423,7 +492,7 @@ mod tests {
 
         let mut q = StreamingUploadQueue::default();
         // Staging budget can only retain one update (each is 16 bytes).
-        let (_out, stats) = q.process_effects(FrameId(1), vec![e0, e1], 0, 16);
+        let (_out, stats, _acks) = q.process_effects(FrameId(1), vec![e0, e1], 0, 16, false);
         assert_eq!(stats.update_effects_seen, 2);
         assert_eq!(stats.update_effects_dropped_staging, 1);
         assert_eq!(stats.pending_updates, 1);
