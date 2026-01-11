@@ -42,6 +42,17 @@ define_id!(FormatterId);
 
 define_id!(StringId);
 
+pub const MARK_VARIANT_BITS: u32 = 16;
+pub const MARK_VARIANT_MASK: u64 = (1u64 << MARK_VARIANT_BITS) - 1;
+
+pub fn series_mark_id(series: SeriesId, variant: u64) -> MarkId {
+    MarkId((series.0 << MARK_VARIANT_BITS) | (variant & MARK_VARIANT_MASK))
+}
+
+pub fn mark_variant(id: MarkId) -> u64 {
+    id.0 & MARK_VARIANT_MASK
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Revision(pub u64);
