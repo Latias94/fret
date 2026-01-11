@@ -68,3 +68,5 @@ _None tracked at this time._
 - Interaction test: `menubar_hover_switches_open_menu`
 - Interaction test: `menubar_triggers_roving_moves_focus_with_arrow_keys`
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
+- Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`
+  (`radix_web_menubar_open_geometry_matches_fret`).

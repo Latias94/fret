@@ -83,4 +83,7 @@ composing:
   (menu popper gap + cross-axis delta, anchored to the right-click point) against the Radix Vega web
   golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.context-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates menubar menu placement
+  (menu popper gap + cross-axis delta) against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.open-navigate-close.light.json`).
 - Run (layout engine v2): `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test radix_web_overlay_geometry`

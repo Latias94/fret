@@ -49,3 +49,8 @@ Fret does not use React context. Instead, dialog behavior is composed via:
 ## Follow-ups (recommended)
 
 - None currently tracked.
+
+## Conformance gate
+
+- Radix Web overlay geometry parity: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
+  (`radix_web_dialog_open_geometry_matches_fret`).
