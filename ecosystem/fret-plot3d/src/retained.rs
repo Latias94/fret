@@ -110,28 +110,28 @@ impl Plot3dCanvas {
 
     fn push_viewport_input(&self, app: &mut impl UiHost, args: ViewportInputArgs) -> bool {
         let mapping = args.viewport.mapping(args.bounds);
-        let (uv, target_px) = if args.clamped {
-            (
-                mapping.window_point_to_uv_clamped(args.position),
-                mapping.window_point_to_target_px_clamped(args.position),
+        let event = if args.clamped {
+            ViewportInputEvent::from_mapping_window_point_clamped(
+                args.window,
+                args.viewport.target,
+                &mapping,
+                args.position,
+                args.kind,
             )
         } else {
-            let Some(uv) = mapping.window_point_to_uv(args.position) else {
+            let Some(event) = ViewportInputEvent::from_mapping_window_point(
+                args.window,
+                args.viewport.target,
+                &mapping,
+                args.position,
+                args.kind,
+            ) else {
                 return false;
             };
-            let Some(target_px) = mapping.window_point_to_target_px(args.position) else {
-                return false;
-            };
-            (uv, target_px)
+            event
         };
 
-        app.push_effect(Effect::ViewportInput(ViewportInputEvent {
-            window: args.window,
-            target: args.viewport.target,
-            uv,
-            target_px,
-            kind: args.kind,
-        }));
+        app.push_effect(Effect::ViewportInput(event));
         true
     }
 }

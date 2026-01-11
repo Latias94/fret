@@ -1,6 +1,7 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUpdateToken, ImageUploadToken, RenderTargetId, TimerToken, WindowLogicalPosition,
+    ImageId, ImageUpdateToken, ImageUploadToken, RenderTargetId, TimerToken, ViewportMapping,
+    WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -320,6 +321,44 @@ pub struct ViewportInputEvent {
     pub uv: (f32, f32),
     pub target_px: (u32, u32),
     pub kind: ViewportInputKind,
+}
+
+impl ViewportInputEvent {
+    pub fn from_mapping_window_point(
+        window: AppWindowId,
+        target: RenderTargetId,
+        mapping: &ViewportMapping,
+        position: Point,
+        kind: ViewportInputKind,
+    ) -> Option<Self> {
+        let uv = mapping.window_point_to_uv(position)?;
+        let target_px = mapping.window_point_to_target_px(position)?;
+        Some(Self {
+            window,
+            target,
+            uv,
+            target_px,
+            kind,
+        })
+    }
+
+    pub fn from_mapping_window_point_clamped(
+        window: AppWindowId,
+        target: RenderTargetId,
+        mapping: &ViewportMapping,
+        position: Point,
+        kind: ViewportInputKind,
+    ) -> Self {
+        let uv = mapping.window_point_to_uv_clamped(position);
+        let target_px = mapping.window_point_to_target_px_clamped(position);
+        Self {
+            window,
+            target,
+            uv,
+            target_px,
+            kind,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -32,15 +32,13 @@ pub(super) fn viewport_input_from_hit(
         target_px_size: hit.viewport.target_px_size,
         fit: hit.viewport.fit,
     };
-    let uv = mapping.window_point_to_uv(position)?;
-    let target_px = mapping.window_point_to_target_px(position)?;
-    Some(ViewportInputEvent {
+    ViewportInputEvent::from_mapping_window_point(
         window,
-        target: hit.viewport.target,
-        uv,
-        target_px,
+        hit.viewport.target,
+        &mapping,
+        position,
         kind,
-    })
+    )
 }
 
 pub(super) fn viewport_input_from_hit_clamped(
@@ -54,15 +52,13 @@ pub(super) fn viewport_input_from_hit_clamped(
         target_px_size: hit.viewport.target_px_size,
         fit: hit.viewport.fit,
     };
-    let uv = mapping.window_point_to_uv_clamped(position);
-    let target_px = mapping.window_point_to_target_px_clamped(position);
-    ViewportInputEvent {
+    ViewportInputEvent::from_mapping_window_point_clamped(
         window,
-        target: hit.viewport.target,
-        uv,
-        target_px,
+        hit.viewport.target,
+        &mapping,
+        position,
         kind,
-    }
+    )
 }
 
 pub(super) fn hit_test_active_viewport_panel(

@@ -57,28 +57,28 @@ fn push_viewport_input(
     clamped: bool,
 ) -> bool {
     let mapping = mapping_for(host.bounds(), props);
-    let (uv, target_px) = if clamped {
-        (
-            mapping.window_point_to_uv_clamped(position),
-            mapping.window_point_to_target_px_clamped(position),
+    let event = if clamped {
+        ViewportInputEvent::from_mapping_window_point_clamped(
+            window,
+            props.target,
+            &mapping,
+            position,
+            kind,
         )
     } else {
-        let Some(uv) = mapping.window_point_to_uv(position) else {
+        let Some(event) = ViewportInputEvent::from_mapping_window_point(
+            window,
+            props.target,
+            &mapping,
+            position,
+            kind,
+        ) else {
             return false;
         };
-        let Some(target_px) = mapping.window_point_to_target_px(position) else {
-            return false;
-        };
-        (uv, target_px)
+        event
     };
 
-    host.push_effect(Effect::ViewportInput(ViewportInputEvent {
-        window,
-        target: props.target,
-        uv,
-        target_px,
-        kind,
-    }));
+    host.push_effect(Effect::ViewportInput(event));
     true
 }
 
