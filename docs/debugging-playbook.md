@@ -90,7 +90,7 @@ Useful env vars:
 # Update `StreamingUploadPerfSnapshot` and log budget/drops (when relevant).
 $env:FRET_STREAMING_DEBUG="1"
 
-# Optional: try a GPU path for NV12 conversion (experimental; falls back to CPU).
+# Optional: debug override to try the NV12 GPU path (experimental; falls back to CPU).
 $env:FRET_STREAMING_GPU_YUV="1"
 
 # Demo-only helpers (apps/fret-examples streaming_*_demo.rs).
