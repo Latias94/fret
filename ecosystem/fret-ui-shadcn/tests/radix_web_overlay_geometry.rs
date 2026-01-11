@@ -1,12 +1,13 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px,
-    Rect, SemanticsRole, Size as CoreSize,
+    AppWindowId, Event, FrameId, Modifiers, MouseButton, MouseButtons, Point, PointerEvent,
+    PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
 };
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, PositionStyle, PressableA11y,
+    PressableProps, SemanticsProps,
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
@@ -340,6 +341,223 @@ fn fixed_size_container(cx: &mut ElementContext<'_, App>, w: f32, h: f32) -> Any
         },
         |_cx| Vec::new(),
     )
+}
+
+fn spacer(cx: &mut ElementContext<'_, App>, w: Length, h: Length) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = w;
+                layout.size.height = h;
+                layout
+            },
+            ..Default::default()
+        },
+        |_cx| Vec::new(),
+    )
+}
+
+fn render_tooltip_fixture(
+    cx: &mut ElementContext<'_, App>,
+    web_trigger_rect: DomRect,
+    web_content_rect: DomRect,
+    side: Side,
+    align: Align,
+    trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>>,
+) -> Vec<AnyElement> {
+    let mut root_layout = LayoutStyle::default();
+    root_layout.size.width = Length::Fill;
+    root_layout.size.height = Length::Fill;
+    root_layout.position = PositionStyle::Relative;
+
+    vec![cx.container(
+        ContainerProps {
+            layout: root_layout,
+            ..Default::default()
+        },
+        |cx| {
+            fret_ui_shadcn::TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with(cx, |cx| {
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(web_trigger_rect.w));
+                                layout.size.height = Length::Px(Px(web_trigger_rect.h));
+                                layout
+                            },
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(Arc::from("Tooltip Trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st| {
+                            vec![fixed_size_container(
+                                cx,
+                                web_trigger_rect.w,
+                                web_trigger_rect.h,
+                            )]
+                        },
+                    );
+                    trigger_id_out.set(Some(trigger.id));
+
+                    let content = fret_ui_shadcn::TooltipContent::new(Vec::new())
+                        .refine_layout(
+                            fret_ui_shadcn::LayoutRefinement::default()
+                                .w_px(fret_ui_shadcn::MetricRef::Px(Px(web_content_rect.w)))
+                                .h_px(fret_ui_shadcn::MetricRef::Px(Px(web_content_rect.h))),
+                        )
+                        .into_element(cx);
+
+                    let tooltip = fret_ui_shadcn::Tooltip::new(trigger, content)
+                        .open_delay_frames(0)
+                        .close_delay_frames(0)
+                        .side(match side {
+                            Side::Top => fret_ui_shadcn::TooltipSide::Top,
+                            Side::Right => fret_ui_shadcn::TooltipSide::Right,
+                            Side::Bottom => fret_ui_shadcn::TooltipSide::Bottom,
+                            Side::Left => fret_ui_shadcn::TooltipSide::Left,
+                        })
+                        .align(match align {
+                            Align::Start => fret_ui_shadcn::TooltipAlign::Start,
+                            Align::Center => fret_ui_shadcn::TooltipAlign::Center,
+                            Align::End => fret_ui_shadcn::TooltipAlign::End,
+                        })
+                        .into_element(cx);
+
+                    let row = cx.flex(FlexProps::default(), move |cx| {
+                        vec![
+                            spacer(
+                                cx,
+                                Length::Px(Px(web_trigger_rect.x)),
+                                Length::Px(Px(web_trigger_rect.h)),
+                            ),
+                            tooltip,
+                        ]
+                    });
+
+                    vec![cx.flex(
+                        FlexProps {
+                            direction: fret_core::Axis::Vertical,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                spacer(cx, Length::Fill, Length::Px(Px(web_trigger_rect.y))),
+                                row,
+                            ]
+                        },
+                    )]
+                })
+        },
+    )]
+}
+
+fn render_hover_card_fixture(
+    cx: &mut ElementContext<'_, App>,
+    web_trigger_rect: DomRect,
+    web_content_rect: DomRect,
+    side: Side,
+    align: Align,
+    trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>>,
+) -> Vec<AnyElement> {
+    let mut root_layout = LayoutStyle::default();
+    root_layout.size.width = Length::Fill;
+    root_layout.size.height = Length::Fill;
+    root_layout.position = PositionStyle::Relative;
+
+    vec![cx.container(
+        ContainerProps {
+            layout: root_layout,
+            ..Default::default()
+        },
+        |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(web_trigger_rect.w));
+                        layout.size.height = Length::Px(Px(web_trigger_rect.h));
+                        layout
+                    },
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::Button),
+                        label: Some(Arc::from("HoverCard Trigger")),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    vec![fixed_size_container(
+                        cx,
+                        web_trigger_rect.w,
+                        web_trigger_rect.h,
+                    )]
+                },
+            );
+            trigger_id_out.set(Some(trigger.id));
+
+            let content = cx.semantics(
+                SemanticsProps {
+                    role: SemanticsRole::Panel,
+                    label: Some(Arc::from("HoverCard Content")),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![fixed_size_container(
+                        cx,
+                        web_content_rect.w,
+                        web_content_rect.h,
+                    )]
+                },
+            );
+
+            let hover_card = fret_ui_shadcn::HoverCard::new(trigger, content)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .side(match side {
+                    Side::Top => fret_ui_shadcn::HoverCardSide::Top,
+                    Side::Right => fret_ui_shadcn::HoverCardSide::Right,
+                    Side::Bottom => fret_ui_shadcn::HoverCardSide::Bottom,
+                    Side::Left => fret_ui_shadcn::HoverCardSide::Left,
+                })
+                .align(match align {
+                    Align::Start => fret_ui_shadcn::HoverCardAlign::Start,
+                    Align::Center => fret_ui_shadcn::HoverCardAlign::Center,
+                    Align::End => fret_ui_shadcn::HoverCardAlign::End,
+                })
+                .into_element(cx);
+
+            let row = cx.flex(FlexProps::default(), move |cx| {
+                vec![
+                    spacer(
+                        cx,
+                        Length::Px(Px(web_trigger_rect.x)),
+                        Length::Px(Px(web_trigger_rect.h)),
+                    ),
+                    hover_card,
+                ]
+            });
+
+            vec![cx.flex(
+                FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        spacer(cx, Length::Fill, Length::Px(Px(web_trigger_rect.y))),
+                        row,
+                    ]
+                },
+            )]
+        },
+    )]
 }
 
 fn fixed_trigger(
@@ -1117,4 +1335,577 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
         web_width_delta,
         3.0,
     );
+}
+
+#[test]
+fn radix_web_tooltip_hover_geometry_matches_fret() {
+    let golden = read_timeline("tooltip-example.tooltip.hover-show-hide.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "tooltip-example");
+    assert_eq!(golden.primitive, "tooltip");
+    assert_eq!(golden.scenario, "hover-show-hide");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "tooltip-trigger")
+            && n.attrs
+                .get("data-state")
+                .is_some_and(|v| v == "delayed-open")
+    })
+    .expect("web tooltip trigger node");
+
+    let web_content = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "tooltip-content")
+            && n.attrs
+                .get("data-state")
+                .is_some_and(|v| v == "delayed-open")
+    })
+    .expect("web tooltip content node");
+
+    let side_str = web_content
+        .attrs
+        .get("data-side")
+        .map(String::as_str)
+        .unwrap_or("top");
+    let align_str = web_content
+        .attrs
+        .get("data-align")
+        .map(String::as_str)
+        .unwrap_or("center");
+
+    let side = parse_side(side_str);
+    let align = parse_align(align_str);
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_content_rect = require_rect(web_content, "web content");
+    let web_gap = rect_main_gap(side, web_trigger_rect, web_content_rect);
+    let web_cross = rect_cross_delta(side, align, web_trigger_rect, web_content_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+
+    // Frame 1: establish trigger bounds.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            render_tooltip_fixture(
+                cx,
+                web_trigger_rect,
+                web_content_rect,
+                side,
+                align,
+                trigger_id_out.clone(),
+            )
+        },
+    );
+
+    // Focus trigger to open tooltip.
+    let trigger_element = trigger_id_out.get().expect("tooltip trigger element id");
+    let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+        .expect("tooltip trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                render_tooltip_fixture(
+                    cx,
+                    web_trigger_rect,
+                    web_content_rect,
+                    side,
+                    align,
+                    trigger_id_out.clone(),
+                )
+            },
+        );
+    }
+
+    assert_eq!(
+        trigger_id_out.get(),
+        Some(trigger_element),
+        "expected tooltip trigger element ID to remain stable across frames"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger = find_semantics(&snap, SemanticsRole::Button, Some("Tooltip Trigger"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret tooltip trigger semantics");
+        });
+    let fret_tooltip = find_semantics(&snap, SemanticsRole::Tooltip, None).unwrap_or_else(|| {
+        dump_semantics(&snap);
+        panic!("fret tooltip semantics");
+    });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_content_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_tooltip.id)
+            .expect("fret tooltip visual bounds"),
+    );
+
+    let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_content_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_content_rect);
+
+    assert_close("tooltip main gap", fret_gap, web_gap, 2.0);
+    assert_close("tooltip cross delta", fret_cross, web_cross, 2.0);
+}
+
+#[test]
+fn radix_web_hover_card_hover_geometry_matches_fret() {
+    let golden = read_timeline("hover-card-example.hover-card.hover.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "hover-card-example");
+    assert_eq!(golden.primitive, "hover-card");
+    assert_eq!(golden.scenario, "hover");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.tag == "button"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "button")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.text.as_deref() == Some("top")
+    })
+    .expect("web hover-card trigger node");
+
+    let web_content = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "hover-card-content")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web hover-card content node");
+
+    let side_str = web_content
+        .attrs
+        .get("data-side")
+        .map(String::as_str)
+        .unwrap_or("bottom");
+    let align_str = web_content
+        .attrs
+        .get("data-align")
+        .map(String::as_str)
+        .unwrap_or("center");
+
+    let side = parse_side(side_str);
+    let align = parse_align(align_str);
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_content_rect = require_rect(web_content, "web content");
+    let web_gap = rect_main_gap(side, web_trigger_rect, web_content_rect);
+    let web_cross = rect_cross_delta(side, align, web_trigger_rect, web_content_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+
+    // Frame 1: establish trigger bounds.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            render_hover_card_fixture(
+                cx,
+                web_trigger_rect,
+                web_content_rect,
+                side,
+                align,
+                trigger_id_out.clone(),
+            )
+        },
+    );
+
+    // Hover trigger to open hover card.
+    let trigger_element = trigger_id_out.get().expect("hover-card trigger element id");
+    let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+        .expect("hover-card trigger node");
+    let trigger_bounds = ui
+        .debug_node_bounds(trigger_node)
+        .expect("hover-card trigger bounds");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(
+                Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+                Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+            ),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                render_hover_card_fixture(
+                    cx,
+                    web_trigger_rect,
+                    web_content_rect,
+                    side,
+                    align,
+                    trigger_id_out.clone(),
+                )
+            },
+        );
+    }
+
+    assert_eq!(
+        trigger_id_out.get(),
+        Some(trigger_element),
+        "expected hover-card trigger element ID to remain stable across frames"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger = find_semantics(&snap, SemanticsRole::Button, Some("HoverCard Trigger"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret hover-card trigger semantics");
+        });
+    let fret_content = find_semantics(&snap, SemanticsRole::Panel, Some("HoverCard Content"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret hover-card content semantics");
+        });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_content_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_content.id)
+            .expect("fret hover-card content visual bounds"),
+    );
+
+    let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_content_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_content_rect);
+
+    assert_close("hover-card main gap", fret_gap, web_gap, 2.0);
+    assert_close("hover-card cross delta", fret_cross, web_cross, 2.0);
+}
+
+#[test]
+fn radix_web_context_menu_open_geometry_matches_fret() {
+    let golden = read_timeline("context-menu-example.context-menu.context-open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "context-menu-example");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "context-open-close");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "context-menu-trigger")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web context-menu trigger node");
+
+    let web_content = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "context-menu-content")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web context-menu content node");
+
+    let side_str = web_content
+        .attrs
+        .get("data-side")
+        .map(String::as_str)
+        .unwrap_or("right");
+    let align_str = web_content
+        .attrs
+        .get("data-align")
+        .map(String::as_str)
+        .unwrap_or("start");
+
+    let side = parse_side(side_str);
+    let align = parse_align(align_str);
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_content_rect = require_rect(web_content, "web content");
+
+    let web_anchor_rect = DomRect {
+        x: rect_center_x(web_trigger_rect),
+        y: rect_center_y(web_trigger_rect),
+        w: 0.0,
+        h: 0.0,
+    };
+    let web_gap = rect_main_gap(side, web_anchor_rect, web_content_rect);
+    let web_cross = rect_cross_delta(side, align, web_anchor_rect, web_content_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    // Frame 1: build the tree and establish stable trigger bounds.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let trigger = fixed_trigger(
+                cx,
+                "ContextMenu Trigger",
+                web_trigger_rect.x,
+                web_trigger_rect.y,
+                web_trigger_rect.w,
+                web_trigger_rect.h,
+            );
+            let menu = fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |_cx| trigger,
+                |_cx| {
+                    vec![
+                        fret_ui_shadcn::ContextMenuEntry::Item(
+                            fret_ui_shadcn::ContextMenuItem::new("Back"),
+                        ),
+                        fret_ui_shadcn::ContextMenuEntry::Item(
+                            fret_ui_shadcn::ContextMenuItem::new("Forward"),
+                        ),
+                        fret_ui_shadcn::ContextMenuEntry::Item(
+                            fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                        ),
+                    ]
+                },
+            );
+            vec![menu]
+        },
+    );
+
+    let click_position = Point::new(Px(web_anchor_rect.x), Px(web_anchor_rect.y));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: click_position,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: click_position,
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let trigger = fixed_trigger(
+                    cx,
+                    "ContextMenu Trigger",
+                    web_trigger_rect.x,
+                    web_trigger_rect.y,
+                    web_trigger_rect.w,
+                    web_trigger_rect.h,
+                );
+                let menu = fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                    cx,
+                    |_cx| trigger,
+                    |_cx| {
+                        vec![
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Back"),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Forward"),
+                            ),
+                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                            ),
+                        ]
+                    },
+                );
+                vec![menu]
+            },
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let back_item = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret Back menu item semantics");
+        });
+
+    let mut candidate_ids = Vec::new();
+    let mut current = Some(back_item.id);
+    while let Some(id) = current {
+        candidate_ids.push(id);
+        current = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == id)
+            .and_then(|n| n.parent);
+    }
+
+    let mut best: Option<&fret_core::SemanticsNode> = None;
+    let mut best_score = f32::INFINITY;
+    for id in candidate_ids {
+        let Some(node) = snap.nodes.iter().find(|n| n.id == id) else {
+            continue;
+        };
+        if node.bounds.size.width.0 >= bounds.size.width.0
+            || node.bounds.size.height.0 >= bounds.size.height.0
+        {
+            continue;
+        }
+        let vb = ui.debug_node_visual_bounds(node.id).unwrap_or(node.bounds);
+        let score = (vb.size.width.0 - web_content_rect.w).abs()
+            + (vb.size.height.0 - web_content_rect.h).abs();
+        if score < best_score {
+            best = Some(node);
+            best_score = score;
+        }
+    }
+
+    let menu_panel = best.unwrap_or_else(|| {
+        dump_semantics(&snap);
+        panic!("fret context-menu panel ancestor");
+    });
+
+    let fret_menu_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(menu_panel.id)
+            .expect("fret context-menu visual bounds"),
+    );
+    let fret_anchor_rect = DomRect {
+        x: web_anchor_rect.x,
+        y: web_anchor_rect.y,
+        w: 0.0,
+        h: 0.0,
+    };
+
+    let fret_gap = rect_main_gap(side, fret_anchor_rect, fret_menu_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_anchor_rect, fret_menu_rect);
+
+    assert_close("context-menu main gap", fret_gap, web_gap, 2.0);
+    assert_close("context-menu cross delta", fret_cross, web_cross, 2.0);
 }
