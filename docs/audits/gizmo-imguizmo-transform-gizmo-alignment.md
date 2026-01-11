@@ -211,7 +211,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
 | Axis flip, axis masking, axis/plane fade limits | Yes | Partial | **Aligned (with known gaps)** | Fret supports `allow_axis_flip`, `axis_mask`, `axis_fade_px`, `plane_fade_px2` in `GizmoConfig`. Rotate rings use a separate view-angle fade window (`rotate_ring_fade_dot`) to avoid edge-on rings stealing interaction. |
 | View gizmo (camera cube) | Yes (`ViewManipulate`) | No | **Partially aligned (basic)** | Fret provides `ViewGizmo` (cube) with hover + face/edge/corner click -> view intent, drag orbit output, center-button projection toggle, and basic labels rendered by the host (`ecosystem/fret-gizmo/src/view_gizmo.rs`, demo integration in `apps/fret-examples/src/gizmo3d_demo.rs`). Missing: richer host camera policies. |
-| Grid draw helper | Yes (`DrawGrid`) | No | **Not implemented** | Could be added as a separate "debug draw" tool (not necessarily in `fret-gizmo`). |
+| Grid draw helper | Yes (`DrawGrid`) | No | **Aligned (basic)** | `Grid3d` helper outputs depth-tested line geometry (`ecosystem/fret-gizmo/src/grid.rs`) and is rendered in `apps/fret-examples/src/gizmo3d_demo.rs` via the viewport overlay pass. |
 
 ## What to align next (recommended order)
 

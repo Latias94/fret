@@ -9,7 +9,7 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
-    GizmoTarget3d, GizmoTargetId, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
+    GizmoTarget3d, GizmoTargetId, Grid3d, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
     ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
 };
 use fret_launch::{
@@ -3370,6 +3370,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     draw.lines.extend(view_draw.lines);
                     draw.triangles.extend(view_draw.triangles);
                 }
+
+                let grid = Grid3d::default().draw();
+                draw.lines.extend(grid.lines);
+                draw.triangles.extend(grid.triangles);
+
                 let thickness_px = m.gizmo.config.line_thickness_px;
                 let depth = m.gizmo.config.depth_range;
 

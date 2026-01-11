@@ -7,6 +7,7 @@
 //! - Optional screen-space affordances (labels/HUD) may be rendered as regular UI overlays.
 
 mod gizmo;
+mod grid;
 mod math;
 mod view_gizmo;
 
@@ -16,6 +17,7 @@ pub use gizmo::{
     GizmoSizePolicy, GizmoState, GizmoTarget3d, GizmoTargetId, GizmoUpdate, HandleId, Line3d,
     Transform3d, Triangle3d,
 };
+pub use grid::{Grid3d, Grid3dConfig};
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,
