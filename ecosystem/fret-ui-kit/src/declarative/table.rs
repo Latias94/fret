@@ -1270,7 +1270,174 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                              scroll_x: Option<
                                                                                 ScrollHandle,
                                                                             >| {
-                                                                                let row =
+                                                                                let row = if props
+                                                                                    .optimize_paint_order
+                                                                                {
+                                                                                    cx.container(
+                                                                                        ContainerProps {
+                                                                                            layout: LayoutStyle {
+                                                                                                size:
+                                                                                                    fret_ui::element::SizeStyle {
+                                                                                                        height: Length::Fill,
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        |cx| {
+                                                                                            let background_row =
+                                                                                                stack::hstack(
+                                                                                                    cx,
+                                                                                                    stack::HStackProps::default()
+                                                                                                        .gap_x(Space::N0)
+                                                                                                        .justify(Justify::Start)
+                                                                                                        .items(Items::Stretch),
+                                                                                                    |cx| {
+                                                                                                        cols.iter()
+                                                                                                            .map(|col| {
+                                                                                                                let col_w = resolve_column_width(
+                                                                                                                    col,
+                                                                                                                    &state_value,
+                                                                                                                    &props,
+                                                                                                                );
+                                                                                                                cx.container(
+                                                                                                                    ContainerProps {
+                                                                                                                        border: Edges {
+                                                                                                                            right: Px(1.0),
+                                                                                                                            ..Default::default()
+                                                                                                                        },
+                                                                                                                        border_color: Some(border),
+                                                                                                                        layout: LayoutStyle {
+                                                                                                                            size: fret_ui::element::SizeStyle {
+                                                                                                                                width: Length::Px(col_w),
+                                                                                                                                height: Length::Fill,
+                                                                                                                                ..Default::default()
+                                                                                                                            },
+                                                                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                                                                shrink: 0.0,
+                                                                                                                                ..Default::default()
+                                                                                                                            },
+                                                                                                                            ..Default::default()
+                                                                                                                        },
+                                                                                                                        ..Default::default()
+                                                                                                                    },
+                                                                                                                    |_| Vec::new(),
+                                                                                                                )
+                                                                                                            })
+                                                                                                            .collect()
+                                                                                                    },
+                                                                                                );
+
+                                                                                            let content_overlay = cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: LayoutStyle {
+                                                                                                        size: fret_ui::element::SizeStyle {
+                                                                                                            width: Length::Fill,
+                                                                                                            height: Length::Fill,
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        position:
+                                                                                                            fret_ui::element::PositionStyle::Absolute,
+                                                                                                        inset: fret_ui::element::InsetStyle {
+                                                                                                            top: Some(Px(0.0)),
+                                                                                                            right: Some(Px(0.0)),
+                                                                                                            bottom: Some(Px(0.0)),
+                                                                                                            left: Some(Px(0.0)),
+                                                                                                        },
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                |cx| {
+                                                                                                    vec![stack::hstack(
+                                                                                                        cx,
+                                                                                                        stack::HStackProps::default()
+                                                                                                            .gap_x(Space::N0)
+                                                                                                            .justify(Justify::Start)
+                                                                                                            .items(Items::Center),
+                                                                                                        |cx| {
+                                                                                                            cols.iter()
+                                                                                                                .map(|col| {
+                                                                                                                    let col_w = resolve_column_width(
+                                                                                                                        col,
+                                                                                                                        &state_value,
+                                                                                                                        &props,
+                                                                                                                    );
+
+                                                                                                                    let is_label_target = col
+                                                                                                                        .id
+                                                                                                                        .as_ref()
+                                                                                                                        == label_target.as_ref();
+                                                                                                                    let is_placeholder =
+                                                                                                                        !is_label_target
+                                                                                                                            && grouping.iter().any(|id| {
+                                                                                                                                id.as_ref() == col.id.as_ref()
+                                                                                                                            });
+
+                                                                                                                    let padding = if is_label_target {
+                                                                                                                        Edges {
+                                                                                                                            left: Px(
+                                                                                                                                cell_px.0
+                                                                                                                                    + indent_px.0,
+                                                                                                                            ),
+                                                                                                                            right: cell_px,
+                                                                                                                            top: cell_py,
+                                                                                                                            bottom: cell_py,
+                                                                                                                        }
+                                                                                                                    } else {
+                                                                                                                        Edges::symmetric(cell_px, cell_py)
+                                                                                                                    };
+
+                                                                                                                    cx.container(
+                                                                                                                        ContainerProps {
+                                                                                                                            padding,
+                                                                                                                            layout: LayoutStyle {
+                                                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                                                    width: Length::Px(col_w),
+                                                                                                                                    height: Length::Fill,
+                                                                                                                                    ..Default::default()
+                                                                                                                                },
+                                                                                                                                flex: fret_ui::element::FlexItemStyle {
+                                                                                                                                    shrink: 0.0,
+                                                                                                                                    ..Default::default()
+                                                                                                                                },
+                                                                                                                                ..Default::default()
+                                                                                                                            },
+                                                                                                                            ..Default::default()
+                                                                                                                        },
+                                                                                                                        |cx| {
+                                                                                                                            if is_placeholder {
+                                                                                                                                return Vec::new();
+                                                                                                                            }
+                                                                                                                            if is_label_target {
+                                                                                                                                vec![cx.text(text.clone())]
+                                                                                                                            } else {
+                                                                                                                                let v = aggregations
+                                                                                                                                    .iter()
+                                                                                                                                    .find(|entry| {
+                                                                                                                                        entry.0.as_ref()
+                                                                                                                                            == col
+                                                                                                                                                .id
+                                                                                                                                                .as_ref()
+                                                                                                                                    })
+                                                                                                                                    .map(|entry| entry.1.clone());
+                                                                                                                                v.map(|v| vec![cx.text(v)])
+                                                                                                                                    .unwrap_or_default()
+                                                                                                                            }
+                                                                                                                        },
+                                                                                                                    )
+                                                                                                                })
+                                                                                                                .collect()
+                                                                                                        },
+                                                                                                    )]
+                                                                                                },
+                                                                                            );
+
+                                                                                            vec![background_row, content_overlay]
+                                                                                        },
+                                                                                    )
+                                                                                } else {
                                                                                     stack::hstack(
                                                                                         cx,
                                                                                         stack::HStackProps::default()
@@ -1356,7 +1523,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                 })
                                                                                                 .collect()
                                                                                         },
-                                                                                    );
+                                                                                    )
+                                                                                };
 
                                                                                 if let Some(scroll_x) =
                                                                                     scroll_x
