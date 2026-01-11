@@ -478,6 +478,14 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_zoom_on_scroll_speed")]
     pub zoom_on_scroll_speed: f32,
 
+    /// Whether pinch gesture zoom is enabled (XyFlow `zoomOnPinch`).
+    #[serde(default = "default_zoom_on_pinch")]
+    pub zoom_on_pinch: bool,
+
+    /// Pinch gesture zoom speed multiplier.
+    #[serde(default = "default_zoom_on_pinch_speed")]
+    pub zoom_on_pinch_speed: f32,
+
     /// Whether double-click zoom is enabled (XyFlow `zoomOnDoubleClick`).
     #[serde(default = "default_zoom_on_double_click")]
     pub zoom_on_double_click: bool,
@@ -564,6 +572,8 @@ impl Default for NodeGraphInteractionState {
             pan_inertia: NodeGraphPanInertiaTuning::default(),
             zoom_on_scroll: default_zoom_on_scroll(),
             zoom_on_scroll_speed: default_zoom_on_scroll_speed(),
+            zoom_on_pinch: default_zoom_on_pinch(),
+            zoom_on_pinch_speed: default_zoom_on_pinch_speed(),
             zoom_on_double_click: default_zoom_on_double_click(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
             node_drag_threshold: default_node_drag_threshold(),
@@ -611,6 +621,14 @@ fn default_zoom_on_scroll() -> bool {
 }
 
 fn default_zoom_on_scroll_speed() -> f32 {
+    1.0
+}
+
+fn default_zoom_on_pinch() -> bool {
+    true
+}
+
+fn default_zoom_on_pinch_speed() -> f32 {
     1.0
 }
 

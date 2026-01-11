@@ -138,6 +138,16 @@ pub enum PointerEvent {
         modifiers: Modifiers,
         pointer_type: PointerType,
     },
+    /// Two-finger pinch gesture, typically produced by touchpads (and some touch platforms).
+    ///
+    /// `delta` is positive for magnification (zoom in) and negative for shrinking (zoom out).
+    /// This value may be NaN depending on the platform backend; callers should guard accordingly.
+    PinchGesture {
+        position: Point,
+        delta: f32,
+        modifiers: Modifiers,
+        pointer_type: PointerType,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

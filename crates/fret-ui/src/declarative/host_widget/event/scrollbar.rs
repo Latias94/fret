@@ -47,6 +47,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             cx.request_redraw();
             cx.stop_propagation();
         }
+        fret_core::PointerEvent::PinchGesture { .. } => {}
         fret_core::PointerEvent::Move { position, .. } => {
             let mut needs_layout = false;
             let mut needs_paint = false;

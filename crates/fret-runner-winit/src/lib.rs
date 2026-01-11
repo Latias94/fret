@@ -615,6 +615,17 @@ impl WinitInputState {
                     pointer_type: fret_core::PointerType::Mouse,
                 }));
             }
+            WindowEvent::PinchGesture { delta, .. } => {
+                if delta.is_nan() {
+                    return;
+                }
+                out.push(Event::Pointer(PointerEvent::PinchGesture {
+                    position: self.cursor_pos,
+                    delta: *delta as f32,
+                    modifiers: self.modifiers,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }));
+            }
             WindowEvent::SurfaceResized(size) => {
                 let logical: LogicalSize<f32> = size.to_logical(window_scale_factor);
                 out.push(Event::WindowResized {

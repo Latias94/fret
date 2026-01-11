@@ -1089,6 +1089,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             pending_redraws.push(self.window);
                         }
                     }
+                    fret_core::PointerEvent::PinchGesture { .. } => {}
                     fret_core::PointerEvent::Up {
                         position,
                         button,

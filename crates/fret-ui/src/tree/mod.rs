@@ -1523,7 +1523,8 @@ fn pointer_position(pe: &PointerEvent) -> Point {
         PointerEvent::Move { position, .. }
         | PointerEvent::Down { position, .. }
         | PointerEvent::Up { position, .. }
-        | PointerEvent::Wheel { position, .. } => *position,
+        | PointerEvent::Wheel { position, .. }
+        | PointerEvent::PinchGesture { position, .. } => *position,
     }
 }
 

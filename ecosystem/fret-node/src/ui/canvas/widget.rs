@@ -4164,39 +4164,6 @@ impl NodeGraphCanvas {
         }
     }
 
-    fn zoom_about_center(&mut self, bounds: Rect, delta_y: f32) {
-        let zoom = self.cached_zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return;
-        }
-
-        let speed = 0.0015;
-        let factor = (1.0 + (-delta_y * speed)).clamp(0.2, 5.0);
-        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
-        if (new_zoom - zoom).abs() <= 1.0e-6 {
-            return;
-        }
-
-        let cx = 0.5 * bounds.size.width.0;
-        let cy = 0.5 * bounds.size.height.0;
-        let center_screen = (cx, cy);
-
-        let pan_x = self.cached_pan.x;
-        let pan_y = self.cached_pan.y;
-
-        let g0_x = center_screen.0 / zoom - pan_x;
-        let g0_y = center_screen.1 / zoom - pan_y;
-
-        let new_pan_x = center_screen.0 / new_zoom - g0_x;
-        let new_pan_y = center_screen.1 / new_zoom - g0_y;
-
-        self.cached_pan = CanvasPoint {
-            x: new_pan_x,
-            y: new_pan_y,
-        };
-        self.cached_zoom = new_zoom;
-    }
-
     fn zoom_about_center_factor(&mut self, bounds: Rect, factor: f32) {
         let zoom = self.cached_zoom;
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -6532,7 +6499,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Wheel {
-                delta, modifiers, ..
+                position,
+                delta,
+                modifiers,
+                ..
             }) => {
                 self.stop_pan_inertia_timer(cx.app);
                 if searcher::handle_searcher_wheel(self, cx, *delta, *modifiers, zoom) {
@@ -6546,7 +6516,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if snapshot.interaction.zoom_on_scroll && zoom_active {
                     let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
                     let delta_screen_y = delta.y.0 * zoom * speed;
-                    self.zoom_about_center(cx.bounds, delta_screen_y);
+                    let zoom_speed = 0.0015;
+                    let factor = (1.0 + (-delta_screen_y * zoom_speed)).clamp(0.2, 5.0);
+                    self.zoom_about_pointer_factor(*position, factor);
                     let pan = self.cached_pan;
                     let zoom = self.cached_zoom;
                     self.update_view_state(cx.app, |s| {
@@ -6588,6 +6560,30 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                 }
+            }
+            Event::Pointer(fret_core::PointerEvent::PinchGesture {
+                position, delta, ..
+            }) => {
+                self.stop_pan_inertia_timer(cx.app);
+                if !snapshot.interaction.zoom_on_pinch {
+                    return;
+                }
+                if !delta.is_finite() {
+                    return;
+                }
+
+                let speed = snapshot.interaction.zoom_on_pinch_speed.max(0.0);
+                let delta = (*delta).clamp(-0.95, 10.0);
+                let factor = (1.0 + delta * speed).max(0.01);
+                self.zoom_about_pointer_factor(*position, factor);
+                let pan = self.cached_pan;
+                let zoom = self.cached_zoom;
+                self.update_view_state(cx.app, |s| {
+                    s.pan = pan;
+                    s.zoom = zoom;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
             }
             _ => {}
         }
@@ -8288,6 +8284,119 @@ mod tests {
         );
         let after2 = canvas.sync_view_state(cx.app).pan;
         assert!((after2.y - after.y - 120.0).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn pinch_gesture_zooms_in_about_pointer() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_pinch = true;
+            s.interaction.zoom_on_pinch_speed = 1.0;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let pos = Point::new(Px(100.0), Px(100.0));
+        let before = canvas.sync_view_state(cx.app);
+        assert_eq!(before.zoom, 1.0);
+        assert_eq!(before.pan, CanvasPoint::default());
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::PinchGesture {
+                position: pos,
+                delta: 1.0,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert!((after.zoom - 2.0).abs() <= 1.0e-6);
+        assert!((after.pan.x - -50.0).abs() <= 1.0e-3);
+        assert!((after.pan.y - -50.0).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn pinch_gesture_respects_toggle() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_pinch = false;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::PinchGesture {
+                position: Point::new(Px(100.0), Px(100.0)),
+                delta: 1.0,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert_eq!(after.zoom, 1.0);
+        assert_eq!(after.pan, CanvasPoint::default());
+    }
+
+    #[test]
+    fn wheel_zoom_zooms_about_pointer() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_scroll = true;
+            s.interaction.zoom_on_scroll_speed = 1.0;
+            s.interaction.zoom_activation_key = crate::io::NodeGraphZoomActivationKey::None;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let pos = Point::new(Px(100.0), Px(100.0));
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: pos,
+                delta: Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert!((after.zoom - 1.18).abs() <= 1.0e-4);
+        assert!((after.pan.x - -15.254).abs() <= 1.0e-3);
+        assert!((after.pan.y - -15.254).abs() <= 1.0e-3);
     }
 
     #[test]

@@ -1075,6 +1075,17 @@ impl<H: UiHost> UiTree<H> {
                         modifiers: *modifiers,
                         pointer_type: *pointer_type,
                     },
+                    PointerEvent::PinchGesture {
+                        delta,
+                        modifiers,
+                        pointer_type,
+                        ..
+                    } => PointerEvent::PinchGesture {
+                        position,
+                        delta: *delta,
+                        modifiers: *modifiers,
+                        pointer_type: *pointer_type,
+                    },
                 };
                 Event::Pointer(e)
             }

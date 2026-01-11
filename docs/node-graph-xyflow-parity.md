@@ -226,7 +226,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - [x] space-to-pan (hold Space + drag with left mouse): `NodeGraphInteractionState.space_to_pan`
       - [x] `panOnDrag` button set: `NodeGraphInteractionState.pan_on_drag`
       - [x] `selectionOnDrag` (selection box without Shift): `NodeGraphInteractionState.selection_on_drag`
-      - [~] touch / trackpad gesture parity still TBD, but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
+      - [~] touch pan gesture parity still TBD; trackpad pinch zoom is supported; inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
     - right click pan semantics:
       - when `pan_on_drag.right = true`, right-button drag pans the canvas and suppresses context menu.
       - a context menu opens only on a "right click" (no drag beyond click distance), on pointer-up.
@@ -237,9 +237,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **Zoom on wheel / pinch / double click**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
   - fret-node:
-    - wheel zoom: supported
+    - wheel zoom: supported (zooms about pointer; gated by `zoom_activation_key`)
     - double click zoom: supported (`NodeGraphInteractionState.zoom_on_double_click`; Shift+double-click zooms out)
-    - pinch zoom parity TBD
+    - pinch gesture zoom: supported (`NodeGraphInteractionState.zoom_on_pinch`; winit `WindowEvent::PinchGesture`)
+    - note: multi-touch pinch zoom on touch screens / web is still TBD at the input layer
 
 - [x] **Pan on scroll**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnScroll`, `panOnScrollMode`, `panOnScrollSpeed`)
