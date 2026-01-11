@@ -37,6 +37,8 @@
     "color.viewport.drag_line.orbit": "#FFD24AD9",
     "color.viewport.gizmo.x": "#FF4D4D",
     "color.viewport.gizmo.y": "#4DFF88",
+    "color.viewport.gizmo.z": "#4D88FF",
+    "color.viewport.gizmo.hover": "#FFD24A",
     "color.viewport.gizmo.handle.background": "#141414",
     "color.viewport.gizmo.handle.border": "#C9C9C9",
     "color.viewport.rotate_gizmo": "#FFD24A",

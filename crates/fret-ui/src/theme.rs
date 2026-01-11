@@ -92,6 +92,22 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
         ),
     ]);
 
+    // Viewport 3D tooling extensions (not yet part of the typed `ThemeColors` baseline).
+    // These are used by engine-pass gizmos and are theme-overridable via JSON theme configs.
+    out.insert(
+        "color.viewport.gizmo.z".to_string(),
+        Color {
+            r: 0.2,
+            g: 0.5,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+    out.insert(
+        "color.viewport.gizmo.hover".to_string(),
+        colors.viewport_rotate_gizmo,
+    );
+
     // shadcn/new-york core semantic palette (canonical names).
     out.insert("background".to_string(), colors.surface_background);
     out.insert("foreground".to_string(), colors.text_primary);
