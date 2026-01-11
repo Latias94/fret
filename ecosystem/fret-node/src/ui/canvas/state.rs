@@ -321,7 +321,6 @@ impl NodeResizeHandle {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum MarqueeMode {
     Replace,
-    Add,
     Toggle,
 }
 
@@ -330,6 +329,7 @@ pub(crate) struct PendingMarqueeDrag {
     pub(crate) start_pos: Point,
     pub(crate) base_nodes: Vec<GraphNodeId>,
     pub(crate) mode: MarqueeMode,
+    pub(crate) clear_selection_on_up: bool,
 }
 
 #[derive(Debug, Clone)]

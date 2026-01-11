@@ -195,6 +195,65 @@ fn background_click_starts_pending_marquee_and_clears_selection_on_up() {
 }
 
 #[test]
+fn shift_clicking_a_node_does_not_clear_selection() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.selected_nodes = vec![a];
+        s.interaction.elements_selectable = true;
+        s.interaction.selection_on_drag = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let pos = Point::new(Px(10.0), Px(10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers {
+            shift: true,
+            ..Modifiers::default()
+        },
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_marquee.is_some());
+    assert!(canvas.interaction.pending_node_drag.is_none());
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers {
+            shift: true,
+            ..Modifiers::default()
+        },
+        snapshot.zoom,
+    ));
+
+    let selected = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected, vec![a]);
+}
+
+#[test]
 fn marquee_toggle_mode_toggles_nodes_in_rect() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
@@ -204,6 +263,7 @@ fn marquee_toggle_mode_toggles_nodes_in_rect() {
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
         s.interaction.elements_selectable = true;
+        s.interaction.selection_on_drag = true;
         s.interaction.pane_click_distance = 0.0;
     });
 

@@ -27,13 +27,6 @@ fn nodes_in_marquee(
         .collect()
 }
 
-fn union_nodes(a: &[GraphNodeId], b: &[GraphNodeId]) -> Vec<GraphNodeId> {
-    let mut out: Vec<GraphNodeId> = Vec::with_capacity(a.len() + b.len());
-    out.extend_from_slice(a);
-    out.extend_from_slice(b);
-    out
-}
-
 fn toggle_nodes(base: &[GraphNodeId], delta: &[GraphNodeId]) -> Vec<GraphNodeId> {
     let mut set: HashSet<GraphNodeId> = base.iter().copied().collect();
     for id in delta.iter().copied() {
@@ -45,9 +38,7 @@ fn toggle_nodes(base: &[GraphNodeId], delta: &[GraphNodeId]) -> Vec<GraphNodeId>
 }
 
 fn mode_from_modifiers(modifiers: Modifiers) -> MarqueeMode {
-    if modifiers.shift {
-        MarqueeMode::Add
-    } else if modifiers.ctrl || modifiers.meta {
+    if modifiers.ctrl || modifiers.meta {
         MarqueeMode::Toggle
     } else {
         MarqueeMode::Replace
@@ -60,12 +51,14 @@ pub(super) fn begin_background_marquee<H: UiHost>(
     snapshot: &ViewSnapshot,
     pos: Point,
     modifiers: Modifiers,
+    clear_selection_on_up: bool,
 ) {
     let mode = mode_from_modifiers(modifiers);
     canvas.interaction.pending_marquee = Some(PendingMarqueeDrag {
         start_pos: pos,
         base_nodes: snapshot.selected_nodes.clone(),
         mode,
+        clear_selection_on_up,
     });
     cx.capture_pointer(cx.node);
     cx.request_redraw();
@@ -93,7 +86,6 @@ pub(super) fn handle_marquee_move<H: UiHost>(
 
         let mut selected: Vec<GraphNodeId> = match marquee.mode {
             MarqueeMode::Replace => selection,
-            MarqueeMode::Add => union_nodes(&marquee.base_nodes, &selection),
             MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
         };
         selected.sort();
@@ -122,10 +114,8 @@ pub(super) fn handle_marquee_move<H: UiHost>(
             let dx = position.x.0 - pending.start_pos.x.0;
             let dy = position.y.0 - pending.start_pos.y.0;
             if threshold_graph <= 0.0 || dx * dx + dy * dy >= threshold_graph * threshold_graph {
-                let selection_box_active = snapshot.interaction.selection_on_drag
-                    || modifiers.shift
-                    || modifiers.ctrl
-                    || modifiers.meta;
+                let selection_box_active =
+                    snapshot.interaction.selection_on_drag || modifiers.shift;
 
                 if selection_box_active {
                     canvas.interaction.pending_marquee = None;
@@ -148,7 +138,6 @@ pub(super) fn handle_marquee_move<H: UiHost>(
 
                     let mut selected: Vec<GraphNodeId> = match marquee.mode {
                         MarqueeMode::Replace => selection,
-                        MarqueeMode::Add => union_nodes(&marquee.base_nodes, &selection),
                         MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
                     };
                     selected.sort();
@@ -197,7 +186,7 @@ pub(super) fn handle_left_up<H: UiHost>(
     }
 
     if let Some(pending) = canvas.interaction.pending_marquee.take() {
-        if matches!(pending.mode, MarqueeMode::Replace) {
+        if pending.clear_selection_on_up {
             canvas.update_view_state(cx.app, |s| {
                 s.selected_nodes.clear();
                 s.selected_edges.clear();

@@ -151,6 +151,37 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             .unwrap_or(Hit::Background)
     };
 
+    if snapshot.interaction.elements_selectable
+        && modifiers.shift
+        && !matches!(
+            hit,
+            Hit::Port(_) | Hit::EdgeAnchor(_, _, _) | Hit::Resize(_, _, _) | Hit::GroupResize(_, _)
+        )
+        && !matches!(hit, Hit::Background)
+    {
+        canvas.interaction.edge_drag = None;
+        canvas.interaction.pending_group_drag = None;
+        canvas.interaction.group_drag = None;
+        canvas.interaction.pending_group_resize = None;
+        canvas.interaction.group_resize = None;
+        canvas.interaction.pending_node_drag = None;
+        canvas.interaction.node_drag = None;
+        canvas.interaction.pending_node_resize = None;
+        canvas.interaction.node_resize = None;
+        canvas.interaction.pending_wire_drag = None;
+        canvas.interaction.wire_drag = None;
+        canvas.interaction.click_connect = false;
+        canvas.interaction.pending_marquee = None;
+        canvas.interaction.marquee = None;
+        canvas.interaction.focused_edge = None;
+        canvas.interaction.hover_port = None;
+        canvas.interaction.hover_port_valid = false;
+        canvas.interaction.hover_port_convertible = false;
+
+        super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers, false);
+        return true;
+    }
+
     match hit {
         Hit::Port(port) => {
             canvas.interaction.focused_edge = None;
@@ -574,11 +605,9 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 // We still begin a pending marquee so a click (no drag) can clear selection. Once
                 // the drag exceeds the threshold, `marquee::handle_marquee_move` will decide
                 // whether to start a selection box or switch into panning.
-                let mut mods = modifiers;
-                if !snapshot.interaction.selection_on_drag && mods.shift {
-                    mods.shift = false;
-                }
-                super::marquee::begin_background_marquee(canvas, cx, snapshot, position, mods);
+                super::marquee::begin_background_marquee(
+                    canvas, cx, snapshot, position, modifiers, true,
+                );
             } else if snapshot.interaction.pan_on_drag.left {
                 let _ = super::pan_zoom::begin_panning(
                     canvas,

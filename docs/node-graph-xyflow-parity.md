@@ -358,7 +358,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `UserSelection` / `NodesSelection` components (React-level) + system selection rect helpers
   - fret-node: canvas-native marquee selection is implemented
   - TODO: parity knobs:
-    - selectionOnDrag vs pan-on-drag conflict resolution
+    - [x] selectionOnDrag vs pan-on-drag conflict resolution:
+      - background drag defaults to pan when `pan_on_drag.left = true`
+      - selection box starts when `selection_on_drag = true` or while holding Shift (selection key)
+      - Shift-clicking a node starts a selection session without clearing selection (mirrors Pane capture semantics)
     - [x] paneClickDistance (pane click threshold): `NodeGraphInteractionState.pane_click_distance`
 
 ## 3.3 Multi-selection and selection transform
