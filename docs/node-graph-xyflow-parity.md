@@ -244,6 +244,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - persisted toggle: `NodeGraphInteractionState.pan_on_scroll` (`ecosystem/fret-node/src/io/mod.rs`)
     - mode knob: `NodeGraphInteractionState.pan_on_scroll_mode` (Free/Horizontal/Vertical)
     - speed knob: `NodeGraphInteractionState.pan_on_scroll_speed`
+    - Space override: holding Space enables panning-on-scroll even when `pan_on_scroll` is false (XyFlow `panActivationKey`)
     - implementation: wheel without zoom activation pans; on Windows/Linux, `Shift+wheel` maps vertical wheel delta to horizontal panning (matching XyFlow) (`ecosystem/fret-node/src/ui/canvas/widget.rs`)
 
 - [x] **Zoom activation key**

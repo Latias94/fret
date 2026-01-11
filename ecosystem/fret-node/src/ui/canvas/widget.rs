@@ -6436,7 +6436,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     });
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
-                } else if snapshot.interaction.pan_on_scroll {
+                } else if snapshot.interaction.pan_on_scroll
+                    || (snapshot.interaction.space_to_pan && self.interaction.space_pan_held)
+                {
                     let mode = snapshot.interaction.pan_on_scroll_mode;
                     let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
                     let dy_for_shift = delta.y.0;
@@ -8108,6 +8110,65 @@ mod tests {
         let after = canvas.sync_view_state(cx.app).pan;
         assert!((after.x - before.x - 120.0).abs() <= 1.0e-3);
         assert!((after.y - before.y).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.pan_on_scroll = false;
+            s.interaction.pan_on_scroll_speed = 1.0;
+            s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+            s.interaction.zoom_on_scroll = false;
+            s.interaction.space_to_pan = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let before = canvas.sync_view_state(cx.app).pan;
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(0.0), Px(0.0)),
+                delta: Point::new(Px(0.0), Px(120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let after = canvas.sync_view_state(cx.app).pan;
+        assert_eq!(before, after);
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(canvas.interaction.space_pan_held);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(0.0), Px(0.0)),
+                delta: Point::new(Px(0.0), Px(120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let after2 = canvas.sync_view_state(cx.app).pan;
+        assert!((after2.y - after.y - 120.0).abs() <= 1.0e-3);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
