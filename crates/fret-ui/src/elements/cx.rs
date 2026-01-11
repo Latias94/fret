@@ -18,8 +18,8 @@ use crate::element::{
     HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
     PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
     ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
-    VirtualListProps, VirtualListState, VisualTransformProps,
+    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
+    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -1306,6 +1306,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn viewport_surface(&mut self, target: fret_core::RenderTargetId) -> AnyElement {
+        self.viewport_surface_props(ViewportSurfaceProps::new(target))
+    }
+
+    #[track_caller]
+    pub fn viewport_surface_props(&mut self, props: ViewportSurfaceProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::ViewportSurface(props), Vec::new())
         })
     }
 

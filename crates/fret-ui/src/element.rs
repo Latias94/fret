@@ -3,7 +3,7 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality, ImageId, NodeId,
-    Px, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
+    Px, RenderTargetId, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -61,6 +61,8 @@ pub enum ElementKind {
     Flex(FlexProps),
     Grid(GridProps),
     Image(ImageProps),
+    /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
+    ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
@@ -896,6 +898,23 @@ impl ImageProps {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ViewportSurfaceProps {
+    pub layout: LayoutStyle,
+    pub target: RenderTargetId,
+    pub opacity: f32,
+}
+
+impl ViewportSurfaceProps {
+    pub fn new(target: RenderTargetId) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            target,
+            opacity: 1.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SvgIconProps {
     pub layout: LayoutStyle,
@@ -1308,6 +1327,12 @@ impl IntoElement for SelectableTextProps {
 impl IntoElement for ImageProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::Image(self), Vec::new())
+    }
+}
+
+impl IntoElement for ViewportSurfaceProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::ViewportSurface(self), Vec::new())
     }
 }
 

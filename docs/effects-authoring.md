@@ -3,6 +3,9 @@
 This document describes how to author scoped UI post-processing effects using the portable effect semantics
 defined in `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
 
+For the recommended user-facing story (Tier A vs Tier B) and the recipe authoring pattern, see:
+`docs/adr/0147-effect-recipes-and-tier-selection-v1.md`.
+
 ## TL;DR
 
 - Use `fret-ui`'s declarative `EffectLayer` wrapper to emit `SceneOp::PushEffect/PopEffect` around a subtree.

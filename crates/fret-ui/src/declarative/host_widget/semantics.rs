@@ -185,6 +185,7 @@ impl ElementHostWidget {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
             ElementInstance::Image(_)
+            | ElementInstance::ViewportSurface(_)
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)

@@ -771,6 +771,18 @@ impl ElementHostWidget {
                     });
                 }
             }
+            ElementInstance::ViewportSurface(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if opacity <= 0.0 {
+                    return;
+                }
+                cx.scene.push(SceneOp::ViewportSurface {
+                    order: DrawOrder(0),
+                    rect: cx.bounds,
+                    target: props.target,
+                    opacity,
+                });
+            }
             ElementInstance::SvgIcon(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
                 if opacity <= 0.0 || props.color.a <= 0.0 {

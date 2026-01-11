@@ -10,6 +10,7 @@ Primary ADR:
 
 - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - Effect semantics ADR: `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+- User-facing recipes + tier selection ADR: `docs/adr/0147-effect-recipes-and-tier-selection-v1.md`
 - Budgets + degradation ADR: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Streaming image/video ingestion ADR: `docs/adr/0121-streaming-images-and-video-surfaces.md`
 - Offscreen capture/readback ADR: `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
