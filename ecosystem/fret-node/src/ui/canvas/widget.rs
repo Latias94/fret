@@ -7655,6 +7655,7 @@ mod tests {
     use serde_json::Value;
     use std::any::{Any, TypeId};
     use std::collections::{HashMap, HashSet};
+    use std::time::Instant;
 
     use crate::core::{
         CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
@@ -7697,6 +7698,56 @@ mod tests {
             bounds,
             Rect::new(Point::new(Px(8.0), Px(8.0)), Size::new(Px(24.0), Px(14.0)))
         );
+    }
+
+    #[test]
+    fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let mut snapshot = canvas.sync_view_state(cx.app);
+        assert_eq!(snapshot.zoom, 1.0);
+        assert_eq!(snapshot.pan, CanvasPoint::default());
+
+        canvas.interaction.panning = true;
+        canvas.interaction.pan_last_sample_at = Some(Instant::now());
+        canvas.interaction.pan_last_screen_pos = None;
+
+        let screen_positions = [
+            Point::new(Px(100.0), Px(100.0)),
+            Point::new(Px(140.0), Px(100.0)),
+            Point::new(Px(190.0), Px(100.0)),
+        ];
+
+        for screen in screen_positions {
+            let zoom = snapshot.zoom;
+            let pan = snapshot.pan;
+            let local = Point::new(
+                Px((screen.x.0 - bounds.origin.x.0) / zoom - pan.x),
+                Px((screen.y.0 - bounds.origin.y.0) / zoom - pan.y),
+            );
+            assert!(super::pan_zoom::handle_panning_move(
+                &mut canvas,
+                &mut cx,
+                &snapshot,
+                local,
+            ));
+            snapshot = canvas.sync_view_state(cx.app);
+        }
+
+        let expected_pan_x = screen_positions.last().unwrap().x.0 - screen_positions[0].x.0;
+        assert!((snapshot.pan.x - expected_pan_x).abs() <= 1.0e-3);
+        assert!((snapshot.pan.y - 0.0).abs() <= 1.0e-3);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
