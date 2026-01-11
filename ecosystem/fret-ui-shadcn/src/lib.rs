@@ -127,7 +127,7 @@ pub use field::{
 };
 pub use form::{Form, FormControl, FormDescription, FormItem, FormLabel, FormMessage, form};
 pub use hover_card::{
-    HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardTrigger,
+    HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };
 pub use input::{Input, input};
 pub use input_group::{InputGroup, input_group};
