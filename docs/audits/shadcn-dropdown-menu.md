@@ -30,7 +30,9 @@ Key upstream behaviors/surfaces:
 ### Placement & sizing
 
 - Pass: Per-window overlay root (portal-like), rendered via `OverlayController`.
-- Pass: Anchored placement via `anchored_panel_bounds_sized` (flip + clamp).
+- Pass: Anchored placement via the Radix-shaped popper facade (deterministic flip + clamp).
+  - Placement policy: `fret_ui_kit::primitives::popper::PopperContentPlacement`
+  - Solver: `crates/fret-ui/src/overlay_placement/solver.rs`
 - Pass: `align="start"` respects the direction provider: under RTL, the content aligns to the
   trigger's logical start edge (Radix/Floating parity).
 - Pass: Default `side_offset` aligns with upstream (`4`).

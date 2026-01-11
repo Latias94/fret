@@ -39,6 +39,7 @@ Fret models Radix/Floating outcomes with a deterministic, pure solver and thin w
   `crates/fret-ui/src/overlay_placement/mod.rs`
 - Types:
   `crates/fret-ui/src/overlay_placement/types.rs`
+  - Includes `ShiftOptions` (Floating UI `shift()` axis configuration).
 - Utility for collision padding (caller-provided “outer inset”):
   `crates/fret-ui/src/overlay_placement/util.rs` (`inset_rect`)
 
@@ -117,8 +118,14 @@ and transform origin:
     `CollisionOptions`, but does not model a full boundary list nor `altBoundary` semantics.
 - Pass: Radix `sticky="partial" | "always"` semantics (`limitShift()`).
   - `StickyMode::Partial` emulates Floating `limitShift()` by allowing alignment-axis overflow to
-    keep the panel attached to the anchor (prevent detachment).
-  - `StickyMode::Always` keeps the current “fully clamp into boundary” behavior.
+    keep the panel attached to the anchor (prevent detachment), when alignment-axis shifting is
+    enabled.
+  - `StickyMode::Always` keeps the “clamp into boundary” behavior as configured by `ShiftOptions`.
+- Pass: Floating `shift({ crossAxis: false })` is modeled explicitly.
+  - Fret exposes `ShiftOptions { main_axis, cross_axis }` on `AnchoredPanelOptions`.
+  - The Radix-shaped popper facade defaults to `cross_axis=false` to match Radix’s typical
+    `shift({ crossAxis: false })` usage.
+  - Implementation: `ecosystem/fret-ui-kit/src/primitives/popper.rs`
 - Pass: Exposed “available width/height” metrics.
   - `popper_available_metrics(...)` returns structured `available_width/available_height` and
     `anchor_width/anchor_height` for recipes (Radix uses CSS vars).

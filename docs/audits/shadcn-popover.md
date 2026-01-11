@@ -46,8 +46,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Placement & collision
 
 - Pass: Supports `side`, `align`, and `side_offset` (default 4px) similar to Radix/shadcn.
-- Pass: Performs deterministic flip + clamp within window bounds via
-  `anchored_panel_bounds_sized(...)` (ADR 0064).
+- Pass: Uses deterministic flip/clamp placement via the Radix-shaped popper facade.
+  - Placement policy: `fret_ui_kit::primitives::popper::PopperContentPlacement`
+  - Solver: `crates/fret-ui/src/overlay_placement/solver.rs`
+  - Layout-driven placement: `AnchoredProps` (no re-entrant “measure triggers layout” loops).
+  - Default shift axis matches Radix (`shift({ crossAxis: false })`) via `ShiftOptions` in the
+    popper facade.
 - Pass: Optional arrow is supported via `Popover::arrow(true)` (default is `false`).
 
 ### Dismissal behavior
