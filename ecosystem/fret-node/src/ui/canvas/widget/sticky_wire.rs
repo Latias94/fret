@@ -49,7 +49,17 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
         &mut scratch_ports,
     );
 
-    if let Some(target) = hit_port {
+    let target = hit_port.filter(|target| {
+        canvas
+            .graph
+            .read_ref(cx.app, |graph| {
+                NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, *target)
+            })
+            .ok()
+            .unwrap_or(false)
+    });
+
+    if let Some(target) = target {
         enum Outcome {
             Apply(Vec<GraphOp>),
             Reject(DiagnosticSeverity, Arc<str>),

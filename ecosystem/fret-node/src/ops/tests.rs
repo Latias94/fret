@@ -15,6 +15,7 @@ fn make_node(kind: &str) -> Node {
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        connectable: None,
         deletable: None,
         parent: None,
         size: None,

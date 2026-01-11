@@ -2655,6 +2655,10 @@ impl NodeGraphCanvas {
         zoom: f32,
         scratch: &mut Vec<PortId>,
     ) -> Option<PortId> {
+        if !Self::port_is_connectable(graph, &snapshot.interaction, from) {
+            return None;
+        }
+
         let from_port = graph.ports.get(&from)?;
         let desired_dir = match from_port.dir {
             PortDirection::In => PortDirection::Out,
@@ -2665,14 +2669,20 @@ impl NodeGraphCanvas {
             NodeGraphConnectionMode::Strict => {
                 let candidate = self.hit_port(geom, index, pos, zoom, scratch)?;
                 let port = graph.ports.get(&candidate)?;
-                (candidate != from && port.dir == desired_dir).then_some(candidate)
+                (candidate != from
+                    && port.dir == desired_dir
+                    && Self::port_is_connectable(graph, &snapshot.interaction, candidate))
+                .then_some(candidate)
             }
             NodeGraphConnectionMode::Loose => {
                 let radius_screen = snapshot.interaction.connection_radius;
                 if !radius_screen.is_finite() || radius_screen <= 0.0 {
                     let candidate = self.hit_port(geom, index, pos, zoom, scratch)?;
                     let port = graph.ports.get(&candidate)?;
-                    return (candidate != from && port.dir == desired_dir).then_some(candidate);
+                    return (candidate != from
+                        && port.dir == desired_dir
+                        && Self::port_is_connectable(graph, &snapshot.interaction, candidate))
+                    .then_some(candidate);
                 }
                 let r = radius_screen / zoom;
                 let r2 = r * r;
@@ -2690,6 +2700,9 @@ impl NodeGraphCanvas {
                         continue;
                     };
                     if handle.dir != desired_dir {
+                        continue;
+                    }
+                    if !Self::port_is_connectable(graph, &snapshot.interaction, port_id) {
                         continue;
                     }
                     let d2 = Self::distance_sq_point_to_rect(pos, handle.bounds);
@@ -3052,6 +3065,7 @@ impl NodeGraphCanvas {
             pos: at,
             selectable: None,
             draggable: None,
+            connectable: None,
             deletable: None,
             parent: None,
             size: None,
@@ -4200,6 +4214,28 @@ impl NodeGraphCanvas {
             return false;
         };
         node.draggable.unwrap_or(true)
+    }
+
+    fn port_is_connectable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        port: PortId,
+    ) -> bool {
+        let Some(port) = graph.ports.get(&port) else {
+            return false;
+        };
+        Self::node_is_connectable(graph, interaction, port.node)
+    }
+
+    fn node_is_connectable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        node: GraphNodeId,
+    ) -> bool {
+        let Some(node) = graph.nodes.get(&node) else {
+            return false;
+        };
+        node.connectable.unwrap_or(interaction.nodes_connectable)
     }
 
     fn node_is_deletable(
@@ -9159,6 +9195,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9175,6 +9212,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9202,6 +9240,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: Some(CanvasSize {
@@ -9221,6 +9260,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 5.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: Some(CanvasSize {
@@ -9251,6 +9291,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9294,6 +9335,7 @@ mod tests {
                 pos: CanvasPoint { x: 200.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9374,6 +9416,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9406,6 +9449,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9479,6 +9523,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9635,6 +9680,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9668,6 +9714,7 @@ mod tests {
                 pos: CanvasPoint { x: 100.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9782,6 +9829,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
@@ -9798,6 +9846,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: Some(false),
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,

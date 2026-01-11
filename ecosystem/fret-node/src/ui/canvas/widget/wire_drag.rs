@@ -114,6 +114,13 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     let this = &*canvas;
                     this.graph
                         .read_ref(cx.app, |graph| {
+                            if !NodeGraphCanvas::port_is_connectable(
+                                graph,
+                                &snapshot.interaction,
+                                candidate,
+                            ) {
+                                return false;
+                            }
                             NodeGraphCanvas::should_add_bundle_port(graph, *from, bundle, candidate)
                         })
                         .ok()
@@ -304,8 +311,31 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
         WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
         WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
     };
+
+    let from_port_connectable = from_port
+        .and_then(|port| {
+            canvas
+                .graph
+                .read_ref(cx.host(), |graph| {
+                    NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, port)
+                })
+                .ok()
+        })
+        .unwrap_or(false);
+    let forced_target = forced_target.filter(|port| {
+        canvas
+            .graph
+            .read_ref(cx.host(), |graph| {
+                NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, *port)
+            })
+            .ok()
+            .unwrap_or(false)
+    });
     let target = forced_target.or_else(|| {
         from_port.and_then(|from_port| {
+            if !from_port_connectable {
+                return None;
+            }
             let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
             let this = &*canvas;
             let index = index.clone();

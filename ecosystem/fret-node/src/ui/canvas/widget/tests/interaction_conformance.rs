@@ -27,6 +27,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            connectable: None,
             deletable: None,
             parent: None,
             size: Some(CanvasSize {
@@ -61,6 +62,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             pos: CanvasPoint { x: 320.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            connectable: None,
             deletable: None,
             parent: None,
             size: Some(CanvasSize {
@@ -1122,6 +1124,201 @@ fn marquee_does_not_select_nodes_when_node_selectable_is_false() {
         .read_ref(&host, |s| s.selected_edges.clone())
         .unwrap_or_default();
     assert_eq!(selected_edges, vec![edge]);
+}
+
+#[test]
+fn port_click_does_not_start_wire_drag_when_nodes_connectable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = false;
+        s.interaction.connect_on_click = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_wire_drag.is_none());
+    assert!(canvas.interaction.wire_drag.is_none());
+}
+
+#[test]
+fn port_click_starts_wire_drag_when_node_connectable_true_even_if_nodes_connectable_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    let from_node = graph_value
+        .ports
+        .get(&from)
+        .map(|p| p.node)
+        .expect("from port must exist");
+    graph_value
+        .nodes
+        .get_mut(&from_node)
+        .expect("from node must exist")
+        .connectable = Some(true);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = false;
+        s.interaction.connect_on_click = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_wire_drag.is_some());
+    assert!(canvas.interaction.wire_drag.is_none());
+}
+
+#[test]
+fn connectable_false_prevents_connecting_to_target_port() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+    let kind = NodeKindKey::new("test.node");
+
+    let a = NodeId::new();
+    let out = PortId::new();
+    graph_value.nodes.insert(
+        a,
+        Node {
+            kind: kind.clone(),
+            kind_version: 1,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            size: Some(CanvasSize {
+                width: 220.0,
+                height: 80.0,
+            }),
+            collapsed: false,
+            ports: vec![out],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph_value.ports.insert(
+        out,
+        Port {
+            node: a,
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: None,
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let b = NodeId::new();
+    let inn = PortId::new();
+    graph_value.nodes.insert(
+        b,
+        Node {
+            kind,
+            kind_version: 1,
+            pos: CanvasPoint { x: 320.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: Some(false),
+            deletable: None,
+            parent: None,
+            size: Some(CanvasSize {
+                width: 220.0,
+                height: 80.0,
+            }),
+            collapsed: false,
+            ports: vec![inn],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph_value.ports.insert(
+        inn,
+        Port {
+            node: b,
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: None,
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+        kind: WireDragKind::New {
+            from: out,
+            bundle: vec![out],
+        },
+        pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    assert!(
+        super::super::wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(inn),
+        )
+    );
+
+    assert_eq!(graph.read_ref(&host, |g| g.edges.len()).unwrap_or(0), 0);
 }
 
 #[test]

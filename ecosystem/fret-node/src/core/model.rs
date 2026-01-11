@@ -112,6 +112,13 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub draggable: Option<bool>,
 
+    /// Whether the node can be used for creating connections via editor interactions (XyFlow
+    /// `node.connectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_connectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable: Option<bool>,
+
     /// Whether the node can be deleted via editor interactions (XyFlow `node.deletable`).
     ///
     /// When omitted, the global `NodeGraphInteractionState.nodes_deletable` decides.

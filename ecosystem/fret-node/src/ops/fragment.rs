@@ -159,6 +159,7 @@ mod tests {
             pos: CanvasPoint { x: pos.0, y: pos.1 },
             selectable: None,
             draggable: None,
+            connectable: None,
             deletable: None,
             parent,
             size: None,

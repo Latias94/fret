@@ -208,6 +208,7 @@ impl InsertNodeTemplate {
                 pos: at,
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,

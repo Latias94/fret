@@ -472,6 +472,24 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 # 5) Ports/Handles and Connecting (Create Connection)
 
+## 5.0 Connection enablement (`nodesConnectable` / `node.connectable`)
+
+- [~] **Nodes connectable (global + per-node override)**
+  - XyFlow:
+    - per-node: `NodeBase.connectable?: boolean` in `repo-ref/xyflow/packages/system/src/types/nodes.ts`
+    - global: `nodesConnectable` in store (`repo-ref/xyflow/packages/react/src/types/store.ts`)
+    - resolved by `NodeWrapper`:
+      - `const isConnectable = !!(node.connectable || (nodesConnectable && typeof node.connectable === 'undefined'));`
+        in `repo-ref/xyflow/packages/react/src/components/NodeWrapper/index.tsx`
+  - fret-node:
+    - per-node: `Node.connectable: Option<bool>` in `ecosystem/fret-node/src/core/model.rs`
+    - global: `NodeGraphInteractionState.nodes_connectable` in `ecosystem/fret-node/src/io/mod.rs`
+    - enforced by:
+      - connection start gating (port hit): `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
+      - candidate selection gating: `NodeGraphCanvas::pick_target_port` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - forced-target / sticky-wire gating: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+
 ## 5.1 Connection mode (Strict vs Loose)
 
 - [x] **Strict / Loose connection modes**
@@ -508,7 +526,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - persisted toggle: `NodeGraphInteractionState.connect_on_click` (`ecosystem/fret-node/src/io/mod.rs`)
     - click-start is created from a "no-move" port click (`PendingWireDrag` on pointer-up)
     - click-end reuses the existing connect/reconnect pipeline by forcing the clicked target port
-      (`handle_wire_left_up_with_forced_target`) so invalid clicks do not open the "drop on empty" picker
+      (`handle_wire_left_up_with_forced_target`) while also filtering non-connectable targets so invalid
+      clicks do not open the "drop on empty" picker
 
 ## 5.6 Connection validation hook
 

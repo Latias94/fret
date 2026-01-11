@@ -192,7 +192,23 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     match hit {
         Hit::Port(port) => {
             canvas.interaction.focused_edge = None;
-            if snapshot.interaction.connect_on_click && canvas.interaction.click_connect {
+            let port_connectable = canvas
+                .graph
+                .read_ref(cx.app, |graph| {
+                    NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, port)
+                })
+                .ok()
+                .unwrap_or(false);
+
+            if snapshot.interaction.connect_on_click
+                && canvas.interaction.click_connect
+                && canvas.interaction.wire_drag.is_some()
+            {
+                // When click-to-connect is active, ignore clicks on non-connectable ports so we do
+                // not accidentally trigger the "drop on empty" picker.
+                if !port_connectable {
+                    return true;
+                }
                 if let Some(mut w) = canvas.interaction.wire_drag.take() {
                     w.pos = position;
                     canvas.interaction.wire_drag = Some(w);
@@ -207,7 +223,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                     );
                     return true;
                 }
+            }
+
+            if !port_connectable {
                 canvas.interaction.click_connect = false;
+                return true;
             }
 
             canvas.interaction.pending_group_drag = None;

@@ -491,6 +491,10 @@ fn default_nodes_draggable() -> bool {
     true
 }
 
+fn default_nodes_connectable() -> bool {
+    true
+}
+
 fn default_nodes_deletable() -> bool {
     true
 }
@@ -518,6 +522,11 @@ pub struct NodeGraphInteractionState {
     /// Whether nodes can be dragged with pointer interactions (XyFlow `nodesDraggable`).
     #[serde(default = "default_nodes_draggable")]
     pub nodes_draggable: bool,
+
+    /// Whether nodes can create/accept connections via editor interactions (XyFlow
+    /// `nodesConnectable`).
+    #[serde(default = "default_nodes_connectable")]
+    pub nodes_connectable: bool,
 
     /// Whether nodes can be deleted via editor interactions (XyFlow `nodesDeletable`).
     #[serde(default = "default_nodes_deletable")]
@@ -753,6 +762,7 @@ impl Default for NodeGraphInteractionState {
         Self {
             elements_selectable: default_elements_selectable(),
             nodes_draggable: default_nodes_draggable(),
+            nodes_connectable: default_nodes_connectable(),
             nodes_deletable: default_nodes_deletable(),
             edges_selectable: default_edges_selectable(),
             edges_deletable: default_edges_deletable(),
@@ -1108,6 +1118,7 @@ mod tests {
                 pos: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                connectable: None,
                 deletable: None,
                 parent: None,
                 size: None,
