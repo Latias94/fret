@@ -64,6 +64,7 @@ use crate::ui::{
 };
 
 use super::paint::CanvasPaintCache;
+use super::state::ViewportMoveDebounceState;
 
 mod cancel;
 mod context_menu;
@@ -177,6 +178,7 @@ impl NodeGraphCanvas {
     const PAN_INERTIA_TICK_HZ: f32 = 60.0;
     const PAN_INERTIA_TICK_INTERVAL: Duration =
         Duration::from_nanos((1.0e9 / Self::PAN_INERTIA_TICK_HZ) as u64);
+    const VIEWPORT_MOVE_END_DEBOUNCE: Duration = Duration::from_millis(180);
     const EDGE_FOCUS_ANCHOR_SIZE_SCREEN: f32 = 16.0;
     const EDGE_FOCUS_ANCHOR_PAD_SCREEN: f32 = 1.0;
     const EDGE_FOCUS_ANCHOR_BORDER_SCREEN: f32 = 2.0;
@@ -4667,6 +4669,33 @@ impl NodeGraphCanvas {
         });
     }
 
+    fn bump_viewport_move_debounce<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        kind: ViewportMoveKind,
+    ) {
+        if let Some(prev) = self.interaction.viewport_move_debounce.take() {
+            host.push_effect(Effect::CancelTimer { token: prev.timer });
+            if prev.kind != kind {
+                self.emit_move_end(snapshot, prev.kind, ViewportMoveEndOutcome::Ended);
+                self.emit_move_start(snapshot, kind);
+            }
+        } else {
+            self.emit_move_start(snapshot, kind);
+        }
+
+        let timer = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window,
+            token: timer,
+            after: Self::VIEWPORT_MOVE_END_DEBOUNCE,
+            repeat: None,
+        });
+        self.interaction.viewport_move_debounce = Some(ViewportMoveDebounceState { kind, timer });
+    }
+
     fn pan_inertia_should_tick(&self) -> bool {
         if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
             return false;
@@ -6399,6 +6428,21 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                 }
+
+                if self
+                    .interaction
+                    .viewport_move_debounce
+                    .as_ref()
+                    .is_some_and(|s| s.timer == *token)
+                {
+                    let Some(state) = self.interaction.viewport_move_debounce.take() else {
+                        return;
+                    };
+                    let snapshot = self.sync_view_state(cx.app);
+                    self.emit_move_end(&snapshot, state.kind, ViewportMoveEndOutcome::Ended);
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
             }
             Event::KeyDown { key, modifiers, .. } => {
                 if cx.input_ctx.focus_is_text_input {
@@ -7004,6 +7048,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .zoom_activation_key
                     .is_pressed(*modifiers);
                 if snapshot.interaction.zoom_on_scroll && zoom_active {
+                    self.bump_viewport_move_debounce(
+                        cx.app,
+                        cx.window,
+                        &snapshot,
+                        ViewportMoveKind::Zoom,
+                    );
                     let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
                     let delta_screen_y = delta.y.0 * zoom * speed;
                     let zoom_speed = 0.0015;
@@ -7062,6 +7112,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if !delta.is_finite() {
                     return;
                 }
+
+                self.bump_viewport_move_debounce(
+                    cx.app,
+                    cx.window,
+                    &snapshot,
+                    ViewportMoveKind::Zoom,
+                );
 
                 let speed = snapshot.interaction.zoom_on_pinch_speed.max(0.0);
                 let delta = (*delta).clamp(-0.95, 10.0);

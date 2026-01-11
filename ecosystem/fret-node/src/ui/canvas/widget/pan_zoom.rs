@@ -1,11 +1,12 @@
 use std::time::Instant;
 
 use fret_core::{MouseButton, Point};
+use fret_runtime::Effect;
 use fret_ui::UiHost;
 
 use super::{NodeGraphCanvas, ViewSnapshot};
 use crate::core::CanvasPoint;
-use crate::runtime::callbacks::ViewportMoveKind;
+use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
 
 pub(super) fn begin_panning<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
@@ -15,6 +16,11 @@ pub(super) fn begin_panning<H: UiHost>(
     button: MouseButton,
 ) -> bool {
     canvas.stop_pan_inertia_timer(cx.app);
+    if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
+        cx.app
+            .push_effect(Effect::CancelTimer { token: state.timer });
+        canvas.emit_move_end(snapshot, state.kind, ViewportMoveEndOutcome::Ended);
+    }
 
     canvas.interaction.hover_edge = None;
     canvas.interaction.pending_group_drag = None;

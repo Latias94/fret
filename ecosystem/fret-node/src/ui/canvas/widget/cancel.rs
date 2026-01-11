@@ -1,5 +1,7 @@
 use fret_ui::UiHost;
 
+use fret_runtime::Effect;
+
 use super::NodeGraphCanvas;
 use crate::runtime::callbacks::{NodeDragEndOutcome, ViewportMoveEndOutcome, ViewportMoveKind};
 
@@ -68,6 +70,12 @@ fn cancel_active_gestures_inner<H: UiHost>(
             ViewportMoveKind::Pan,
             ViewportMoveEndOutcome::Canceled,
         );
+        canceled = true;
+    }
+    if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
+        cx.app
+            .push_effect(Effect::CancelTimer { token: state.timer });
+        canvas.emit_move_end(&snapshot, state.kind, ViewportMoveEndOutcome::Canceled);
         canceled = true;
     }
     if let Some(w) = canvas.interaction.suspended_wire_drag.take() {

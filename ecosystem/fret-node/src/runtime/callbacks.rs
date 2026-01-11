@@ -30,6 +30,7 @@ pub struct DeleteChange {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewportMoveKind {
     Pan,
+    Zoom,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

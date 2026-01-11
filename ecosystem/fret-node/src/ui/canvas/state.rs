@@ -6,6 +6,7 @@ use fret_runtime::TimerToken;
 
 use crate::core::{CanvasPoint, EdgeId, GroupId, NodeId as GraphNodeId, NodeKindKey, PortId};
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
+use crate::runtime::callbacks::ViewportMoveKind;
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphContextMenuItem};
 
 use super::searcher::SearcherRow;
@@ -44,6 +45,7 @@ pub(crate) struct InteractionState {
     pub(crate) pan_last_sample_at: Option<Instant>,
     pub(crate) pan_velocity: CanvasPoint,
     pub(crate) pan_inertia: Option<PanInertiaState>,
+    pub(crate) viewport_move_debounce: Option<ViewportMoveDebounceState>,
     /// Whether the current `wire_drag` session was initiated via click-to-connect.
     ///
     /// When set, the next handle click should attempt to finalize the connection and then clear
@@ -183,6 +185,12 @@ pub(crate) struct PanInertiaState {
     pub(crate) timer: TimerToken,
     pub(crate) velocity: CanvasPoint,
     pub(crate) last_tick_at: Instant,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ViewportMoveDebounceState {
+    pub(crate) kind: ViewportMoveKind,
+    pub(crate) timer: TimerToken,
 }
 
 #[derive(Debug, Clone)]
