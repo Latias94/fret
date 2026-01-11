@@ -2,6 +2,35 @@ use super::*;
 use crate::text::TextFontFamilyConfig;
 
 impl Renderer {
+    pub fn set_perf_enabled(&mut self, enabled: bool) {
+        self.perf_enabled = enabled;
+        self.perf = RenderPerfStats::default();
+    }
+
+    pub fn take_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
+        if !self.perf_enabled {
+            return None;
+        }
+
+        let snap = RenderPerfSnapshot {
+            frames: self.perf.frames,
+            encode_scene_us: self.perf.encode_scene.as_micros() as u64,
+            prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
+            prepare_text_us: self.perf.prepare_text.as_micros() as u64,
+            draw_calls: self.perf.draw_calls,
+            pipeline_switches: self.perf.pipeline_switches,
+            bind_group_switches: self.perf.bind_group_switches,
+            uniform_bytes: self.perf.uniform_bytes,
+            instance_bytes: self.perf.instance_bytes,
+            vertex_bytes: self.perf.vertex_bytes,
+            scene_encoding_cache_hits: self.perf.scene_encoding_cache_hits,
+            scene_encoding_cache_misses: self.perf.scene_encoding_cache_misses,
+        };
+
+        self.perf = RenderPerfStats::default();
+        Some(snap)
+    }
+
     pub fn set_svg_perf_enabled(&mut self, enabled: bool) {
         self.svg_perf_enabled = enabled;
         self.svg_perf = SvgPerfStats::default();

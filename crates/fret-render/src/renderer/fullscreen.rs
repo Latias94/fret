@@ -7,6 +7,7 @@ pub(super) fn run_fullscreen_triangle_pass(
     bind_group0: &wgpu::BindGroup,
     bind_group0_offsets: &[u32],
     dst_scissor: Option<super::ScissorRect>,
+    mut perf: Option<&mut super::RenderPerfStats>,
 ) {
     let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),
@@ -32,6 +33,12 @@ pub(super) fn run_fullscreen_triangle_pass(
         }
     }
     rp.draw(0..3, 0..1);
+
+    if let Some(perf) = perf.as_deref_mut() {
+        perf.pipeline_switches = perf.pipeline_switches.saturating_add(1);
+        perf.bind_group_switches = perf.bind_group_switches.saturating_add(1);
+        perf.draw_calls = perf.draw_calls.saturating_add(1);
+    }
 }
 
 pub(super) fn create_texture_bind_group(

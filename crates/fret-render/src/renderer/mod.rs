@@ -36,7 +36,7 @@ use intermediate_pool::*;
 use path::*;
 use render_plan::*;
 use types::*;
-pub use types::{IntermediatePerfSnapshot, SvgPerfSnapshot};
+pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use util::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -169,6 +169,9 @@ pub struct Renderer {
     svg_raster_epoch: u64,
     svg_perf_enabled: bool,
     svg_perf: SvgPerfStats,
+
+    perf_enabled: bool,
+    perf: RenderPerfStats,
 
     path_msaa_samples: u32,
     debug_offscreen_blit_enabled: bool,

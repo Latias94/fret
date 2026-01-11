@@ -104,6 +104,46 @@ pub(super) const SVG_MASK_ATLAS_PAGE_SIZE_PX: u32 = 1024;
 pub(super) const SVG_MASK_ATLAS_PADDING_PX: u32 = 1;
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct RenderPerfSnapshot {
+    pub frames: u64,
+
+    pub encode_scene_us: u64,
+    pub prepare_svg_us: u64,
+    pub prepare_text_us: u64,
+
+    pub draw_calls: u64,
+    pub pipeline_switches: u64,
+    pub bind_group_switches: u64,
+
+    pub uniform_bytes: u64,
+    pub instance_bytes: u64,
+    pub vertex_bytes: u64,
+
+    pub scene_encoding_cache_hits: u64,
+    pub scene_encoding_cache_misses: u64,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct RenderPerfStats {
+    pub(super) frames: u64,
+
+    pub(super) encode_scene: Duration,
+    pub(super) prepare_svg: Duration,
+    pub(super) prepare_text: Duration,
+
+    pub(super) draw_calls: u64,
+    pub(super) pipeline_switches: u64,
+    pub(super) bind_group_switches: u64,
+
+    pub(super) uniform_bytes: u64,
+    pub(super) instance_bytes: u64,
+    pub(super) vertex_bytes: u64,
+
+    pub(super) scene_encoding_cache_hits: u64,
+    pub(super) scene_encoding_cache_misses: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SvgPerfSnapshot {
     pub frames: u64,
     pub prepare_svg_ops_us: u64,

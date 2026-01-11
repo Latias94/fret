@@ -310,6 +310,8 @@ impl Renderer {
             svg_raster_epoch: 0,
             svg_perf_enabled: false,
             svg_perf: SvgPerfStats::default(),
+            perf_enabled: false,
+            perf: RenderPerfStats::default(),
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,
             debug_pixelate_scale: 0,

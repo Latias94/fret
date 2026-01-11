@@ -1,4 +1,3 @@
-mod capabilities;
 mod error;
 mod images;
 mod renderer;
@@ -9,15 +8,11 @@ mod targets;
 mod text;
 pub mod viewport_overlay;
 
-pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
-pub use images::{
-    ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
-    upload_rgba8_image, write_rgba8_texture_region,
-};
+pub use images::{ImageDescriptor, ImageRegistry, UploadedRgba8Image, upload_rgba8_image};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
-pub use renderer::{IntermediatePerfSnapshot, SvgPerfSnapshot};
+pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
 pub use svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,

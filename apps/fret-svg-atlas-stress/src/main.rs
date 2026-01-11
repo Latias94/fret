@@ -247,6 +247,7 @@ fn run_headless(
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_svg_raster_budget_bytes(budget_bytes);
     renderer.set_svg_perf_enabled(true);
+    renderer.set_perf_enabled(true);
 
     let svg_square = renderer.register_svg(SVG_SQUARE.as_bytes());
     let svg_wide = renderer.register_svg(SVG_WIDE.as_bytes());
@@ -469,6 +470,24 @@ fn run_headless(
         );
     }
 
+    if let Some(snap) = renderer.take_perf_snapshot() {
+        println!(
+            "headless_renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+            snap.frames,
+            snap.encode_scene_us as f64 / 1000.0,
+            snap.prepare_svg_us as f64 / 1000.0,
+            snap.prepare_text_us as f64 / 1000.0,
+            snap.draw_calls,
+            snap.pipeline_switches,
+            snap.bind_group_switches,
+            snap.uniform_bytes / 1024,
+            snap.instance_bytes / 1024,
+            snap.vertex_bytes / 1024,
+            snap.scene_encoding_cache_hits,
+            snap.scene_encoding_cache_misses
+        );
+    }
+
     Ok(())
 }
 
@@ -482,6 +501,7 @@ impl WinitAppDriver for SvgAtlasStressDriver {
         renderer: &mut fret_render::Renderer,
     ) {
         renderer.set_svg_perf_enabled(true);
+        renderer.set_perf_enabled(true);
     }
 
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
@@ -522,6 +542,25 @@ impl WinitAppDriver for SvgAtlasStressDriver {
             Some(last) => now.duration_since(last) >= Duration::from_secs(1),
         };
         if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                }
+            }
             if let Some(snap) = renderer.take_svg_perf_snapshot() {
                 if snap.frames == 0 {
                     state.last_renderer_report = Some(now);

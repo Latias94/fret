@@ -205,6 +205,9 @@ This section is intentionally lightweight and should be updated as work lands.
 - An experimental NV12 GPU conversion path exists behind capability gating (ADR 0124) and an enable switch
   (`WinitRunnerConfig.streaming_nv12_gpu_convert_enabled` or `FRET_STREAMING_GPU_YUV=1`): NV12 planes + a tiny conversion
   pass into RGBA8 sRGB image storage in `crates/fret-launch/src/runner/yuv_gpu.rs`.
+- A unified renderer-wide perf snapshot exists (ADR 0096): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
+  P0 counters (draw calls, pipeline/bind group sets, upload bytes, encode/prepare timing) and is printed by
+  `apps/fret-svg-atlas-stress/src/main.rs` (`renderer_perf:`).
 
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
