@@ -5400,18 +5400,37 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if !snapshot.interaction.elements_selectable {
                     return true;
                 }
-                let nodes = self
+                let (nodes, groups, edges) = self
                     .graph
                     .read_ref(cx.app, |graph| {
-                        graph.nodes.keys().copied().collect::<Vec<_>>()
+                        let nodes = graph.nodes.keys().copied().collect::<Vec<_>>();
+                        let groups = graph.groups.keys().copied().collect::<Vec<_>>();
+                        let edges = if snapshot.interaction.edges_selectable {
+                            graph
+                                .edges
+                                .keys()
+                                .copied()
+                                .filter(|id| {
+                                    Self::edge_is_selectable(graph, &snapshot.interaction, *id)
+                                })
+                                .collect::<Vec<_>>()
+                        } else {
+                            Vec::new()
+                        };
+                        (nodes, groups, edges)
                     })
                     .ok()
                     .unwrap_or_default();
+
                 self.interaction.focused_edge = None;
+                self.interaction.focused_node = None;
+                self.interaction.focused_port = None;
+                self.interaction.focused_port_valid = false;
+                self.interaction.focused_port_convertible = false;
                 self.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_groups.clear();
                     s.selected_nodes = nodes;
+                    s.selected_groups = groups;
+                    s.selected_edges = edges;
                 });
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
@@ -8001,8 +8020,9 @@ mod tests {
     use std::time::Instant;
 
     use crate::core::{
-        CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
-        Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+        CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group,
+        GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+        PortKind,
     };
 
     mod connect_conformance;
@@ -8763,7 +8783,7 @@ mod tests {
         CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT,
         CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
         CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
-        CMD_NODE_GRAPH_NUDGE_RIGHT,
+        CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
     };
 
     use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
@@ -9590,6 +9610,160 @@ mod tests {
             read_node_pos(&mut host, &graph, b),
             CanvasPoint { x: 10.0, y: 0.0 }
         );
+    }
+
+    #[test]
+    fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
+        let mut host = TestUiHostImpl::default();
+
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 0.0 },
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        let p_out = PortId::new();
+        let p_in = PortId::new();
+        graph.ports.insert(
+            p_out,
+            Port {
+                node: a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            p_in,
+            Port {
+                node: b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.nodes.get_mut(&a).unwrap().ports.push(p_out);
+        graph.nodes.get_mut(&b).unwrap().ports.push(p_in);
+
+        let e_ok = EdgeId::new();
+        let e_no = EdgeId::new();
+        graph.edges.insert(
+            e_ok,
+            Edge {
+                kind: EdgeKind::Data,
+                from: p_out,
+                to: p_in,
+                selectable: None,
+            },
+        );
+        graph.edges.insert(
+            e_no,
+            Edge {
+                kind: EdgeKind::Data,
+                from: p_out,
+                to: p_in,
+                selectable: Some(false),
+            },
+        );
+
+        let g0 = GroupId::new();
+        graph.groups.insert(
+            g0,
+            Group {
+                title: "Group".to_string(),
+                rect: CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 100.0,
+                        height: 80.0,
+                    },
+                },
+                color: None,
+            },
+        );
+
+        let graph = host.models.insert(graph);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.interaction.elements_selectable = true;
+            s.interaction.edges_selectable = true;
+            s.selected_nodes.clear();
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+        })
+        .unwrap();
+
+        canvas.interaction.focused_edge = Some(e_ok);
+        canvas.interaction.focused_node = Some(a);
+        canvas.interaction.focused_port = Some(p_out);
+        canvas.interaction.focused_port_valid = true;
+        canvas.interaction.focused_port_convertible = true;
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_SELECT_ALL)));
+
+        assert!(canvas.interaction.focused_edge.is_none());
+        assert!(canvas.interaction.focused_node.is_none());
+        assert!(canvas.interaction.focused_port.is_none());
+        assert!(!canvas.interaction.focused_port_valid);
+        assert!(!canvas.interaction.focused_port_convertible);
+
+        let mut selected_nodes = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        selected_nodes.sort();
+        assert_eq!(selected_nodes, vec![a, b]);
+
+        let mut selected_groups = view
+            .read_ref(&host, |s| s.selected_groups.clone())
+            .unwrap_or_default();
+        selected_groups.sort();
+        assert_eq!(selected_groups, vec![g0]);
+
+        let mut selected_edges = view
+            .read_ref(&host, |s| s.selected_edges.clone())
+            .unwrap_or_default();
+        selected_edges.sort();
+        assert_eq!(selected_edges, vec![e_ok]);
     }
 
     #[test]
