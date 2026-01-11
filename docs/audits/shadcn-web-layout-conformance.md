@@ -66,7 +66,9 @@ These shadcn v4 new-york-v4 pages are good early gates because they stress the m
 patterns:
 
 - `button-default`
+- `checkbox-demo`
 - `tabs-demo`
+- `switch-demo`
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling)
@@ -95,4 +97,3 @@ Rationale: these tests encode external normalization rules (web schema, toleranc
 
 When any of these requires a new cross-crate contract, we should introduce a dedicated ADR rather
 than quietly changing semantics.
-
