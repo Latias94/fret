@@ -6171,9 +6171,58 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
             Event::Pointer(fret_core::PointerEvent::Move {
                 position,
+                buttons,
                 modifiers,
                 ..
             }) => {
+                // The runtime may occasionally miss a corresponding `PointerEvent::Up` (e.g. when
+                // releasing outside of the window / losing capture). Infer the release from the
+                // current button state and synthesize an "up" so we can finish the interaction
+                // through the canonical pointer-up code path (commit, cancel, inertia, etc.).
+                if self.interaction.panning && !buttons.middle {
+                    let snapshot = self.sync_view_state(cx.app);
+                    let _ = pointer_up::handle_pointer_up(
+                        self,
+                        cx,
+                        &snapshot,
+                        *position,
+                        fret_core::MouseButton::Middle,
+                        1,
+                        *modifiers,
+                        snapshot.zoom,
+                    );
+                    return;
+                }
+
+                let has_left_interaction = self.interaction.pending_marquee.is_some()
+                    || self.interaction.marquee.is_some()
+                    || self.interaction.pending_node_drag.is_some()
+                    || self.interaction.node_drag.is_some()
+                    || self.interaction.pending_group_drag.is_some()
+                    || self.interaction.group_drag.is_some()
+                    || self.interaction.pending_group_resize.is_some()
+                    || self.interaction.group_resize.is_some()
+                    || self.interaction.pending_node_resize.is_some()
+                    || self.interaction.node_resize.is_some()
+                    || self.interaction.pending_wire_drag.is_some()
+                    || self.interaction.wire_drag.is_some()
+                    || self.interaction.edge_drag.is_some();
+
+                if has_left_interaction && !buttons.left {
+                    let snapshot = self.sync_view_state(cx.app);
+                    let _ = pointer_up::handle_pointer_up(
+                        self,
+                        cx,
+                        &snapshot,
+                        *position,
+                        fret_core::MouseButton::Left,
+                        1,
+                        *modifiers,
+                        snapshot.zoom,
+                    );
+                    return;
+                }
+
                 if self.interaction.last_pos.is_none() {
                     self.interaction.last_pos = Some(*position);
                     self.interaction.last_modifiers = *modifiers;

@@ -1,4 +1,4 @@
-use fret_core::{Modifiers, Point, Px, Rect, Size};
+use fret_core::{Modifiers, MouseButtons, Point, Px, Rect, Size};
 
 use crate::core::{
     CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
@@ -396,4 +396,65 @@ fn window_focus_lost_cancels_wire_drag() {
 
     // Cancel should not change graph history.
     assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
+fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.snaplines = false;
+        s.interaction.snap_to_grid = false;
+        s.interaction.auto_pan.on_node_drag = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.interaction.node_drag = Some(super::super::super::state::NodeDrag {
+        primary: a,
+        nodes: vec![(a, CanvasPoint { x: 0.0, y: 0.0 })],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    assert!(super::super::node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(40.0), Px(10.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert_eq!(canvas.history.undo_len(), 0);
+
+    // Simulate a missed `PointerEvent::Up`: Move arrives with no left button held.
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(40.0), Px(10.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(canvas.interaction.node_drag.is_none());
+    assert_eq!(canvas.history.undo_len(), 1);
+
+    let pos = graph
+        .read_ref(cx.app, |g| g.nodes.get(&a).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(pos, CanvasPoint { x: 40.0, y: 10.0 });
 }
