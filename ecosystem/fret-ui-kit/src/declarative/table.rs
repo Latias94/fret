@@ -139,6 +139,7 @@ pub struct TableViewProps {
     ///
     /// Limitations / caveats:
     ///
+    /// - Default: `false`.
     /// - This intentionally trades per-column dividers for only `{left|center|right}` group dividers.
     /// - It is not a stable styling contract. Prefer keeping it disabled unless profiling shows that
     ///   per-cell dividers dominate quad count and pipeline switches for your workload.
