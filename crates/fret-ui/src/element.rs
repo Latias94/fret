@@ -2,8 +2,8 @@ use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
-    CaretAffinity, Color, Corners, Edges, ImageId, NodeId, Px, RichText, SemanticsRole, SvgFit,
-    TextOverflow, TextStyle, TextWrap, UvRect,
+    CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality, ImageId, NodeId,
+    Px, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -39,6 +39,8 @@ pub enum ElementKind {
     /// preserved).
     InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
+    /// A scoped post-processing effect group wrapper (ADR 0119).
+    EffectLayer(EffectLayerProps),
     VisualTransform(VisualTransformProps),
     RenderTransform(RenderTransformProps),
     Anchored(AnchoredProps),
@@ -362,6 +364,29 @@ impl Default for OpacityProps {
         Self {
             layout: LayoutStyle::default(),
             opacity: 1.0,
+        }
+    }
+}
+
+/// Scoped post-processing effect wrapper for declarative element subtrees (ADR 0119).
+///
+/// This emits a `SceneOp::PushEffect/PopEffect` pair around the subtree during painting. The
+/// effect's computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy)]
+pub struct EffectLayerProps {
+    pub layout: LayoutStyle,
+    pub mode: EffectMode,
+    pub chain: EffectChain,
+    pub quality: EffectQuality,
+}
+
+impl Default for EffectLayerProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::EMPTY,
+            quality: EffectQuality::Auto,
         }
     }
 }
