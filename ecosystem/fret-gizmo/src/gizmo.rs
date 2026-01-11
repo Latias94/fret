@@ -2406,7 +2406,12 @@ impl Gizmo {
 
             let rotate_feedback =
                 self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
+            let translate_feedback =
+                self.draw_translate_feedback(view_projection, viewport, origin, size_length_world);
+            let scale_feedback = self.draw_scale_feedback(view_projection, viewport, origin);
             out.lines.extend(rotate_feedback.lines);
+            out.lines.extend(translate_feedback.lines);
+            out.lines.extend(scale_feedback.lines);
 
             if translate_axes || translate_planes || translate_screen {
                 out.triangles.extend(self.draw_translate_solids(
@@ -2460,6 +2465,13 @@ impl Gizmo {
                     origin,
                     size_length_world,
                 ));
+                let feedback = self.draw_translate_feedback(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                );
+                out.lines.extend(feedback.lines);
                 out.triangles.extend(self.draw_translate_solids(
                     view_projection,
                     viewport,
@@ -2515,6 +2527,8 @@ impl Gizmo {
                     true,
                     true,
                 ));
+                let feedback = self.draw_scale_feedback(view_projection, viewport, origin);
+                out.lines.extend(feedback.lines);
                 out.triangles.extend(self.draw_scale_solids(
                     view_projection,
                     viewport,
@@ -2572,7 +2586,16 @@ impl Gizmo {
                 }
                 let rotate_feedback =
                     self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
+                let translate_feedback = self.draw_translate_feedback(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                );
+                let scale_feedback = self.draw_scale_feedback(view_projection, viewport, origin);
                 out.lines.extend(rotate_feedback.lines);
+                out.lines.extend(translate_feedback.lines);
+                out.lines.extend(scale_feedback.lines);
                 out.triangles.extend(self.draw_translate_solids(
                     view_projection,
                     viewport,
@@ -4066,6 +4089,282 @@ impl Gizmo {
                     }
                 }
             }
+        }
+
+        out
+    }
+
+    fn tick_perp_dir(
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        depth: DepthRange,
+        dir: Vec3,
+    ) -> Vec3 {
+        let dir = dir.normalize_or_zero();
+        if dir.length_squared() == 0.0 {
+            return Vec3::X;
+        }
+        if let Some(view_dir) = view_dir_at_origin(view_projection, viewport, origin, depth) {
+            let perp = dir.cross(view_dir).normalize_or_zero();
+            if perp.length_squared() > 0.0 {
+                return perp;
+            }
+        }
+        plane_basis(dir).0.normalize_or_zero()
+    }
+
+    fn draw_translate_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        size_length_world: f32,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Translate {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.active.is_none() || !self.state.drag_has_started || !self.state.drag_snap {
+            return GizmoDrawList3d::default();
+        }
+        let Some(step) = self
+            .config
+            .translate_snap_step
+            .filter(|s| s.is_finite() && *s > 0.0)
+        else {
+            return GizmoDrawList3d::default();
+        };
+
+        let tick_len_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            10.0,
+        )
+        .unwrap_or(size_length_world.max(1e-6) * 0.06);
+        let half = (tick_len_world * 0.5).max(1e-6);
+
+        let minor = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.20,
+        };
+        let major = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.28,
+        };
+        let highlight = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.75,
+        };
+
+        let range = (size_length_world.max(1e-6) * 1.25).max(step * 2.0);
+        let count = ((range / step).ceil() as i32).clamp(1, 24);
+
+        let mut out = GizmoDrawList3d::default();
+
+        if self.state.drag_translate_is_plane {
+            let u = self.state.drag_translate_u.normalize_or_zero();
+            let v = self.state.drag_translate_v.normalize_or_zero();
+            if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+
+            for k in -count..=count {
+                let off = (k as f32) * step;
+                let is_major = k % 5 == 0;
+                let c = if is_major { major } else { minor };
+
+                let a = origin + v * off - u * range;
+                let b = origin + v * off + u * range;
+                self.push_line(&mut out.lines, a, b, c, DepthMode::Always);
+
+                let a = origin + u * off - v * range;
+                let b = origin + u * off + v * range;
+                self.push_line(&mut out.lines, a, b, c, DepthMode::Always);
+            }
+
+            let applied = self.state.drag_total_plane_applied;
+            let p = origin + u * applied.x + v * applied.y;
+            self.push_line(
+                &mut out.lines,
+                p - u * (half * 1.5),
+                p + u * (half * 1.5),
+                highlight,
+                DepthMode::Always,
+            );
+            self.push_line(
+                &mut out.lines,
+                p - v * (half * 1.5),
+                p + v * (half * 1.5),
+                highlight,
+                DepthMode::Always,
+            );
+        } else {
+            let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+            if axis_dir.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+            let tick_dir = Self::tick_perp_dir(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+            );
+            if tick_dir.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+
+            for k in -count..=count {
+                let off = (k as f32) * step;
+                let pos = origin + axis_dir * off;
+                let is_major = k % 5 == 0;
+                let len = if is_major { half * 1.65 } else { half };
+                let c = if is_major { major } else { minor };
+                self.push_line(
+                    &mut out.lines,
+                    pos - tick_dir * len,
+                    pos + tick_dir * len,
+                    c,
+                    DepthMode::Always,
+                );
+            }
+
+            let p = origin + axis_dir * self.state.drag_total_axis_applied;
+            self.push_line(
+                &mut out.lines,
+                p - tick_dir * (half * 2.2),
+                p + tick_dir * (half * 2.2),
+                highlight,
+                DepthMode::Always,
+            );
+        }
+
+        out
+    }
+
+    fn draw_scale_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Scale {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.active.is_none() || !self.state.drag_has_started || !self.state.drag_snap {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.drag_scale_is_bounds {
+            return GizmoDrawList3d::default();
+        }
+
+        let Some(step) = self
+            .config
+            .scale_snap_step
+            .filter(|s| s.is_finite() && *s > 0.0)
+        else {
+            return GizmoDrawList3d::default();
+        };
+
+        let length_world = self.state.drag_size_length_world.max(1e-6);
+        let tick_len_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            10.0,
+        )
+        .unwrap_or(length_world * 0.06);
+        let half = (tick_len_world * 0.5).max(1e-6);
+
+        let minor = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.18,
+        };
+        let major = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.26,
+        };
+        let highlight = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.75,
+        };
+
+        let mut out = GizmoDrawList3d::default();
+
+        let mut draw_ticks = |dir: Vec3, current_factor: f32| {
+            let dir = dir.normalize_or_zero();
+            if dir.length_squared() == 0.0 {
+                return;
+            }
+
+            let tick_dir = Self::tick_perp_dir(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                dir,
+            );
+            if tick_dir.length_squared() == 0.0 {
+                return;
+            }
+
+            let k_cur = ((current_factor - 1.0) / step).round() as i32;
+            let radius = (k_cur.abs() + 6).clamp(6, 24);
+
+            for k in -radius..=radius {
+                let factor = 1.0 + (k as f32) * step;
+                if !factor.is_finite() || factor <= 0.01 {
+                    continue;
+                }
+                let pos = origin + dir * (length_world * factor);
+                let is_major = k % 5 == 0;
+                let len = if is_major { half * 1.65 } else { half };
+                let c = if is_major { major } else { minor };
+                self.push_line(
+                    &mut out.lines,
+                    pos - tick_dir * len,
+                    pos + tick_dir * len,
+                    c,
+                    DepthMode::Always,
+                );
+            }
+
+            let pos = origin + dir * (length_world * current_factor.max(0.01));
+            self.push_line(
+                &mut out.lines,
+                pos - tick_dir * (half * 2.2),
+                pos + tick_dir * (half * 2.2),
+                highlight,
+                DepthMode::Always,
+            );
+        };
+
+        if self.state.drag_scale_plane_axes.is_some() {
+            let u = self.state.drag_scale_plane_u;
+            let v = self.state.drag_scale_plane_v;
+            let factors = self.state.drag_total_scale_plane_applied;
+            draw_ticks(u, factors.x);
+            draw_ticks(v, factors.y);
+        } else {
+            draw_ticks(
+                self.state.drag_axis_dir,
+                self.state.drag_total_scale_applied,
+            );
         }
 
         out
