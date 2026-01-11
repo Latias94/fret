@@ -125,12 +125,19 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let commands: [PathCommand; 2] = [
-        PathCommand::MoveTo(Point::new(Px(16.0), Px(80.0))),
-        PathCommand::LineTo(Point::new(Px(240.0), Px(80.0))),
-    ];
-    let (path, _metrics) = renderer.prepare(
-        &commands,
+    let (path_top, _metrics) = renderer.prepare(
+        &[
+            PathCommand::MoveTo(Point::new(Px(16.0), Px(80.0))),
+            PathCommand::LineTo(Point::new(Px(240.0), Px(80.0))),
+        ],
+        PathStyle::Stroke(StrokeStyle { width: Px(6.0) }),
+        PathConstraints { scale_factor: 1.0 },
+    );
+    let (path_bottom, _metrics) = renderer.prepare(
+        &[
+            PathCommand::MoveTo(Point::new(Px(16.0), Px(160.0))),
+            PathCommand::LineTo(Point::new(Px(240.0), Px(160.0))),
+        ],
         PathStyle::Stroke(StrokeStyle { width: Px(6.0) }),
         PathConstraints { scale_factor: 1.0 },
     );
@@ -145,10 +152,33 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
     scene.push(SceneOp::Path {
         order: DrawOrder(0),
         origin: Point::new(Px(0.0), Px(0.0)),
-        path,
+        path: path_top,
         color: Color {
             r: 1.0,
             g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    });
+    scene.push(SceneOp::PopClip);
+
+    // Ensure we generate a second `PathMsaaBatch` pass by changing the clip stack and thus the
+    // path draw's uniform index. The old (buggy) renderer wrote the composite quad vertices into
+    // a shared buffer at offset 0 for each pass, which meant only the final write was observed by
+    // all passes in the same submission.
+    scene.push(SceneOp::PushClipRect {
+        rect: Rect::new(
+            Point::new(Px(64.0), Px(144.0)),
+            Size::new(Px(128.0), Px(64.0)),
+        ),
+    });
+    scene.push(SceneOp::Path {
+        order: DrawOrder(0),
+        origin: Point::new(Px(0.0), Px(0.0)),
+        path: path_bottom,
+        color: Color {
+            r: 0.0,
+            g: 1.0,
             b: 0.0,
             a: 1.0,
         },
@@ -172,12 +202,16 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
 
     let pixels = read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size);
     // BGRA order for Bgra8 outputs.
-    let on_line = pixel_bgra(&pixels, size.0, 128, 80);
+    let top_line = pixel_bgra(&pixels, size.0, 128, 80);
+    let bottom_line = pixel_bgra(&pixels, size.0, 128, 160);
 
-    // Expect the red stroke to be visible at y=80. If the MSAA resolve/composite path
-    // fails, this often ends up fully transparent.
+    // Expect the red stroke to be visible at y=80 and the green stroke at y=160.
     assert!(
-        on_line[3] > 32 && on_line[2] > 32,
-        "expected a visible red pixel at (128, 80), got BGRA={on_line:?}"
+        top_line[3] > 32 && top_line[2] > 32,
+        "expected a visible red pixel at (128, 80), got BGRA={top_line:?}"
+    );
+    assert!(
+        bottom_line[3] > 32 && bottom_line[1] > 32,
+        "expected a visible green pixel at (128, 160), got BGRA={bottom_line:?}"
     );
 }
