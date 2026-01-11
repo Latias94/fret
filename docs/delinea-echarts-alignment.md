@@ -188,18 +188,21 @@ single “at a glance” view of:
   - multi-series / dataset-wide targeting parity (v1 restriction),
   - more channels (e.g. stroke width) without per-item attributes.
 
-**S8 — LOD / downsampling strategies and conformance harness** (`[~]`)
+**S8 - LOD / downsampling strategies and conformance harness** (`[~]`)
 
 - ECharts reference: `large`, `progressive`, sampling/decimation knobs per series type
 - ADR(s): `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
 - Evidence: `ecosystem/delinea/src/engine/lod/*` + stage budgets
-- Missing validation harness (recommended):
-  - Add a `chart_stress_demo` (delinea + fret-chart) that can generate large scatter/line/bar datasets and report frame time.
+- Validation harness (native, v1):
+  - `cargo run -p fret-demo --bin chart_stress_demo`
+  - Env knobs:
+    - `FRET_CHART_STRESS_POINTS` (default: 1_000_000)
+    - `FRET_CHART_STRESS_EXIT_AFTER_FRAMES`
 - Missing vs ECharts:
   - explicit policies per series kind (line vs scatter vs bar),
   - a benchmark/conformance harness that locks frame-time and visual invariants.
 
-**S9 — Append/update semantics (`appendData`)** (`[~]`)
+**S9 - Append/update semantics (`appendData`)** (`[~]`)
 
 - ECharts reference: `appendData` and incremental updates on `DataStore`
 - ADR(s): likely an ADR 0140 follow-up (dataset store contract expansion) once we commit to a stable surface
