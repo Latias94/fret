@@ -42,6 +42,17 @@ fn parse_env_u64(key: &str) -> Option<u64> {
     std::env::var_os(key).and_then(|v| v.to_string_lossy().parse::<u64>().ok())
 }
 
+fn parse_env_bool(key: &str) -> Option<bool> {
+    std::env::var_os(key).and_then(|v| {
+        let s = v.to_string_lossy();
+        match s.as_ref() {
+            "1" | "true" | "TRUE" | "True" => Some(true),
+            "0" | "false" | "FALSE" | "False" => Some(false),
+            _ => None,
+        }
+    })
+}
+
 #[derive(Debug, Clone)]
 struct DemoRow {
     id: u32,
@@ -595,6 +606,10 @@ impl WinitAppDriver for TableStressDriver {
                                                         column_resize_mode:
                                                             fret_ui_kit::headless::table::ColumnResizeMode::OnEnd,
                                                         optimize_paint_order: true,
+                                                        optimize_grid_lines: parse_env_bool(
+                                                            "FRET_TABLE_OPTIMIZE_GRID_LINES",
+                                                        )
+                                                        .unwrap_or(false),
                                                         ..Default::default()
                                                     },
                                                     |_row| None,

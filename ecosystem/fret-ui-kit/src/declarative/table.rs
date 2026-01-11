@@ -132,6 +132,11 @@ pub struct TableViewProps {
     ///
     /// Note: this may increase UI tree complexity because it introduces an overlay layer per row.
     pub optimize_paint_order: bool,
+    /// When enabled, draws only coarse column-group separators instead of per-cell vertical grid lines.
+    ///
+    /// This reduces quad count and renderer state churn for wide tables. It is intended as an opt-in
+    /// performance/appearance trade-off for large datasets.
+    pub optimize_grid_lines: bool,
 }
 
 impl Default for TableViewProps {
@@ -150,6 +155,7 @@ impl Default for TableViewProps {
             enable_row_selection: true,
             single_row_selection: true,
             optimize_paint_order: false,
+            optimize_grid_lines: false,
         }
     }
 }
@@ -1119,15 +1125,70 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     .justify(Justify::Start)
                                                     .items(Items::Stretch),
                                                 |cx| {
-                                                    vec![
-                                                        render_header_group(cx, &left_cols, None),
-                                                        render_header_group(
-                                                            cx,
-                                                            &center_cols,
-                                                            Some(scroll_x.clone()),
-                                                        ),
-                                                        render_header_group(cx, &right_cols, None),
-                                                    ]
+                                                    let has_left = !left_cols.is_empty();
+                                                    let has_center = !center_cols.is_empty();
+                                                    let has_right = !right_cols.is_empty();
+
+                                                    let divider_after_left = props.optimize_grid_lines
+                                                        && has_left
+                                                        && (has_center || has_right);
+                                                    let divider_after_center =
+                                                        props.optimize_grid_lines && has_center && has_right;
+
+                                                    let left = render_header_group(cx, &left_cols, None);
+                                                    let left = if divider_after_left {
+                                                        cx.container(
+                                                            ContainerProps {
+                                                                border: Edges {
+                                                                    right: Px(1.0),
+                                                                    ..Default::default()
+                                                                },
+                                                                border_color: Some(border),
+                                                                layout: LayoutStyle {
+                                                                    size: fret_ui::element::SizeStyle {
+                                                                        height: Length::Fill,
+                                                                        ..Default::default()
+                                                                    },
+                                                                    ..Default::default()
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |_| vec![left],
+                                                        )
+                                                    } else {
+                                                        left
+                                                    };
+
+                                                    let center = render_header_group(
+                                                        cx,
+                                                        &center_cols,
+                                                        Some(scroll_x.clone()),
+                                                    );
+                                                    let center = if divider_after_center {
+                                                        cx.container(
+                                                            ContainerProps {
+                                                                border: Edges {
+                                                                    right: Px(1.0),
+                                                                    ..Default::default()
+                                                                },
+                                                                border_color: Some(border),
+                                                                layout: LayoutStyle {
+                                                                    size: fret_ui::element::SizeStyle {
+                                                                        height: Length::Fill,
+                                                                        ..Default::default()
+                                                                    },
+                                                                    ..Default::default()
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |_| vec![center],
+                                                        )
+                                                    } else {
+                                                        center
+                                                    };
+
+                                                    let right = render_header_group(cx, &right_cols, None);
+                                                    vec![left, center, right]
                                                 },
                                             )]
                                         },
@@ -1309,11 +1370,19 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             .map(|(_col, col_w)| {
                                                                                                                 cx.container(
                                                                                                                     ContainerProps {
-                                                                                                                        border: Edges {
-                                                                                                                            right: Px(1.0),
-                                                                                                                            ..Default::default()
+                                                                                                                        border: if props.optimize_grid_lines {
+                                                                                                                            Edges::default()
+                                                                                                                        } else {
+                                                                                                                            Edges {
+                                                                                                                                right: Px(1.0),
+                                                                                                                                ..Default::default()
+                                                                                                                            }
                                                                                                                         },
-                                                                                                                        border_color: Some(border),
+                                                                                                                        border_color: if props.optimize_grid_lines {
+                                                                                                                            None
+                                                                                                                        } else {
+                                                                                                                            Some(border)
+                                                                                                                        },
                                                                                                                         layout: LayoutStyle {
                                                                                                                             size: fret_ui::element::SizeStyle {
                                                                                                                                 width: Length::Px(col_w),
@@ -1483,11 +1552,19 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     cx.container(
                                                                                                         ContainerProps {
                                                                                                             padding,
-                                                                                                            border: Edges {
-                                                                                                                right: Px(1.0),
-                                                                                                                ..Default::default()
+                                                                                                            border: if props.optimize_grid_lines {
+                                                                                                                Edges::default()
+                                                                                                            } else {
+                                                                                                                Edges {
+                                                                                                                    right: Px(1.0),
+                                                                                                                    ..Default::default()
+                                                                                                                }
                                                                                                             },
-                                                                                                            border_color: Some(border),
+                                                                                                            border_color: if props.optimize_grid_lines {
+                                                                                                                None
+                                                                                                            } else {
+                                                                                                                Some(border)
+                                                                                                            },
                                                                                                             layout: LayoutStyle {
                                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                                     width: Length::Px(col_w),
@@ -1565,23 +1642,85 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                 .justify(Justify::Start)
                                                                                 .items(Items::Stretch),
                                                                             |cx| {
-                                                                                vec![
-                                                                                    render_group(
-                                                                                        cx,
-                                                                                        &left_cols,
-                                                                                        None,
-                                                                                    ),
-                                                                                    render_group(
-                                                                                        cx,
-                                                                                        &center_cols,
-                                                                                        Some(scroll_x.clone()),
-                                                                                    ),
-                                                                                    render_group(
-                                                                                        cx,
-                                                                                        &right_cols,
-                                                                                        None,
-                                                                                    ),
-                                                                                ]
+                                                                                let has_left =
+                                                                                    !left_cols.is_empty();
+                                                                                let has_center =
+                                                                                    !center_cols.is_empty();
+                                                                                let has_right =
+                                                                                    !right_cols.is_empty();
+
+                                                                                let divider_after_left = props
+                                                                                    .optimize_grid_lines
+                                                                                    && has_left
+                                                                                    && (has_center || has_right);
+                                                                                let divider_after_center = props
+                                                                                    .optimize_grid_lines
+                                                                                    && has_center
+                                                                                    && has_right;
+
+                                                                                let left = render_group(
+                                                                                    cx,
+                                                                                    &left_cols,
+                                                                                    None,
+                                                                                );
+                                                                                let left = if divider_after_left {
+                                                                                    cx.container(
+                                                                                        ContainerProps {
+                                                                                            border: Edges {
+                                                                                                right: Px(1.0),
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            border_color: Some(border),
+                                                                                            layout: LayoutStyle {
+                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                    height: Length::Fill,
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        move |_| vec![left],
+                                                                                    )
+                                                                                } else {
+                                                                                    left
+                                                                                };
+
+                                                                                let center = render_group(
+                                                                                    cx,
+                                                                                    &center_cols,
+                                                                                    Some(scroll_x.clone()),
+                                                                                );
+                                                                                let center = if divider_after_center {
+                                                                                    cx.container(
+                                                                                        ContainerProps {
+                                                                                            border: Edges {
+                                                                                                right: Px(1.0),
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            border_color: Some(border),
+                                                                                            layout: LayoutStyle {
+                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                    height: Length::Fill,
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        move |_| vec![center],
+                                                                                    )
+                                                                                } else {
+                                                                                    center
+                                                                                };
+
+                                                                                let right = render_group(
+                                                                                    cx,
+                                                                                    &right_cols,
+                                                                                    None,
+                                                                                );
+
+                                                                                vec![left, center, right]
                                                                             },
                                                                         )]
                                                                     },
@@ -1696,11 +1835,19 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             .map(|(_col, col_w)| {
                                                                                                 cx.container(
                                                                                                     ContainerProps {
-                                                                                                        border: Edges {
-                                                                                                            right: Px(1.0),
-                                                                                                            ..Default::default()
+                                                                                                        border: if props.optimize_grid_lines {
+                                                                                                            Edges::default()
+                                                                                                        } else {
+                                                                                                            Edges {
+                                                                                                                right: Px(1.0),
+                                                                                                                ..Default::default()
+                                                                                                            }
                                                                                                         },
-                                                                                                        border_color: Some(border),
+                                                                                                        border_color: if props.optimize_grid_lines {
+                                                                                                            None
+                                                                                                        } else {
+                                                                                                            Some(border)
+                                                                                                        },
                                                                                                         layout: LayoutStyle {
                                                                                                             size: fret_ui::element::SizeStyle {
                                                                                                                 width: Length::Px(col_w),
@@ -1794,29 +1941,37 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                 .gap_x(Space::N0)
                                                                                 .justify(Justify::Start)
                                                                                 .items(Items::Center),
-                                                                            |cx| {
-                                                                                cols.iter()
-                                                                                    .map(|col| {
-                                                                                        let col_w = resolve_column_width(
-                                                                                            col,
-                                                                                            &state_value,
-                                                                                            &props,
-                                                                                        );
-                                                                                        cx.container(
-                                                                                            ContainerProps {
-                                                                                                padding: Edges::symmetric(
-                                                                                                    cell_px, cell_py,
-                                                                                                ),
-                                                                                                border: Edges {
-                                                                                                    right: Px(1.0),
-                                                                                                    ..Default::default()
-                                                                                                },
-                                                                                                border_color: Some(border),
-                                                                                                layout: LayoutStyle {
-                                                                                                    size: fret_ui::element::SizeStyle {
-                                                                                                        width: Length::Px(col_w),
-                                                                                                        ..Default::default()
+                                                                                |cx| {
+                                                                                    cols.iter()
+                                                                                        .map(|col| {
+                                                                                            let col_w = resolve_column_width(
+                                                                                                col,
+                                                                                                &state_value,
+                                                                                                &props,
+                                                                                            );
+                                                                                            cx.container(
+                                                                                                ContainerProps {
+                                                                                                    padding: Edges::symmetric(
+                                                                                                        cell_px, cell_py,
+                                                                                                    ),
+                                                                                                    border: if props.optimize_grid_lines {
+                                                                                                        Edges::default()
+                                                                                                    } else {
+                                                                                                        Edges {
+                                                                                                            right: Px(1.0),
+                                                                                                            ..Default::default()
+                                                                                                        }
                                                                                                     },
+                                                                                                    border_color: if props.optimize_grid_lines {
+                                                                                                        None
+                                                                                                    } else {
+                                                                                                        Some(border)
+                                                                                                    },
+                                                                                                    layout: LayoutStyle {
+                                                                                                        size: fret_ui::element::SizeStyle {
+                                                                                                            width: Length::Px(col_w),
+                                                                                                            ..Default::default()
+                                                                                                        },
                                                                                                     flex: fret_ui::element::FlexItemStyle {
                                                                                                         shrink: 0.0,
                                                                                                         ..Default::default()
@@ -1870,15 +2025,72 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     .justify(Justify::Start)
                                                                     .items(Items::Stretch),
                                                                 |cx| {
-                                                                    vec![
-                                                                        render_row_group(cx, &left_cols, None),
-                                                                        render_row_group(
-                                                                            cx,
-                                                                            &center_cols,
-                                                                            Some(scroll_x.clone()),
-                                                                        ),
-                                                                        render_row_group(cx, &right_cols, None),
-                                                                    ]
+                                                                    let has_left = !left_cols.is_empty();
+                                                                    let has_center = !center_cols.is_empty();
+                                                                    let has_right = !right_cols.is_empty();
+
+                                                                    let divider_after_left = props.optimize_grid_lines
+                                                                        && has_left
+                                                                        && (has_center || has_right);
+                                                                    let divider_after_center =
+                                                                        props.optimize_grid_lines && has_center && has_right;
+
+                                                                    let left =
+                                                                        render_row_group(cx, &left_cols, None);
+                                                                    let left = if divider_after_left {
+                                                                        cx.container(
+                                                                            ContainerProps {
+                                                                                border: Edges {
+                                                                                    right: Px(1.0),
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                border_color: Some(border),
+                                                                                layout: LayoutStyle {
+                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                        height: Length::Fill,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                ..Default::default()
+                                                                            },
+                                                                            move |_| vec![left],
+                                                                        )
+                                                                    } else {
+                                                                        left
+                                                                    };
+
+                                                                    let center = render_row_group(
+                                                                        cx,
+                                                                        &center_cols,
+                                                                        Some(scroll_x.clone()),
+                                                                    );
+                                                                    let center = if divider_after_center {
+                                                                        cx.container(
+                                                                            ContainerProps {
+                                                                                border: Edges {
+                                                                                    right: Px(1.0),
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                border_color: Some(border),
+                                                                                layout: LayoutStyle {
+                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                        height: Length::Fill,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                ..Default::default()
+                                                                            },
+                                                                            move |_| vec![center],
+                                                                        )
+                                                                    } else {
+                                                                        center
+                                                                    };
+
+                                                                    let right =
+                                                                        render_row_group(cx, &right_cols, None);
+                                                                    vec![left, center, right]
                                                                 },
                                                             )]
                                                         },
