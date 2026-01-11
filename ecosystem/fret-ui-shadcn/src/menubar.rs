@@ -1100,20 +1100,27 @@ impl MenubarMenuEntries {
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
                         let font_line_height = theme.metric_required("font.line_height");
                         let mut desired = menu_panel_desired_size(&entries, font_line_height, pad_y);
-                        desired.width.0 = desired.width.0.max(anchor.size.width.0);
+                        let popper_placement = popper::PopperContentPlacement::new(
+                            direction,
+                            Side::Bottom,
+                            Align::Start,
+                            side_offset,
+                        )
+                        .with_align_offset(Px(-4.0));
 
-                        let layout = popper::popper_content_layout_sized(
-                            outer,
-                            anchor,
-                            desired,
-                            popper::PopperContentPlacement::new(
-                                direction,
-                                Side::Bottom,
-                                Align::Start,
-                                side_offset,
-                            )
-                            .with_align_offset(Px(-4.0)),
-                        );
+                        let popper_vars =
+                            menu::menubar_popper_vars(outer, anchor, desired.width, popper_placement);
+                        let desired_w =
+                            menu::menubar_popper_desired_width(outer, anchor, desired.width);
+                        let max_h = theme
+                            .metric_by_key("component.menubar.max_height")
+                            .map(|h| Px(h.0.min(popper_vars.available_height.0)))
+                            .unwrap_or(popper_vars.available_height);
+                        desired.width = desired_w;
+                        desired.height = Px(desired.height.0.min(max_h.0));
+
+                        let layout =
+                            popper::popper_content_layout_sized(outer, anchor, desired, popper_placement);
                         let placed = layout.rect;
                         let origin = popper::popper_content_transform_origin(&layout, anchor, None);
                         let transform = overlay_motion::shadcn_popper_presence_transform(
@@ -1617,6 +1624,43 @@ impl MenubarMenuEntries {
                                                                  text_style_for_content.clone();
                                                               let has_submenu =
                                                                    matches!(entry, MenubarEntry::Submenu(_));
+                                                              let submenu_desired_for_hint =
+                                                                  if let MenubarEntry::Submenu(submenu) = entry {
+                                                                      let mut flat: Vec<MenubarEntry> =
+                                                                          Vec::new();
+                                                                      flatten_entries(
+                                                                          &mut flat,
+                                                                          submenu
+                                                                              .entries
+                                                                              .iter()
+                                                                              .cloned()
+                                                                              .collect(),
+                                                                      );
+                                                                      let submenu_max_h = theme
+                                                                          .metric_by_key(
+                                                                              "component.menubar.max_height",
+                                                                          )
+                                                                          .map(|h| {
+                                                                              Px(h.0.min(
+                                                                                  outer.size.height.0,
+                                                                              ))
+                                                                          })
+                                                                          .unwrap_or(outer.size.height);
+                                                                      let desired = menu_panel_desired_size(
+                                                                          &flat,
+                                                                          font_line_height,
+                                                                          pad_y,
+                                                                      );
+                                                                      Some(Size::new(
+                                                                          desired.width,
+                                                                          Px(desired
+                                                                              .height
+                                                                              .0
+                                                                              .min(submenu_max_h.0)),
+                                                                      ))
+                                                                  } else {
+                                                                      None
+                                                                  };
 
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
@@ -1630,15 +1674,12 @@ impl MenubarMenuEntries {
                                                                   overlay_root_name_for_controls.clone();
                                                               out.push(cx.keyed(value.clone(), move |cx| {
                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let geometry_hint = has_submenu.then_some(
+                                                                    let geometry_hint = submenu_desired_for_hint.map(|desired| {
                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                             outer,
-                                                                            desired: fret_core::Size::new(
-                                                                                Px(240.0),
-                                                                                Px(1.0e9),
-                                                                            ),
-                                                                        },
-                                                                    );
+                                                                            desired,
+                                                                        }
+                                                                    });
                                                                     let expanded = menu::sub_trigger::wire(
                                                                         cx,
                                                                         st,
@@ -1924,6 +1965,11 @@ impl MenubarMenuEntries {
                                 menu_panel_desired_size(&flat, font_line_height, pad_y)
                             })
                             .unwrap_or_else(|| menu_panel_desired_size(&[], font_line_height, pad_y));
+                        let submenu_max_h = theme
+                            .metric_by_key("component.menubar.max_height")
+                            .map(|h| Px(h.0.min(outer.size.height.0)))
+                            .unwrap_or(outer.size.height);
+                        let desired = Size::new(desired.width, Px(desired.height.0.min(submenu_max_h.0)));
                         let submenu_is_open = submenu_open_value.is_some();
                         let submenu_motion =
                             radix_presence::scale_fade_presence_with_durations_and_easing(
@@ -1937,7 +1983,7 @@ impl MenubarMenuEntries {
                             );
                         let submenu_opacity = submenu_motion.opacity;
                         let submenu_scale = submenu_motion.scale;
-                        let open_submenu = menu::sub::with_open_submenu(
+                        let open_submenu = menu::sub::with_open_submenu_synced(
                             cx,
                             &submenu_for_panel,
                             outer,
@@ -2063,7 +2109,7 @@ impl MenubarMenuEntries {
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
 
-                                    let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
+                                    let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
@@ -2553,24 +2599,7 @@ impl MenubarMenuEntries {
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
-
-                                            let scroll_layout = LayoutStyle {
-                                                size: SizeStyle {
-                                                    width: Length::Fill,
-                                                    height: Length::Fill,
-                                                    ..Default::default()
-                                                },
-                                                overflow: fret_ui::element::Overflow::Clip,
-                                                ..Default::default()
-                                            };
-                                            vec![cx.scroll(
-                                                ScrollProps {
-                                                    layout: scroll_layout,
-                                                    axis: ScrollAxis::Y,
-                                                    ..Default::default()
-                                                },
-                                                move |_cx| vec![roving],
-                                            )]
+                                            vec![roving]
                                         },
                                     );
 

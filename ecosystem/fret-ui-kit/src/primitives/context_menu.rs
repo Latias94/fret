@@ -8,9 +8,11 @@
 
 use std::sync::Arc;
 
-use fret_core::MouseButton;
+use fret_core::{MouseButton, Px, Rect};
 use fret_runtime::Model;
 use fret_ui::action::{OnPointerDown, PointerDownCx, UiPointerActionHost};
+
+use crate::primitives::popper;
 
 pub use crate::primitives::menu::*;
 
@@ -49,4 +51,68 @@ pub fn context_menu_pointer_down_policy(open: Model<bool>) -> OnPointerDown {
             true
         },
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ContextMenuPopperVars {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub trigger_width: Px,
+    pub trigger_height: Px,
+}
+
+pub fn context_menu_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    popper::popper_desired_width(outer, anchor, min_width)
+}
+
+/// Compute Radix-like "context menu popper vars" (`--radix-context-menu-*`) for recipes.
+///
+/// Upstream Radix re-namespaces these from `@radix-ui/react-popper`:
+/// - `--radix-context-menu-content-available-width`
+/// - `--radix-context-menu-content-available-height`
+/// - `--radix-context-menu-trigger-width`
+/// - `--radix-context-menu-trigger-height`
+///
+/// In Fret, we compute the same concepts as a structured return value so recipes can constrain
+/// their content without relying on CSS variables.
+pub fn context_menu_popper_vars(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> ContextMenuPopperVars {
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
+    ContextMenuPopperVars {
+        available_width: metrics.available_width,
+        available_height: metrics.available_height,
+        trigger_width: metrics.anchor_width,
+        trigger_height: metrics.anchor_height,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::Point;
+    use fret_core::Size;
+
+    #[test]
+    fn context_menu_popper_vars_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(Point::new(Px(10.0), Px(70.0)), Size::new(Px(1.0), Px(1.0)));
+
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            popper::Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+        let vars = context_menu_popper_vars(outer, anchor, Px(0.0), placement);
+        assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 90.0);
+    }
 }

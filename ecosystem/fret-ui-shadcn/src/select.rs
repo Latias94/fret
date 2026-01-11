@@ -979,24 +979,9 @@ fn select_impl<H: UiHost>(
                         .unwrap_or(Px(8.0));
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
-                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which
-                    // adapts to the current window + trigger placement. Prefer that behavior by
-                    // defaulting to the computed outer bounds height, while still allowing an
-                    // explicit theme override for apps that want a fixed cap.
-                    let max_h = theme
-                        .metric_by_key("component.select.max_list_height")
-                        .unwrap_or(outer.size.height);
                     let item_h = theme
                         .metric_by_key("component.select.item_height")
                         .unwrap_or(Px(32.0));
-                    let desired_h = Px(
-                        (item_h.0 * item_len as f32)
-                            .min(max_h.0)
-                            .max(item_h.0)
-                            .min(outer.size.height.0),
-                    );
-                    let desired_w = Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
-                    let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let border_width = resolved.border_width;
                     let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1075,6 +1060,29 @@ fn select_impl<H: UiHost>(
                     )
                     .with_align_offset(align_offset)
                     .with_arrow(arrow_options, arrow_protrusion);
+
+                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which adapts
+                    // to the current window + trigger placement. Prefer that behavior by computing
+                    // the available height from our popper substrate, while still allowing an
+                    // explicit theme override for apps that want a fixed cap.
+                    let popper_vars = (position == SelectPosition::Popper).then(|| {
+                        radix_select::select_popper_vars(outer, anchor, min_width, popper_placement)
+                    });
+                    let available_h = popper_vars
+                        .map(|vars| vars.available_height)
+                        .unwrap_or(outer.size.height);
+                    let max_h = theme
+                        .metric_by_key("component.select.max_list_height")
+                        .map(|h| Px(h.0.min(available_h.0)))
+                        .unwrap_or(available_h);
+                    let desired_h = Px(
+                        (item_h.0 * item_len as f32)
+                            .min(max_h.0)
+                            .max(item_h.0)
+                            .min(outer.size.height.0),
+                    );
+                    let desired_w = radix_select::select_popper_desired_width(outer, anchor, min_width);
+                    let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let (item_aligned_inputs, did_scroll) = match item_aligned {
                         Some((inputs, did_scroll)) => (Some(inputs), did_scroll),

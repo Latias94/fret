@@ -50,7 +50,12 @@ pub fn project_point(
     depth: DepthRange,
 ) -> Option<ProjectedPoint> {
     let clip: Vec4 = view_projection * world.extend(1.0);
-    if !clip.w.is_finite() || clip.w == 0.0 {
+    // For perspective projections, `clip.w` is proportional to view-space depth. Reject points
+    // behind the camera to avoid unstable projections/picking.
+    if !clip.w.is_finite() || clip.w <= 0.0 {
+        return None;
+    }
+    if clip.w.abs() < 1e-6 {
         return None;
     }
     let ndc = clip.truncate() / clip.w;

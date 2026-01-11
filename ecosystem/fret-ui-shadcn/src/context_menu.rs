@@ -7,9 +7,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
-    TextProps,
+    ScrollAxis, ScrollProps, SizeStyle, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -753,7 +753,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
-    menu::sub_content::submenu_panel_for_value_at(
+    menu::sub_content::submenu_panel_scroll_y_for_value_at(
         cx,
         open_value,
         placed,
@@ -1262,6 +1262,7 @@ impl ContextMenu {
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
+            let submenu_max_height_metric = theme.metric_by_key("component.context_menu.max_height");
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
@@ -1391,8 +1392,6 @@ impl ContextMenu {
 
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
-                    let estimated = Size::new(Px(220.0), Px(200.0));
-
                     let align = match align {
                         DropdownMenuAlign::Start => Align::Start,
                         DropdownMenuAlign::Center => Align::Center,
@@ -1408,18 +1407,33 @@ impl ContextMenu {
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
+                    let min_width = theme
+                        .metric_by_key("component.context_menu.min_width")
+                        .unwrap_or(Px(220.0));
+
                     let anchor_rect = overlay::anchor_rect_from_point(anchor);
+                    let popper_placement =
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_arrow(arrow_options, arrow_protrusion);
+                    let popper_vars = menu::context_menu_popper_vars(
+                        outer,
+                        anchor_rect,
+                        min_width,
+                        popper_placement,
+                    );
+                    let desired_w =
+                        menu::context_menu_popper_desired_width(outer, anchor_rect, min_width);
+                    let max_h = theme
+                        .metric_by_key("component.context_menu.max_height")
+                        .map(|h| Px(h.0.min(popper_vars.available_height.0)))
+                        .unwrap_or(popper_vars.available_height);
+                    let desired = Size::new(desired_w, max_h);
+
                     let layout = popper::popper_content_layout_sized(
                         outer,
                         anchor_rect,
-                        estimated,
-                        popper::PopperContentPlacement::new(
-                            direction,
-                            side,
-                            align,
-                            side_offset,
-                        )
-                        .with_arrow(arrow_options, arrow_protrusion),
+                        desired,
+                        popper_placement,
                     );
 
                     let placed = layout.rect;
@@ -1623,6 +1637,13 @@ impl ContextMenu {
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let has_submenu = item.submenu.is_some();
+                                                        let submenu_row_count_for_hint =
+                                                            item.submenu.clone().map(|entries| {
+                                                                let mut flat: Vec<ContextMenuEntry> =
+                                                                    Vec::new();
+                                                                flatten_entries(&mut flat, entries);
+                                                                flat.len()
+                                                            });
                                                         let variant = item.variant;
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
@@ -1637,16 +1658,30 @@ impl ContextMenu {
                                                                 move |cx, st, item_id| {
                                                                     let geometry_hint =
                                                                         has_submenu.then(|| {
-                                                                            let desired = Size::new(
+                                                                            let outer =
+                                                                                overlay::outer_bounds_with_window_margin(
+                                                                                    cx.bounds,
+                                                                                    window_margin,
+                                                                                );
+                                                                            let submenu_max_h =
+                                                                                submenu_max_height_metric
+                                                                                    .map(|h| {
+                                                                                        Px(h.0.min(
+                                                                                            outer.size.height.0,
+                                                                                        ))
+                                                                                    })
+                                                                                    .unwrap_or(outer.size.height);
+                                                                            let desired = menu::sub::estimated_desired_size_for_row_count(
                                                                                 Px(192.0),
-                                                                                Px(1.0e9),
+                                                                                Px(28.0),
+                                                                                submenu_row_count_for_hint
+                                                                                    .unwrap_or(
+                                                                                        1,
+                                                                                    ),
+                                                                                submenu_max_h,
                                                                             );
                                                                             menu::sub_trigger::MenuSubTriggerGeometryHint {
-                                                                                outer:
-                                                                                    overlay::outer_bounds_with_window_margin(
-                                                                                        cx.bounds,
-                                                                                        window_margin,
-                                                                                    ),
+                                                                                outer,
                                                                                 desired,
                                                                             }
                                                                         });
@@ -1973,7 +2008,23 @@ impl ContextMenu {
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
-                                            vec![roving]
+                                            let scroll_layout = LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Fill,
+                                                    ..Default::default()
+                                                },
+                                                overflow: Overflow::Clip,
+                                                ..Default::default()
+                                            };
+                                            vec![cx.scroll(
+                                                ScrollProps {
+                                                    layout: scroll_layout,
+                                                    axis: ScrollAxis::Y,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![roving],
+                                            )]
                                         },
                                     );
 
@@ -1994,13 +2045,36 @@ impl ContextMenu {
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
-                    let desired = Size::new(Px(192.0), Px(1.0e9));
                     let submenu_open_value = cx
                         .app
                         .models_mut()
                         .read(&submenu_for_panel.open_value, |v| v.clone())
                         .ok()
                         .flatten();
+                    let desired = submenu_open_value
+                        .as_ref()
+                        .and_then(|open_value| {
+                            find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
+                        })
+                        .map(|submenu_entries| {
+                            let mut flat: Vec<ContextMenuEntry> = Vec::new();
+                            flatten_entries(&mut flat, submenu_entries);
+                            let submenu_max_h = submenu_max_height_metric
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            menu::sub::estimated_desired_size_for_row_count(
+                                Px(192.0),
+                                Px(28.0),
+                                flat.len(),
+                                submenu_max_h,
+                            )
+                        })
+                        .unwrap_or_else(|| {
+                            let submenu_max_h = submenu_max_height_metric
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            Size::new(Px(192.0), submenu_max_h)
+                        });
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
@@ -2014,7 +2088,7 @@ impl ContextMenu {
                     let submenu_opacity = submenu_motion.opacity;
                     let submenu_scale = submenu_motion.scale;
 
-                    let open_submenu = menu::sub::with_open_submenu(
+                    let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
                         &submenu_for_panel,
                         outer,

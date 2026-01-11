@@ -45,8 +45,10 @@ expected.
 Validate:
 
 - `buffer_dump.named_buffers[scale_params].scale` matches the effect pixelation scale.
+- `buffer_dump.named_buffers[scale_params].src_origin/dst_origin` match the intended mapping:
+  - Downsample into effect-local target: `src_origin = effect_rect.xy`, `dst_origin = (0, 0)`.
+  - Upscale back into full-size target: `src_origin = (0, 0)`, `dst_origin = effect_rect.xy`.
 - `raster_state.scissors[0]` matches the expected effect region (for scissored passes).
 
 If the output looks "anchored to the window origin", this usually indicates a missing origin adjustment in
 the fullscreen shader when scissoring is used.
-

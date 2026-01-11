@@ -394,7 +394,7 @@ impl ScrollArea {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
-            axis: ScrollAxis::Y,
+            axis: ScrollAxis::Both,
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
@@ -545,9 +545,26 @@ mod tests {
         ty: ScrollAreaType,
         content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
     ) -> fret_core::NodeId {
+        render_with_axis(ui, app, services, window, ScrollAxis::Y, ty, content)
+    }
+
+    fn render_with_axis(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        axis: ScrollAxis,
+        ty: ScrollAreaType,
+        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+    ) -> fret_core::NodeId {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
-                vec![ScrollArea::new(content(cx)).type_(ty).into_element(cx)]
+                vec![
+                    ScrollArea::new(content(cx))
+                        .axis(axis)
+                        .type_(ty)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         ui.layout_all(app, services, bounds(), 1.0);

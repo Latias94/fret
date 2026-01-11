@@ -129,6 +129,8 @@ pub struct Renderer {
     scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
     scale_param_buffer: wgpu::Buffer,
+    scale_param_stride: u64,
+    scale_param_capacity: usize,
 
     color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
     color_adjust_pipeline: Option<wgpu::RenderPipeline>,
