@@ -2,6 +2,7 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
+use super::DockViewportLayout;
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::services::DockFocusRequestService;
@@ -12,7 +13,8 @@ pub struct DockManager {
     pub panels: HashMap<PanelKey, DockPanel>,
     pub(super) dock_space_nodes: HashMap<fret_core::AppWindowId, NodeId>,
     pub(super) hover: Option<DockDropTarget>,
-    pub(super) viewport_content_rects: HashMap<(fret_core::AppWindowId, RenderTargetId), Rect>,
+    pub(super) viewport_layouts:
+        HashMap<(fret_core::AppWindowId, RenderTargetId), DockViewportLayout>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -94,7 +96,7 @@ impl Default for DockManager {
             panels: HashMap::new(),
             dock_space_nodes: HashMap::new(),
             hover: None,
-            viewport_content_rects: HashMap::new(),
+            viewport_layouts: HashMap::new(),
         }
     }
 }
@@ -125,11 +127,41 @@ impl DockManager {
         window: fret_core::AppWindowId,
         target: RenderTargetId,
     ) -> Option<Rect> {
-        self.viewport_content_rects.get(&(window, target)).copied()
+        self.viewport_layouts
+            .get(&(window, target))
+            .map(|layout| layout.content_rect)
+    }
+
+    pub fn viewport_draw_rect(
+        &self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> Option<Rect> {
+        self.viewport_layouts
+            .get(&(window, target))
+            .map(|layout| layout.draw_rect)
+    }
+
+    pub fn viewport_mapping(
+        &self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> Option<ViewportMapping> {
+        self.viewport_layouts
+            .get(&(window, target))
+            .map(|layout| layout.mapping)
+    }
+
+    pub fn viewport_layout(
+        &self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+    ) -> Option<DockViewportLayout> {
+        self.viewport_layouts.get(&(window, target)).copied()
     }
 
     pub fn clear_viewport_layout_for_window(&mut self, window: fret_core::AppWindowId) {
-        self.viewport_content_rects.retain(|(w, _), _| *w != window);
+        self.viewport_layouts.retain(|(w, _), _| *w != window);
     }
 
     pub fn set_viewport_content_rect(
@@ -138,7 +170,27 @@ impl DockManager {
         target: RenderTargetId,
         rect: Rect,
     ) {
-        self.viewport_content_rects.insert((window, target), rect);
+        self.viewport_layouts.insert(
+            (window, target),
+            DockViewportLayout {
+                content_rect: rect,
+                mapping: ViewportMapping {
+                    content_rect: rect,
+                    target_px_size: (1, 1),
+                    fit: ViewportFit::Stretch,
+                },
+                draw_rect: rect,
+            },
+        );
+    }
+
+    pub fn set_viewport_layout(
+        &mut self,
+        window: fret_core::AppWindowId,
+        target: RenderTargetId,
+        layout: DockViewportLayout,
+    ) {
+        self.viewport_layouts.insert((window, target), layout);
     }
 
     pub fn update_viewport_target_px_size(

@@ -31,6 +31,13 @@ pub struct DockPanel {
     pub viewport: Option<ViewportPanel>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockViewportLayout {
+    pub content_rect: Rect,
+    pub mapping: ViewportMapping,
+    pub draw_rect: Rect,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ViewportPanel {
     pub target: RenderTargetId,
