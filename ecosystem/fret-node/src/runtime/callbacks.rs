@@ -11,7 +11,9 @@
 //! a store subscription.
 
 use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId};
+use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
+use crate::rules::EdgeEndpoint;
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
 use crate::runtime::store::NodeGraphStore;
@@ -40,6 +42,53 @@ pub struct SelectionChange {
     pub nodes: Vec<NodeId>,
     pub edges: Vec<EdgeId>,
     pub groups: Vec<GroupId>,
+}
+
+/// Connection start kind (UI-driven).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConnectDragKind {
+    New {
+        from: PortId,
+        bundle: Vec<PortId>,
+    },
+    Reconnect {
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+        fixed: PortId,
+    },
+    ReconnectMany {
+        edges: Vec<(EdgeId, EdgeEndpoint, PortId)>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectStart {
+    pub kind: ConnectDragKind,
+    pub mode: NodeGraphConnectionMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectEndOutcome {
+    /// A graph transaction was committed.
+    Committed,
+    /// A target was chosen but the connect plan was rejected.
+    Rejected,
+    /// The workflow opened a conversion picker (domain-specific UX).
+    OpenConversionPicker,
+    /// The workflow opened an insert-node picker (drop on empty background).
+    OpenInsertNodePicker,
+    /// The gesture was canceled (escape, focus lost, etc.).
+    Canceled,
+    /// Gesture ended without committing or opening a picker.
+    NoOp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectEnd {
+    pub kind: ConnectDragKind,
+    pub mode: NodeGraphConnectionMode,
+    pub target: Option<PortId>,
+    pub outcome: ConnectEndOutcome,
 }
 
 /// Object-safe callback trait for B-layer consumers.
@@ -71,6 +120,11 @@ pub trait NodeGraphCallbacks: 'static {
 
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
     fn on_selection_change(&mut self, _sel: SelectionChange) {}
+
+    /// UI-driven hook: called when a connection gesture starts (after drag threshold / click-to-connect).
+    fn on_connect_start(&mut self, _ev: ConnectStart) {}
+    /// UI-driven hook: called when a connection gesture ends (commit/reject/cancel/picker).
+    fn on_connect_end(&mut self, _ev: ConnectEnd) {}
 }
 
 /// Installs callbacks into a store via a subscription.

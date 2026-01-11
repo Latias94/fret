@@ -61,14 +61,16 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
 
     canvas.interaction.edge_drag = None;
     canvas.interaction.hover_edge = None;
+    let kind = WireDragKind::Reconnect {
+        edge: drag.edge,
+        endpoint,
+        fixed,
+    };
     canvas.interaction.wire_drag = Some(WireDrag {
-        kind: WireDragKind::Reconnect {
-            edge: drag.edge,
-            endpoint,
-            fixed,
-        },
+        kind: kind.clone(),
         pos: position,
     });
+    canvas.emit_connect_start(snapshot, &kind);
 
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

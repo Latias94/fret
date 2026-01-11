@@ -6,6 +6,7 @@ use fret_ui::UiHost;
 use crate::core::{EdgeId, PortId};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
+use crate::runtime::callbacks::ConnectEndOutcome;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::conversion;
@@ -319,6 +320,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     let Some(w) = canvas.interaction.wire_drag.take() else {
         return false;
     };
+    let kind_for_callbacks = w.kind.clone();
 
     let window = cx.window();
     let bounds = cx.bounds(canvas);
@@ -383,10 +385,14 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
 
+    let mut connect_end_outcome = ConnectEndOutcome::NoOp;
+    let mut connect_end_target = target;
+
     match w.kind {
         WireDragKind::New { from, bundle } => {
             let suspended_pos = w.pos;
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 enum Outcome {
                     Apply(Vec<GraphOp>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -502,11 +508,13 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 match outcome {
                     Outcome::Apply(ops) => {
                         canvas.apply_ops(cx.host(), window, ops);
+                        connect_end_outcome = ConnectEndOutcome::Committed;
                         if let Some((sev, msg)) = toast {
                             canvas.show_toast(cx.host(), window, sev, msg);
                         }
                     }
                     Outcome::OpenConversionPicker(candidates) => {
+                        connect_end_outcome = ConnectEndOutcome::OpenConversionPicker;
                         canvas.interaction.suspended_wire_drag = Some(WireDrag {
                             kind: WireDragKind::New {
                                 from,
@@ -551,6 +559,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         });
                     }
                     Outcome::Reject(sev, msg) => {
+                        connect_end_outcome = ConnectEndOutcome::Rejected;
                         canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
@@ -578,6 +587,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 };
 
                 if let Some(edge_id) = hit_edge {
+                    connect_end_outcome = ConnectEndOutcome::OpenInsertNodePicker;
                     canvas.open_edge_insert_node_picker(cx.host(), window, edge_id, w.pos);
                 } else {
                     let at = crate::core::CanvasPoint {
@@ -591,6 +601,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         },
                         pos: suspended_pos,
                     });
+                    connect_end_outcome = ConnectEndOutcome::OpenInsertNodePicker;
                     canvas.open_connection_insert_node_picker(cx.host(), from, at);
                 }
             }
@@ -601,6 +612,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
             fixed: _fixed,
         } => {
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 enum Outcome {
                     Apply(Vec<GraphOp>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -632,8 +644,12 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         .unwrap_or(Outcome::Ignore)
                 };
                 match outcome {
-                    Outcome::Apply(ops) => canvas.apply_ops(cx.host(), window, ops),
+                    Outcome::Apply(ops) => {
+                        canvas.apply_ops(cx.host(), window, ops);
+                        connect_end_outcome = ConnectEndOutcome::Committed;
+                    }
                     Outcome::Reject(sev, msg) => {
+                        connect_end_outcome = ConnectEndOutcome::Rejected;
                         canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
@@ -654,11 +670,13 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     .unwrap_or_default();
                 if !ops.is_empty() {
                     let _ = canvas.commit_ops(cx.host(), window, Some("Disconnect Edge"), ops);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
             }
         }
         WireDragKind::ReconnectMany { edges } => {
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 let presenter = &mut *canvas.presenter;
                 let (ops_all, toast) = canvas
                     .graph
@@ -701,6 +719,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
 
                 if !ops_all.is_empty() {
                     canvas.apply_ops(cx.host(), window, ops_all);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
                 if let Some((sev, msg)) = toast {
                     canvas.show_toast(cx.host(), window, sev, msg);
@@ -732,10 +751,18 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         "Disconnect Edges"
                     };
                     let _ = canvas.commit_ops(cx.host(), window, Some(label), ops_all);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
             }
         }
     }
+
+    canvas.emit_connect_end(
+        snapshot.interaction.connection_mode,
+        &kind_for_callbacks,
+        connect_end_target,
+        connect_end_outcome,
+    );
 
     cx.release_pointer_capture();
     cx.request_redraw();

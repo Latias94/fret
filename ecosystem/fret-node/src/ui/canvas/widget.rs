@@ -23,6 +23,7 @@ use crate::ops::{
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
+use crate::runtime::callbacks::{ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart};
 use crate::runtime::callbacks::{NodeGraphCallbacks, connection_changes_from_transaction};
 use crate::runtime::changes::NodeGraphChanges;
 use crate::runtime::events::ViewChange;
@@ -239,6 +240,55 @@ impl NodeGraphCanvas {
                 }
             }
         }
+    }
+
+    fn drag_kind_from_wire_drag_kind(kind: &WireDragKind) -> ConnectDragKind {
+        match kind {
+            WireDragKind::New { from, bundle } => ConnectDragKind::New {
+                from: *from,
+                bundle: bundle.clone(),
+            },
+            WireDragKind::Reconnect {
+                edge,
+                endpoint,
+                fixed,
+            } => ConnectDragKind::Reconnect {
+                edge: *edge,
+                endpoint: *endpoint,
+                fixed: *fixed,
+            },
+            WireDragKind::ReconnectMany { edges } => ConnectDragKind::ReconnectMany {
+                edges: edges.clone(),
+            },
+        }
+    }
+
+    pub(super) fn emit_connect_start(&mut self, snapshot: &ViewSnapshot, kind: &WireDragKind) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_connect_start(ConnectStart {
+            kind: Self::drag_kind_from_wire_drag_kind(kind),
+            mode: snapshot.interaction.connection_mode,
+        });
+    }
+
+    pub(super) fn emit_connect_end(
+        &mut self,
+        mode: crate::interaction::NodeGraphConnectionMode,
+        kind: &WireDragKind,
+        target: Option<PortId>,
+        outcome: ConnectEndOutcome,
+    ) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_connect_end(ConnectEnd {
+            kind: Self::drag_kind_from_wire_drag_kind(kind),
+            mode,
+            target,
+            outcome,
+        });
     }
 
     fn emit_view_callbacks(&mut self, changes: &[ViewChange]) {
@@ -8316,6 +8366,7 @@ mod tests {
         PortKind,
     };
 
+    mod callbacks_conformance;
     mod connect_conformance;
     mod connection_mode_conformance;
     mod hit_testing_conformance;

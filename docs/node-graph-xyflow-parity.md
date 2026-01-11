@@ -134,6 +134,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
     - Convenience hooks are provided alongside the raw streams:
       - connections: `on_connect` / `on_disconnect` / `on_reconnect` (derived from committed ops)
+      - connection lifecycle: `on_connect_start` / `on_connect_end` (UI-driven; includes cancel/reject/picker)
       - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
     - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
 

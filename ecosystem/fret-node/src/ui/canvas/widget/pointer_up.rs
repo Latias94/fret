@@ -363,11 +363,13 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     if let Some(pending) = canvas.interaction.pending_wire_drag.take() {
         if snapshot.interaction.connect_on_click {
             if matches!(pending.kind, WireDragKind::New { .. }) {
+                let kind = pending.kind.clone();
                 canvas.interaction.wire_drag = Some(WireDrag {
                     kind: pending.kind,
                     pos: position,
                 });
                 canvas.interaction.click_connect = true;
+                canvas.emit_connect_start(snapshot, &kind);
             }
         }
 

@@ -27,10 +27,12 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost>(
     }
 
     canvas.interaction.pending_wire_drag = None;
+    let kind = pending.kind.clone();
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: pending.kind,
         pos: pending.start_pos,
     });
+    canvas.emit_connect_start(snapshot, &kind);
 
     wire_drag::handle_wire_drag_move(canvas, cx, snapshot, position, modifiers, zoom)
 }

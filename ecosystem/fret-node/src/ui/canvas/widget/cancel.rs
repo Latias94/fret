@@ -7,9 +7,16 @@ fn cancel_active_gestures_inner<H: UiHost>(
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     consume: bool,
 ) {
+    let mode = canvas.sync_view_state(cx.app).interaction.connection_mode;
     let mut canceled = false;
-    if canvas.interaction.wire_drag.take().is_some() {
+    if let Some(w) = canvas.interaction.wire_drag.take() {
         canvas.interaction.click_connect = false;
+        canvas.emit_connect_end(
+            mode,
+            &w.kind,
+            None,
+            crate::runtime::callbacks::ConnectEndOutcome::Canceled,
+        );
         canceled = true;
     }
     if canvas.interaction.edge_drag.take().is_some() {
@@ -55,7 +62,13 @@ fn cancel_active_gestures_inner<H: UiHost>(
         canvas.interaction.pan_last_sample_at = None;
         canceled = true;
     }
-    if canvas.interaction.suspended_wire_drag.take().is_some() {
+    if let Some(w) = canvas.interaction.suspended_wire_drag.take() {
+        canvas.emit_connect_end(
+            mode,
+            &w.kind,
+            None,
+            crate::runtime::callbacks::ConnectEndOutcome::Canceled,
+        );
         canceled = true;
     }
     if canvas.interaction.pending_right_click.take().is_some() {
