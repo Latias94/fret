@@ -8278,6 +8278,64 @@ mod tests {
     }
 
     #[test]
+    fn universal_translate_tip_intent_works_in_orthographic() {
+        let mut gizmo = base_gizmo(GizmoMode::Universal);
+        assert!(gizmo.config.universal_includes_scale);
+        // In orthographic projection the translate arrow tip is further from the rotate ring in
+        // screen space than in perspective. Reduce the overall gizmo size so the default
+        // `pick_radius_px` can still cover the tip-intent window.
+        gizmo.config.size_px = 32.0;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(3.0, 2.0, 4.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        // Use the translate arrow tip position; in this orthographic projection, ensure the rotate
+        // ring is still within pick radius so the overlap resolution logic is exercised.
+        let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+        let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+                .is_some(),
+            "expected rotate rings to be pickable near the translate tip in this orthographic projection"
+        );
+
+        let (hit, kind) = gizmo
+            .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap();
+        assert_eq!(kind, GizmoMode::Translate);
+        assert_eq!(hit.handle, HandleId(1));
+    }
+
+    #[test]
+    fn universal_is_not_pickable_when_origin_is_behind_camera() {
+        let gizmo = base_gizmo(GizmoMode::Universal);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 1.0));
+        let origin = Vec3::new(0.0, 0.0, 2.0);
+        let cursor = Vec2::new(400.0, 300.0);
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        assert!(
+            gizmo
+                .pick_universal_handle(view_proj, vp, origin, cursor, axes, 1.0)
+                .is_none()
+        );
+    }
+
+    #[test]
     fn size_policy_pixels_clamped_by_selection_bounds_clamps_world_length() {
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let view_proj = test_view_projection((800.0, 600.0));
