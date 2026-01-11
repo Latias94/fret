@@ -3,6 +3,7 @@ use fret_ui::UiHost;
 
 use crate::core::GroupId;
 use crate::ops::GraphOp;
+use crate::runtime::callbacks::{NodeDragEndOutcome, ViewportMoveEndOutcome, ViewportMoveKind};
 
 use super::super::state::{PendingNodeSelectAction, ViewSnapshot, WireDrag, WireDragKind};
 use super::NodeGraphCanvas;
@@ -41,6 +42,11 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         canvas.interaction.pan_last_sample_at = None;
         canvas.stop_auto_pan_timer(cx.app);
         canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
+        canvas.emit_move_end(
+            snapshot,
+            ViewportMoveKind::Pan,
+            ViewportMoveEndOutcome::Ended,
+        );
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
@@ -190,6 +196,7 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     }
 
     if let Some(drag) = canvas.interaction.node_drag.take() {
+        let drag_nodes: Vec<crate::core::NodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
             .graph
@@ -277,7 +284,9 @@ pub(super) fn handle_pointer_up<H: UiHost>(
                 to: *to,
             });
         }
-        if !ops.is_empty() {
+        let drag_outcome = if ops.is_empty() {
+            NodeDragEndOutcome::NoOp
+        } else {
             let label = if ops
                 .iter()
                 .all(|op| matches!(op, GraphOp::SetNodeParent { .. }))
@@ -292,8 +301,14 @@ pub(super) fn handle_pointer_up<H: UiHost>(
             } else {
                 "Move Nodes"
             };
-            let _ = canvas.commit_ops(cx.app, cx.window, Some(label), ops);
-        }
+            if canvas.commit_ops(cx.app, cx.window, Some(label), ops) {
+                NodeDragEndOutcome::Committed
+            } else {
+                NodeDragEndOutcome::Rejected
+            }
+        };
+
+        canvas.emit_node_drag_end(drag.primary, &drag_nodes, drag_outcome);
         canvas.interaction.pending_node_drag = None;
         canvas.interaction.snap_guides = None;
         cx.release_pointer_capture();

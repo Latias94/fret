@@ -1,6 +1,8 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use crate::core::NodeId as GraphNodeId;
+
 use super::super::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
 use super::NodeGraphCanvas;
 use super::threshold::exceeds_drag_threshold;
@@ -81,12 +83,14 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         return true;
     }
+    let drag_nodes: Vec<GraphNodeId> = start_nodes.iter().map(|(id, _)| *id).collect();
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: pending.primary,
         nodes: start_nodes,
         grab_offset: pending.grab_offset,
         start_pos: pending.start_pos,
     });
+    canvas.emit_node_drag_start(pending.primary, &drag_nodes);
 
     false
 }

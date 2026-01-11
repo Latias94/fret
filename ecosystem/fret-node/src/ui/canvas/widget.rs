@@ -23,7 +23,10 @@ use crate::ops::{
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
-use crate::runtime::callbacks::{ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart};
+use crate::runtime::callbacks::{
+    ConnectDragKind, ConnectEnd, ConnectEndOutcome, ConnectStart, NodeDragEnd, NodeDragEndOutcome,
+    NodeDragStart, ViewportMoveEnd, ViewportMoveEndOutcome, ViewportMoveKind, ViewportMoveStart,
+};
 use crate::runtime::callbacks::{NodeGraphCallbacks, connection_changes_from_transaction};
 use crate::runtime::changes::NodeGraphChanges;
 use crate::runtime::events::ViewChange;
@@ -327,6 +330,60 @@ impl NodeGraphCanvas {
             callbacks.on_reconnect_end(ev.clone());
             callbacks.on_edge_update_end(ev);
         }
+    }
+
+    pub(super) fn emit_move_start(&mut self, snapshot: &ViewSnapshot, kind: ViewportMoveKind) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_move_start(ViewportMoveStart {
+            kind,
+            pan: snapshot.pan,
+            zoom: snapshot.zoom,
+        });
+    }
+
+    pub(super) fn emit_move_end(
+        &mut self,
+        snapshot: &ViewSnapshot,
+        kind: ViewportMoveKind,
+        outcome: ViewportMoveEndOutcome,
+    ) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_move_end(ViewportMoveEnd {
+            kind,
+            pan: snapshot.pan,
+            zoom: snapshot.zoom,
+            outcome,
+        });
+    }
+
+    pub(super) fn emit_node_drag_start(&mut self, primary: GraphNodeId, nodes: &[GraphNodeId]) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_node_drag_start(NodeDragStart {
+            primary,
+            nodes: nodes.to_vec(),
+        });
+    }
+
+    pub(super) fn emit_node_drag_end(
+        &mut self,
+        primary: GraphNodeId,
+        nodes: &[GraphNodeId],
+        outcome: NodeDragEndOutcome,
+    ) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_node_drag_end(NodeDragEnd {
+            primary,
+            nodes: nodes.to_vec(),
+            outcome,
+        });
     }
 
     fn emit_view_callbacks(&mut self, changes: &[ViewChange]) {

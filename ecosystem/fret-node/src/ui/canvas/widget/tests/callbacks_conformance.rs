@@ -5,9 +5,14 @@ use fret_core::{Modifiers, MouseButton, Point, Px, Rect, Size};
 
 use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
-use crate::runtime::callbacks::{ConnectEnd, ConnectStart, NodeGraphCallbacks};
+use crate::runtime::callbacks::{
+    ConnectEnd, ConnectStart, NodeDragEnd, NodeDragStart, NodeGraphCallbacks, ViewportMoveEnd,
+    ViewportMoveStart,
+};
 
-use super::super::super::state::{PendingWireDrag, WireDrag, WireDragKind};
+use super::super::super::state::{
+    NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
+};
 use super::super::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
@@ -51,6 +56,30 @@ impl NodeGraphCallbacks for Recorder {
         self.log
             .borrow_mut()
             .push(format!("edge_update_end:{:?}:{:?}", ev.outcome, ev.target));
+    }
+
+    fn on_move_start(&mut self, ev: ViewportMoveStart) {
+        self.log
+            .borrow_mut()
+            .push(format!("move_start:{:?}", ev.kind));
+    }
+
+    fn on_move_end(&mut self, ev: ViewportMoveEnd) {
+        self.log
+            .borrow_mut()
+            .push(format!("move_end:{:?}:{:?}", ev.kind, ev.outcome));
+    }
+
+    fn on_node_drag_start(&mut self, ev: NodeDragStart) {
+        self.log
+            .borrow_mut()
+            .push(format!("node_drag_start:{:?}", ev.primary));
+    }
+
+    fn on_node_drag_end(&mut self, ev: NodeDragEnd) {
+        self.log
+            .borrow_mut()
+            .push(format!("node_drag_end:{:?}:{:?}", ev.primary, ev.outcome));
     }
 }
 
@@ -350,4 +379,179 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.contains("reconnect_end:Canceled")));
     assert!(got.iter().any(|s| s.contains("edge_update_end:Canceled")));
+}
+
+#[test]
+fn panning_emits_move_start_and_move_end() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(100.0), Px(100.0));
+    assert!(super::super::pan_zoom::begin_panning(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        MouseButton::Middle,
+    ));
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        MouseButton::Middle,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.starts_with("move_start:")));
+    assert!(got.iter().any(|s| s.contains("move_end:Pan:Ended")));
+}
+
+#[test]
+fn escape_cancel_panning_emits_move_end_canceled() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(100.0), Px(100.0));
+    assert!(super::super::pan_zoom::begin_panning(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        MouseButton::Middle,
+    ));
+
+    super::super::cancel::handle_escape_cancel(&mut canvas, &mut cx);
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.contains("move_end:Pan:Canceled")));
+}
+
+#[test]
+fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_draggable = true;
+    });
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(100.0), Px(100.0));
+    canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
+        primary: a,
+        nodes: vec![a],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: start,
+        select_action: PendingNodeSelectAction::None,
+        drag_enabled: true,
+    });
+
+    let _ = super::super::pending_drag::handle_pending_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(400.0), Px(400.0)),
+        snapshot.zoom,
+    );
+
+    super::super::cancel::handle_escape_cancel(&mut canvas, &mut cx);
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.starts_with("node_drag_start:")));
+    assert!(
+        got.iter()
+            .any(|s| s.contains("node_drag_end") && s.contains("Canceled"))
+    );
+}
+
+#[test]
+fn node_drag_pointer_up_emits_node_drag_end_committed() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let start_pos = graph_value.nodes.get(&a).unwrap().pos;
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let _ = graph.update(&mut host, |g, _cx| {
+        if let Some(n) = g.nodes.get_mut(&a) {
+            n.pos.x += 10.0;
+        }
+    });
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: a,
+        nodes: vec![(a, start_pos)],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(100.0), Px(100.0)),
+    });
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(110.0), Px(110.0)),
+        MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let got = log.borrow().clone();
+    assert!(
+        got.iter()
+            .any(|s| s.contains("node_drag_end") && s.contains("Committed"))
+    );
 }

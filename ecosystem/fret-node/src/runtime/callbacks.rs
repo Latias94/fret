@@ -26,6 +26,54 @@ pub struct DeleteChange {
     pub sticky_notes: Vec<StickyNoteId>,
 }
 
+/// Viewport move gesture kind (UI-driven).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewportMoveKind {
+    Pan,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewportMoveEndOutcome {
+    Ended,
+    Canceled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportMoveStart {
+    pub kind: ViewportMoveKind,
+    pub pan: CanvasPoint,
+    pub zoom: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportMoveEnd {
+    pub kind: ViewportMoveKind,
+    pub pan: CanvasPoint,
+    pub zoom: f32,
+    pub outcome: ViewportMoveEndOutcome,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeDragEndOutcome {
+    Committed,
+    Rejected,
+    Canceled,
+    NoOp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NodeDragStart {
+    pub primary: NodeId,
+    pub nodes: Vec<NodeId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NodeDragEnd {
+    pub primary: NodeId,
+    pub nodes: Vec<NodeId>,
+    pub outcome: NodeDragEndOutcome,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EdgeConnection {
     pub edge: EdgeId,
@@ -144,6 +192,16 @@ pub trait NodeGraphCallbacks: 'static {
 
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
     fn on_selection_change(&mut self, _sel: SelectionChange) {}
+
+    /// UI-driven hook: viewport pan/zoom gesture start (ReactFlow `onMoveStart`).
+    fn on_move_start(&mut self, _ev: ViewportMoveStart) {}
+    /// UI-driven hook: viewport pan/zoom gesture end (ReactFlow `onMoveEnd`).
+    fn on_move_end(&mut self, _ev: ViewportMoveEnd) {}
+
+    /// UI-driven hook: node drag gesture start (ReactFlow `onNodeDragStart`).
+    fn on_node_drag_start(&mut self, _ev: NodeDragStart) {}
+    /// UI-driven hook: node drag gesture end (ReactFlow `onNodeDragStop`).
+    fn on_node_drag_end(&mut self, _ev: NodeDragEnd) {}
 
     /// UI-driven hook: called when a connection gesture starts (after drag threshold / click-to-connect).
     fn on_connect_start(&mut self, _ev: ConnectStart) {}

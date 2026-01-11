@@ -1,13 +1,15 @@
 use fret_ui::UiHost;
 
 use super::NodeGraphCanvas;
+use crate::runtime::callbacks::{NodeDragEndOutcome, ViewportMoveEndOutcome, ViewportMoveKind};
 
 fn cancel_active_gestures_inner<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     consume: bool,
 ) {
-    let mode = canvas.sync_view_state(cx.app).interaction.connection_mode;
+    let snapshot = canvas.sync_view_state(cx.app);
+    let mode = snapshot.interaction.connection_mode;
     let mut canceled = false;
     if let Some(w) = canvas.interaction.wire_drag.take() {
         canvas.interaction.click_connect = false;
@@ -22,7 +24,9 @@ fn cancel_active_gestures_inner<H: UiHost>(
     if canvas.interaction.edge_drag.take().is_some() {
         canceled = true;
     }
-    if canvas.interaction.node_drag.take().is_some() {
+    if let Some(drag) = canvas.interaction.node_drag.take() {
+        let nodes: Vec<crate::core::NodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
+        canvas.emit_node_drag_end(drag.primary, &nodes, NodeDragEndOutcome::Canceled);
         canceled = true;
     }
     if canvas.interaction.pending_node_drag.take().is_some() {
@@ -60,6 +64,11 @@ fn cancel_active_gestures_inner<H: UiHost>(
         canvas.interaction.panning_button = None;
         canvas.interaction.pan_last_screen_pos = None;
         canvas.interaction.pan_last_sample_at = None;
+        canvas.emit_move_end(
+            &snapshot,
+            ViewportMoveKind::Pan,
+            ViewportMoveEndOutcome::Canceled,
+        );
         canceled = true;
     }
     if let Some(w) = canvas.interaction.suspended_wire_drag.take() {

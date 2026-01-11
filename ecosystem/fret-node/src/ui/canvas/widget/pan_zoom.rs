@@ -5,6 +5,7 @@ use fret_ui::UiHost;
 
 use super::{NodeGraphCanvas, ViewSnapshot};
 use crate::core::CanvasPoint;
+use crate::runtime::callbacks::ViewportMoveKind;
 
 pub(super) fn begin_panning<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
@@ -47,6 +48,8 @@ pub(super) fn begin_panning<H: UiHost>(
     canvas.interaction.pan_last_screen_pos = Some(screen_pos);
     canvas.interaction.pan_last_sample_at = Some(Instant::now());
     canvas.interaction.pan_velocity = CanvasPoint::default();
+
+    canvas.emit_move_start(snapshot, ViewportMoveKind::Pan);
 
     cx.capture_pointer(cx.node);
     cx.request_redraw();
