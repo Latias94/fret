@@ -225,18 +225,19 @@ impl Renderer {
 
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = &self.instance_buffers[instance_buffer_index];
+        let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
         if !instances.is_empty() {
-            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(instances));
+            queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
         }
 
         let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
         self.viewport_vertex_buffer_index =
             (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
+        let viewport_vertex_buffer =
+            self.viewport_vertex_buffers[viewport_vertex_buffer_index].clone();
         if !viewport_vertices.is_empty() {
             queue.write_buffer(
-                viewport_vertex_buffer,
+                &viewport_vertex_buffer,
                 0,
                 bytemuck::cast_slice(viewport_vertices),
             );
@@ -245,17 +246,17 @@ impl Renderer {
         let text_vertex_buffer_index = self.text_vertex_buffer_index;
         self.text_vertex_buffer_index =
             (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
+        let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
         if !text_vertices.is_empty() {
-            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
+            queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
         }
 
         let path_vertex_buffer_index = self.path_vertex_buffer_index;
         self.path_vertex_buffer_index =
             (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
-        let path_vertex_buffer = &self.path_vertex_buffers[path_vertex_buffer_index];
+        let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
         if !path_vertices.is_empty() {
-            queue.write_buffer(path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
+            queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

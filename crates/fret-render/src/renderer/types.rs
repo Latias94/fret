@@ -286,6 +286,9 @@ pub(super) struct PathIntermediate {
     pub(super) sample_count: u32,
     pub(super) _msaa_texture: Option<wgpu::Texture>,
     pub(super) msaa_view: Option<wgpu::TextureView>,
+    pub(super) _resolved_texture: wgpu::Texture,
+    pub(super) resolved_view: wgpu::TextureView,
+    pub(super) bind_group: wgpu::BindGroup,
 }
 
 pub(super) struct PathCompositeTarget {
