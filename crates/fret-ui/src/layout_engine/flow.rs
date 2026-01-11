@@ -362,6 +362,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
             | ElementInstance::DismissibleLayer(_)
+            | ElementInstance::Anchored(_)
             | ElementInstance::Stack(_)),
         ) if !tree.children(node).is_empty()
             && (!matches!(&instance, ElementInstance::HoverRegion(_))
@@ -675,7 +676,6 @@ fn passthrough_wrapper_child<H: UiHost>(
     match instance {
         ElementInstance::InteractivityGate(gate) if gate.present => Some(child),
         ElementInstance::Container(_)
-        | ElementInstance::Anchored(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)
         | ElementInstance::WheelRegion(_)
