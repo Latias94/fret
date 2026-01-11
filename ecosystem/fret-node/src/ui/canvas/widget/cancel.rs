@@ -49,7 +49,11 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     }
     if canvas.interaction.panning {
         canvas.interaction.panning = false;
+        canvas.interaction.pan_last_screen_pos = None;
         canvas.interaction.pan_last_sample_at = None;
+        canceled = true;
+    }
+    if canvas.interaction.suspended_wire_drag.take().is_some() {
         canceled = true;
     }
     if canvas.interaction.sticky_wire || canvas.interaction.sticky_wire_ignore_next_up {

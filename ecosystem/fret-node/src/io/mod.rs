@@ -378,6 +378,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_reconnect_radius")]
     pub reconnect_radius: f32,
 
+    /// Whether dropping an edge reconnect drag on empty canvas disconnects the edge.
+    ///
+    /// This matches common editor expectations (ShaderGraph/Blueprint) where dragging an edge end
+    /// away from a port and releasing disconnects it.
+    #[serde(default)]
+    pub reconnect_on_drop_empty: bool,
+
     /// Edge hit slop width in screen pixels (independent from wire stroke thickness).
     #[serde(default = "default_edge_interaction_width")]
     pub edge_interaction_width: f32,
@@ -485,6 +492,7 @@ impl Default for NodeGraphInteractionState {
             connection_mode: NodeGraphConnectionMode::default(),
             connection_radius: default_connection_radius(),
             reconnect_radius: default_reconnect_radius(),
+            reconnect_on_drop_empty: false,
             edge_interaction_width: default_edge_interaction_width(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),

@@ -575,6 +575,23 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                     }
                     Outcome::Ignore => {}
                 }
+            } else if snapshot.interaction.reconnect_on_drop_empty {
+                let ops = canvas
+                    .graph
+                    .read_ref(cx.host(), |graph| {
+                        let Some(edge_value) = graph.edges.get(&edge) else {
+                            return Vec::new();
+                        };
+                        vec![GraphOp::RemoveEdge {
+                            id: edge,
+                            edge: edge_value.clone(),
+                        }]
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                if !ops.is_empty() {
+                    let _ = canvas.commit_ops(cx.host(), window, Some("Disconnect Edge"), ops);
+                }
             }
         }
         WireDragKind::ReconnectMany { edges } => {
@@ -619,6 +636,34 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                 }
                 if let Some((sev, msg)) = toast {
                     canvas.show_toast(cx.host(), window, sev, msg);
+                }
+            } else if snapshot.interaction.reconnect_on_drop_empty {
+                let ops_all = canvas
+                    .graph
+                    .read_ref(cx.host(), |graph| {
+                        let mut out: Vec<GraphOp> = Vec::new();
+                        out.reserve(edges.len());
+                        for (edge_id, _endpoint, _fixed) in edges {
+                            let Some(edge_value) = graph.edges.get(&edge_id) else {
+                                continue;
+                            };
+                            out.push(GraphOp::RemoveEdge {
+                                id: edge_id,
+                                edge: edge_value.clone(),
+                            });
+                        }
+                        out
+                    })
+                    .ok()
+                    .unwrap_or_default();
+
+                if !ops_all.is_empty() {
+                    let label = if ops_all.len() == 1 {
+                        "Disconnect Edge"
+                    } else {
+                        "Disconnect Edges"
+                    };
+                    let _ = canvas.commit_ops(cx.host(), window, Some(label), ops_all);
                 }
             }
         }

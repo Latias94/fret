@@ -316,3 +316,45 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
         other => panic!("unexpected wire drag kind: {other:?}"),
     }
 }
+
+#[test]
+fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.reconnect_on_drop_empty = true;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+        kind: WireDragKind::Reconnect {
+            edge,
+            endpoint: EdgeEndpoint::From,
+            fixed: to,
+        },
+        pos: Point::new(Px(10_000.0), Px(10_000.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(super::super::wire_drag::handle_wire_left_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        snapshot.zoom,
+    ));
+
+    let edges_len = graph.read_ref(&host, |g| g.edges.len()).unwrap_or(0);
+    assert_eq!(edges_len, 0);
+    assert_eq!(canvas.history.undo_len(), 1);
+}
