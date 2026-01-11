@@ -9,7 +9,8 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoSizePolicy, GizmoTarget3d,
-    GizmoTargetId, Transform3d, ViewportRect,
+    GizmoTargetId, Transform3d, ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput,
+    ViewGizmoUpdate, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -105,8 +106,12 @@ impl Default for OverlayTextCache {
 struct FrameAnim {
     target: Vec3,
     distance: f32,
+    yaw_radians: f32,
+    pitch_radians: f32,
     target_velocity: Vec3,
     distance_velocity: f32,
+    yaw_velocity: f32,
+    pitch_velocity: f32,
     smooth_time_s: f32,
 }
 
@@ -460,6 +465,34 @@ fn smooth_damp_vec3(
     Vec3::new(x, y, z)
 }
 
+fn wrap_angle_pi(radians: f32) -> f32 {
+    let two_pi = std::f32::consts::PI * 2.0;
+    let mut x = radians % two_pi;
+    if x > std::f32::consts::PI {
+        x -= two_pi;
+    } else if x < -std::f32::consts::PI {
+        x += two_pi;
+    }
+    x
+}
+
+fn smooth_damp_angle(
+    current: f32,
+    target: f32,
+    current_velocity: &mut f32,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> f32 {
+    let adjusted_target = current + wrap_angle_pi(target - current);
+    smooth_damp_f32(
+        current,
+        adjusted_target,
+        current_velocity,
+        smooth_time_s,
+        dt_seconds,
+    )
+}
+
 fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     if camera.orbiting || camera.panning {
         camera.frame_anim = None;
@@ -492,14 +525,34 @@ fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     )
     .clamp(0.2, 25.0);
 
+    camera.yaw_radians = smooth_damp_angle(
+        camera.yaw_radians,
+        anim.yaw_radians,
+        &mut anim.yaw_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    );
+    camera.pitch_radians = smooth_damp_f32(
+        camera.pitch_radians,
+        anim.pitch_radians,
+        &mut anim.pitch_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(-1.55, 1.55);
+
     let done = (camera.target - anim.target).length() <= 1e-3
         && (camera.distance - anim.distance).abs() <= 1e-3
+        && wrap_angle_pi(camera.yaw_radians - anim.yaw_radians).abs() <= 1e-3
+        && (camera.pitch_radians - anim.pitch_radians).abs() <= 1e-3
         && anim.target_velocity.length() <= 1e-3
         && anim.distance_velocity.abs() <= 1e-3;
 
     if done {
         camera.target = anim.target;
         camera.distance = anim.distance.clamp(0.2, 25.0);
+        camera.yaw_radians = anim.yaw_radians;
+        camera.pitch_radians = anim.pitch_radians.clamp(-1.55, 1.55);
         camera.frame_anim = None;
         false
     } else {
@@ -531,8 +584,12 @@ fn frame_aabb(
     camera.frame_anim = Some(FrameAnim {
         target: center,
         distance: dist.clamp(0.2, 25.0),
+        yaw_radians: camera.yaw_radians,
+        pitch_radians: camera.pitch_radians,
         target_velocity: Vec3::ZERO,
         distance_velocity: 0.0,
+        yaw_velocity: 0.0,
+        pitch_velocity: 0.0,
         smooth_time_s: smooth_time_s.max(1e-4),
     });
 }
@@ -554,6 +611,7 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     gizmo: Gizmo,
+    view_gizmo: ViewGizmo,
     op_mask_enabled: bool,
     op_mask_preset_index: usize,
     show_help: bool,
@@ -699,10 +757,15 @@ impl Default for Gizmo3dDemoModel {
                 }),
             },
         ];
+        let mut view_gizmo_cfg = ViewGizmoConfig::default();
+        view_gizmo_cfg.depth_range = gizmo_cfg.depth_range;
+        view_gizmo_cfg.anchor = ViewGizmoAnchor::TopRight;
+        let view_gizmo = ViewGizmo::new(view_gizmo_cfg);
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
+            view_gizmo,
             op_mask_enabled: false,
             op_mask_preset_index: 0,
             show_help: true,
@@ -2438,6 +2501,89 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
             );
 
+            let view_gizmo_drag = matches!(
+                event.kind,
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                }
+            );
+            let view_gizmo_input = ViewGizmoInput {
+                cursor_px,
+                hovered,
+                drag_started: view_gizmo_drag,
+                dragging: view_gizmo_drag,
+            };
+            let view_gizmo_update =
+                m.view_gizmo
+                    .update(view_projection, viewport, view_gizmo_input);
+
+            if let Some(ViewGizmoUpdate::SnapView {
+                face: _,
+                view_dir,
+                up: _,
+            }) = view_gizmo_update
+            {
+                // Avoid snapping while other interactions are in progress.
+                if !m.is_busy() {
+                    let pivot = if m.selection.is_empty() {
+                        m.camera.target
+                    } else {
+                        let selected: Vec<GizmoTarget3d> = m
+                            .targets
+                            .iter()
+                            .copied()
+                            .filter(|t| m.selection.contains(&t.id))
+                            .collect();
+                        targets_world_aabb(&selected)
+                            .map(|(min, max)| (min + max) * 0.5)
+                            .unwrap_or(m.camera.target)
+                    };
+
+                    let desired_eye_dir = (-view_dir).normalize_or_zero();
+                    if desired_eye_dir.length_squared() > 0.0 {
+                        let (yaw_radians, pitch_radians) =
+                            if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
+                                (m.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
+                            } else {
+                                (
+                                    desired_eye_dir.z.atan2(desired_eye_dir.x),
+                                    desired_eye_dir.y.asin(),
+                                )
+                            };
+
+                        m.camera.frame_anim = Some(FrameAnim {
+                            target: pivot,
+                            distance: m.camera.distance,
+                            yaw_radians,
+                            pitch_radians: pitch_radians.clamp(-1.55, 1.55),
+                            target_velocity: Vec3::ZERO,
+                            distance_velocity: 0.0,
+                            yaw_velocity: 0.0,
+                            pitch_velocity: 0.0,
+                            smooth_time_s: 0.12,
+                        });
+                    }
+
+                    m.gizmo.state.hovered = None;
+                    m.pending_selection = None;
+                    m.marquee = None;
+                    m.marquee_preview.clear();
+                    m.selection_before_select = None;
+                    m.active_before_select = None;
+
+                    m.input = GizmoInput {
+                        cursor_px,
+                        hovered: false,
+                        drag_started: false,
+                        dragging: false,
+                        snap,
+                        cancel: false,
+                    };
+                    return rec_to_record;
+                }
+            }
+
             if hovered {
                 match event.kind {
                     ViewportInputKind::PointerDown {
@@ -2791,7 +2937,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     selection.first().copied().unwrap_or(m.active_target)
                 };
 
-                let draw = if marquee.is_some() {
+                let viewport =
+                    ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+                let mut draw = if marquee.is_some() {
                     GizmoDrawList3d::default()
                 } else {
                     let gizmo_targets: Vec<GizmoTarget3d> = m
@@ -2800,13 +2948,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.gizmo.draw(
-                        view_proj,
-                        ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                        active_target,
-                        &gizmo_targets,
-                    )
+                    m.gizmo
+                        .draw(view_proj, viewport, active_target, &gizmo_targets)
                 };
+                if marquee.is_none() {
+                    let view_draw = m.view_gizmo.draw(view_proj, viewport);
+                    draw.lines.extend(view_draw.lines);
+                    draw.triangles.extend(view_draw.triangles);
+                }
                 let thickness_px = m.gizmo.config.line_thickness_px;
                 let depth = m.gizmo.config.depth_range;
 
