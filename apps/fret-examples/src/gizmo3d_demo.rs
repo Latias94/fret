@@ -1054,6 +1054,8 @@ fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
     model.view_gizmo.config.y_color = model.gizmo.config.y_color;
     model.view_gizmo.config.z_color = model.gizmo.config.z_color;
     model.view_gizmo.config.hover_color = model.gizmo.config.hover_color;
+    model.view_gizmo.config.face_color = theme.color_required("color.viewport.view_gizmo.face");
+    model.view_gizmo.config.edge_color = theme.color_required("color.viewport.view_gizmo.edge");
 }
 
 #[derive(Default)]
