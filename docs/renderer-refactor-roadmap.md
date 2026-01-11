@@ -207,7 +207,17 @@ This section is intentionally lightweight and should be updated as work lands.
   pass into RGBA8 sRGB image storage in `crates/fret-launch/src/runner/yuv_gpu.rs`.
 - A unified renderer-wide perf snapshot exists (ADR 0096): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
   P0 counters (draw calls, pipeline/bind group sets, upload bytes, encode/prepare timing) and is printed by
-  `apps/fret-svg-atlas-stress/src/main.rs` (`renderer_perf:`).
+  `apps/fret-svg-atlas-stress/src/main.rs` and stress demos in `apps/fret-examples/src/` (e.g. `plot_stress_demo.rs`, `table_stress_demo.rs`, `virtual_list_stress_demo.rs`) (`renderer_perf:`).
+
+## Perf Baseline Capture (Local)
+
+To capture a local baseline, run a deterministic stress demo for ~10s and record the periodic `renderer_perf:` lines.
+Recommended entry points:
+
+- `cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- `cargo run -p fret-demo --bin plot_stress_demo -- --frames 600`
+- `FRET_TABLE_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin table_stress_demo`
+- `FRET_VLIST_STRESS_AUTO_SCROLL=1 FRET_VLIST_STRESS_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin virtual_list_stress_demo`
 
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`

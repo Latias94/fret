@@ -5,6 +5,7 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -16,7 +17,7 @@ use fret_ui_kit::headless::table::{
     contains_ascii_case_insensitive, create_column_helper,
 };
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::alloc_profile;
 
@@ -49,6 +50,7 @@ struct TableStressWindowState {
     frame: u64,
     profile_frames_left: u64,
     exit_after_frames: Option<u64>,
+    last_renderer_report: Option<Instant>,
     col_label_id: Arc<str>,
     col_label_name: Arc<str>,
     col_label_role: Arc<str>,
@@ -150,6 +152,7 @@ impl TableStressDriver {
             frame: 0,
             profile_frames_left,
             exit_after_frames,
+            last_renderer_report: None,
             col_label_id: Arc::from("ID"),
             col_label_name: Arc::from("Name"),
             col_label_role: Arc::from("Role"),
@@ -231,6 +234,52 @@ impl TableStressDriver {
 
 impl WinitAppDriver for TableStressDriver {
     type WindowState = TableStressWindowState;
+
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
+        renderer.set_perf_enabled(true);
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+        if state.profile_frames_left == 0 && state.exit_after_frames.is_none() {
+            return;
+        }
+
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                }
+            }
+            state.last_renderer_report = Some(now);
+        }
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)

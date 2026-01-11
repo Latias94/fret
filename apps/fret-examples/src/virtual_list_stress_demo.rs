@@ -5,6 +5,7 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -13,8 +14,21 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 const LIST_LEN: usize = 100_000;
+
+fn parse_env_u64(key: &str) -> Option<u64> {
+    std::env::var_os(key).and_then(|v| v.to_string_lossy().parse::<u64>().ok())
+}
+
+fn parse_env_bool(key: &str) -> bool {
+    let Some(raw) = std::env::var_os(key) else {
+        return false;
+    };
+    let value = raw.to_string_lossy().trim().to_ascii_lowercase();
+    matches!(value.as_str(), "1" | "true" | "yes" | "on")
+}
 
 struct VirtualListStressWindowState {
     ui: UiTree<App>,
@@ -22,6 +36,10 @@ struct VirtualListStressWindowState {
     tall_rows_enabled: fret_app::Model<bool>,
     reversed: fret_app::Model<bool>,
     items_revision: fret_app::Model<u64>,
+    frame: u64,
+    exit_after_frames: Option<u64>,
+    auto_scroll: bool,
+    last_renderer_report: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -32,6 +50,8 @@ impl VirtualListStressDriver {
         let tall_rows_enabled = app.models_mut().insert(false);
         let reversed = app.models_mut().insert(false);
         let items_revision = app.models_mut().insert(0u64);
+        let exit_after_frames = parse_env_u64("FRET_VLIST_STRESS_EXIT_AFTER_FRAMES");
+        let auto_scroll = parse_env_bool("FRET_VLIST_STRESS_AUTO_SCROLL");
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -42,12 +62,62 @@ impl VirtualListStressDriver {
             tall_rows_enabled,
             reversed,
             items_revision,
+            frame: 0,
+            exit_after_frames,
+            auto_scroll,
+            last_renderer_report: None,
         }
     }
 }
 
 impl WinitAppDriver for VirtualListStressDriver {
     type WindowState = VirtualListStressWindowState;
+
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
+        renderer.set_perf_enabled(true);
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+        if !state.auto_scroll && state.exit_after_frames.is_none() {
+            return;
+        }
+
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                }
+            }
+            state.last_renderer_report = Some(now);
+        }
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
@@ -176,6 +246,8 @@ impl WinitAppDriver for VirtualListStressDriver {
             scale_factor,
             scene,
         } = context;
+
+        state.frame = state.frame.wrapping_add(1);
 
         let tall_rows_enabled = app
             .models()
@@ -330,6 +402,23 @@ impl WinitAppDriver for VirtualListStressDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
         frame.paint_all(scene);
+
+        if let Some(limit) = state.exit_after_frames
+            && state.frame >= limit
+        {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if state.auto_scroll {
+            let index = ((state.frame as usize).saturating_mul(37)) % LIST_LEN;
+            state
+                .scroll_handle
+                .scroll_to_item(index, fret_ui::ScrollStrategy::Start);
+            app.request_redraw(window);
+        } else if state.exit_after_frames.is_some() {
+            app.request_redraw(window);
+        }
     }
 
     fn window_create_spec(

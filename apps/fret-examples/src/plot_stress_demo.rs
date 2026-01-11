@@ -8,6 +8,7 @@ use fret_launch::{
 use fret_plot::cartesian::{DataPoint, DataRect};
 use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
 use fret_plot::series::Series;
+use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use std::sync::Arc;
@@ -24,6 +25,7 @@ struct PlotStressWindowState {
     max_frames: Option<u64>,
     frame: u64,
     last_report: Option<Instant>,
+    last_renderer_report: Option<Instant>,
     render_time_accum: Duration,
     render_frames_accum: u64,
 }
@@ -139,6 +141,48 @@ impl PlotStressDriver {
 impl WinitAppDriver for PlotStressDriver {
     type WindowState = PlotStressWindowState;
 
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
+        renderer.set_perf_enabled(true);
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                }
+            }
+            state.last_renderer_report = Some(now);
+        }
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         let plot = app
             .models_mut()
@@ -156,6 +200,7 @@ impl WinitAppDriver for PlotStressDriver {
             max_frames: self.max_frames,
             frame: 0,
             last_report: None,
+            last_renderer_report: None,
             render_time_accum: Duration::ZERO,
             render_frames_accum: 0,
         }
