@@ -7,6 +7,15 @@ pub enum ImageColorSpace {
     Linear,
 }
 
+impl ImageColorSpace {
+    pub const fn to_color_info(self) -> ImageColorInfo {
+        match self {
+            Self::Srgb => ImageColorInfo::srgb_rgba(),
+            Self::Linear => ImageColorInfo::linear_rgba(),
+        }
+    }
+}
+
 /// Stable metadata describing how to interpret pixel bytes for streaming images (ADR 0126).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ImageColorInfo {

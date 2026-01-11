@@ -1,7 +1,12 @@
 use std::collections::{HashMap, VecDeque};
 
-use fret_core::{AppWindowId, FrameId, ImageId, ImageUpdateDropReason, ImageUpdateToken, RectPx};
+use fret_core::{
+    AlphaMode, AppWindowId, FrameId, ImageColorInfo, ImageId, ImageUpdateDropReason,
+    ImageUpdateToken, RectPx,
+};
 use fret_runtime::Effect;
+
+use super::yuv;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct StreamingUploadStats {
@@ -108,6 +113,22 @@ fn estimate_upload_bytes(effect: &Effect) -> u64 {
             bytes_per_row,
             ..
         } => estimate_rgba8_upload_bytes(*width, *height, *update_rect_px, *bytes_per_row),
+        Effect::ImageUpdateNv12 {
+            width,
+            height,
+            update_rect_px,
+            ..
+        }
+        | Effect::ImageUpdateI420 {
+            width,
+            height,
+            update_rect_px,
+            ..
+        } => yuv::normalize_update_rect_420(*width, *height, *update_rect_px)
+            .map(|rect| {
+                estimate_rgba8_upload_bytes(*width, *height, Some(rect), rect.w.saturating_mul(4))
+            })
+            .unwrap_or(0),
         _ => 0,
     }
 }
@@ -356,32 +377,6 @@ impl StreamingUploadQueue {
                     continue;
                 }
 
-                let is_supported = matches!(entry.effect, Effect::ImageUpdateRgba8 { .. });
-                if !is_supported {
-                    let removed = self.pending.remove(&key);
-                    if let Some(removed) = removed {
-                        if let Some(bytes) =
-                            self.pending_staging_bytes.get_mut(&removed.window_bucket)
-                        {
-                            *bytes = bytes.saturating_sub(removed.staging_bytes);
-                        }
-                        if ack_enabled
-                            && let Some((token, image)) =
-                                streaming_update_token_and_image(&removed.effect)
-                        {
-                            self.pending_acks.push(StreamingUploadAck {
-                                window_hint: removed.window_hint,
-                                token,
-                                image,
-                                kind: StreamingUploadAckKind::Dropped(
-                                    ImageUpdateDropReason::Unsupported,
-                                ),
-                            });
-                        }
-                    }
-                    continue;
-                }
-
                 let upload_bytes = estimate_upload_bytes(&entry.effect);
                 let allow_oversize_if_first =
                     per_window_upload_budget_bytes > 0 && !applied_any && used == 0;
@@ -398,12 +393,123 @@ impl StreamingUploadQueue {
                     {
                         *bytes = bytes.saturating_sub(removed.staging_bytes);
                     }
-                    used = used.saturating_add(upload_bytes);
-                    applied_any = true;
-                    stats.update_effects_applied = stats.update_effects_applied.saturating_add(1);
-                    stats.upload_bytes_applied =
-                        stats.upload_bytes_applied.saturating_add(upload_bytes);
-                    out.push(removed.effect);
+
+                    let token_and_image = streaming_update_token_and_image(&removed.effect);
+                    let maybe_effect = match removed.effect {
+                        effect @ Effect::ImageUpdateRgba8 { .. } => Ok(Some(effect)),
+                        Effect::ImageUpdateNv12 {
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            y_plane,
+                            uv_bytes_per_row,
+                            uv_plane,
+                            color_info,
+                            alpha_mode: _,
+                        } => yuv::nv12_to_rgba8_rect(
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            &y_plane,
+                            uv_bytes_per_row,
+                            &uv_plane,
+                            color_info.range,
+                            color_info.matrix,
+                        )
+                        .map(|(rect, bytes)| {
+                            Some(Effect::ImageUpdateRgba8 {
+                                window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                update_rect_px: Some(rect),
+                                bytes_per_row: rect.w.saturating_mul(4),
+                                bytes,
+                                color_info: ImageColorInfo::srgb_rgba(),
+                                alpha_mode: AlphaMode::Opaque,
+                            })
+                        })
+                        .map_err(|e| e),
+                        Effect::ImageUpdateI420 {
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            y_plane,
+                            u_bytes_per_row,
+                            u_plane,
+                            v_bytes_per_row,
+                            v_plane,
+                            color_info,
+                            alpha_mode: _,
+                        } => yuv::i420_to_rgba8_rect(
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            &y_plane,
+                            u_bytes_per_row,
+                            &u_plane,
+                            v_bytes_per_row,
+                            &v_plane,
+                            color_info.range,
+                            color_info.matrix,
+                        )
+                        .map(|(rect, bytes)| {
+                            Some(Effect::ImageUpdateRgba8 {
+                                window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                update_rect_px: Some(rect),
+                                bytes_per_row: rect.w.saturating_mul(4),
+                                bytes,
+                                color_info: ImageColorInfo::srgb_rgba(),
+                                alpha_mode: AlphaMode::Opaque,
+                            })
+                        })
+                        .map_err(|e| e),
+                        other => Ok(Some(other)),
+                    };
+
+                    match maybe_effect {
+                        Ok(Some(effect)) => {
+                            used = used.saturating_add(upload_bytes);
+                            applied_any = true;
+                            stats.update_effects_applied =
+                                stats.update_effects_applied.saturating_add(1);
+                            stats.upload_bytes_applied =
+                                stats.upload_bytes_applied.saturating_add(upload_bytes);
+                            out.push(effect);
+                        }
+                        Ok(None) => {}
+                        Err(_message) => {
+                            if ack_enabled && let Some((token, image)) = token_and_image {
+                                self.pending_acks.push(StreamingUploadAck {
+                                    window_hint: removed.window_hint,
+                                    token,
+                                    image,
+                                    kind: StreamingUploadAckKind::Dropped(
+                                        ImageUpdateDropReason::InvalidPayload,
+                                    ),
+                                });
+                            }
+                        }
+                    }
                 }
             }
 

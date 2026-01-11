@@ -2354,7 +2354,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         width,
                         height,
                         bytes,
-                        color_space,
+                        color_info,
+                        alpha_mode: _,
                     } => {
                         let Some(context) = self.context.as_ref() else {
                             self.deliver_window_event_now(
@@ -2406,11 +2407,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
-                        let color_space = match color_space {
-                            fret_runtime::ImageColorSpace::Srgb => {
-                                fret_render::ImageColorSpace::Srgb
-                            }
-                            fret_runtime::ImageColorSpace::Linear => {
+                        let color_space = match color_info.encoding {
+                            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+                            fret_core::ImageEncoding::Linear => {
                                 fret_render::ImageColorSpace::Linear
                             }
                         };

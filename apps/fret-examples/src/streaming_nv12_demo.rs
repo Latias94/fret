@@ -1,37 +1,18 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
-    AlphaMode, AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorInfo, Px, Rect,
-    RectPx, SceneOp, Size,
+    AlphaMode, AppWindowId, ChromaSiting, Color, ColorPrimaries, ColorRange, Corners, DrawOrder,
+    Edges, Event, ImageColorInfo, ImageEncoding, ImageId, Px, Rect, SceneOp, Size,
+    TransferFunction, YuvMatrix,
 };
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext};
 
-struct StreamingImageDemoState {
-    image: Option<fret_core::ImageId>,
+struct StreamingNv12DemoState {
+    image: Option<ImageId>,
     pending_token: Option<fret_core::ImageUploadToken>,
     image_size: (u32, u32),
     frame: u64,
     close_requested: bool,
-}
-
-fn generate_rgba8_checkerboard(width: u32, height: u32) -> Vec<u8> {
-    let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
-            let cell = ((x / 16) ^ (y / 16)) & 1;
-            let (r, g, b) = if cell == 0 {
-                (20u8, 30u8, 60u8)
-            } else {
-                (40u8, 60u8, 110u8)
-            };
-            out[idx] = r;
-            out[idx + 1] = g;
-            out[idx + 2] = b;
-            out[idx + 3] = 255;
-        }
-    }
-    out
 }
 
 fn generate_solid_rgba8(width: u32, height: u32, rgba: (u8, u8, u8, u8)) -> Vec<u8> {
@@ -46,13 +27,59 @@ fn generate_solid_rgba8(width: u32, height: u32, rgba: (u8, u8, u8, u8)) -> Vec<
     out
 }
 
+fn yuv_info() -> ImageColorInfo {
+    ImageColorInfo {
+        encoding: ImageEncoding::Srgb,
+        range: ColorRange::Limited,
+        matrix: YuvMatrix::Bt709,
+        primaries: ColorPrimaries::Bt709,
+        transfer: TransferFunction::Bt709,
+        chroma_siting: Some(ChromaSiting::Center),
+    }
+}
+
+fn fill_nv12_frame(size: (u32, u32), frame: u64) -> (Vec<u8>, Vec<u8>) {
+    let (width, height) = size;
+    let y_bpr = width as usize;
+    let (cw, ch) = ((width + 1) / 2, (height + 1) / 2);
+    let uv_bpr = (cw as usize).saturating_mul(2);
+
+    let mut y_plane = vec![0u8; y_bpr.saturating_mul(height as usize)];
+    let mut uv_plane = vec![0u8; uv_bpr.saturating_mul(ch as usize)];
+
+    for y in 0..height {
+        let row = (y as usize).saturating_mul(y_bpr);
+        for x in 0..width {
+            let v = ((x as u64).saturating_add(frame * 3) ^ (y as u64 * 7)) & 0xFF;
+            // Visible luma variation in limited range [16, 235].
+            let yv = 16u8.saturating_add(((v as u32) % 220) as u8);
+            y_plane[row + x as usize] = yv;
+        }
+    }
+
+    let t = (frame % 120) as i32;
+    let u_base = (128 + (t - 60) / 2).clamp(16, 240) as u8;
+    let v_base = (128 - (t - 60) / 3).clamp(16, 240) as u8;
+
+    for y in 0..ch {
+        let row = (y as usize).saturating_mul(uv_bpr);
+        for x in 0..cw {
+            let off = row + (x as usize).saturating_mul(2);
+            uv_plane[off] = u_base;
+            uv_plane[off + 1] = v_base;
+        }
+    }
+
+    (y_plane, uv_plane)
+}
+
 fn create_window_state(
     _driver: &mut (),
     app: &mut App,
     window: AppWindowId,
-) -> StreamingImageDemoState {
-    let image_size = (320, 200);
-    let bytes = generate_rgba8_checkerboard(image_size.0, image_size.1);
+) -> StreamingNv12DemoState {
+    let image_size = (256, 144);
+    let bytes = generate_solid_rgba8(image_size.0, image_size.1, (0, 0, 0, 255));
     let token = app.next_image_upload_token();
     app.push_effect(Effect::ImageRegisterRgba8 {
         window,
@@ -64,7 +91,7 @@ fn create_window_state(
         alpha_mode: AlphaMode::Opaque,
     });
 
-    StreamingImageDemoState {
+    StreamingNv12DemoState {
         image: None,
         pending_token: Some(token),
         image_size,
@@ -75,7 +102,7 @@ fn create_window_state(
 
 fn handle_event(
     _driver: &mut (),
-    context: WinitEventContext<'_, StreamingImageDemoState>,
+    context: WinitEventContext<'_, StreamingNv12DemoState>,
     event: &Event,
 ) {
     let WinitEventContext {
@@ -119,7 +146,7 @@ fn handle_event(
     }
 }
 
-fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoState>) {
+fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingNv12DemoState>) {
     let WinitRenderContext {
         app,
         window,
@@ -163,22 +190,21 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingImageDemoSt
             opacity: 1.0,
         });
 
-        let bar_w = 24u32;
-        let max_x = state.image_size.0.saturating_sub(bar_w).max(1);
-        let bar_x = (state.frame as u32) % max_x;
-
-        let bytes = generate_solid_rgba8(bar_w, state.image_size.1, (240, 90, 80, 255));
-        app.push_effect(Effect::ImageUpdateRgba8 {
+        let (y_plane, uv_plane) = fill_nv12_frame(state.image_size, state.frame);
+        let (cw, _ch) = ((state.image_size.0 + 1) / 2, (state.image_size.1 + 1) / 2);
+        app.push_effect(Effect::ImageUpdateNv12 {
             window: Some(window),
             token: fret_runtime::ImageUpdateToken(state.frame),
             image,
             stream_generation: 0,
             width: state.image_size.0,
             height: state.image_size.1,
-            update_rect_px: Some(RectPx::new(bar_x, 0, bar_w, state.image_size.1)),
-            bytes_per_row: bar_w * 4,
-            bytes,
-            color_info: ImageColorInfo::srgb_rgba(),
+            update_rect_px: None,
+            y_bytes_per_row: state.image_size.0,
+            y_plane,
+            uv_bytes_per_row: cw.saturating_mul(2),
+            uv_plane,
+            color_info: yuv_info(),
             alpha_mode: AlphaMode::Opaque,
         });
 
@@ -211,7 +237,7 @@ pub fn run() -> anyhow::Result<()> {
     let driver = FnDriver::new((), create_window_state, handle_event, render);
 
     let builder = BootstrapBuilder::new(App::new(), driver).configure(|config| {
-        config.main_window_title = "streaming_image_demo".to_string();
+        config.main_window_title = "streaming_nv12_demo".to_string();
         config.main_window_size = winit::dpi::LogicalSize::new(720.0, 480.0);
     });
 

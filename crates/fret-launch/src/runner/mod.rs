@@ -1,5 +1,6 @@
 mod common;
 mod streaming_upload;
+mod yuv;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod desktop;

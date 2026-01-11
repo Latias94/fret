@@ -6,7 +6,7 @@ use crate::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorInfo,
-    ImageColorSpace, ImageId, Rect, RectPx, WindowAnchor,
+    ImageId, Rect, RectPx, WindowAnchor,
 };
 
 use crate::CommandId;
@@ -84,7 +84,8 @@ pub enum Effect {
         width: u32,
         height: u32,
         bytes: Vec<u8>,
-        color_space: ImageColorSpace,
+        color_info: ImageColorInfo,
+        alpha_mode: AlphaMode,
     },
     ImageUpdateRgba8 {
         window: Option<AppWindowId>,

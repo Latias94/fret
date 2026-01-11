@@ -71,6 +71,8 @@ pub mod stems_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod streaming_image_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod streaming_nv12_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_stress_demo;
