@@ -1263,6 +1263,65 @@ fn port_click_does_not_start_wire_drag_when_port_connectable_start_is_false() {
 }
 
 #[test]
+fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
+    use crate::runtime::store::NodeGraphStore;
+
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+
+    let mut store_view = NodeGraphViewState::default();
+    store_view.interaction.nodes_connectable = true;
+    store_view.interaction.edges_reconnectable = true;
+    store_view.interaction.connect_on_click = false;
+
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value.clone(), store_view));
+    let graph = host.models.insert(Graph::default());
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+        snapshot.zoom,
+    ));
+
+    let Some(pending) = canvas.interaction.pending_wire_drag.as_ref() else {
+        panic!("expected pending wire drag");
+    };
+    match &pending.kind {
+        WireDragKind::Reconnect {
+            edge: got_edge,
+            endpoint,
+            fixed,
+        } => {
+            assert_eq!(*got_edge, edge);
+            assert_eq!(*endpoint, EdgeEndpoint::From);
+            assert_eq!(*fixed, to);
+        }
+        other => panic!("unexpected kind: {other:?}"),
+    }
+}
+
+#[test]
 fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false() {
     let mut host = TestUiHostImpl::default();
     let (mut graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();

@@ -267,22 +267,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
             let yank = (modifiers.ctrl || modifiers.meta).then(|| {
-                let this = &*canvas;
-                this.graph
-                    .read_ref(cx.app, |graph| {
-                        let mut edges = NodeGraphCanvas::yank_edges_from_port(graph, port);
-                        edges.retain(|(edge_id, endpoint, _fixed)| {
-                            NodeGraphCanvas::edge_endpoint_is_reconnectable(
-                                graph,
-                                &snapshot.interaction,
-                                *edge_id,
-                                *endpoint,
-                            )
-                        });
-                        edges
-                    })
-                    .ok()
-                    .unwrap_or_default()
+                canvas.yank_reconnectable_edges_from_port(cx.app, &snapshot.interaction, port)
             });
 
             let kind = match yank {
