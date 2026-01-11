@@ -98,6 +98,30 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopOpacity);
                 }
             }
+            ElementInstance::EffectLayer(props) => {
+                if cx.bounds.size.width.0 <= 0.0 || cx.bounds.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                if !props.chain.is_empty() {
+                    cx.scene.push(SceneOp::PushEffect {
+                        bounds: cx.bounds,
+                        mode: props.mode,
+                        chain: props.chain,
+                        quality: props.quality,
+                    });
+                }
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                if !props.chain.is_empty() {
+                    cx.scene.push(SceneOp::PopEffect);
+                }
+            }
             ElementInstance::VisualTransform(props) => {
                 let local = props.transform;
                 let is_finite = local.a.is_finite()

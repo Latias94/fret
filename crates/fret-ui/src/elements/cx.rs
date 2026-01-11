@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, NodeId, Px, Rect};
+use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -14,12 +14,12 @@ use crate::action::{
     PressableActionHooks, PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
 };
 use crate::element::{
-    AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
-    ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps, PointerRegionProps,
-    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
-    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
-    SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions, VirtualListProps,
-    VirtualListState, VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps, GridProps,
+    HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
+    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
+    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
+    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
+    VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -469,6 +469,36 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn effect_layer(
+        &mut self,
+        mode: EffectMode,
+        chain: EffectChain,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.effect_layer_props(
+            EffectLayerProps {
+                mode,
+                chain,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn effect_layer_props(
+        &mut self,
+        props: EffectLayerProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::EffectLayer(props), children)
         })
     }
 
