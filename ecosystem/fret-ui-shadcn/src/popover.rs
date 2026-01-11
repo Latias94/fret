@@ -9,7 +9,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Overflow, RenderTransformProps,
+    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Length, Overflow, RenderTransformProps,
     SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
@@ -352,7 +352,11 @@ impl Popover {
                         AnchoredProps {
                             layout: LayoutStyle {
                                 overflow: Overflow::Visible,
-                                size: SizeStyle::default(),
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             outer_margin: Edges::all(window_margin),
