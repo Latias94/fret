@@ -165,6 +165,37 @@ pub enum GizmoSizePolicy {
     },
 }
 
+/// Picking priority policy for multi-mode gizmos (Universal / operation masks).
+///
+/// This controls how hits from different sub-gizmos are resolved when their projections overlap.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GizmoPickPolicy {
+    /// Maximum score treated as a "plane interior" hit for translate planes (handle ids 4/5/6).
+    ///
+    /// Note: this is expressed in the `PickHit.score` domain, not pixels.
+    pub translate_plane_inside_score_max: f32,
+    /// Maximum score treated as an "explicit solid" hit for scale handles (axis end boxes).
+    ///
+    /// Scale end boxes produce `score == 0.0` when the cursor is inside their projected quad.
+    pub scale_solid_inside_score_max: f32,
+    /// Maximum score treated as "inside" for bounds handles (corners/faces).
+    pub bounds_inside_score_max: f32,
+    /// Multiplier applied to `pick_radius_px` when detecting "translate axis tip intent" in
+    /// Universal tools (bias translate near the arrow tip over rotate rings).
+    pub translate_axis_tip_radius_scale: f32,
+}
+
+impl Default for GizmoPickPolicy {
+    fn default() -> Self {
+        Self {
+            translate_plane_inside_score_max: 0.25,
+            scale_solid_inside_score_max: 1e-6,
+            bounds_inside_score_max: 0.25,
+            translate_axis_tip_radius_scale: 0.90,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoConfig {
     pub mode: GizmoMode,
@@ -188,6 +219,8 @@ pub struct GizmoConfig {
     /// stylistic control to avoid extreme world-space gizmo sizes at very near/far camera
     /// distances while preserving the default "constant screen size" behavior when unset.
     pub size_world_clamp: Option<(f32, f32)>,
+    /// Picking priority policy used to resolve hit overlaps in multi-mode configurations.
+    pub pick_policy: GizmoPickPolicy,
     pub pick_radius_px: f32,
     pub line_thickness_px: f32,
     pub drag_start_threshold_px: f32,
@@ -279,6 +312,7 @@ impl Default for GizmoConfig {
             size_policy: GizmoSizePolicy::ConstantPixels,
             size_px: 96.0,
             size_world_clamp: None,
+            pick_policy: GizmoPickPolicy::default(),
             pick_radius_px: 10.0,
             line_thickness_px: 6.0,
             drag_start_threshold_px: 3.0,
@@ -545,6 +579,15 @@ enum TranslateConstraint {
 struct PickHit {
     handle: HandleId,
     score: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum MixedPickBand {
+    TranslateCenter = 0,
+    TranslatePlaneInside = 1,
+    ScaleSolidInside = 2,
+    TranslateAxisTipIntent = 3,
+    Default = 4,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -4673,6 +4716,161 @@ impl Gizmo {
         best
     }
 
+    fn mixed_translate_axis_tip_intent(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        hit: PickHit,
+    ) -> bool {
+        if !matches!(hit.handle.0, 1 | 2 | 3) {
+            return false;
+        }
+        let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
+        if axis_dir.length_squared() == 0.0 {
+            return false;
+        }
+
+        let axis_tip_len = size_length_world * self.translate_axis_tip_scale();
+        let tip_world = origin + axis_dir * axis_tip_len;
+        let Some(tip) = project_point(
+            view_projection,
+            viewport,
+            tip_world,
+            self.config.depth_range,
+        ) else {
+            return false;
+        };
+        let d = (cursor - tip.screen).length();
+        if !d.is_finite() {
+            return false;
+        }
+        let r = self.config.pick_radius_px.max(6.0)
+            * self.config.pick_policy.translate_axis_tip_radius_scale;
+        d <= r
+    }
+
+    fn mixed_pick_band(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        rotate_present: bool,
+        allow_translate_axis_tip_intent: bool,
+        hit: PickHit,
+        kind: GizmoMode,
+    ) -> MixedPickBand {
+        match kind {
+            GizmoMode::Translate => {
+                if hit.handle == TranslateHandle::Screen.id() {
+                    return MixedPickBand::TranslateCenter;
+                }
+                if matches!(hit.handle.0, 4 | 5 | 6)
+                    && hit.score <= self.config.pick_policy.translate_plane_inside_score_max
+                {
+                    return MixedPickBand::TranslatePlaneInside;
+                }
+                if rotate_present
+                    && allow_translate_axis_tip_intent
+                    && self.mixed_translate_axis_tip_intent(
+                        view_projection,
+                        viewport,
+                        origin,
+                        cursor,
+                        axes,
+                        size_length_world,
+                        hit,
+                    )
+                {
+                    return MixedPickBand::TranslateAxisTipIntent;
+                }
+                MixedPickBand::Default
+            }
+            GizmoMode::Scale => {
+                if hit.score <= self.config.pick_policy.scale_solid_inside_score_max {
+                    return MixedPickBand::ScaleSolidInside;
+                }
+                if Self::bounds_handle_from_id(hit.handle).is_some()
+                    && hit.score <= self.config.pick_policy.bounds_inside_score_max
+                {
+                    return MixedPickBand::ScaleSolidInside;
+                }
+                MixedPickBand::Default
+            }
+            GizmoMode::Rotate | GizmoMode::Universal => MixedPickBand::Default,
+        }
+    }
+
+    fn pick_best_mixed_handle(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        allow_translate_axis_tip_intent: bool,
+        rotate: Option<(PickHit, GizmoMode)>,
+        scale: Option<(PickHit, GizmoMode)>,
+        translate: Option<(PickHit, GizmoMode)>,
+    ) -> Option<(PickHit, GizmoMode)> {
+        let rotate_present = rotate.is_some();
+
+        let mut best: Option<(PickHit, GizmoMode, MixedPickBand, f32, u8)> = None;
+        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
+            let Some((hit, kind)) = candidate else {
+                return;
+            };
+            if !hit.score.is_finite() {
+                return;
+            }
+
+            let band = self.mixed_pick_band(
+                view_projection,
+                viewport,
+                origin,
+                cursor,
+                axes,
+                size_length_world,
+                rotate_present,
+                allow_translate_axis_tip_intent,
+                hit,
+                kind,
+            );
+            let kind_priority: u8 = match kind {
+                GizmoMode::Rotate => 0,
+                GizmoMode::Scale => 1,
+                GizmoMode::Translate => 2,
+                GizmoMode::Universal => 3,
+            };
+
+            match best {
+                Some((_best_hit, _best_kind, best_band, best_score, best_kind_pri)) => {
+                    if band < best_band
+                        || (band == best_band && (hit.score < best_score))
+                        || (band == best_band
+                            && hit.score == best_score
+                            && kind_priority < best_kind_pri)
+                    {
+                        best = Some((hit, kind, band, hit.score, kind_priority));
+                    }
+                }
+                None => best = Some((hit, kind, band, hit.score, kind_priority)),
+            }
+        };
+
+        consider(rotate);
+        consider(scale);
+        consider(translate);
+        best.map(|(hit, kind, _, _, _)| (hit, kind))
+    }
+
     fn pick_universal_handle(
         &self,
         view_projection: Mat4,
@@ -4724,76 +4922,18 @@ impl Gizmo {
             .flatten()
             .map(|h| (h, GizmoMode::Scale));
 
-        // Universal priority ladder:
-        // - Translate center / plane interior should not be stolen by other handles.
-        // - Scale end boxes (explicit solids) should not be stolen by rotate rings in screen space.
-        // - Otherwise prefer "more structural" handles first when scores tie: rotate > scale > translate.
-        if let Some((hit, kind)) = translate {
-            if hit.handle.0 == 10 || (matches!(hit.handle.0, 4 | 5 | 6) && hit.score <= 0.25) {
-                return Some((hit, kind));
-            }
-        }
-        if let Some((hit, kind)) = scale {
-            if hit.score <= 1e-6 {
-                return Some((hit, kind));
-            }
-        }
-
-        // Translate axis "arrow tip" intent: when the cursor is close to the translate axis end,
-        // prefer translation over rotate rings (common editor expectation for a universal tool).
-        if let Some((hit, kind)) = translate {
-            if kind == GizmoMode::Translate && matches!(hit.handle.0, 1 | 2 | 3) {
-                let length_world = size_length_world;
-                let axis_tip_len = length_world * self.translate_axis_tip_scale();
-                let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let tip_world = origin + axis_dir * axis_tip_len;
-                    if let Some(tip) = project_point(
-                        view_projection,
-                        viewport,
-                        tip_world,
-                        self.config.depth_range,
-                    ) {
-                        let d = (cursor - tip.screen).length();
-                        if d.is_finite() && d <= self.config.pick_radius_px.max(6.0) * 0.90 {
-                            return Some((hit, kind));
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut best: Option<(PickHit, GizmoMode, f32, u8)> = None;
-        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
-            let Some((hit, kind)) = candidate else {
-                return;
-            };
-            if !hit.score.is_finite() {
-                return;
-            }
-            let priority: u8 = match kind {
-                GizmoMode::Rotate => 0,
-                GizmoMode::Scale => 1,
-                GizmoMode::Translate => 2,
-                GizmoMode::Universal => 3,
-            };
-            let score_cmp = hit.score;
-            match best {
-                Some((_best_hit, _best_kind, best_score_cmp, best_priority)) => {
-                    if score_cmp < best_score_cmp
-                        || (score_cmp == best_score_cmp && priority < best_priority)
-                    {
-                        best = Some((hit, kind, score_cmp, priority));
-                    }
-                }
-                None => best = Some((hit, kind, score_cmp, priority)),
-            }
-        };
-
-        consider(rotate);
-        consider(scale);
-        consider(translate);
-        best.map(|(hit, kind, _, _)| (hit, kind))
+        self.pick_best_mixed_handle(
+            view_projection,
+            viewport,
+            origin,
+            cursor,
+            axes,
+            size_length_world,
+            true,
+            rotate,
+            scale,
+            translate,
+        )
     }
 
     fn pick_operation_mask_handle(
@@ -4892,7 +5032,7 @@ impl Gizmo {
                 // handle, it should win over other scaling candidates that may overlap in
                 // projection (axis end boxes, plane edges, etc).
                 if let Some((hit, _)) = bounds {
-                    if hit.score <= 0.25 {
+                    if hit.score <= self.config.pick_policy.bounds_inside_score_max {
                         return Some((hit, GizmoMode::Scale));
                     }
                 }
@@ -4923,84 +5063,18 @@ impl Gizmo {
             })
             .flatten();
 
-        // Combined priority ladder (editor UX):
-        // - Translate center / plane interior should not be stolen by other handles.
-        // - Scale explicit solids (axis end boxes, bounds handles) should not be stolen by rotate rings.
-        // - Otherwise prefer "more structural" handles first when scores tie: rotate > scale > translate.
-        if let Some((hit, kind)) = translate {
-            if hit.handle.0 == 10 || (matches!(hit.handle.0, 4 | 5 | 6) && hit.score <= 0.25) {
-                return Some((hit, kind));
-            }
-        }
-        if let Some((hit, kind)) = scale {
-            if hit.score <= 1e-6
-                || (Self::bounds_handle_from_id(hit.handle).is_some() && hit.score <= 0.25)
-            {
-                return Some((hit, kind));
-            }
-        }
-
-        // Translate axis "arrow tip" intent: when the cursor is close to the translate axis end,
-        // prefer translation over rotate rings (common editor expectation for a universal tool).
-        if rotate_enabled {
-            if let Some((hit, kind)) = translate {
-                if kind == GizmoMode::Translate
-                    && ops.contains(GizmoOps::translate_axis())
-                    && matches!(hit.handle.0, 1 | 2 | 3)
-                {
-                    let length_world = size_length_world;
-                    let axis_tip_len = length_world * self.translate_axis_tip_scale();
-                    let axis_dir =
-                        axes_flipped[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
-                    if axis_dir.length_squared() > 0.0 {
-                        let tip_world = origin + axis_dir * axis_tip_len;
-                        if let Some(tip) = project_point(
-                            view_projection,
-                            viewport,
-                            tip_world,
-                            self.config.depth_range,
-                        ) {
-                            let d = (cursor - tip.screen).length();
-                            if d.is_finite() && d <= self.config.pick_radius_px.max(6.0) * 0.90 {
-                                return Some((hit, kind));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut best: Option<(PickHit, GizmoMode, f32, u8)> = None;
-        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
-            let Some((hit, kind)) = candidate else {
-                return;
-            };
-            if !hit.score.is_finite() {
-                return;
-            }
-            let priority: u8 = match kind {
-                GizmoMode::Rotate => 0,
-                GizmoMode::Scale => 1,
-                GizmoMode::Translate => 2,
-                GizmoMode::Universal => 3,
-            };
-            let score_cmp = hit.score;
-            match best {
-                Some((_best_hit, _best_kind, best_score_cmp, best_priority)) => {
-                    if score_cmp < best_score_cmp
-                        || (score_cmp == best_score_cmp && priority < best_priority)
-                    {
-                        best = Some((hit, kind, score_cmp, priority));
-                    }
-                }
-                None => best = Some((hit, kind, score_cmp, priority)),
-            }
-        };
-
-        consider(rotate);
-        consider(scale);
-        consider(translate);
-        best.map(|(hit, kind, _, _)| (hit, kind))
+        self.pick_best_mixed_handle(
+            view_projection,
+            viewport,
+            origin,
+            cursor,
+            axes_flipped,
+            size_length_world,
+            ops.contains(GizmoOps::translate_axis()),
+            rotate,
+            scale,
+            translate,
+        )
     }
 
     fn pick_scale_or_bounds_handle(
@@ -5054,7 +5128,7 @@ impl Gizmo {
         // Bounds handles are explicit solid affordances. If the cursor is inside a bounds handle,
         // it should win over axis end-box scaling that may overlap in projection.
         if let Some((hit, _)) = bounds {
-            if hit.score <= 0.25 {
+            if hit.score <= self.config.pick_policy.bounds_inside_score_max {
                 return Some(hit);
             }
         }
@@ -5974,6 +6048,65 @@ mod tests {
 
         assert_eq!(gizmo.state.hovered, Some(ScaleHandle::Uniform.id()));
         assert_eq!(gizmo.state.hovered_kind, Some(GizmoMode::Scale));
+    }
+
+    #[test]
+    fn operation_mask_translate_axis_tip_wins_over_rotate_rings() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Universal;
+        config.operation_mask = Some(GizmoOps::translate_axis() | GizmoOps::rotate_all());
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+
+        let gizmo = Gizmo::new(config);
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+        let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+                .is_some(),
+            "expected rotate rings to be pickable near the translate tip in this projection"
+        );
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let (hit, kind) = gizmo
+            .pick_operation_mask_handle(
+                view_proj,
+                vp,
+                origin,
+                tip.screen,
+                axes,
+                axes,
+                length_world,
+                &targets,
+            )
+            .unwrap();
+        assert_eq!(kind, GizmoMode::Translate);
+        assert_eq!(hit.handle, HandleId(1));
     }
 
     #[test]
