@@ -29,9 +29,18 @@ pub struct DeleteChange {
 /// Viewport move gesture kind (UI-driven).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewportMoveKind {
-    Pan,
-    Zoom,
-    ScrollPan,
+    /// Pointer-drag panning (mouse/touch drag).
+    PanDrag,
+    /// Inertial/momentum panning after releasing a pan drag.
+    PanInertia,
+    /// Panning via scroll wheel / trackpad scroll when `pan_on_scroll` is enabled.
+    PanScroll,
+    /// Zooming via scroll wheel (e.g. Ctrl+wheel).
+    ZoomWheel,
+    /// Zooming via pinch gesture (trackpad pinch).
+    ZoomPinch,
+    /// Zooming via double-click gesture.
+    ZoomDoubleClick,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

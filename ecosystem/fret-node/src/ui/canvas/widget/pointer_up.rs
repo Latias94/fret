@@ -42,12 +42,13 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         canvas.interaction.pan_last_sample_at = None;
         canvas.stop_auto_pan_timer(cx.app);
         let started_inertia = canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
-        if !started_inertia {
-            canvas.emit_move_end(
-                snapshot,
-                ViewportMoveKind::Pan,
-                ViewportMoveEndOutcome::Ended,
-            );
+        canvas.emit_move_end(
+            snapshot,
+            ViewportMoveKind::PanDrag,
+            ViewportMoveEndOutcome::Ended,
+        );
+        if started_inertia {
+            canvas.emit_move_start(snapshot, ViewportMoveKind::PanInertia);
         }
         cx.release_pointer_capture();
         cx.request_redraw();

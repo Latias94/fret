@@ -428,7 +428,7 @@ fn panning_emits_move_start_and_move_end() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("move_start:")));
-    assert!(got.iter().any(|s| s.contains("move_end:Pan:Ended")));
+    assert!(got.iter().any(|s| s.contains("move_end:PanDrag:Ended")));
 }
 
 #[test]
@@ -461,7 +461,7 @@ fn escape_cancel_panning_emits_move_end_canceled() {
     super::super::cancel::handle_escape_cancel(&mut canvas, &mut cx);
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s.contains("move_end:Pan:Canceled")));
+    assert!(got.iter().any(|s| s.contains("move_end:PanDrag:Canceled")));
 }
 
 #[test]
@@ -515,7 +515,7 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
 }
 
 #[test]
-fn pan_inertia_defers_move_end_until_inertia_stops() {
+fn pan_inertia_emits_move_end_after_inertia_stops() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
@@ -564,9 +564,11 @@ fn pan_inertia_defers_move_end_until_inertia_stops() {
     ));
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s.starts_with("move_start:Pan")));
+    assert!(got.iter().any(|s| s == "move_start:PanDrag"));
+    assert!(got.iter().any(|s| s == "move_end:PanDrag:Ended"));
+    assert!(got.iter().any(|s| s == "move_start:PanInertia"));
     assert!(
-        !got.iter().any(|s| s.contains("move_end:Pan:Ended")),
+        !got.iter().any(|s| s == "move_end:PanInertia:Ended"),
         "move_end should be deferred while inertia is active"
     );
 
@@ -586,7 +588,7 @@ fn pan_inertia_defers_move_end_until_inertia_stops() {
     canvas.event(&mut cx, &Event::Timer { token });
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s.contains("move_end:Pan:Ended")));
+    assert!(got.iter().any(|s| s == "move_end:PanInertia:Ended"));
 }
 
 #[test]
@@ -716,7 +718,7 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     );
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_start:Zoom"));
+    assert!(got.iter().any(|s| s == "move_start:ZoomWheel"));
 
     let token = canvas
         .interaction
@@ -728,7 +730,7 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     canvas.event(&mut cx, &Event::Timer { token });
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_end:Zoom:Ended"));
+    assert!(got.iter().any(|s| s == "move_end:ZoomWheel:Ended"));
     let _ = snapshot;
 }
 
@@ -767,7 +769,7 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     );
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_start:Zoom"));
+    assert!(got.iter().any(|s| s == "move_start:ZoomPinch"));
 
     let token = canvas
         .interaction
@@ -778,7 +780,7 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     canvas.event(&mut cx, &Event::Timer { token });
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_end:Zoom:Ended"));
+    assert!(got.iter().any(|s| s == "move_end:ZoomPinch:Ended"));
     let _ = snapshot;
 }
 
@@ -819,7 +821,7 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     );
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_start:ScrollPan"));
+    assert!(got.iter().any(|s| s == "move_start:PanScroll"));
 
     let token = canvas
         .interaction
@@ -831,6 +833,6 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     canvas.event(&mut cx, &Event::Timer { token });
 
     let got = log.borrow().clone();
-    assert!(got.iter().any(|s| s == "move_end:ScrollPan:Ended"));
+    assert!(got.iter().any(|s| s == "move_end:PanScroll:Ended"));
     let _ = snapshot;
 }

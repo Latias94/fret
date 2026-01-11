@@ -19,7 +19,7 @@ pub(super) fn begin_panning<H: UiHost>(
         canvas.stop_pan_inertia_timer(cx.app);
         canvas.emit_move_end(
             snapshot,
-            ViewportMoveKind::Pan,
+            ViewportMoveKind::PanInertia,
             ViewportMoveEndOutcome::Ended,
         );
     }
@@ -62,7 +62,7 @@ pub(super) fn begin_panning<H: UiHost>(
     canvas.interaction.pan_last_sample_at = Some(Instant::now());
     canvas.interaction.pan_velocity = CanvasPoint::default();
 
-    canvas.emit_move_start(snapshot, ViewportMoveKind::Pan);
+    canvas.emit_move_start(snapshot, ViewportMoveKind::PanDrag);
 
     cx.capture_pointer(cx.node);
     cx.request_redraw();

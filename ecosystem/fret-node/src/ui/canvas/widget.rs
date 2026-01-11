@@ -6357,7 +6357,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             let snap = self.sync_view_state(cx.app);
                             self.emit_move_end(
                                 &snap,
-                                ViewportMoveKind::Pan,
+                                ViewportMoveKind::PanInertia,
                                 ViewportMoveEndOutcome::Ended,
                             );
                         }
@@ -6410,7 +6410,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let snap = self.sync_view_state(cx.app);
                         self.emit_move_end(
                             &snap,
-                            ViewportMoveKind::Pan,
+                            ViewportMoveKind::PanInertia,
                             ViewportMoveEndOutcome::Ended,
                         );
                     }
@@ -6658,7 +6658,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.stop_pan_inertia_timer(cx.app);
                     self.emit_move_end(
                         &snapshot,
-                        ViewportMoveKind::Pan,
+                        ViewportMoveKind::PanInertia,
                         ViewportMoveEndOutcome::Ended,
                     );
                 }
@@ -6751,7 +6751,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         .unwrap_or(false);
 
                     if is_background {
-                        self.stop_pan_inertia_timer(cx.app);
+                        if let Some(state) = self.interaction.viewport_move_debounce.take() {
+                            cx.app
+                                .push_effect(Effect::CancelTimer { token: state.timer });
+                            self.emit_move_end(
+                                &snapshot,
+                                state.kind,
+                                ViewportMoveEndOutcome::Ended,
+                            );
+                        }
+
+                        self.emit_move_start(&snapshot, ViewportMoveKind::ZoomDoubleClick);
                         let factor = if modifiers.shift { 0.5 } else { 2.0 };
                         self.zoom_about_pointer_factor(*position, factor);
                         let pan = self.cached_pan;
@@ -6760,6 +6770,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             s.pan = pan;
                             s.zoom = zoom;
                         });
+                        let snap = self.sync_view_state(cx.app);
+                        self.emit_move_end(
+                            &snap,
+                            ViewportMoveKind::ZoomDoubleClick,
+                            ViewportMoveEndOutcome::Ended,
+                        );
                         cx.stop_propagation();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -7064,7 +7080,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.stop_pan_inertia_timer(cx.app);
                     self.emit_move_end(
                         &snapshot,
-                        ViewportMoveKind::Pan,
+                        ViewportMoveKind::PanInertia,
                         ViewportMoveEndOutcome::Ended,
                     );
                 }
@@ -7086,7 +7102,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.app,
                         cx.window,
                         &snapshot,
-                        ViewportMoveKind::Zoom,
+                        ViewportMoveKind::ZoomWheel,
                     );
                     let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
                     let delta_screen_y = delta.y.0 * zoom * speed;
@@ -7109,7 +7125,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.app,
                         cx.window,
                         &snapshot,
-                        ViewportMoveKind::ScrollPan,
+                        ViewportMoveKind::PanScroll,
                     );
                     let mode = snapshot.interaction.pan_on_scroll_mode;
                     let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
@@ -7149,7 +7165,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.stop_pan_inertia_timer(cx.app);
                     self.emit_move_end(
                         &snapshot,
-                        ViewportMoveKind::Pan,
+                        ViewportMoveKind::PanInertia,
                         ViewportMoveEndOutcome::Ended,
                     );
                 }
@@ -7164,7 +7180,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.app,
                     cx.window,
                     &snapshot,
-                    ViewportMoveKind::Zoom,
+                    ViewportMoveKind::ZoomPinch,
                 );
 
                 let speed = snapshot.interaction.zoom_on_pinch_speed.max(0.0);

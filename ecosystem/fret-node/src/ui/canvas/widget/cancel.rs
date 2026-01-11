@@ -67,7 +67,7 @@ fn cancel_active_gestures_inner<H: UiHost>(
         canvas.interaction.pan_last_sample_at = None;
         canvas.emit_move_end(
             &snapshot,
-            ViewportMoveKind::Pan,
+            ViewportMoveKind::PanDrag,
             ViewportMoveEndOutcome::Canceled,
         );
         canceled = true;
@@ -76,7 +76,7 @@ fn cancel_active_gestures_inner<H: UiHost>(
         canvas.stop_pan_inertia_timer(cx.app);
         canvas.emit_move_end(
             &snapshot,
-            ViewportMoveKind::Pan,
+            ViewportMoveKind::PanInertia,
             ViewportMoveEndOutcome::Canceled,
         );
         canceled = true;

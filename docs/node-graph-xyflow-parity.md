@@ -138,7 +138,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - reconnect lifecycle: `on_reconnect_start` / `on_reconnect_end` (reconnect-only aliases)
       - edge update: `on_edge_update` / `on_edge_update_start` / `on_edge_update_end` (ReactFlow `onEdgeUpdate*` aliases)
       - delete: `on_nodes_delete` / `on_edges_delete` / `on_delete` (derived from committed ops)
-      - viewport lifecycle: `on_move_start` / `on_move_end` (UI-driven; drag-pan + inertia + zoom + scroll-pan; zoom/scroll-pan end via debounce)
+      - viewport lifecycle: `on_move_start` / `on_move_end` (UI-driven; pan-drag + pan-inertia + pan-scroll + zoom-wheel + zoom-pinch + zoom-double-click; wheel/pinch/scroll end via debounce)
       - viewport move: `on_move` (derived from viewport changes)
       - node drag lifecycle: `on_node_drag_start` / `on_node_drag_end` (UI-driven)
       - node drag move: `on_node_drag` (UI-driven)
