@@ -67,6 +67,7 @@ patterns:
 
 - `button-default`
 - `checkbox-demo`
+- `radio-group-demo`
 - `tabs-demo`
 - `switch-demo`
 - `popover-demo` (overlay placement + transform origin)
