@@ -236,7 +236,8 @@ impl NodeGraphCanvas {
                     callbacks.on_disconnect(conn)
                 }
                 crate::runtime::callbacks::ConnectionChange::Reconnected { edge, from, to } => {
-                    callbacks.on_reconnect(edge, from, to)
+                    callbacks.on_reconnect(edge, from, to);
+                    callbacks.on_edge_update(edge, from, to);
                 }
             }
         }
@@ -276,7 +277,8 @@ impl NodeGraphCanvas {
             kind,
             WireDragKind::Reconnect { .. } | WireDragKind::ReconnectMany { .. }
         ) {
-            callbacks.on_reconnect_start(ev);
+            callbacks.on_reconnect_start(ev.clone());
+            callbacks.on_edge_update_start(ev);
         }
     }
 
@@ -301,7 +303,8 @@ impl NodeGraphCanvas {
             kind,
             WireDragKind::Reconnect { .. } | WireDragKind::ReconnectMany { .. }
         ) {
-            callbacks.on_reconnect_end(ev);
+            callbacks.on_reconnect_end(ev.clone());
+            callbacks.on_edge_update_end(ev);
         }
     }
 

@@ -116,6 +116,11 @@ pub trait NodeGraphCallbacks: 'static {
     fn on_disconnect(&mut self, _conn: EdgeConnection) {}
     fn on_reconnect(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {}
 
+    /// ReactFlow-style alias for reconnect (`onEdgeUpdate`).
+    ///
+    /// This hook is derived from committed ops (headless-safe), just like `on_reconnect`.
+    fn on_edge_update(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {}
+
     fn on_view_change(&mut self, _changes: &[ViewChange]) {}
 
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
@@ -137,6 +142,18 @@ pub trait NodeGraphCallbacks: 'static {
     /// This is a reconnect-only alias that mirrors ReactFlow's `onReconnectEnd`.
     /// Note that `on_connect_end` is still emitted (with `ConnectDragKind::Reconnect*`).
     fn on_reconnect_end(&mut self, _ev: ConnectEnd) {}
+
+    /// UI-driven hook: called when an edge update (reconnect) gesture starts.
+    ///
+    /// This is a reconnect-only alias that mirrors ReactFlow's `onEdgeUpdateStart`.
+    /// Note that `on_connect_start` is still emitted (with `ConnectDragKind::Reconnect*`).
+    fn on_edge_update_start(&mut self, _ev: ConnectStart) {}
+
+    /// UI-driven hook: called when an edge update (reconnect) gesture ends.
+    ///
+    /// This is a reconnect-only alias that mirrors ReactFlow's `onEdgeUpdateEnd`.
+    /// Note that `on_connect_end` is still emitted (with `ConnectDragKind::Reconnect*`).
+    fn on_edge_update_end(&mut self, _ev: ConnectEnd) {}
 }
 
 /// Installs callbacks into a store via a subscription.
@@ -161,7 +178,8 @@ pub fn install_callbacks(
                     ConnectionChange::Connected(conn) => callbacks.on_connect(conn),
                     ConnectionChange::Disconnected(conn) => callbacks.on_disconnect(conn),
                     ConnectionChange::Reconnected { edge, from, to } => {
-                        callbacks.on_reconnect(edge, from, to)
+                        callbacks.on_reconnect(edge, from, to);
+                        callbacks.on_edge_update(edge, from, to);
                     }
                 }
             }

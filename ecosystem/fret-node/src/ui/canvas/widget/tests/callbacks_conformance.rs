@@ -40,6 +40,18 @@ impl NodeGraphCallbacks for Recorder {
             .borrow_mut()
             .push(format!("reconnect_end:{:?}:{:?}", ev.outcome, ev.target));
     }
+
+    fn on_edge_update_start(&mut self, ev: ConnectStart) {
+        self.log
+            .borrow_mut()
+            .push(format!("edge_update_start:{:?}", ev.kind));
+    }
+
+    fn on_edge_update_end(&mut self, ev: ConnectEnd) {
+        self.log
+            .borrow_mut()
+            .push(format!("edge_update_end:{:?}:{:?}", ev.outcome, ev.target));
+    }
 }
 
 fn make_bounds() -> Rect {
@@ -103,6 +115,7 @@ fn click_connect_emits_connect_start_and_committed_end() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("start:")));
+    assert!(!got.iter().any(|s| s.starts_with("edge_update_start:")));
     assert!(
         got.iter()
             .any(|s| s.contains("end:Committed") && s.contains("Some"))
@@ -281,9 +294,14 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.starts_with("reconnect_start:")));
+    assert!(got.iter().any(|s| s.starts_with("edge_update_start:")));
     assert!(
         got.iter()
             .any(|s| s.contains("reconnect_end:Committed") && s.contains("Some"))
+    );
+    assert!(
+        got.iter()
+            .any(|s| s.contains("edge_update_end:Committed") && s.contains("Some"))
     );
 }
 
@@ -331,4 +349,5 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
 
     let got = log.borrow().clone();
     assert!(got.iter().any(|s| s.contains("reconnect_end:Canceled")));
+    assert!(got.iter().any(|s| s.contains("edge_update_end:Canceled")));
 }

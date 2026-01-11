@@ -398,6 +398,10 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
         fn on_reconnect(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {
             self.log.borrow_mut().push("reconnect");
         }
+
+        fn on_edge_update(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {
+            self.log.borrow_mut().push("edge_update");
+        }
     }
 
     let (mut g0, a, _b, out_port, in_port, eid) = make_graph();
@@ -504,6 +508,7 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
     assert!(got.contains(&"selection"));
     assert!(got.contains(&"connect"));
     assert!(got.contains(&"reconnect"));
+    assert!(got.contains(&"edge_update"));
     assert!(got.contains(&"disconnect"));
 }
 
