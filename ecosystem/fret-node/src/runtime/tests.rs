@@ -31,6 +31,7 @@ fn make_graph() -> (
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,
@@ -43,6 +44,7 @@ fn make_graph() -> (
         pos: CanvasPoint { x: 100.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,
@@ -85,6 +87,7 @@ fn make_graph() -> (
             from: out_port,
             to: in_port,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -211,6 +214,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     from: out_port,
                     to: in_port,
                     selectable: None,
+                    deletable: None,
                 },
             },
             GraphOp::SetEdgeEndpoints {
@@ -231,6 +235,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     from: out_port,
                     to: in_port,
                     selectable: None,
+                    deletable: None,
                 },
             },
         ],
@@ -523,6 +528,7 @@ fn store_selector_subscription_dedupes_and_tracks_graph_and_view_projections() {
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,

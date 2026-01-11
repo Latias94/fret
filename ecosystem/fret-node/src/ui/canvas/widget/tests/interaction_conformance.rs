@@ -27,6 +27,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
@@ -60,6 +61,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             pos: CanvasPoint { x: 320.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
@@ -91,6 +93,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 

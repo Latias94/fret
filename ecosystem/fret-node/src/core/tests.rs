@@ -11,6 +11,7 @@ fn make_node(kind: &str) -> Node {
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,
@@ -76,6 +77,7 @@ fn validate_rejects_edge_with_wrong_direction() {
             from: in_a,
             to: in_b,
             selectable: None,
+            deletable: None,
         },
     );
 

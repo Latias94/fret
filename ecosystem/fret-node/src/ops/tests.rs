@@ -15,6 +15,7 @@ fn make_node(kind: &str) -> Node {
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,
@@ -62,6 +63,7 @@ fn build_remove_node_tx_captures_ports_and_edges() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -102,6 +104,7 @@ fn build_disconnect_port_ops_removes_incident_edges() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -365,6 +368,7 @@ fn set_edge_endpoints_updates_edge_in_place() {
             from: out1,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -435,6 +439,7 @@ fn fragment_paste_transaction_is_deterministic_for_seed() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -489,6 +494,7 @@ fn invert_transaction_restores_graph_state() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -531,6 +537,7 @@ fn history_undo_redo_roundtrip() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 

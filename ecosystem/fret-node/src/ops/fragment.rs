@@ -159,6 +159,7 @@ mod tests {
             pos: CanvasPoint { x: pos.0, y: pos.1 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent,
             size: None,
             collapsed: false,
@@ -258,6 +259,7 @@ mod tests {
                 from: a_out,
                 to: b_in,
                 selectable: None,
+                deletable: None,
             },
         );
 
@@ -454,6 +456,7 @@ impl GraphFragment {
                 from: port_map[&old_edge.from],
                 to: port_map[&old_edge.to],
                 selectable: old_edge.selectable,
+                deletable: old_edge.deletable,
             };
             tx.push(GraphOp::AddEdge {
                 id: new_edge_id,

@@ -491,6 +491,14 @@ fn default_nodes_draggable() -> bool {
     true
 }
 
+fn default_nodes_deletable() -> bool {
+    true
+}
+
+fn default_edges_deletable() -> bool {
+    true
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeGraphPanOnScrollMode {
@@ -511,9 +519,17 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_nodes_draggable")]
     pub nodes_draggable: bool,
 
+    /// Whether nodes can be deleted via editor interactions (XyFlow `nodesDeletable`).
+    #[serde(default = "default_nodes_deletable")]
+    pub nodes_deletable: bool,
+
     /// Whether edges can be selected via pointer/keyboard.
     #[serde(default = "default_edges_selectable")]
     pub edges_selectable: bool,
+
+    /// Whether edges can be deleted via editor interactions (XyFlow `edgesDeletable`).
+    #[serde(default = "default_edges_deletable")]
+    pub edges_deletable: bool,
 
     /// Whether edges can be focused via keyboard navigation.
     #[serde(default = "default_edges_focusable")]
@@ -737,7 +753,9 @@ impl Default for NodeGraphInteractionState {
         Self {
             elements_selectable: default_elements_selectable(),
             nodes_draggable: default_nodes_draggable(),
+            nodes_deletable: default_nodes_deletable(),
             edges_selectable: default_edges_selectable(),
+            edges_deletable: default_edges_deletable(),
             edges_focusable: default_edges_focusable(),
             edges_reconnectable: default_edges_reconnectable(),
             connection_mode: NodeGraphConnectionMode::default(),
@@ -1090,6 +1108,7 @@ mod tests {
                 pos: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,

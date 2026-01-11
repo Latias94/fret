@@ -130,6 +130,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -145,6 +146,7 @@ mod tests {
                 pos: CanvasPoint { x: 100.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -185,6 +187,7 @@ mod tests {
                 from: out_port,
                 to: in_port,
                 selectable: None,
+                deletable: None,
             },
         );
 

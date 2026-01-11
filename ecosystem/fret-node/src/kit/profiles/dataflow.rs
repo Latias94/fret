@@ -281,6 +281,7 @@ mod tests {
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -354,6 +355,7 @@ mod tests {
                     from: src_out,
                     to: in0,
                     selectable: None,
+                    deletable: None,
                 },
             }],
         };

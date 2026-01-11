@@ -112,6 +112,12 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub draggable: Option<bool>,
 
+    /// Whether the node can be deleted via editor interactions (XyFlow `node.deletable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_deletable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletable: Option<bool>,
+
     /// Optional group container id (subflow / parent frame).
     ///
     /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally
@@ -222,6 +228,12 @@ pub struct Edge {
     /// When omitted, the global `NodeGraphInteractionState.edges_selectable` decides.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selectable: Option<bool>,
+
+    /// Whether the edge can be deleted via editor interactions (XyFlow `edge.deletable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.edges_deletable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletable: Option<bool>,
 }
 
 /// Graph-scoped symbol.

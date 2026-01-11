@@ -121,6 +121,7 @@ fn make_graph_two_nodes_one_edge() -> Graph {
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -136,6 +137,7 @@ fn make_graph_two_nodes_one_edge() -> Graph {
             pos: CanvasPoint { x: 260.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -177,6 +179,7 @@ fn make_graph_two_nodes_one_edge() -> Graph {
             to: inn,
             kind: EdgeKind::Data,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -295,6 +298,7 @@ fn auto_measure_dedupes_text_measure_for_repeated_labels() {
                 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,

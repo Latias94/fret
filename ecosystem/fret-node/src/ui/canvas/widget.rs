@@ -1780,6 +1780,7 @@ impl NodeGraphCanvas {
 
     fn delete_selection_ops(
         graph: &Graph,
+        interaction: &NodeGraphInteractionState,
         selected_nodes: &[GraphNodeId],
         selected_edges: &[EdgeId],
         selected_groups: &[crate::core::GroupId],
@@ -1800,6 +1801,9 @@ impl NodeGraphCanvas {
         nodes.sort();
 
         for node_id in nodes {
+            if !Self::node_is_deletable(graph, interaction, node_id) {
+                continue;
+            }
             let Some(node) = graph.nodes.get(&node_id) else {
                 continue;
             };
@@ -1844,6 +1848,9 @@ impl NodeGraphCanvas {
             if removed_edges.contains(&edge_id) {
                 continue;
             }
+            if !Self::edge_is_deletable(graph, interaction, edge_id) {
+                continue;
+            }
             let Some(edge) = graph.edges.get(&edge_id) else {
                 continue;
             };
@@ -1854,6 +1861,38 @@ impl NodeGraphCanvas {
         }
 
         ops
+    }
+
+    fn removed_ids_from_ops(
+        ops: &[GraphOp],
+    ) -> (
+        HashSet<GraphNodeId>,
+        HashSet<EdgeId>,
+        HashSet<crate::core::GroupId>,
+    ) {
+        let mut removed_nodes: HashSet<GraphNodeId> = HashSet::new();
+        let mut removed_edges: HashSet<EdgeId> = HashSet::new();
+        let mut removed_groups: HashSet<crate::core::GroupId> = HashSet::new();
+
+        for op in ops {
+            match op {
+                GraphOp::RemoveNode { id, edges, .. } => {
+                    removed_nodes.insert(*id);
+                    for (edge_id, _) in edges {
+                        removed_edges.insert(*edge_id);
+                    }
+                }
+                GraphOp::RemoveEdge { id, .. } => {
+                    removed_edges.insert(*id);
+                }
+                GraphOp::RemoveGroup { id, .. } => {
+                    removed_groups.insert(*id);
+                }
+                _ => {}
+            }
+        }
+
+        (removed_nodes, removed_edges, removed_groups)
     }
 
     fn nudge_selection_by_screen_delta<H: UiHost>(
@@ -3013,6 +3052,7 @@ impl NodeGraphCanvas {
             pos: at,
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -4120,6 +4160,20 @@ impl NodeGraphCanvas {
         edge.selectable.unwrap_or(true)
     }
 
+    fn edge_is_deletable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        edge: EdgeId,
+    ) -> bool {
+        if !interaction.edges_deletable {
+            return false;
+        }
+        let Some(edge) = graph.edges.get(&edge) else {
+            return false;
+        };
+        edge.deletable.unwrap_or(true)
+    }
+
     fn node_is_selectable(
         graph: &Graph,
         interaction: &NodeGraphInteractionState,
@@ -4146,6 +4200,20 @@ impl NodeGraphCanvas {
             return false;
         };
         node.draggable.unwrap_or(true)
+    }
+
+    fn node_is_deletable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        node: GraphNodeId,
+    ) -> bool {
+        if !interaction.nodes_deletable {
+            return false;
+        }
+        let Some(node) = graph.nodes.get(&node) else {
+            return false;
+        };
+        node.deletable.unwrap_or(true)
     }
 
     fn should_add_bundle_port(
@@ -5497,6 +5565,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .read_ref(cx.app, |graph| {
                         Self::delete_selection_ops(
                             graph,
+                            &snapshot.interaction,
                             &selected_nodes,
                             &selected_edges,
                             &selected_groups,
@@ -5504,11 +5573,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     })
                     .ok()
                     .unwrap_or_default();
+                if remove_ops.is_empty() {
+                    return true;
+                }
+                let (removed_nodes, removed_edges, removed_groups) =
+                    Self::removed_ids_from_ops(&remove_ops);
                 let _ = self.commit_ops(cx.app, cx.window, Some("Cut"), remove_ops);
                 self.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_nodes.clear();
-                    s.selected_groups.clear();
+                    s.selected_edges.retain(|id| !removed_edges.contains(id));
+                    s.selected_nodes.retain(|id| !removed_nodes.contains(id));
+                    s.selected_groups.retain(|id| !removed_groups.contains(id));
                 });
 
                 cx.request_redraw();
@@ -5552,6 +5626,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .read_ref(cx.app, |graph| {
                         Self::delete_selection_ops(
                             graph,
+                            &snapshot.interaction,
                             &selected_nodes,
                             &selected_edges,
                             &selected_groups,
@@ -5560,11 +5635,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .ok()
                     .unwrap_or_default();
 
+                if remove_ops.is_empty() {
+                    return true;
+                }
+                let (removed_nodes, removed_edges, removed_groups) =
+                    Self::removed_ids_from_ops(&remove_ops);
                 let _ = self.commit_ops(cx.app, cx.window, Some("Delete Selection"), remove_ops);
                 self.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_nodes.clear();
-                    s.selected_groups.clear();
+                    s.selected_edges.retain(|id| !removed_edges.contains(id));
+                    s.selected_nodes.retain(|id| !removed_nodes.contains(id));
+                    s.selected_groups.retain(|id| !removed_groups.contains(id));
                 });
                 self.repair_focused_edge_after_graph_change(cx.app, preferred_focus);
                 cx.request_redraw();
@@ -8818,8 +8898,8 @@ mod tests {
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{
-        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_FOCUS_NEXT,
-        CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+        CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_LEFT, CMD_NODE_GRAPH_DELETE_SELECTION,
+        CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
         CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
         CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL,
     };
@@ -9079,6 +9159,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9094,6 +9175,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9120,6 +9202,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9138,6 +9221,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 5.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9167,6 +9251,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9209,6 +9294,7 @@ mod tests {
                 pos: CanvasPoint { x: 200.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9288,6 +9374,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9319,6 +9406,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9350,6 +9438,7 @@ mod tests {
                 from: p_out,
                 to: p_in1,
                 selectable: None,
+                deletable: None,
             },
         );
         graph.edges.insert(
@@ -9359,6 +9448,7 @@ mod tests {
                 from: p_out,
                 to: p_in2,
                 selectable: None,
+                deletable: None,
             },
         );
 
@@ -9389,6 +9479,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9544,6 +9635,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9576,6 +9668,7 @@ mod tests {
                 pos: CanvasPoint { x: 100.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9689,6 +9782,7 @@ mod tests {
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9704,6 +9798,7 @@ mod tests {
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: Some(false),
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9750,6 +9845,7 @@ mod tests {
                 from: p_out,
                 to: p_in,
                 selectable: None,
+                deletable: None,
             },
         );
         graph.edges.insert(
@@ -9759,6 +9855,7 @@ mod tests {
                 from: p_out,
                 to: p_in,
                 selectable: Some(false),
+                deletable: None,
             },
         );
 
@@ -9828,6 +9925,98 @@ mod tests {
             .unwrap_or_default();
         selected_edges.sort();
         assert_eq!(selected_edges, vec![e_ok]);
+    }
+
+    #[test]
+    fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, a, b) = make_test_graph_two_nodes();
+        graph_value
+            .nodes
+            .get_mut(&a)
+            .expect("node must exist")
+            .deletable = Some(false);
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes = vec![a, b];
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+            s.interaction.nodes_deletable = true;
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION)));
+
+        assert!(
+            graph
+                .read_ref(&mut host, |g| g.nodes.contains_key(&a))
+                .unwrap_or(false)
+        );
+        assert!(
+            !graph
+                .read_ref(&mut host, |g| g.nodes.contains_key(&b))
+                .unwrap_or(true)
+        );
+
+        let selected_nodes = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        assert_eq!(selected_nodes, vec![a]);
+        assert_eq!(canvas.history.undo_len(), 1);
+    }
+
+    #[test]
+    fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
+
+        let edge = EdgeId::new();
+        graph_value.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: Some(false),
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.selected_nodes.clear();
+            s.selected_groups.clear();
+            s.selected_edges = vec![edge];
+            s.interaction.edges_deletable = true;
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION)));
+
+        assert_eq!(graph.read_ref(&mut host, |g| g.edges.len()).unwrap_or(0), 1);
+        let selected_edges = view
+            .read_ref(&host, |s| s.selected_edges.clone())
+            .unwrap_or_default();
+        assert_eq!(selected_edges, vec![edge]);
+        assert_eq!(canvas.history.undo_len(), 0);
     }
 
     #[test]

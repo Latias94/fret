@@ -16,6 +16,7 @@ fn make_node(kind: &str) -> Node {
         pos: CanvasPoint { x: 0.0, y: 0.0 },
         selectable: None,
         draggable: None,
+        deletable: None,
         parent: None,
         size: None,
         collapsed: false,
@@ -276,6 +277,7 @@ fn plan_reconnect_preserves_edge_id() {
             from: out1,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -361,6 +363,7 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             from: out1,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
     graph.edges.insert(
@@ -370,6 +373,7 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             from: out2,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -535,6 +539,7 @@ fn plan_split_edge_by_inserting_node_preserves_edge_id() {
             from: out,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 
@@ -641,6 +646,7 @@ fn plan_reconnect_rejects_duplicate_connection() {
             from: out1,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
     graph.edges.insert(
@@ -650,6 +656,7 @@ fn plan_reconnect_rejects_duplicate_connection() {
             from: out2,
             to: inn,
             selectable: None,
+            deletable: None,
         },
     );
 

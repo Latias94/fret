@@ -88,6 +88,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -118,6 +119,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             pos: CanvasPoint { x: 280.0, y: 0.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -148,6 +150,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             pos: CanvasPoint { x: 280.0, y: 160.0 },
             selectable: None,
             draggable: None,
+            deletable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -176,6 +179,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             from: out,
             to: old_in,
             selectable: None,
+            deletable: None,
         },
     );
 

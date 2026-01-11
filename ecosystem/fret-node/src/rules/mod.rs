@@ -208,6 +208,7 @@ impl InsertNodeTemplate {
                 pos: at,
                 selectable: None,
                 draggable: None,
+                deletable: None,
                 parent: None,
                 size: None,
                 collapsed: self.collapsed,
@@ -325,6 +326,7 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
             from: from_id,
             to: to_id,
             selectable: None,
+            deletable: None,
         },
     });
 
@@ -523,6 +525,7 @@ pub fn plan_connect_by_inserting_node(
             from: from_id,
             to: inserted.input,
             selectable: None,
+            deletable: None,
         },
     });
     ops.push(GraphOp::AddEdge {
@@ -532,6 +535,7 @@ pub fn plan_connect_by_inserting_node(
             from: inserted.output,
             to: to_id,
             selectable: None,
+            deletable: None,
         },
     });
 
@@ -661,6 +665,7 @@ pub fn plan_split_edge_by_inserting_node(
             from: inserted.output,
             to: edge.to,
             selectable: edge.selectable,
+            deletable: edge.deletable,
         },
     });
 

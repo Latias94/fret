@@ -336,6 +336,13 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Node.selectable: Option<bool>`)
       - enforced by: `NodeGraphCanvas::node_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_node` + `CMD_NODE_GRAPH_SELECT_ALL`
       - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - per-node override: `Node.deletable` (XyFlow `node.deletable`)
+      - XyFlow: `repo-ref/xyflow/packages/system/src/types/nodes.ts` (`NodeBase.deletable?: boolean`)
+      - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Node.deletable: Option<bool>`)
+      - global gate: `NodeGraphInteractionState.nodes_deletable` (XyFlow `nodesDeletable`)
+        - fret-node: `ecosystem/fret-node/src/io/mod.rs`
+      - enforced by: `NodeGraphCanvas::node_is_deletable` + `NodeGraphCanvas::delete_selection_ops` (used by `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`)
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`delete_selection_respects_node_deletable_and_keeps_undeletable_selected`)
 
 - [~] **Select edge / edge focus**
   - XyFlow: edges are focusable and selectable; store fields `edgesFocusable`, `edgesReconnectable`, `elementsSelectable`
@@ -349,6 +356,13 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Edge.selectable: Option<bool>`)
       - enforced by: `NodeGraphCanvas::edge_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_edge`
       - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - per-edge override: `Edge.deletable` (XyFlow `edge.deletable`)
+      - XyFlow: `repo-ref/xyflow/packages/system/src/types/edges.ts` (`EdgeBase.deletable?: boolean`)
+      - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Edge.deletable: Option<bool>`)
+      - global gate: `NodeGraphInteractionState.edges_deletable` (XyFlow `edgesDeletable`)
+        - fret-node: `ecosystem/fret-node/src/io/mod.rs`
+      - enforced by: `NodeGraphCanvas::edge_is_deletable` + `NodeGraphCanvas::delete_selection_ops` (used by `CMD_NODE_GRAPH_DELETE_SELECTION` / `CMD_NODE_GRAPH_CUT`)
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`delete_selection_respects_edge_deletable_and_keeps_undeletable_selected`)
 
 - [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)
@@ -652,6 +666,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - selection align/distribute commands: `node_graph.align_*`, `node_graph.distribute_{x,y}`
     - key policy parity:
       - `deleteKeyCode`: `NodeGraphInteractionState.delete_key` (default: Backspace)
+      - `nodesDeletable` / `edgesDeletable` + per-element `deletable`:
+        - `NodeGraphInteractionState.{nodes_deletable, edges_deletable}` in `ecosystem/fret-node/src/io/mod.rs`
+        - `Node.deletable` / `Edge.deletable` in `ecosystem/fret-node/src/core/model.rs`
+        - enforced by: `NodeGraphCanvas::delete_selection_ops` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
       - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
       - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
       - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y` (disables keyboard focus traversal / a11y paths, not delete/copy/paste)
