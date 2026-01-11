@@ -56,6 +56,20 @@ The `glass_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
 
 The `pixelate_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
 
+## Pixelate semantics (what to expect)
+
+Fret's current pixelation implementation is a **nearest**-based downsample/upscale chain that is **anchored to the
+effect bounds** (not the window origin). This is intentional: it makes nested/translated effects deterministic and
+keeps the "pixel grid" stable within the effect region.
+
+Practical implications:
+
+- Pixelate is not a blur: high-frequency patterns (1–2 px stripes, checkerboards) will alias as `scale` changes.
+- Some `scale` values can make thin patterns appear to disappear or turn into a flat tint, depending on how the block
+  origin lines up with the underlying pattern.
+- If you need a more predictable look across arbitrary content, prefer blur/color-adjust steps, or author content that
+  matches the target `scale` (pixel-art inputs, deliberate block sizes).
+
 ## Token naming conventions (recommended)
 
 Fret theme tokens are plain string keys (ADR 0050) and can be extended with dotted namespaces.
