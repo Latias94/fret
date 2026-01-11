@@ -5813,7 +5813,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 cancel::handle_escape_cancel(self, cx);
-                self.interaction.space_pan_held = false;
+                self.interaction.pan_activation_key_held = false;
                 return;
             }
             Event::PointerCancel(_) => {
@@ -6041,26 +6041,23 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if *key == fret_core::KeyCode::Space
-                    && !modifiers.ctrl
-                    && !modifiers.meta
-                    && !modifiers.alt
-                    && !modifiers.alt_gr
-                {
-                    if self.interaction.searcher.is_some()
-                        || self.interaction.context_menu.is_some()
-                        || !snapshot.interaction.space_to_pan
+                if !modifiers.ctrl && !modifiers.meta && !modifiers.alt && !modifiers.alt_gr {
+                    if snapshot.interaction.space_to_pan
+                        && self.interaction.searcher.is_none()
+                        && self.interaction.context_menu.is_none()
                     {
-                        return;
+                        if let Some(crate::io::NodeGraphKeyCode(key_code)) =
+                            snapshot.interaction.pan_activation_key_code
+                        {
+                            if *key == key_code && !self.interaction.pan_activation_key_held {
+                                self.interaction.pan_activation_key_held = true;
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                                cx.stop_propagation();
+                                return;
+                            }
+                        }
                     }
-
-                    if !self.interaction.space_pan_held {
-                        self.interaction.space_pan_held = true;
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    cx.stop_propagation();
-                    return;
                 }
 
                 if matches!(
@@ -6103,15 +6100,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 return;
             }
             Event::KeyUp { key, .. } => {
-                if *key != fret_core::KeyCode::Space {
+                let Some(crate::io::NodeGraphKeyCode(key_code)) =
+                    snapshot.interaction.pan_activation_key_code
+                else {
                     return;
+                };
+                if *key == key_code && self.interaction.pan_activation_key_held {
+                    self.interaction.pan_activation_key_held = false;
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
                 }
-                if !self.interaction.space_pan_held {
-                    return;
-                }
-                self.interaction.space_pan_held = false;
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
                 return;
             }
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -6253,7 +6251,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if *button == MouseButton::Left
                     && snapshot.interaction.space_to_pan
-                    && self.interaction.space_pan_held
+                    && self.interaction.pan_activation_key_held
                     && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
                 {
                     let _ = pan_zoom::begin_panning(
@@ -6529,7 +6527,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                 } else if snapshot.interaction.pan_on_scroll
-                    || (snapshot.interaction.space_to_pan && self.interaction.space_pan_held)
+                    || (snapshot.interaction.space_to_pan
+                        && self.interaction.pan_activation_key_held)
                 {
                     let mode = snapshot.interaction.pan_on_scroll_mode;
                     let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
@@ -8069,7 +8068,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert!(canvas.interaction.space_pan_held);
+        assert!(canvas.interaction.pan_activation_key_held);
 
         canvas.event(
             &mut cx,
@@ -8136,8 +8135,101 @@ mod tests {
                 modifiers: Modifiers::default(),
             },
         );
-        assert!(!canvas.interaction.space_pan_held);
+        assert!(!canvas.interaction.pan_activation_key_held);
         assert_eq!(canvas.history.undo_len(), 0);
+    }
+
+    #[test]
+    fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.space_to_pan = true;
+            s.interaction.pan_activation_key_code =
+                Some(crate::io::NodeGraphKeyCode(fret_core::KeyCode::KeyP));
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let _snapshot = canvas.sync_view_state(cx.app);
+        assert!(!canvas.interaction.pan_activation_key_held);
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(
+            !canvas.interaction.pan_activation_key_held,
+            "Space should not activate panning when pan_activation_key_code is KeyP"
+        );
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::KeyP,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(canvas.interaction.pan_activation_key_held);
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyUp {
+                key: fret_core::KeyCode::KeyP,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert!(!canvas.interaction.pan_activation_key_held);
+    }
+
+    #[test]
+    fn pan_activation_key_code_none_disables_space_to_pan_activation() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.space_to_pan = true;
+            s.interaction.pan_activation_key_code = None;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let _snapshot = canvas.sync_view_state(cx.app);
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(
+            !canvas.interaction.pan_activation_key_held,
+            "pan_activation_key_code=None should disable activation"
+        );
     }
 
     #[test]
@@ -8272,7 +8364,7 @@ mod tests {
                 repeat: false,
             },
         );
-        assert!(canvas.interaction.space_pan_held);
+        assert!(canvas.interaction.pan_activation_key_held);
 
         canvas.event(
             &mut cx,

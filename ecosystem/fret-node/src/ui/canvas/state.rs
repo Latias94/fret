@@ -30,7 +30,7 @@ pub(crate) struct InteractionState {
     pub(crate) last_bounds: Option<Rect>,
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
-    pub(crate) space_pan_held: bool,
+    pub(crate) pan_activation_key_held: bool,
     pub(crate) pending_right_click: Option<PendingRightClick>,
     pub(crate) panning: bool,
     pub(crate) panning_button: Option<MouseButton>,

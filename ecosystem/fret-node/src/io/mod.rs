@@ -1,9 +1,11 @@
 //! On-disk wrapper formats and optional helpers.
 
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use fret_core::Modifiers;
 use serde::{Deserialize, Serialize};
+use serde::{Deserializer, Serializer};
 
 use crate::core::{CanvasRect, CanvasSize, EdgeId, Graph, GraphId, GroupId, NodeId};
 
@@ -271,6 +273,28 @@ impl Default for NodeGraphModifierKey {
     }
 }
 
+/// Serialized key code (a `keyboard_types::Code`), stored as a string like `"Space"` or `"KeyA"`.
+///
+/// This is intentionally aligned with the `KeyboardEvent.code` naming used by XyFlow for
+/// `panActivationKeyCode`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeGraphKeyCode(pub fret_core::KeyCode);
+
+impl Serialize for NodeGraphKeyCode {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for NodeGraphKeyCode {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        let code = fret_core::KeyCode::from_str(&s)
+            .map_err(|_| serde::de::Error::custom(format!("unrecognized key code: {s}")))?;
+        Ok(Self(code))
+    }
+}
+
 /// Delete key binding for removing the current selection (XyFlow `deleteKeyCode`).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -519,9 +543,22 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_pane_click_distance")]
     pub pane_click_distance: f32,
 
-    /// Enables panning the canvas by holding Space and dragging with the left mouse button.
+    /// Optional key code that activates panning while held down (XyFlow `panActivationKeyCode`).
     ///
-    /// This matches XyFlow's default "space-to-pan" editor affordance.
+    /// This is gated by `space_to_pan` for backward compatibility.
+    ///
+    /// Default: `Some("Space")`.
+    #[serde(
+        default = "default_pan_activation_key_code",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub pan_activation_key_code: Option<NodeGraphKeyCode>,
+
+    /// Enables panning the canvas by holding an activation key and dragging with the left mouse.
+    ///
+    /// This matches XyFlow's default "space-to-pan" editor affordance. The actual key is
+    /// configured by `pan_activation_key_code` (default: Space). The name is kept for backward
+    /// compatibility with early fret-node APIs.
     #[serde(default = "default_space_to_pan")]
     pub space_to_pan: bool,
 
@@ -638,6 +675,7 @@ impl Default for NodeGraphInteractionState {
             delete_key: NodeGraphDeleteKey::default(),
             disable_keyboard_a11y: false,
             pane_click_distance: default_pane_click_distance(),
+            pan_activation_key_code: default_pan_activation_key_code(),
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
             pan_on_scroll_mode: NodeGraphPanOnScrollMode::default(),
@@ -690,6 +728,10 @@ fn default_selection_key() -> NodeGraphModifierKey {
 
 fn default_multi_selection_key() -> NodeGraphModifierKey {
     NodeGraphModifierKey::CtrlOrMeta
+}
+
+fn default_pan_activation_key_code() -> Option<NodeGraphKeyCode> {
+    Some(NodeGraphKeyCode(fret_core::KeyCode::Space))
 }
 
 fn default_pane_click_distance() -> f32 {
