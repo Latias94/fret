@@ -134,8 +134,16 @@ pub struct TableViewProps {
     pub optimize_paint_order: bool,
     /// When enabled, draws only coarse column-group separators instead of per-cell vertical grid lines.
     ///
-    /// This reduces quad count and renderer state churn for wide tables. It is intended as an opt-in
-    /// performance/appearance trade-off for large datasets.
+    /// This reduces quad count and renderer state churn for wide tables, but it also changes the visual
+    /// semantics of the grid (column-level separators are removed).
+    ///
+    /// Limitations / caveats:
+    ///
+    /// - This intentionally trades per-column dividers for only `{left|center|right}` group dividers.
+    /// - It is not a stable styling contract. Prefer keeping it disabled unless profiling shows that
+    ///   per-cell dividers dominate quad count and pipeline switches for your workload.
+    /// - This may be replaced by a formal style option (e.g. `TableGridLines`) or removed entirely
+    ///   once a better default grid strategy exists.
     pub optimize_grid_lines: bool,
 }
 

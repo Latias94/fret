@@ -609,6 +609,8 @@ impl WinitAppDriver for TableStressDriver {
                                                         optimize_grid_lines: parse_env_bool(
                                                             "FRET_TABLE_OPTIMIZE_GRID_LINES",
                                                         )
+                                                        // Debug-only/experimental: see the `optimize_grid_lines`
+                                                        // doc comment on `TableViewProps` for caveats.
                                                         .unwrap_or(false),
                                                         ..Default::default()
                                                     },
