@@ -8,6 +8,7 @@
 
 mod gizmo;
 mod math;
+mod view_gizmo;
 
 pub use gizmo::{
     Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoHandedness, GizmoInput, GizmoMode,
@@ -18,4 +19,8 @@ pub use gizmo::{
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,
+};
+pub use view_gizmo::{
+    ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoState,
+    ViewGizmoUpdate,
 };
