@@ -171,6 +171,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.slider.thumb_size".to_string())
         .or_insert(16.0);
 
+    // new-york-v4 `Badge` defaults:
+    // - `text-xs` (12px) with Tailwind default leading (16px).
+    metrics
+        .entry("component.badge.text_px".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.badge.line_height".to_string())
+        .or_insert(16.0);
+
     // Tooltip defaults in the upstream registry:
     // - `sideOffset={4}`
     // - Arrow uses `h-2 w-2` (8px)
