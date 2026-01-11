@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::hash::Hash;
+
 use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
@@ -34,6 +37,215 @@ pub struct Overlay3dPipelines {
     pub solid_always_pipeline: wgpu::RenderPipeline,
     pub thick_line_depth_pipeline: wgpu::RenderPipeline,
     pub thick_line_always_pipeline: wgpu::RenderPipeline,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Overlay3dPipelineConfig {
+    pub test_depth_bias: wgpu::DepthBiasState,
+}
+
+impl Default for Overlay3dPipelineConfig {
+    fn default() -> Self {
+        Self {
+            test_depth_bias: wgpu::DepthBiasState {
+                constant: -2,
+                slope_scale: -1.0,
+                clamp: 0.0,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Overlay3dCpuBuilder {
+    solid_test: Vec<Overlay3dVertex>,
+    solid_ghost: Vec<Overlay3dVertex>,
+    solid_always: Vec<Overlay3dVertex>,
+    line_test: Vec<Overlay3dLineVertex>,
+    line_ghost: Vec<Overlay3dLineVertex>,
+    line_always: Vec<Overlay3dLineVertex>,
+}
+
+impl Overlay3dCpuBuilder {
+    pub fn clear(&mut self) {
+        self.solid_test.clear();
+        self.solid_ghost.clear();
+        self.solid_always.clear();
+        self.line_test.clear();
+        self.line_ghost.clear();
+        self.line_always.clear();
+    }
+
+    pub fn solid_test(&self) -> &[Overlay3dVertex] {
+        &self.solid_test
+    }
+    pub fn solid_ghost(&self) -> &[Overlay3dVertex] {
+        &self.solid_ghost
+    }
+    pub fn solid_always(&self) -> &[Overlay3dVertex] {
+        &self.solid_always
+    }
+    pub fn line_test(&self) -> &[Overlay3dLineVertex] {
+        &self.line_test
+    }
+    pub fn line_ghost(&self) -> &[Overlay3dLineVertex] {
+        &self.line_ghost
+    }
+    pub fn line_always(&self) -> &[Overlay3dLineVertex] {
+        &self.line_always
+    }
+
+    pub fn solid_test_mut(&mut self) -> &mut Vec<Overlay3dVertex> {
+        &mut self.solid_test
+    }
+    pub fn solid_ghost_mut(&mut self) -> &mut Vec<Overlay3dVertex> {
+        &mut self.solid_ghost
+    }
+    pub fn solid_always_mut(&mut self) -> &mut Vec<Overlay3dVertex> {
+        &mut self.solid_always
+    }
+    pub fn line_test_mut(&mut self) -> &mut Vec<Overlay3dLineVertex> {
+        &mut self.line_test
+    }
+    pub fn line_ghost_mut(&mut self) -> &mut Vec<Overlay3dLineVertex> {
+        &mut self.line_ghost
+    }
+    pub fn line_always_mut(&mut self) -> &mut Vec<Overlay3dLineVertex> {
+        &mut self.line_always
+    }
+}
+
+pub fn push_triangle(
+    out: &mut Vec<Overlay3dVertex>,
+    a: [f32; 3],
+    b: [f32; 3],
+    c: [f32; 3],
+    color: [f32; 4],
+) {
+    out.push(Overlay3dVertex { pos: a, color });
+    out.push(Overlay3dVertex { pos: b, color });
+    out.push(Overlay3dVertex { pos: c, color });
+}
+
+pub fn push_thick_line_quad(
+    out: &mut Vec<Overlay3dLineVertex>,
+    a: [f32; 3],
+    b: [f32; 3],
+    color: [f32; 4],
+) {
+    // Two triangles (6 vertices) for a screen-space thick line quad.
+    out.extend_from_slice(&[
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: -1.0,
+            color,
+        },
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: 1.0,
+            color,
+        },
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: 1.0,
+            color,
+        },
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 0.0,
+            side: -1.0,
+            color,
+        },
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: 1.0,
+            color,
+        },
+        Overlay3dLineVertex {
+            a,
+            b,
+            t: 1.0,
+            side: -1.0,
+            color,
+        },
+    ]);
+}
+
+#[derive(Debug, Clone)]
+pub struct Overlay3dCacheEntry {
+    pub overlay: Overlay3dPipelines,
+    pub batch: Overlay3dBatch,
+}
+
+impl Overlay3dCacheEntry {
+    pub fn update_uniform(&self, queue: &wgpu::Queue, uniforms: &Overlay3dUniforms) {
+        queue.write_buffer(&self.overlay.uniform, 0, bytemuck::bytes_of(uniforms));
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Overlay3dCache<K> {
+    entries: HashMap<K, Overlay3dCacheEntry>,
+    color_format: wgpu::TextureFormat,
+    depth_format: wgpu::TextureFormat,
+    config: Overlay3dPipelineConfig,
+}
+
+impl<K> Overlay3dCache<K>
+where
+    K: Eq + Hash,
+{
+    pub fn new(color_format: wgpu::TextureFormat, depth_format: wgpu::TextureFormat) -> Self {
+        Self {
+            entries: HashMap::new(),
+            color_format,
+            depth_format,
+            config: Overlay3dPipelineConfig::default(),
+        }
+    }
+
+    pub fn new_with_config(
+        color_format: wgpu::TextureFormat,
+        depth_format: wgpu::TextureFormat,
+        config: Overlay3dPipelineConfig,
+    ) -> Self {
+        Self {
+            entries: HashMap::new(),
+            color_format,
+            depth_format,
+            config,
+        }
+    }
+
+    pub fn get(&self, key: &K) -> Option<&Overlay3dCacheEntry> {
+        self.entries.get(key)
+    }
+
+    pub fn ensure(&mut self, device: &wgpu::Device, key: K) -> &mut Overlay3dCacheEntry {
+        let color_format = self.color_format;
+        let depth_format = self.depth_format;
+        let config = self.config;
+        self.entries
+            .entry(key)
+            .or_insert_with(|| Overlay3dCacheEntry {
+                overlay: Overlay3dPipelines::new_with_config(
+                    device,
+                    color_format,
+                    depth_format,
+                    config,
+                ),
+                batch: Overlay3dBatch::default(),
+            })
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -199,6 +411,20 @@ impl Overlay3dPipelines {
         color_format: wgpu::TextureFormat,
         depth_format: wgpu::TextureFormat,
     ) -> Self {
+        Self::new_with_config(
+            device,
+            color_format,
+            depth_format,
+            Overlay3dPipelineConfig::default(),
+        )
+    }
+
+    pub fn new_with_config(
+        device: &wgpu::Device,
+        color_format: wgpu::TextureFormat,
+        depth_format: wgpu::TextureFormat,
+        config: Overlay3dPipelineConfig,
+    ) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret viewport overlay3d shader"),
             source: wgpu::ShaderSource::Wgsl(OVERLAY3D_WGSL.into()),
@@ -357,11 +583,7 @@ impl Overlay3dPipelines {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 depth_write_enabled: false,
-                bias: wgpu::DepthBiasState {
-                    constant: -2,
-                    slope_scale: -1.0,
-                    clamp: 0.0,
-                },
+                bias: config.test_depth_bias,
                 ..depth_state.clone()
             }),
             multisample: wgpu::MultisampleState::default(),
@@ -431,11 +653,7 @@ impl Overlay3dPipelines {
                 },
                 depth_stencil: Some(wgpu::DepthStencilState {
                     depth_write_enabled: false,
-                    bias: wgpu::DepthBiasState {
-                        constant: -2,
-                        slope_scale: -1.0,
-                        clamp: 0.0,
-                    },
+                    bias: config.test_depth_bias,
                     ..depth_state.clone()
                 }),
                 multisample: wgpu::MultisampleState::default(),

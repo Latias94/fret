@@ -19,8 +19,9 @@ use fret_launch::{
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
-    Overlay3dBatch, Overlay3dLineVertex, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
-    ViewportOverlay3dContext,
+    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dLineVertex, Overlay3dPipelines,
+    Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext, push_thick_line_quad,
+    push_triangle,
 };
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -442,63 +443,11 @@ fn ortho_half_height_to_distance(ortho_half_height: f32) -> f32 {
 
 type Uniforms = Overlay3dUniforms;
 
-fn push_thick_line_quad(out: &mut Vec<LineVertex>, a: [f32; 3], b: [f32; 3], color: [f32; 4]) {
-    // Two triangles (6 vertices) for a screen-space thick line quad.
-    out.extend_from_slice(&[
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: -1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: -1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: -1.0,
-            color,
-        },
-    ]);
-}
-
 struct Gizmo3dDemoTarget {
     id: RenderTargetId,
     size: (u32, u32),
     color: wgpu::Texture,
     depth: wgpu::Texture,
-}
-
-struct Gizmo3dDemoGpu {
-    overlay: Overlay3dPipelines,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -950,6 +899,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  L: local/world   P: pivot active/center\n");
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
         out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
+        out.push_str("  O: toggle depth mode (depth test / on top)\n");
         out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
@@ -970,6 +920,10 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Gizmo: size_policy={:?}\n",
             self.gizmo.config.size_policy
+        ));
+        out.push_str(&format!(
+            "Gizmo: depth_mode={:?}\n",
+            self.gizmo.config.depth_mode
         ));
 
         if self.op_mask_enabled {
@@ -1080,64 +1034,51 @@ struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
 }
 
-#[derive(Clone)]
-struct Gizmo3dDemoViewportOverlayWindow {
-    overlay: Overlay3dPipelines,
-    batch: Overlay3dBatch,
+struct Gizmo3dDemoViewportOverlayService {
+    cache: Overlay3dCache<(AppWindowId, RenderTargetId)>,
 }
 
-#[derive(Default)]
-struct Gizmo3dDemoViewportOverlayService {
-    per_viewport: HashMap<(AppWindowId, RenderTargetId), Gizmo3dDemoViewportOverlayWindow>,
+impl Default for Gizmo3dDemoViewportOverlayService {
+    fn default() -> Self {
+        Self {
+            cache: Overlay3dCache::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::TextureFormat::Depth24Plus,
+            ),
+        }
+    }
 }
 
 impl Gizmo3dDemoViewportOverlayService {
-    fn ensure_entry(
+    fn upload(
         &mut self,
-        window: AppWindowId,
-        target: RenderTargetId,
-        gpu: &Gizmo3dDemoGpu,
-    ) -> &mut Gizmo3dDemoViewportOverlayWindow {
-        self.per_viewport
-            .entry((window, target))
-            .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
-                overlay: gpu.overlay.clone(),
-                batch: Overlay3dBatch::default(),
-            })
-    }
-
-    fn update_buffers(
-        &mut self,
-        window: AppWindowId,
-        target: RenderTargetId,
-        gpu: &Gizmo3dDemoGpu,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        solid_test: &[Vertex],
-        solid_ghost: &[Vertex],
-        solid_always: &[Vertex],
-        line_test: &[LineVertex],
-        line_ghost: &[LineVertex],
-        line_always: &[LineVertex],
-    ) {
-        let entry = self.ensure_entry(window, target, gpu);
+        window: AppWindowId,
+        target: RenderTargetId,
+        uniforms: Uniforms,
+        cpu: &Overlay3dCpuBuilder,
+    ) -> Overlay3dPipelines {
+        let entry = self.cache.ensure(device, (window, target));
+        entry.update_uniform(queue, &uniforms);
         entry.batch.upload(
             device,
             queue,
-            solid_test,
-            solid_ghost,
-            solid_always,
-            line_test,
-            line_ghost,
-            line_always,
+            cpu.solid_test(),
+            cpu.solid_ghost(),
+            cpu.solid_always(),
+            cpu.line_test(),
+            cpu.line_ghost(),
+            cpu.line_always(),
         );
+        entry.overlay.clone()
     }
 
     fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
-        let Some(overlays) = self.per_viewport.get(&(window, target)) else {
+        let Some(entry) = self.cache.get(&(window, target)) else {
             return;
         };
-        overlays.batch.record(&overlays.overlay, pass);
+        entry.batch.record(&entry.overlay, pass);
     }
 }
 
@@ -1167,8 +1108,8 @@ struct Gizmo3dDemoWindowState {
     overlay: OverlayTextCache,
     view_gizmo_labels: ViewGizmoLabelCache,
     hud: GizmoHudCache,
+    overlay_cpu: Overlay3dCpuBuilder,
     target: Option<Gizmo3dDemoTarget>,
-    gpu: Option<Gizmo3dDemoGpu>,
     doc: DocumentId,
     warmup_frames_remaining: u8,
 }
@@ -1212,8 +1153,8 @@ impl Gizmo3dDemoDriver {
             overlay: OverlayTextCache::default(),
             view_gizmo_labels: ViewGizmoLabelCache::default(),
             hud: GizmoHudCache::default(),
+            overlay_cpu: Overlay3dCpuBuilder::default(),
             target: None,
-            gpu: None,
             doc,
             warmup_frames_remaining: 3,
         }
@@ -1325,6 +1266,7 @@ impl Gizmo3dDemoDriver {
         (target.id, color_view, depth_view, target.size)
     }
 
+    #[cfg(any())]
     fn ensure_gpu(state: &mut Gizmo3dDemoWindowState, context: &WgpuContext) {
         if state.gpu.is_some() {
             return;
@@ -2231,6 +2173,22 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     } else {
                         m.apply_op_mask();
                     }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyO,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.depth_mode = match m.gizmo.config.depth_mode {
+                        DepthMode::Test => DepthMode::Always,
+                        DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
+                    };
                 });
                 app.request_redraw(window);
             }
@@ -3231,7 +3189,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
     ) -> EngineFrameUpdate {
         let (target_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
-        Self::ensure_gpu(state, context);
 
         let animating = state
             .demo
@@ -3248,8 +3205,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         if animating {
             app.request_redraw(window);
         }
-
-        let gpu = state.gpu.as_ref().expect("gpu ensured");
 
         let (
             scene_targets,
@@ -3338,9 +3293,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             view_proj: view_proj.to_cols_array_2d(),
             viewport_and_thickness: [size.0 as f32, size.1 as f32, thickness_px, 0.0],
         };
-        context
-            .queue
-            .write_buffer(&gpu.overlay.uniform, 0, bytemuck::bytes_of(&uniforms));
+        let cpu = &mut state.overlay_cpu;
+        cpu.clear();
 
         let mut cube_verts: Vec<Vertex> = Vec::new();
         for t in &scene_targets {
@@ -3365,39 +3319,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 })
         });
 
-        let mut solid_verts_test: Vec<Vertex> = Vec::new();
-        let mut solid_verts_ghost: Vec<Vertex> = Vec::new();
-        let mut solid_verts_always: Vec<Vertex> = Vec::new();
-
         for tri in draw.triangles {
             let a = tri.a.to_array();
             let b = tri.b.to_array();
             let c = tri.c.to_array();
             let color = [tri.color.r, tri.color.g, tri.color.b, tri.color.a];
-            let push = |out: &mut Vec<Vertex>| {
-                out.push(Vertex { pos: a, color });
-                out.push(Vertex { pos: b, color });
-                out.push(Vertex { pos: c, color });
-            };
             match tri.depth {
-                DepthMode::Test => push(&mut solid_verts_test),
-                DepthMode::Ghost => push(&mut solid_verts_ghost),
-                DepthMode::Always => push(&mut solid_verts_always),
+                DepthMode::Test => push_triangle(cpu.solid_test_mut(), a, b, c, color),
+                DepthMode::Ghost => push_triangle(cpu.solid_ghost_mut(), a, b, c, color),
+                DepthMode::Always => push_triangle(cpu.solid_always_mut(), a, b, c, color),
             }
         }
-
-        let mut line_verts_test: Vec<LineVertex> = Vec::new();
-        let mut line_verts_ghost: Vec<LineVertex> = Vec::new();
-        let mut line_verts_always: Vec<LineVertex> = Vec::new();
 
         for line in draw.lines {
             let a = line.a.to_array();
             let b = line.b.to_array();
             let color = [line.color.r, line.color.g, line.color.b, line.color.a];
             match line.depth {
-                DepthMode::Test => push_thick_line_quad(&mut line_verts_test, a, b, color),
-                DepthMode::Ghost => push_thick_line_quad(&mut line_verts_ghost, a, b, color),
-                DepthMode::Always => push_thick_line_quad(&mut line_verts_always, a, b, color),
+                DepthMode::Test => push_thick_line_quad(cpu.line_test_mut(), a, b, color),
+                DepthMode::Ghost => push_thick_line_quad(cpu.line_ghost_mut(), a, b, color),
+                DepthMode::Always => push_thick_line_quad(cpu.line_always_mut(), a, b, color),
             }
         }
 
@@ -3437,35 +3378,25 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
                 };
 
-                solid_verts_always.push(Vertex {
-                    pos: w[0].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[1].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[2].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[0].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[2].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[3].to_array(),
-                    color: fill,
-                });
+                push_triangle(
+                    cpu.solid_always_mut(),
+                    w[0].to_array(),
+                    w[1].to_array(),
+                    w[2].to_array(),
+                    fill,
+                );
+                push_triangle(
+                    cpu.solid_always_mut(),
+                    w[0].to_array(),
+                    w[2].to_array(),
+                    w[3].to_array(),
+                    fill,
+                );
 
                 let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
                 for (a, b) in edges {
                     push_thick_line_quad(
-                        &mut line_verts_always,
+                        cpu.line_always_mut(),
                         w[a].to_array(),
                         w[b].to_array(),
                         border,
@@ -3474,21 +3405,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
         }
 
-        app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
-            svc.update_buffers(
-                window,
-                target_id,
-                gpu,
-                &context.device,
-                &context.queue,
-                &solid_verts_test,
-                &solid_verts_ghost,
-                &solid_verts_always,
-                &line_verts_test,
-                &line_verts_ghost,
-                &line_verts_always,
-            );
-        });
+        let overlay =
+            app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
+                svc.upload(
+                    &context.device,
+                    &context.queue,
+                    window,
+                    target_id,
+                    uniforms,
+                    cpu,
+                )
+            });
 
         let clear = wgpu::Color {
             r: 0.08,
@@ -3529,8 +3456,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             });
 
             if let Some(cube_vb) = &cube_vb {
-                pass.set_bind_group(0, &gpu.overlay.bind_group, &[]);
-                pass.set_pipeline(&gpu.overlay.tri_pipeline);
+                pass.set_bind_group(0, &overlay.bind_group, &[]);
+                pass.set_pipeline(&overlay.tri_pipeline);
                 pass.set_vertex_buffer(0, cube_vb.slice(..));
                 pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
             }
