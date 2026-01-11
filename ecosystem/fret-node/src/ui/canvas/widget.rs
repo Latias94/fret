@@ -547,10 +547,14 @@ impl NodeGraphCanvas {
         } else {
             1.0
         };
-        let size = (self.style.resize_handle_size / zoom).max(1.0 / zoom.max(1.0e-6));
-        let size = size
-            .min(node_rect.size.width.0.max(0.0))
-            .min(node_rect.size.height.0.max(0.0));
+        let min_size = 1.0 / zoom.max(1.0e-6);
+        let size = (self.style.resize_handle_size / zoom).max(min_size);
+
+        // Prevent resize handles from covering the full node for small nodes (which would make it
+        // impossible to click/drag the node body without starting a resize).
+        let max_w = (0.25 * node_rect.size.width.0.max(0.0)).max(min_size);
+        let max_h = (0.25 * node_rect.size.height.0.max(0.0)).max(min_size);
+        let size = size.min(max_w).min(max_h);
 
         let x0 = node_rect.origin.x.0;
         let y0 = node_rect.origin.y.0;
