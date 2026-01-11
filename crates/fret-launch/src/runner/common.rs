@@ -131,6 +131,11 @@ pub struct WinitRunnerConfig {
     ///
     /// This is used for `SceneOp::SvgMaskIcon` and `SceneOp::SvgImage` rasterizations.
     pub svg_raster_budget_bytes: u64,
+    /// Soft upper bound for total GPU memory used by renderer-owned intermediate targets.
+    ///
+    /// This covers internal multi-pass steps such as MSAA resolves, effect intermediates, clip masks,
+    /// and post-processing substrates (ADR 0120).
+    pub renderer_intermediate_budget_bytes: u64,
     /// MSAA sample count used by the renderer's offscreen path pass.
     ///
     /// Set to `1` to disable MSAA-based AA for paths (more compatible, lower quality).
@@ -200,6 +205,7 @@ impl Default for WinitRunnerConfig {
             file_dialog_max_file_bytes: 32 * 1024 * 1024,
             file_dialog_max_files: 128,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
+            renderer_intermediate_budget_bytes: 256 * 1024 * 1024,
             path_msaa_samples: 4,
             accessibility_enabled: true,
             text_font_families: fret_render::TextFontFamilyConfig::default(),

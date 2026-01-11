@@ -181,6 +181,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
 
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
+        renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
         self.app

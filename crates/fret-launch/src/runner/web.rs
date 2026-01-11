@@ -1627,6 +1627,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             let gfx_slot = self.pending_gfx.clone();
             let proxy = self.event_loop_proxy.clone();
             let svg_budget = self.config.svg_raster_budget_bytes;
+            let intermediate_budget = self.config.renderer_intermediate_budget_bytes;
             let msaa = self.config.path_msaa_samples;
             let font_config = self.config.text_font_families.clone();
             spawn_local(async move {
@@ -1662,6 +1663,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
                 renderer.set_svg_raster_budget_bytes(svg_budget);
+                renderer.set_intermediate_budget_bytes(intermediate_budget);
                 renderer.set_path_msaa_samples(msaa);
                 let _ = renderer.set_text_font_families(&font_config);
 
