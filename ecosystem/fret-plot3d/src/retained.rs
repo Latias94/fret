@@ -2,7 +2,8 @@ use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
     AppWindowId, Event, MouseButton, PointerEvent, RenderTargetId, SemanticsRole, UiServices,
-    ViewportFit, ViewportInputEvent, ViewportInputKind, ViewportMapping,
+    ViewportFit, ViewportInputEvent, ViewportInputEventLegacy, ViewportInputGeometry,
+    ViewportInputKind, ViewportMapping, WindowMetricsService,
 };
 use fret_runtime::{Effect, Model};
 use fret_ui::UiHost;
@@ -110,6 +111,7 @@ impl Plot3dCanvas {
 
     fn push_viewport_input(&self, app: &mut impl UiHost, args: ViewportInputArgs) -> bool {
         let mapping = args.viewport.mapping(args.bounds);
+        let mapped = mapping.map();
         let (uv, target_px) = if args.clamped {
             (
                 mapping.window_point_to_uv_clamped(args.position),
@@ -125,7 +127,28 @@ impl Plot3dCanvas {
             (uv, target_px)
         };
 
+        let pixels_per_point = app
+            .global::<WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(args.window))
+            .unwrap_or(1.0);
+
         app.push_effect(Effect::ViewportInput(ViewportInputEvent {
+            window: args.window,
+            target: args.viewport.target,
+            geometry: ViewportInputGeometry {
+                content_rect_px: args.bounds,
+                draw_rect_px: mapped.draw_rect,
+                target_px_size: args.viewport.target_px_size,
+                fit: args.viewport.fit,
+                pixels_per_point,
+            },
+            cursor_px: args.position,
+            uv,
+            target_px,
+            kind: args.kind,
+        }));
+
+        app.push_effect(Effect::ViewportInputLegacy(ViewportInputEventLegacy {
             window: args.window,
             target: args.viewport.target,
             uv,

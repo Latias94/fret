@@ -1,6 +1,7 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUploadToken, RenderTargetId, TimerToken, WindowLogicalPosition,
+    ImageId, ImageUploadToken, Rect, RenderTargetId, TimerToken, ViewportFit,
+    WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -288,9 +289,34 @@ pub enum Event {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportInputEventLegacy {
+    pub window: AppWindowId,
+    pub target: RenderTargetId,
+    pub uv: (f32, f32),
+    pub target_px: (u32, u32),
+    pub kind: ViewportInputKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViewportInputGeometry {
+    /// The viewport widget bounds in window-local logical pixels (ADR 0017).
+    pub content_rect_px: Rect,
+    /// The mapped draw rect in window-local logical pixels after applying the viewport `fit`.
+    pub draw_rect_px: Rect,
+    /// The backing render target size in physical pixels.
+    pub target_px_size: (u32, u32),
+    pub fit: ViewportFit,
+    /// Pixels-per-point (a.k.a. window scale factor) used to convert logical px → physical px.
+    pub pixels_per_point: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewportInputEvent {
     pub window: AppWindowId,
     pub target: RenderTargetId,
+    pub geometry: ViewportInputGeometry,
+    /// Cursor position in window-local logical pixels (ADR 0017).
+    pub cursor_px: Point,
     pub uv: (f32, f32),
     pub target_px: (u32, u32),
     pub kind: ViewportInputKind,

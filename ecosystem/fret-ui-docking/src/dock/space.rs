@@ -563,6 +563,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<WindowMetricsService>()
             .and_then(|svc| svc.inner_bounds(self.window))
             .unwrap_or(self.last_bounds);
+        let pixels_per_point = cx
+            .app
+            .global::<WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(self.window))
+            .unwrap_or(1.0);
         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
 
         match dock_drag.as_ref() {
@@ -784,6 +789,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             if let Some(e) = viewport_input_from_hit(
                                 self.window,
                                 hit.clone(),
+                                pixels_per_point,
                                 *position,
                                 ViewportInputKind::PointerDown {
                                     button: *button,
@@ -962,6 +968,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             let e = viewport_input_from_hit_clamped(
                                 self.window,
                                 hit,
+                                pixels_per_point,
                                 *position,
                                 ViewportInputKind::PointerMove {
                                     buttons: *buttons,
@@ -993,6 +1000,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     && let Some(e) = viewport_input_from_hit(
                                         self.window,
                                         hit,
+                                        pixels_per_point,
                                         *position,
                                         ViewportInputKind::PointerMove {
                                             buttons: *buttons,
@@ -1078,6 +1086,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             && let Some(e) = viewport_input_from_hit(
                                 self.window,
                                 hit,
+                                pixels_per_point,
                                 *position,
                                 ViewportInputKind::Wheel {
                                     delta: *delta,
@@ -1231,6 +1240,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 let e = viewport_input_from_hit_clamped(
                                     self.window,
                                     capture.hit.clone(),
+                                    pixels_per_point,
                                     *position,
                                     ViewportInputKind::PointerUp {
                                         button: *button,
@@ -1317,6 +1327,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     ) && let Some(e) = viewport_input_from_hit(
                                         self.window,
                                         hit,
+                                        pixels_per_point,
                                         *position,
                                         ViewportInputKind::PointerUp {
                                             button: *button,

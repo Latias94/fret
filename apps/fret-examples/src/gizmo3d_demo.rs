@@ -472,6 +472,14 @@ fn selection_op(modifiers: &fret_core::Modifiers) -> SelectionOp {
     }
 }
 
+fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
+    if modifiers.ctrl || modifiers.meta {
+        0.2
+    } else {
+        1.0
+    }
+}
+
 fn apply_click_selection_op(
     selection: &mut Vec<GizmoTargetId>,
     active_target: &mut GizmoTargetId,
@@ -842,6 +850,7 @@ struct MarqueeSelection {
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
+    pixels_per_point: f32,
     gizmo: Gizmo,
     view_gizmo: ViewGizmo,
     theme_preset_index: usize,
@@ -1013,6 +1022,7 @@ impl Default for Gizmo3dDemoModel {
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
+            pixels_per_point: 1.0,
             gizmo: Gizmo::new(gizmo_cfg),
             view_gizmo,
             theme_preset_index: 0,
@@ -1035,6 +1045,7 @@ impl Default for Gizmo3dDemoModel {
                 dragging: false,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             },
             camera: OrbitCamera::default(),
             last_frame_instant: None,
@@ -2650,10 +2661,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
 
             // Use UV instead of integer target pixels to avoid cursor quantization.
-            let cursor_px = Vec2::new(
-                event.uv.0 * m.viewport_px.0 as f32,
-                event.uv.1 * m.viewport_px.1 as f32,
-            );
+            let (tw, th) = event.geometry.target_px_size;
+            let cursor_px = Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32);
 
             let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
 
@@ -2780,6 +2789,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
             };
 
+            let precision = match event.kind {
+                ViewportInputKind::PointerMove { modifiers, .. } => {
+                    precision_multiplier(&modifiers)
+                }
+                ViewportInputKind::PointerDown { modifiers, .. } => {
+                    precision_multiplier(&modifiers)
+                }
+                ViewportInputKind::PointerUp { modifiers, .. } => precision_multiplier(&modifiers),
+                ViewportInputKind::Wheel { modifiers, .. } => precision_multiplier(&modifiers),
+            };
+
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
 
@@ -2831,6 +2851,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     dragging: false,
                     snap,
                     cancel: false,
+                    precision,
                 };
             };
 
@@ -2981,6 +3002,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             dragging: false,
                             snap: modifiers.shift,
                             cancel: false,
+                            precision,
                         };
                         let _ = m.gizmo.update(
                             view_projection,
@@ -3162,6 +3184,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 dragging,
                 snap,
                 cancel: false,
+                precision,
             };
 
             let selected: Vec<GizmoTarget3d> = m
@@ -3270,7 +3293,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         state: &mut Self::WindowState,
         context: &WgpuContext,
         renderer: &mut Renderer,
-        _scale_factor: f32,
+        scale_factor: f32,
         _tick_id: fret_runtime::TickId,
         _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
@@ -3280,6 +3303,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         let animating = state
             .demo
             .update(app, |m, _cx| {
+                let scale_factor = scale_factor.clamp(0.1, 16.0);
+                if (m.pixels_per_point - scale_factor).abs() > 1e-3 {
+                    let ratio = (scale_factor / m.pixels_per_point).clamp(0.1, 16.0);
+                    m.pixels_per_point = scale_factor;
+                    m.gizmo.config = m.gizmo.config.scale_for_pixels_per_point(ratio);
+                    m.view_gizmo.config = m.view_gizmo.config.scale_for_pixels_per_point(ratio);
+                }
+
                 let now = Instant::now();
                 let dt = m
                     .last_frame_instant

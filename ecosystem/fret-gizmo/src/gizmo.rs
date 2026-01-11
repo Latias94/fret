@@ -540,6 +540,11 @@ pub struct GizmoInput {
     pub dragging: bool,
     pub snap: bool,
     pub cancel: bool,
+    /// Drag precision multiplier (1.0 = normal). Values < 1.0 reduce sensitivity for fine control.
+    ///
+    /// This is intentionally host-defined (no hard-coded keybindings) so editor apps can map it to
+    /// any modifier scheme (e.g. Ctrl/Alt/Shift).
+    pub precision: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1527,6 +1532,7 @@ impl Gizmo {
         }
 
         let active = self.state.active.unwrap();
+        let precision = input_precision(input.precision);
 
         match self.state.drag_mode {
             GizmoMode::Translate => {
@@ -1577,7 +1583,7 @@ impl Gizmo {
                             return None;
                         }
                         self.state.drag_total_axis_raw =
-                            dy * self.state.drag_translate_dolly_world_per_px;
+                            dy * self.state.drag_translate_dolly_world_per_px * precision;
                         let desired_total = if input.snap {
                             self.config
                                 .translate_snap_step
@@ -1608,7 +1614,7 @@ impl Gizmo {
                             .unwrap_or(self.state.drag_origin)
                         });
 
-                        let delta_world = hit_world - self.state.drag_prev_hit_world;
+                        let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
                         self.state.drag_prev_hit_world = hit_world;
 
                         if self.state.drag_translate_is_plane {
@@ -1747,6 +1753,7 @@ impl Gizmo {
                         }
 
                         let mut delta_q = Quat::from_rotation_arc(prev, current);
+                        let mut angle_scale = precision;
                         if let Some(speed) = self
                             .config
                             .arcball_rotation_speed
@@ -1754,8 +1761,11 @@ impl Gizmo {
                             .then_some(self.config.arcball_rotation_speed)
                             .filter(|s| *s > 0.0 && (*s - 1.0).abs() > 1e-3)
                         {
+                            angle_scale *= speed;
+                        }
+                        if (angle_scale - 1.0).abs() > 1e-3 {
                             let (axis, angle) = quat_axis_angle(delta_q);
-                            delta_q = Quat::from_axis_angle(axis, angle * speed);
+                            delta_q = Quat::from_axis_angle(axis, angle * angle_scale);
                         }
 
                         self.state.drag_total_arcball_raw =
@@ -1895,7 +1905,8 @@ impl Gizmo {
                         };
                         angle *= self.handedness_rotation_sign();
 
-                        let delta_angle = wrap_angle(angle - self.state.drag_prev_angle);
+                        let delta_angle =
+                            wrap_angle(angle - self.state.drag_prev_angle) * precision;
                         self.state.drag_prev_angle = angle;
                         self.state.drag_total_angle_raw += delta_angle;
 
@@ -2047,7 +2058,7 @@ impl Gizmo {
                         });
 
                         let basis = self.state.drag_bounds_basis;
-                        let delta_world = hit_world - self.state.drag_prev_hit_world;
+                        let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
                         self.state.drag_prev_hit_world = hit_world;
                         let delta_local = Vec3::new(
                             delta_world.dot(basis[0]),
@@ -2175,7 +2186,7 @@ impl Gizmo {
                         .unwrap_or(self.state.drag_origin)
                     });
 
-                    let delta_world = hit_world - self.state.drag_prev_hit_world;
+                    let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
                     self.state.drag_prev_hit_world = hit_world;
 
                     if let Some((a, b)) = self.state.drag_scale_plane_axes {
@@ -6335,6 +6346,13 @@ fn origin_z01(
     Some(z01.clamp(0.0, 1.0))
 }
 
+fn input_precision(precision: f32) -> f32 {
+    if !precision.is_finite() {
+        return 1.0;
+    }
+    precision.clamp(0.01, 100.0)
+}
+
 fn axis_length_world(
     view_projection: Mat4,
     viewport: ViewportRect,
@@ -6547,6 +6565,7 @@ mod tests {
                 dragging: false,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             },
             targets[0].id,
             &targets,
@@ -6591,6 +6610,7 @@ mod tests {
                 dragging: false,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             },
             targets[0].id,
             &targets,
@@ -6699,6 +6719,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -6709,6 +6730,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -6739,6 +6761,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -6821,6 +6844,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -6831,6 +6855,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -6853,6 +6878,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -6905,6 +6931,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -6915,6 +6942,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -6927,6 +6955,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -6978,6 +7007,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -6988,6 +7018,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7006,6 +7037,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7056,6 +7088,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7066,6 +7099,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7084,6 +7118,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7138,6 +7173,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7148,6 +7184,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7160,6 +7197,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7212,6 +7250,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7222,6 +7261,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7234,6 +7274,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7288,6 +7329,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7298,6 +7340,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7316,6 +7359,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7366,6 +7410,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7376,6 +7421,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7394,6 +7440,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7897,6 +7944,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -7907,6 +7955,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -7934,6 +7983,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -7990,6 +8040,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8000,6 +8051,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8018,6 +8070,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8085,6 +8138,7 @@ mod tests {
                 dragging: true,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             };
             let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8095,6 +8149,7 @@ mod tests {
                 dragging: true,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             };
             let moved = gizmo
                 .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8111,6 +8166,7 @@ mod tests {
                 dragging: true,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             };
             let back = gizmo
                 .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8182,6 +8238,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8192,6 +8249,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8210,6 +8268,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8403,6 +8462,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8413,6 +8473,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8447,6 +8508,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8501,6 +8563,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8511,6 +8574,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8538,6 +8602,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8607,6 +8672,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8617,6 +8683,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8656,6 +8723,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
@@ -8731,6 +8799,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8741,6 +8810,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8769,6 +8839,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -8838,6 +8909,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -8848,6 +8920,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -8884,6 +8957,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
@@ -8990,6 +9064,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -9000,6 +9075,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -9019,6 +9095,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
@@ -9119,6 +9196,7 @@ mod tests {
             dragging: true,
             snap: true,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -9129,6 +9207,7 @@ mod tests {
             dragging: true,
             snap: true,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -9292,6 +9371,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -9302,6 +9382,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -9322,6 +9403,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let back = gizmo
             .update(view_proj, vp, input_back, targets[0].id, &targets)
@@ -9384,6 +9466,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 
@@ -9394,6 +9477,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let moved = gizmo
             .update(view_proj, vp, input_move, targets[0].id, &targets)
@@ -9734,6 +9818,7 @@ mod tests {
             dragging: true,
             snap: false,
             cancel: false,
+            precision: 1.0,
         };
         let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
 

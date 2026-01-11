@@ -4,6 +4,9 @@ Status: Accepted
 
 ## Context
 
+Note: this ADR defines the legacy forwarding contract. For the explicit-units contract with mapping
+geometry and DPI scale factor, see `docs/adr/0147-viewport-input-forwarding-explicit-units.md`.
+
 Fret embeds engine viewports as `SceneOp::ViewportSurface` (ADR 0007). A real editor also needs to
 forward input from the UI viewport widget to the host app/engine:
 
@@ -33,7 +36,7 @@ References:
 
 Define a core event shape that is independent of the engine implementation:
 
-- `fret-core::ViewportInputEvent`
+- `fret-core::ViewportInputEventLegacy`
 - `fret-core::ViewportInputKind`
 
 Events include:
@@ -54,7 +57,7 @@ This is carried by `PointerEvent::Move { position, buttons, modifiers }`.
 
 ### 3) Viewport mapping is explicit and reusable
 
-Viewport widgets map `PointerEvent` → `ViewportInputEvent` using an explicit mapping type
+Viewport widgets map `PointerEvent` → `ViewportInputEventLegacy` using an explicit mapping type
 (`ViewportMapping`), so that:
 
 - the mapping logic is shared across viewports/panels/windows,
@@ -62,8 +65,9 @@ Viewport widgets map `PointerEvent` → `ViewportInputEvent` using an explicit m
 
 ### 4) Forwarding is effect-driven, not a direct engine call from widgets
 
-Viewport widgets enqueue `Effect::ViewportInput(ViewportInputEvent)`; the platform runner drains
-effects and delivers them to the host integration callback (e.g. `WinitDriver::viewport_input`).
+Viewport widgets enqueue `Effect::ViewportInputLegacy(ViewportInputEventLegacy)`; the platform runner
+drains effects and delivers them to the host integration callback (e.g.
+`WinitDriver::viewport_input_legacy`).
 
 This preserves the platform boundary (ADR 0003) and avoids coupling widgets to engine objects.
 
