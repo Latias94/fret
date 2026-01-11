@@ -115,6 +115,13 @@ Notes on the NV12 GPU path (`FRET_STREAMING_GPU_YUV=1`):
   `upload_bytes_applied` reflects actual CPU->GPU uploads performed by the applied path.
 - A quick sanity check is that `streaming_nv12_demo` should show a significantly smaller `yuv_us` vs CPU fallback.
 
+Notes on capability gating (ADR 0124):
+
+- The runner publishes a per-session capability snapshot as an app global: `fret_render::RendererCapabilities`.
+- NV12 GPU conversion requires both:
+  - `RendererCapabilities.streaming_images.nv12_gpu_convert == true` (supported), and
+  - an enable switch (either `WinitRunnerConfig.streaming_nv12_gpu_convert_enabled = true` or `FRET_STREAMING_GPU_YUV=1`).
+
 If you need structured logs from the runner:
 
 ```powershell

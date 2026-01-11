@@ -1,3 +1,4 @@
+mod capabilities;
 mod error;
 mod images;
 mod renderer;
@@ -8,6 +9,7 @@ mod targets;
 mod text;
 pub mod viewport_overlay;
 
+pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
 pub use images::{

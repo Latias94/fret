@@ -843,6 +843,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
+    renderer_caps: Option<fret_render::RendererCapabilities>,
     no_services: NoUiServices,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
@@ -1349,10 +1350,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         uv_plane: &[u8],
         color_info: fret_core::ImageColorInfo,
     ) -> bool {
-        if std::env::var_os("FRET_STREAMING_GPU_YUV")
-            .filter(|v| !v.is_empty())
-            .is_none()
-        {
+        let requested = self.config.streaming_nv12_gpu_convert_enabled
+            || std::env::var_os("FRET_STREAMING_GPU_YUV").is_some_and(|v| !v.is_empty());
+        if !requested {
+            return false;
+        }
+
+        let supported = self
+            .renderer_caps
+            .as_ref()
+            .is_some_and(|c| c.streaming_images.nv12_gpu_convert);
+        if !supported {
             return false;
         }
 
@@ -1894,6 +1902,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             renderdoc: None,
             context: None,
             renderer: None,
+            renderer_caps: None,
             no_services: NoUiServices,
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),

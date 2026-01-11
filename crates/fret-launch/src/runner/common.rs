@@ -156,6 +156,10 @@ pub struct WinitRunnerConfig {
     /// When enabled, the runner may emit `Event::{ImageUpdateApplied,ImageUpdateDropped}` for
     /// streaming image updates (ADR 0126).
     pub streaming_update_ack_enabled: bool,
+
+    /// Enable experimental GPU-assisted NV12 conversion for streaming image updates when supported
+    /// by the selected backend/device (ADR 0124).
+    pub streaming_nv12_gpu_convert_enabled: bool,
 }
 
 pub enum WgpuInit {
@@ -205,6 +209,7 @@ impl Default for WinitRunnerConfig {
             streaming_staging_budget_bytes: 128 * 1024 * 1024,
             streaming_perf_snapshot_enabled: false,
             streaming_update_ack_enabled: false,
+            streaming_nv12_gpu_convert_enabled: false,
         }
     }
 }

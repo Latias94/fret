@@ -202,8 +202,9 @@ This section is intentionally lightweight and should be updated as work lands.
   (ADR 0123 / ADR 0126): `crates/fret-launch/src/runner/streaming_upload.rs`.
 - YUV updates are applied in the runner at drain time (queue coalescing stays separate from apply), keeping a clean
   extension point for future zero-copy imports/capability gates (ADR 0124).
-- An experimental NV12 GPU conversion path exists behind `FRET_STREAMING_GPU_YUV=1` (NV12 planes + a tiny conversion
-  pass into RGBA8 sRGB image storage): `crates/fret-launch/src/runner/yuv_gpu.rs`.
+- An experimental NV12 GPU conversion path exists behind capability gating (ADR 0124) and an enable switch
+  (`WinitRunnerConfig.streaming_nv12_gpu_convert_enabled` or `FRET_STREAMING_GPU_YUV=1`): NV12 planes + a tiny conversion
+  pass into RGBA8 sRGB image storage in `crates/fret-launch/src/runner/yuv_gpu.rs`.
 
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`

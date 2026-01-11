@@ -60,6 +60,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
     streaming_uploads: StreamingUploadQueue,
     nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
+    renderer_caps: Option<fret_render::RendererCapabilities>,
 
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
@@ -165,6 +166,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
             nv12_gpu: None,
+            renderer_caps: None,
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
@@ -261,6 +263,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(gfx) = pending else {
             return;
         };
+
+        let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&gfx.ctx);
+        self.app
+            .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
+        self.renderer_caps = Some(renderer_caps);
 
         let prev_rev = self
             .app
@@ -616,10 +623,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         uv_plane: &[u8],
         color_info: fret_core::ImageColorInfo,
     ) -> bool {
-        if std::env::var_os("FRET_STREAMING_GPU_YUV")
-            .filter(|v| !v.is_empty())
-            .is_none()
-        {
+        let requested = self.config.streaming_nv12_gpu_convert_enabled
+            || std::env::var_os("FRET_STREAMING_GPU_YUV").is_some_and(|v| !v.is_empty());
+        if !requested {
+            return false;
+        }
+
+        let supported = self
+            .renderer_caps
+            .as_ref()
+            .is_some_and(|c| c.streaming_images.nv12_gpu_convert);
+        if !supported {
             return false;
         }
 
