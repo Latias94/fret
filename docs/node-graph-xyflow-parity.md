@@ -628,7 +628,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - `deleteKeyCode`: `NodeGraphInteractionState.delete_key` (default: Backspace)
       - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
       - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
-      - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y`
+      - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y` (disables keyboard focus traversal / a11y paths, not delete/copy/paste)
     - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
 
 - [~] **Roving focus / a11y semantics**

@@ -5958,12 +5958,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if snapshot.interaction.disable_keyboard_a11y {
-                    return;
-                }
-
                 if modifiers.ctrl || modifiers.meta {
-                    if *key == fret_core::KeyCode::Tab {
+                    if !snapshot.interaction.disable_keyboard_a11y
+                        && *key == fret_core::KeyCode::Tab
+                    {
                         let cmd = if modifiers.shift {
                             CMD_NODE_GRAPH_FOCUS_PREV_EDGE
                         } else {
@@ -6019,7 +6017,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
 
-                if *key == fret_core::KeyCode::Tab
+                if !snapshot.interaction.disable_keyboard_a11y
+                    && *key == fret_core::KeyCode::Tab
                     && !modifiers.ctrl
                     && !modifiers.meta
                     && !modifiers.alt
@@ -6071,6 +6070,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     && !modifiers.alt
                     && !modifiers.alt_gr
                 {
+                    if snapshot.interaction.disable_keyboard_a11y {
+                        return;
+                    }
+
                     if snapshot.selected_nodes.is_empty() && snapshot.selected_groups.is_empty() {
                         return;
                     }
@@ -8545,7 +8548,7 @@ mod tests {
     }
 
     #[test]
-    fn disable_keyboard_a11y_blocks_delete_shortcut() {
+    fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
         let mut host = TestUiHostImpl::default();
         let (graph_value, _a, _b) = make_test_graph_two_nodes();
         let graph = host.models.insert(graph_value);
@@ -8577,8 +8580,49 @@ mod tests {
         }
 
         assert!(
+            host.effects.iter().any(|e| matches!(
+                e,
+                Effect::Command { command, .. }
+                    if *command == CommandId::from(crate::ui::commands::CMD_NODE_GRAPH_DELETE_SELECTION)
+            )),
+            "delete shortcut should still work when disable_keyboard_a11y is enabled (XYFlow parity)"
+        );
+    }
+
+    #[test]
+    fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.disable_keyboard_a11y = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+
+        {
+            let mut cx = event_cx(&mut host, &mut services, bounds);
+            cx.window = Some(AppWindowId::default());
+            canvas.event(
+                &mut cx,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::Tab,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+
+        assert!(
             host.effects.is_empty(),
-            "delete shortcut should be blocked when disable_keyboard_a11y is enabled"
+            "Tab focus traversal should not dispatch focus commands when disable_keyboard_a11y is enabled"
         );
     }
 

@@ -528,9 +528,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub delete_key: NodeGraphDeleteKey,
 
-    /// Disable keyboard-driven accessibility and shortcut handling (XyFlow `disableKeyboardA11y`).
+    /// Disable keyboard-driven accessibility and focus traversal (XyFlow `disableKeyboardA11y`).
     ///
-    /// When enabled, the canvas will avoid handling global keyboard shortcuts and focus traversal.
+    /// When enabled, the canvas will avoid handling keyboard a11y navigation such as:
+    /// - Tab-based focus traversal (nodes / edges),
+    /// - Arrow-key nudging for selected nodes.
+    ///
+    /// Editor shortcuts such as delete/copy/paste are still handled.
     /// Overlay UIs (searcher, context menus) still receive keyboard events, and Escape can still
     /// cancel in-progress interactions.
     #[serde(default)]
