@@ -1,12 +1,15 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
+use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
+use fret_core::scene::{Color, DrawOrder, SceneOp};
+use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d,
-    ViewportRect,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId,
+    Transform3d, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -24,6 +27,79 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GizmoOpMaskPreset {
+    Translate,
+    Rotate,
+    Scale,
+    Universal,
+    UniversalArcball,
+    BoundsOnly,
+}
+
+impl GizmoOpMaskPreset {
+    const ALL: [Self; 6] = [
+        Self::Translate,
+        Self::Rotate,
+        Self::Scale,
+        Self::Universal,
+        Self::UniversalArcball,
+        Self::BoundsOnly,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Translate => "Translate (axis+plane+view)",
+            Self::Rotate => "Rotate (axis+view+arcball)",
+            Self::Scale => "Scale (axis+plane+uniform+bounds)",
+            Self::Universal => "Universal (t + r + s-axis)",
+            Self::UniversalArcball => "Universal (t + r + arcball + s-axis)",
+            Self::BoundsOnly => "Bounds (box scaling only)",
+        }
+    }
+
+    fn mask(self) -> GizmoOps {
+        match self {
+            Self::Translate => GizmoOps::translate_all(),
+            Self::Rotate => GizmoOps::rotate_all(),
+            Self::Scale => GizmoOps::scale_all(),
+            Self::Universal => {
+                GizmoOps::translate_all()
+                    | GizmoOps::rotate_axis()
+                    | GizmoOps::rotate_view()
+                    | GizmoOps::scale_axis()
+            }
+            Self::UniversalArcball => {
+                GizmoOps::translate_all()
+                    | GizmoOps::rotate_axis()
+                    | GizmoOps::rotate_view()
+                    | GizmoOps::rotate_arcball()
+                    | GizmoOps::scale_axis()
+            }
+            Self::BoundsOnly => GizmoOps::scale_bounds(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct OverlayTextCache {
+    last_text: String,
+    last_scale_bits: u32,
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<fret_core::text::TextMetrics>,
+}
+
+impl Default for OverlayTextCache {
+    fn default() -> Self {
+        Self {
+            last_text: String::new(),
+            last_scale_bits: 0,
+            blob: None,
+            metrics: None,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 struct FrameAnim {
@@ -478,6 +554,9 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     gizmo: Gizmo,
+    op_mask_enabled: bool,
+    op_mask_preset_index: usize,
+    show_help: bool,
     targets: Vec<GizmoTarget3d>,
     selection: Vec<GizmoTargetId>,
     marquee_preview: Vec<GizmoTargetId>,
@@ -490,6 +569,77 @@ struct Gizmo3dDemoModel {
     input: GizmoInput,
     camera: OrbitCamera,
     last_frame_instant: Option<Instant>,
+}
+
+impl Gizmo3dDemoModel {
+    fn is_busy(&self) -> bool {
+        self.input.dragging
+            || self.gizmo.state.active.is_some()
+            || self.pending_selection.is_some()
+            || self.marquee.is_some()
+    }
+
+    fn op_mask_preset(&self) -> GizmoOpMaskPreset {
+        let idx = self.op_mask_preset_index % GizmoOpMaskPreset::ALL.len();
+        GizmoOpMaskPreset::ALL[idx]
+    }
+
+    fn set_op_mask_preset(&mut self, preset: GizmoOpMaskPreset) {
+        let idx = GizmoOpMaskPreset::ALL
+            .iter()
+            .position(|p| *p == preset)
+            .unwrap_or(0);
+        self.op_mask_preset_index = idx;
+        self.apply_op_mask();
+    }
+
+    fn apply_op_mask(&mut self) {
+        if self.op_mask_enabled {
+            let preset = self.op_mask_preset();
+            self.gizmo.config.operation_mask = Some(preset.mask());
+        } else {
+            self.gizmo.config.operation_mask = None;
+        }
+    }
+
+    fn overlay_text(&self) -> String {
+        let mut out = String::new();
+        out.push_str("Gizmo3D Demo\n");
+        out.push_str("Controls:\n");
+        out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
+        out.push_str("  L: local/world   P: pivot active/center\n");
+        out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
+        out.push_str("  H: toggle help\n");
+        out.push_str("  Esc: cancel drag / selection\n");
+        out.push_str("  Ctrl+A: select all (Shift: clear)\n");
+        out.push('\n');
+
+        out.push_str(&format!(
+            "Mode: {:?}   Orientation: {:?}   Pivot: {:?}\n",
+            self.gizmo.config.mode, self.gizmo.config.orientation, self.gizmo.config.pivot_mode
+        ));
+
+        if self.op_mask_enabled {
+            let preset = self.op_mask_preset();
+            out.push_str(&format!("Op mask: ON   Preset: {}\n", preset.name()));
+            out.push_str(&format!(
+                "  mask={:?}\n",
+                self.gizmo
+                    .config
+                    .operation_mask
+                    .unwrap_or_else(GizmoOps::empty)
+            ));
+        } else {
+            out.push_str("Op mask: OFF\n");
+        }
+
+        out.push_str(&format!(
+            "Selection: {}   Active: {}\n",
+            self.selection.len(),
+            self.active_target.0
+        ));
+        out
+    }
 }
 
 impl Default for Gizmo3dDemoModel {
@@ -540,6 +690,9 @@ impl Default for Gizmo3dDemoModel {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
+            op_mask_enabled: false,
+            op_mask_preset_index: 0,
+            show_help: true,
             targets,
             selection: vec![GizmoTargetId(1)],
             marquee_preview: Vec::new(),
@@ -728,6 +881,7 @@ struct Gizmo3dDemoWindowState {
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<Plot3dModel>,
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
+    overlay: OverlayTextCache,
     target: Option<Gizmo3dDemoTarget>,
     gpu: Option<Gizmo3dDemoGpu>,
     doc: DocumentId,
@@ -769,6 +923,7 @@ impl Gizmo3dDemoDriver {
             root: None,
             plot,
             demo,
+            overlay: OverlayTextCache::default(),
             target: None,
             gpu: None,
             doc,
@@ -1671,7 +1826,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Rotate;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Rotate;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1681,7 +1843,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Scale;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Scale;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1691,7 +1860,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Translate;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Translate;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1701,7 +1877,79 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Universal;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Universal;
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyH,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.show_help = !m.show_help;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyM,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.op_mask_enabled = !m.op_mask_enabled;
+                    if m.op_mask_enabled {
+                        // Pick a reasonable starting preset based on the current coarse mode.
+                        let preset = match m.gizmo.config.mode {
+                            GizmoMode::Translate => GizmoOpMaskPreset::Translate,
+                            GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
+                            GizmoMode::Scale => GizmoOpMaskPreset::Scale,
+                            GizmoMode::Universal => GizmoOpMaskPreset::Universal,
+                        };
+                        m.set_op_mask_preset(preset);
+                    } else {
+                        m.apply_op_mask();
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::BracketLeft,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() || !m.op_mask_enabled {
+                        return;
+                    }
+                    let n = GizmoOpMaskPreset::ALL.len();
+                    m.op_mask_preset_index = (m.op_mask_preset_index + n - 1) % n;
+                    m.apply_op_mask();
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::BracketRight,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() || !m.op_mask_enabled {
+                        return;
+                    }
+                    let n = GizmoOpMaskPreset::ALL.len();
+                    m.op_mask_preset_index = (m.op_mask_preset_index + 1) % n;
+                    m.apply_op_mask();
                 });
                 app.request_redraw(window);
             }
@@ -2729,6 +2977,91 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
         frame.paint_all(scene);
+
+        let (show_help, overlay_text) = state
+            .demo
+            .read(app, |_app, m| (m.show_help, m.overlay_text()))
+            .unwrap_or((false, String::new()));
+
+        if show_help {
+            let scale_bits = scale_factor.to_bits();
+            if state.overlay.last_text != overlay_text
+                || state.overlay.last_scale_bits != scale_bits
+            {
+                if let Some(blob) = state.overlay.blob.take() {
+                    services.text().release(blob);
+                }
+
+                let style = TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: Px(13.0),
+                    weight: FontWeight::MEDIUM,
+                    slant: fret_core::text::TextSlant::Normal,
+                    line_height: Some(Px(16.0)),
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: Some(Px(bounds.size.width.0 - 24.0)),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    scale_factor,
+                };
+
+                let (blob, metrics) = services.text().prepare(&overlay_text, &style, constraints);
+                state.overlay.last_text = overlay_text;
+                state.overlay.last_scale_bits = scale_bits;
+                state.overlay.blob = Some(blob);
+                state.overlay.metrics = Some(metrics);
+            }
+
+            if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
+                let pad = Px(10.0);
+                let outer_pad = Px(12.0);
+
+                let bg_rect = Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + outer_pad.0),
+                        Px(bounds.origin.y.0 + outer_pad.0),
+                    ),
+                    Size::new(
+                        Px(metrics.size.width.0 + pad.0 * 2.0),
+                        Px(metrics.size.height.0 + pad.0 * 2.0),
+                    ),
+                );
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(50_000),
+                    rect: bg_rect,
+                    background: Color {
+                        r: 0.08,
+                        g: 0.08,
+                        b: 0.09,
+                        a: 0.78,
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        r: 0.35,
+                        g: 0.35,
+                        b: 0.40,
+                        a: 0.85,
+                    },
+                    corner_radii: Corners::all(Px(12.0)),
+                });
+                scene.push(SceneOp::Text {
+                    order: DrawOrder(50_010),
+                    origin: Point::new(
+                        Px(bg_rect.origin.x.0 + pad.0),
+                        Px(bg_rect.origin.y.0 + pad.0),
+                    ),
+                    text: blob,
+                    color: Color {
+                        r: 0.92,
+                        g: 0.92,
+                        b: 0.94,
+                        a: 0.95,
+                    },
+                });
+            }
+        }
     }
 }
 
