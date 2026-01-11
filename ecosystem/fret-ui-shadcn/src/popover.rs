@@ -9,8 +9,8 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Overflow, SemanticsProps, SizeStyle,
-    TextProps,
+    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Overflow, RenderTransformProps,
+    SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -443,10 +443,14 @@ impl Popover {
                             );
 
                             let overlay_content =
-                                overlay_motion::wrap_opacity_and_render_transform_gated(
+                                overlay_motion::wrap_opacity_and_render_transform_with_layouts_gated(
                                     cx,
+                                    LayoutStyle::default(),
                                     opacity,
-                                    transform,
+                                    RenderTransformProps {
+                                        layout: LayoutStyle::default(),
+                                        transform,
+                                    },
                                     !reference_hidden,
                                     vec![wrapper],
                                 );
@@ -1595,11 +1599,14 @@ mod tests {
         let content_id = popover_content_cell.get().expect("popover content id");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
             .expect("content node");
-        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+        let content_bounds = ui
+            .debug_node_visual_bounds(content_node)
+            .expect("content visual bounds");
 
         let clip_bottom = 80.0f32;
         let target_y = (clip_bottom + 5.0).max(content_bounds.origin.y.0 + 2.0);
-        let point = Point::new(Px(content_bounds.origin.x.0 + 5.0), Px(target_y));
+        let target_x = (content_bounds.origin.x.0 + 5.0).max(0.0);
+        let point = Point::new(Px(target_x), Px(target_y));
         assert!(
             content_bounds.contains(point),
             "expected point inside popover bounds; point={point:?} bounds={content_bounds:?}"
@@ -1703,7 +1710,9 @@ mod tests {
         let content_id = popover_content_cell.get().expect("popover content id");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
             .expect("content node");
-        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+        let content_bounds = ui
+            .debug_node_visual_bounds(content_node)
+            .expect("content visual bounds");
 
         // Click just above the panel: this should land on the arrow and not trigger outside-press
         // dismissal.
@@ -1711,6 +1720,11 @@ mod tests {
             Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
             Px(content_bounds.origin.y.0 - 1.0),
         );
+        let pre_hit = ui.debug_hit_test(click);
+        let pre_path = pre_hit
+            .hit
+            .map(|n| ui.debug_node_path(n))
+            .unwrap_or_default();
 
         ui.dispatch_event(
             &mut app,
@@ -1735,7 +1749,13 @@ mod tests {
             }),
         );
 
-        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected arrow click to stay open; click={click:?} hit={:?} path={pre_path:?} layers={:?}",
+            pre_hit.hit,
+            pre_hit.active_layer_roots
+        );
     }
 
     #[test]

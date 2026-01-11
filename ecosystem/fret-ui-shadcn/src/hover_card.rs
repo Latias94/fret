@@ -1541,11 +1541,15 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, selectable_element)
                 .expect("selectable node");
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let selectable_bounds = snap
-            .nodes
-            .iter()
-            .find(|n| n.id == selectable_node)
-            .map(|n| n.bounds)
+        let selectable_bounds = ui
+            .debug_node_visual_bounds(selectable_node)
+            .or_else(|| ui.debug_node_bounds(selectable_node))
+            .or_else(|| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.id == selectable_node)
+                    .map(|n| n.bounds)
+            })
             .expect("selectable bounds");
 
         // Select text (double click selects the first word), then leave the hover card.
@@ -1563,6 +1567,17 @@ mod tests {
                 click_count: 2,
                 pointer_type: fret_core::PointerType::Mouse,
             }),
+        );
+        let (anchor, caret) = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            selectable_element,
+            fret_ui::element::SelectableTextState::default,
+            |state| (state.selection_anchor, state.caret),
+        );
+        assert_ne!(
+            anchor, caret,
+            "expected selectable text to have an active selection after double click"
         );
 
         let outside = Point::new(Px(400.0), Px(400.0));
@@ -1597,6 +1612,18 @@ mod tests {
                 anchor: 0,
                 focus: 0,
             },
+        );
+        let (anchor, caret) = fret_ui::elements::with_element_state(
+            &mut app,
+            window,
+            selectable_element,
+            fret_ui::element::SelectableTextState::default,
+            |state| (state.selection_anchor, state.caret),
+        );
+        assert_eq!(
+            (anchor, caret),
+            (0, 0),
+            "expected selection to collapse before asserting hover card close"
         );
         render(&mut ui, &mut app, &mut services, 5);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);

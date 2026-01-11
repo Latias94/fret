@@ -1108,7 +1108,8 @@ impl DropdownMenu {
                                         ..Default::default()
                                     };
 
-                                    vec![cx.scroll(
+                                    vec![cx.keyed("menu-scroll", |cx| {
+                                        cx.scroll(
                                         ScrollProps {
                                             layout: scroll_layout,
                                             axis: ScrollAxis::Y,
@@ -1715,7 +1716,8 @@ impl DropdownMenu {
                                             }
                                             vec![roving]
                                         },
-                                    )]
+                                        )
+                                    })]
                                         },
                                     );
 
@@ -4284,15 +4286,49 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 0"))
             .expect("Sub 0 menu item");
-        let wheel_pos = rect_center(first.bounds);
 
-        let submenu_menu_bounds = snap
+        let submenu_menu_id = snap
             .nodes
             .iter()
             .filter(|n| n.role == SemanticsRole::Menu)
-            .map(|n| n.bounds)
-            .find(|b| b.contains(wheel_pos))
+            .find(|n| ui.is_descendant(n.id, first.id))
+            .map(|n| n.id)
+            .expect("submenu menu id");
+        let submenu_menu_bounds = ui
+            .debug_node_visual_bounds(submenu_menu_id)
+            .or_else(|| ui.debug_node_bounds(submenu_menu_id))
             .expect("submenu menu bounds");
+        let wheel_pos = rect_center(submenu_menu_bounds);
+
+        let viewport_bounds = {
+            let path = ui.debug_node_path(first.id);
+            let mut out: Option<Rect> = None;
+            for window in path.windows(2) {
+                let parent = window[0];
+                let child = window[1];
+                let parent_bounds = ui
+                    .debug_node_visual_bounds(parent)
+                    .or_else(|| ui.debug_node_bounds(parent));
+                let child_bounds = ui
+                    .debug_node_visual_bounds(child)
+                    .or_else(|| ui.debug_node_bounds(child));
+                let (Some(parent_bounds), Some(child_bounds)) = (parent_bounds, child_bounds)
+                else {
+                    continue;
+                };
+
+                let same_origin = (parent_bounds.origin.x.0 - child_bounds.origin.x.0).abs() < 0.01
+                    && (parent_bounds.origin.y.0 - child_bounds.origin.y.0).abs() < 0.01;
+                let same_width =
+                    (parent_bounds.size.width.0 - child_bounds.size.width.0).abs() < 0.01;
+                let expands_vertically =
+                    child_bounds.size.height.0 > parent_bounds.size.height.0 + 1.0;
+                if same_origin && same_width && expands_vertically {
+                    out = Some(parent_bounds);
+                }
+            }
+            out.unwrap_or(submenu_menu_bounds)
+        };
 
         for _ in 0..60 {
             ui.dispatch_event(
@@ -4325,16 +4361,19 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
             .expect("last submenu item");
-        let last_bounds = ui.debug_node_bounds(last.id).expect("last bounds");
+        let last_bounds = ui
+            .debug_node_visual_bounds(last.id)
+            .or_else(|| ui.debug_node_bounds(last.id))
+            .expect("last bounds");
 
-        let menu_top = submenu_menu_bounds.origin.y.0;
-        let menu_bottom = submenu_menu_bounds.origin.y.0 + submenu_menu_bounds.size.height.0;
+        let menu_top = viewport_bounds.origin.y.0;
+        let menu_bottom = viewport_bounds.origin.y.0 + viewport_bounds.size.height.0;
         let last_top = last_bounds.origin.y.0;
         let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
 
         assert!(
             last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
-            "expected last submenu item to be visible after wheel scrolling; menu={submenu_menu_bounds:?} last={last_bounds:?}"
+            "expected last submenu item to be visible after wheel scrolling; menu={viewport_bounds:?} last={last_bounds:?}"
         );
     }
 
