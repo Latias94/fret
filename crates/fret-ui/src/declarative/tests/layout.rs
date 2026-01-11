@@ -4604,6 +4604,68 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
     );
 }
 
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scroll-axis-both-min-content-width",
+        |cx| {
+            let mut p = crate::element::ScrollProps::default();
+            p.layout.size.width = crate::element::Length::Fill;
+            p.layout.size.height = crate::element::Length::Fill;
+            p.axis = crate::element::ScrollAxis::Both;
+            p.probe_unbounded = true;
+
+            vec![cx.scroll(p, |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        layout: crate::element::LayoutStyle {
+                            size: crate::element::SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Auto,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        gap: Px(0.0),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("a")],
+                )]
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let column_bounds = ui.debug_node_bounds(column_node).expect("column bounds");
+
+    assert_eq!(
+        column_bounds.size.width, bounds.size.width,
+        "expected scroll content bounds to be at least the viewport width; got={:?} want={:?}",
+        column_bounds.size.width, bounds.size.width
+    );
+}
+
 #[test]
 fn scroll_thumb_drag_updates_offset() {
     let mut app = TestHost::new();

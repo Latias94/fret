@@ -24,6 +24,9 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
   `ScrollAreaCorner` surface (Radix-shaped), while keeping the compact `ScrollArea::new(children)`
   builder for convenience.
 - Pass: Supports passing a `ScrollHandle` when consumers need programmatic scrolling.
+- Pass: Mirrors the Radix `Viewport` content minimum width behavior: the scroll content bounds are
+  clamped to at least the viewport bounds so `w-full` descendants do not collapse under
+  `probe_unbounded` layouts (see `docs/audits/radix-scroll-area.md`).
 
 ### Scrollbar visibility (Radix `type`)
 
