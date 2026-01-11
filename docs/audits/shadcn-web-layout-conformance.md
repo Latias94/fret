@@ -66,6 +66,7 @@ These shadcn v4 new-york-v4 pages are good early gates because they stress the m
 patterns:
 
 - `button-default`
+- `badge-demo`
 - `checkbox-demo`
 - `radio-group-demo`
 - `tabs-demo`
