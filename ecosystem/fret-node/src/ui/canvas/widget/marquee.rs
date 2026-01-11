@@ -69,36 +69,40 @@ pub(super) fn handle_marquee_move<H: UiHost>(
         selected.sort();
         selected.dedup();
 
-        let selected_edges = if snapshot.interaction.edges_selectable {
-            let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
-            canvas
-                .graph
-                .read_ref(cx.app, |graph| {
-                    graph
-                        .edges
-                        .iter()
-                        .filter_map(|(edge_id, edge)| {
-                            let from_node = graph.ports.get(&edge.from).map(|p| p.node)?;
-                            let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
-                            match snapshot.interaction.box_select_edges {
-                                crate::io::NodeGraphBoxSelectEdges::None => None,
-                                crate::io::NodeGraphBoxSelectEdges::Connected => {
-                                    (nodes.contains(&from_node) || nodes.contains(&to_node))
-                                        .then_some(*edge_id)
+        let selected_edges =
+            if snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable {
+                let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
+                canvas
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        graph
+                            .edges
+                            .iter()
+                            .filter_map(|(edge_id, edge)| {
+                                if !edge.selectable.unwrap_or(true) {
+                                    return None;
                                 }
-                                crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
-                                    (nodes.contains(&from_node) && nodes.contains(&to_node))
-                                        .then_some(*edge_id)
+                                let from_node = graph.ports.get(&edge.from).map(|p| p.node)?;
+                                let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
+                                match snapshot.interaction.box_select_edges {
+                                    crate::io::NodeGraphBoxSelectEdges::None => None,
+                                    crate::io::NodeGraphBoxSelectEdges::Connected => {
+                                        (nodes.contains(&from_node) || nodes.contains(&to_node))
+                                            .then_some(*edge_id)
+                                    }
+                                    crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
+                                        (nodes.contains(&from_node) && nodes.contains(&to_node))
+                                            .then_some(*edge_id)
+                                    }
                                 }
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .ok()
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        };
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
 
         canvas.interaction.marquee = Some(marquee);
         canvas.interaction.focused_edge = None;
@@ -150,7 +154,9 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                     selected.sort();
                     selected.dedup();
 
-                    let selected_edges = if snapshot.interaction.edges_selectable {
+                    let selected_edges = if snapshot.interaction.elements_selectable
+                        && snapshot.interaction.edges_selectable
+                    {
                         let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
                         canvas
                             .graph
@@ -159,6 +165,9 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                                     .edges
                                     .iter()
                                     .filter_map(|(edge_id, edge)| {
+                                        if !edge.selectable.unwrap_or(true) {
+                                            return None;
+                                        }
                                         let from_node =
                                             graph.ports.get(&edge.from).map(|p| p.node)?;
                                         let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;

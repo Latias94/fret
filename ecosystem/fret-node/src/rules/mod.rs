@@ -322,6 +322,7 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
             kind: edge_kind,
             from: from_id,
             to: to_id,
+            selectable: None,
         },
     });
 
@@ -519,6 +520,7 @@ pub fn plan_connect_by_inserting_node(
             kind: edge_kind,
             from: from_id,
             to: inserted.input,
+            selectable: None,
         },
     });
     ops.push(GraphOp::AddEdge {
@@ -527,6 +529,7 @@ pub fn plan_connect_by_inserting_node(
             kind: edge_kind,
             from: inserted.output,
             to: to_id,
+            selectable: None,
         },
     });
 
@@ -655,6 +658,7 @@ pub fn plan_split_edge_by_inserting_node(
             kind: edge.kind,
             from: inserted.output,
             to: edge.to,
+            selectable: edge.selectable,
         },
     });
 

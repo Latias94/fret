@@ -351,6 +351,7 @@ mod tests {
                     kind: EdgeKind::Data,
                     from: src_out,
                     to: in0,
+                    selectable: None,
                 },
             }],
         };

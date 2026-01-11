@@ -80,6 +80,7 @@ fn make_graph() -> (
             kind: EdgeKind::Data,
             from: out_port,
             to: in_port,
+            selectable: None,
         },
     );
 
@@ -205,6 +206,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     kind: EdgeKind::Data,
                     from: out_port,
                     to: in_port,
+                    selectable: None,
                 },
             },
             GraphOp::SetEdgeEndpoints {
@@ -224,6 +226,7 @@ fn connection_changes_from_transaction_maps_edge_ops() {
                     kind: EdgeKind::Data,
                     from: out_port,
                     to: in_port,
+                    selectable: None,
                 },
             },
         ],

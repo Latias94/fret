@@ -172,6 +172,7 @@ fn make_graph_two_nodes_one_edge() -> Graph {
             from: out,
             to: inn,
             kind: EdgeKind::Data,
+            selectable: None,
         },
     );
 

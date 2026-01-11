@@ -169,6 +169,7 @@ fn make_graph_reconnect_to_new_target() -> (Graph, EdgeId, PortId, PortId, PortI
             kind: EdgeKind::Data,
             from: out,
             to: old_in,
+            selectable: None,
         },
     );
 

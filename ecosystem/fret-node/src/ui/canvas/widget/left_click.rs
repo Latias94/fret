@@ -261,6 +261,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
         Hit::EdgeAnchor(edge, endpoint, fixed) => {
+            let edge_selectable = canvas
+                .graph
+                .read_ref(cx.app, |g| {
+                    NodeGraphCanvas::edge_is_selectable(g, &snapshot.interaction, edge)
+                })
+                .ok()
+                .unwrap_or(false);
+
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
             canvas.interaction.pending_group_resize = None;
@@ -275,15 +283,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_marquee = None;
             canvas.interaction.marquee = None;
-            canvas.interaction.focused_edge = Some(edge);
+            canvas.interaction.focused_edge =
+                (snapshot.interaction.edges_focusable && edge_selectable).then_some(edge);
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
             canvas.interaction.hover_edge = None;
 
-            let selectable =
-                snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
-            if selectable {
+            if edge_selectable {
                 let multi = multi_selection_pressed;
                 canvas.update_view_state(cx.app, |s| {
                     if multi {
@@ -456,9 +463,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
             let multi = multi_selection_pressed;
-            let selectable =
-                snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
-            if selectable {
+            let edge_selectable = canvas
+                .graph
+                .read_ref(cx.app, |g| {
+                    NodeGraphCanvas::edge_is_selectable(g, &snapshot.interaction, edge)
+                })
+                .ok()
+                .unwrap_or(false);
+            if edge_selectable {
                 canvas.update_view_state(cx.app, |s| {
                     if multi {
                         if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
@@ -474,7 +486,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                     }
                 });
             }
-            canvas.interaction.focused_edge = snapshot.interaction.edges_focusable.then_some(edge);
+            canvas.interaction.focused_edge =
+                (snapshot.interaction.edges_focusable && edge_selectable).then_some(edge);
             canvas.interaction.edge_drag = Some(EdgeDrag {
                 edge,
                 start_pos: position,

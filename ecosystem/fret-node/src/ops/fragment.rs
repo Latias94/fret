@@ -255,6 +255,7 @@ mod tests {
                 kind: EdgeKind::Data,
                 from: a_out,
                 to: b_in,
+                selectable: None,
             },
         );
 
@@ -450,6 +451,7 @@ impl GraphFragment {
                 kind: old_edge.kind,
                 from: port_map[&old_edge.from],
                 to: port_map[&old_edge.to],
+                selectable: old_edge.selectable,
             };
             tx.push(GraphOp::AddEdge {
                 id: new_edge_id,

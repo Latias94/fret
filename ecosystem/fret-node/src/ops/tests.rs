@@ -59,6 +59,7 @@ fn build_remove_node_tx_captures_ports_and_edges() {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -98,6 +99,7 @@ fn build_disconnect_port_ops_removes_incident_edges() {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -360,6 +362,7 @@ fn set_edge_endpoints_updates_edge_in_place() {
             kind: EdgeKind::Data,
             from: out1,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -429,6 +432,7 @@ fn fragment_paste_transaction_is_deterministic_for_seed() {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -482,6 +486,7 @@ fn invert_transaction_restores_graph_state() {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -523,6 +528,7 @@ fn history_undo_redo_roundtrip() {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 

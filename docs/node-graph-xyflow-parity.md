@@ -339,6 +339,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - keyboard focus is available via `Ctrl/Cmd+Tab` cycling (opt-in policy until per-edge focus nodes exist)
     - config gates: `NodeGraphInteractionState.{elements_selectable, edges_selectable, edges_focusable}`
     - reconnect gating: `NodeGraphInteractionState.edges_reconnectable`
+    - per-edge override: `Edge.selectable` (XyFlow `edge.selectable`)
+      - XyFlow: `repo-ref/xyflow/packages/system/src/types/edges.ts` (`EdgeBase.selectable?: boolean`)
+      - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Edge.selectable: Option<bool>`)
+      - enforced by: `NodeGraphCanvas::edge_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_edge`
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 
 - [~] **Selection keyboard a11y**
   - XyFlow: `elementSelectionKeys` and arrow-key movement in `NodeWrapper` (`onKeyDown`)
@@ -384,6 +389,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node:
     - default: `NodeGraphInteractionState.box_select_edges = connected` (also accepts legacy `box_select_connected_edges: true`)
     - gated by: `NodeGraphInteractionState.edges_selectable`
+    - respects: `Edge.selectable` (unselectable edges are skipped)
 
 ---
 

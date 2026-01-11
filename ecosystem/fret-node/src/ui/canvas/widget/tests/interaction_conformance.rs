@@ -86,6 +86,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             kind: EdgeKind::Data,
             from: out,
             to: inn,
+            selectable: None,
         },
     );
 
@@ -376,6 +377,75 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         .read_ref(&host, |s| s.selected_edges.clone())
         .unwrap_or_default();
     assert_eq!(selected_edges, vec![edge]);
+}
+
+#[test]
+fn marquee_does_not_select_edges_when_edge_selectable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, edge, from, _to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge exists")
+        .selectable = Some(false);
+
+    let graph = host.models.insert(graph_value);
+    let a = graph
+        .read_ref(&host, |g| g.ports.get(&from).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("from port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.interaction.selection_on_drag = true;
+        s.interaction.pane_click_distance = 0.0;
+        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(-10.0), Px(-10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    // Cover only node A (at x=0..220) and exclude node B (at x=320..540).
+    let end = Point::new(Px(250.0), Px(120.0));
+    assert!(marquee::handle_marquee_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        end,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
+
+    let selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_nodes, vec![a]);
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert!(selected_edges.is_empty());
 }
 
 #[test]
@@ -701,6 +771,87 @@ fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
         .read_ref(&host, |s| s.selected_edges.clone())
         .unwrap_or_default();
     assert_eq!(selected_edges, vec![edge]);
+}
+
+#[test]
+fn edge_click_does_not_select_edge_when_edge_selectable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    graph_value
+        .edges
+        .get_mut(&edge)
+        .expect("edge exists")
+        .selectable = Some(false);
+
+    let graph = host.models.insert(graph_value);
+    let a = graph
+        .read_ref(&host, |g| g.ports.get(&from).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("from port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.selected_nodes = vec![a];
+        s.selected_edges.clear();
+        s.selected_groups.clear();
+    });
+
+    let edge_types =
+        NodeGraphEdgeTypes::new().register(EdgeTypeKey::new("data"), |_g, _e, _s, mut h| {
+            h.route = crate::ui::presenter::EdgeRouteKind::Straight;
+            h
+        });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let pos = Point::new(
+        Px(0.5 * (from_center.x.0 + to_center.x.0)),
+        Px(0.5 * (from_center.y.0 + to_center.y.0)),
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_nodes, vec![a]);
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert!(selected_edges.is_empty());
 }
 
 #[test]

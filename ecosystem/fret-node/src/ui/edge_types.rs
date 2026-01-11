@@ -180,6 +180,7 @@ mod tests {
                 kind: EdgeKind::Exec,
                 from: out_port,
                 to: in_port,
+                selectable: None,
             },
         );
 

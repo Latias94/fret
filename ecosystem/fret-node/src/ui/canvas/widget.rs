@@ -4104,6 +4104,20 @@ impl NodeGraphCanvas {
         out
     }
 
+    fn edge_is_selectable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        edge: EdgeId,
+    ) -> bool {
+        if !interaction.elements_selectable || !interaction.edges_selectable {
+            return false;
+        }
+        let Some(edge) = graph.edges.get(&edge) else {
+            return false;
+        };
+        edge.selectable.unwrap_or(true)
+    }
+
     fn should_add_bundle_port(
         graph: &Graph,
         from: PortId,
@@ -4399,7 +4413,13 @@ impl NodeGraphCanvas {
 
         let mut edges: Vec<EdgeId> = self
             .graph
-            .read_ref(host, |g| g.edges.keys().copied().collect())
+            .read_ref(host, |g| {
+                g.edges
+                    .keys()
+                    .copied()
+                    .filter(|id| Self::edge_is_selectable(g, &snapshot.interaction, *id))
+                    .collect()
+            })
             .ok()
             .unwrap_or_default();
         if edges.is_empty() {
@@ -9255,6 +9275,7 @@ mod tests {
                 kind: EdgeKind::Data,
                 from: p_out,
                 to: p_in1,
+                selectable: None,
             },
         );
         graph.edges.insert(
@@ -9263,6 +9284,7 @@ mod tests {
                 kind: EdgeKind::Data,
                 from: p_out,
                 to: p_in2,
+                selectable: None,
             },
         );
 

@@ -73,6 +73,7 @@ fn validate_rejects_edge_with_wrong_direction() {
             kind: EdgeKind::Data,
             from: in_a,
             to: in_b,
+            selectable: None,
         },
     );
 

@@ -205,6 +205,11 @@ pub struct Edge {
     pub from: PortId,
     /// Target port.
     pub to: PortId,
+    /// Whether the edge can be selected (XyFlow `edge.selectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.edges_selectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selectable: Option<bool>,
 }
 
 /// Graph-scoped symbol.
