@@ -124,6 +124,63 @@ fn opacity_element_emits_opacity_stack_ops() {
 }
 
 #[test]
+fn effect_layer_element_emits_effect_stack_ops() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "effect-layer-element-emits-ops",
+        |cx| {
+            let chain =
+                fret_core::EffectChain::from_steps(&[fret_core::EffectStep::Pixelate { scale: 6 }]);
+            vec![
+                cx.effect_layer(fret_core::EffectMode::FilterContent, chain, |cx| {
+                    let mut props = crate::element::ContainerProps::default();
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
+                    props.background = Some(Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    });
+                    vec![cx.container(props, |_| Vec::new())]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(scene.ops_len(), 3);
+    assert!(matches!(
+        scene.ops()[0],
+        SceneOp::PushEffect {
+            mode: fret_core::EffectMode::FilterContent,
+            ..
+        }
+    ));
+    assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+    assert!(matches!(scene.ops()[2], SceneOp::PopEffect));
+}
+
+#[test]
 fn visual_transform_element_emits_transform_stack_ops() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

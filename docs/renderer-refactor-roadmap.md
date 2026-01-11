@@ -240,6 +240,7 @@ Debugging aids (landed on `main`):
 - Scriptable RenderDoc inspection tool: `apps/fret-renderdoc`
 - RenderDoc inspection workflow: `docs/renderdoc-inspection.md`
 - Practical debugging checklist: `docs/debugging-playbook.md`
+- Effects authoring overview (declarative wrapper + Tier A/Tier B guidance): `docs/effects-authoring.md`
 
 ## Work Breakdown (Actionable Checklist)
 

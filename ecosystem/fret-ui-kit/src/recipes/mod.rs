@@ -1,6 +1,9 @@
 pub mod control;
+pub mod effect_recipe;
+pub mod glass;
 pub mod input;
 pub mod menu_list;
+pub mod pixelate;
 pub mod resizable;
 pub mod surface;
 

@@ -189,6 +189,7 @@ impl ElementHostWidget {
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)
+            | ElementInstance::EffectLayer(_)
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::Anchored(_)

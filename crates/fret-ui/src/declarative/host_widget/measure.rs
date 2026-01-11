@@ -164,6 +164,9 @@ impl ElementHostWidget {
             ElementInstance::Opacity(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::EffectLayer(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::VisualTransform(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

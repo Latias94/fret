@@ -407,6 +407,7 @@ fn mount_element<H: UiHost>(
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
+        ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
