@@ -121,8 +121,8 @@ Fret's current contract:
 | --- | --- | --- | --- | --- |
 | Translate axis X/Y/Z | Yes | Yes | **Aligned** | Axis handles exist + picking + axis constraint. `ecosystem/fret-gizmo/src/gizmo.rs` (`pick_translate_handle`, `begin_translate_drag`). |
 | Translate plane XY/XZ/YZ | Yes | Yes | **Aligned** | Plane quads + picking. `pick_translate_handle` + `translate_plane_quad_world`. |
-| Translate "screen-plane" (center handle) | Yes (screen component) | Yes (`TranslateView`, but implemented as a view-plane in code) | **Aligned** | Fret's center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
-| Translate "depth" (move toward/away camera) | No (not explicit) | No (not in core modes) | **Implemented (Fret extension)** | View-direction "dolly" handle (`TranslateHandle::Depth`, id `11`) with screen-delta mapping for stability: `translate_constraint_for_handle`, `begin_translate_drag`, and the Translate update path in `ecosystem/fret-gizmo/src/gizmo.rs`. |
+| Translate "screen-plane" (center handle) | Yes (center screen-plane) | No (not in core modes) | **Aligned** | Fret's center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
+| Translate "depth" (move toward/away camera) | No (not explicit) | Yes (`TranslateView`, along view forward axis) | **Aligned (transform-gizmo) / Fret extension (ImGuizmo)** | View-direction "dolly" handle (`TranslateHandle::Depth`, id `11`) with screen-delta mapping for stability: `translate_constraint_for_handle`, `begin_translate_drag`, and the Translate update path in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Ring drawing + pick based on distance-to-segment. `draw_rotate_rings`, `pick_rotate_axis`. |
 | Rotate around view axis (screen ring) | Yes (`ROTATE_SCREEN`) | Yes (`RotateView`) | **Aligned** | `show_view_axis_ring` + handle id 8, rendered as an outer ring (`view_axis_ring_radius_scale`). `pick_rotate_axis` view ring path, `begin_rotate_drag` view-axis mode. |
 | Arcball rotation | No | Yes (`Arcball`) | **Aligned (basic)** | Fret supports arcball free-rotation in `GizmoMode::Rotate` via `GizmoConfig::show_arcball` and emits `GizmoResult::Arcball { delta, total }` (quat-based), matching transform-gizmo’s contract shape. |
@@ -137,7 +137,7 @@ Fret's current contract:
 | --- | --- | --- | --- | --- |
 | Combine translate + rotate | Yes | Yes | **Aligned** | Fret `GizmoMode::Universal` overlays translate + rotate and resolves pick conflicts. `pick_universal_handle`. |
 | Combine translate + rotate + scale | Yes (`UNIVERSAL`) | Yes (via mode set) | **Aligned (with known gaps)** | Fret Universal supports axis scaling alongside translate+rotate when `universal_includes_scale` is enabled. Note: uniform scale (center handle) remains exclusive to `Scale` mode to avoid center-handle conflicts with view-plane translation. |
-| Fine-grained mode toggles | Yes (bitmask `OPERATION`) | Yes (`EnumSet<GizmoMode>`) | **Not implemented** | Fret uses coarse `GizmoMode` and hard-coded handle sets. Consider evolving to a bitmask/flags surface (without committing policy to `fret-ui`). |
+| Fine-grained mode toggles | Yes (bitmask `OPERATION`) | Yes (`EnumSet<GizmoMode>`) | **Aligned (basic)** | Fret supports both: coarse `GizmoMode` and `GizmoConfig::operation_mask: Option<GizmoOps>` for sub-operation selection. Note: `GizmoMode::Universal` also includes a dedicated toggle for depth translate (`universal_includes_translate_depth`). |
 
 ### C) Orientation, pivot, multi-selection
 
@@ -217,40 +217,48 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 
 This is a suggested sequence for reaching "mature editor" parity without over-design.
 
-### P0 (correctness + UX baseline)
+### What is already strong (baseline coverage)
 
-1. **Stability + picking UX audit (lock-in editor feel)**
-   - Motivation: most user pain comes from drift/overshoot/mispicks, not missing modes.
-   - Outcome: add targeted tests for translate/rotate/scale drag stability + explicit picking priority ladder.
-2. **Universal: scale semantics + picking**
-   - Fret already supports axis scale in `Universal` (via `GizmoConfig::universal_includes_scale`).
-   - Decide whether `Universal` should also include uniform scale, and tighten picking rules so scale doesn't fight translate planes / rotate rings.
-3. **Picking priority ladder**
-   - Explicit priority ordering (e.g. active > hovered; center/plane/axis; rotate view ring) with tunable bias.
-4. **Projection edge-case audit**
-   - Validate orthographic, near-plane clipping, behind-camera cases with tests (project/unproject + pick stability).
-5. **First-frame presentation / redraw robustness**
-   - Ensure viewport + gizmo visuals present without requiring any user input (no "click to see the first frame").
-   - Handle transient `wgpu::SurfaceError::{Timeout,Outdated}` by scheduling a one-shot redraw/RAF retry.
+- Core transform set: translate (axis/plane/screen/dolly), rotate (axis/view/arcball), scale (axis/plane/uniform), bounds/box scaling.
+- Fine-grained operation selection: `GizmoConfig::operation_mask: Option<GizmoOps>` (ImGuizmo-like `OPERATION` / transform-gizmo `EnumSet`).
+- Editor-feel invariants are guarded by tests (return-to-zero stability, behind-camera culling, near-plane edge cases).
 
-### P1 (feature breadth parity)
+### Biggest remaining gaps vs. "mature editor feel" (P0)
 
-1. **Arcball rotation**
-   - Bring parity with transform-gizmo's `Arcball` (trackball) option.
-2. **Plane scaling (XY/XZ/YZ)**
-   - Parity with transform-gizmo; useful for non-uniform edits without axis-only drags.
-3. **ImGuizmo-style behavior knobs**
-   - Axis flip, axis mask, axis/plane fade limits (these are feel multipliers in dense scenes).
+1. **Viewport redraw policy (first frame + interaction-driven redraw)**
+   - Goal: demo/editor should not require any input to present the first frame; interaction should always feel responsive.
+   - Suggested work: ensure the host calls `request_redraw(...)` on startup, on camera/scene changes, and during active drags.
+2. **Universal mode surface + policy**
+   - We now support depth/dolly in Universal behind a toggle (`universal_includes_translate_depth`), but the policy surface is still evolving.
+   - Suggested work: expose all Universal inclusions as explicit toggles (translate depth, axis scale, optional rotate view ring, arcball),
+     and add more overlap regression tests (ortho + very wide FOV + tight proximity to the origin).
+3. **Precision controls**
+   - Add a host-facing way to provide "precision modifier" inputs (e.g. Shift/Alt slows movement, Ctrl changes snap step),
+     without hard-binding to a specific input system.
+4. **Styling API parity**
+   - ImGuizmo offers per-part thickness/sizes (translation arrow size, center circle size, ring thickness, etc).
+   - transform-gizmo offers a compact visuals struct (stroke width + gizmo size + highlight alpha).
+   - Suggested work: add a `GizmoStyle`/`GizmoVisuals`-like struct in Fret (still in ecosystem) that controls per-part metrics
+     while keeping `GizmoConfig` backwards compatible.
 
-### P2 (ImGuizmo-specific extras)
+### Feature breadth beyond the core (P1)
 
-1. **Bounds / box scaling (basic in place)**
-   - Fret already implements a bounds-style box with corner + face handles, and supports `GizmoTarget3d::local_bounds`
-     as the ImGuizmo `localBounds` equivalent input surface.
-   - Next alignment targets: tighter multi-selection scaling semantics (pivot/anchor/axis constraints), and
-     more mature visuals (thickness/AA/consistent occlusion feedback).
-2. **View gizmo (camera cube)**
-   - A separate tool; can be layered on the same math/picking substrate.
+1. **Matrix tooling convenience**
+   - Optional helpers for `TRS <-> Mat4` (decompose/recompose, delta matrix output) if we want easier ImGuizmo-style integrations.
+2. **Custom gizmo extensibility**
+   - Godot-style plugin surface: allow tools to contribute custom handles with explicit picking shapes (segments/capsules/triangles)
+     in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
+
+### Roadmap (suggested, editor-first)
+
+This is a pragmatic path that keeps core stable while opening extensibility points:
+
+1. **MVP: reliable transform manipulator**
+   - Translate/Rotate/Scale/Universal + snapping + robust redraw (no first-frame "click to show").
+2. **MVP+: production-feel polish**
+   - Precision modifier inputs + richer style controls + more overlap tests for Universal.
+3. **Extensibility milestone**
+   - Introduce a gizmo plugin contract with explicit picking primitives + draw lists, inspired by Godot's `EditorNode3DGizmoPlugin`.
 
 ## Notes / open design questions
 
