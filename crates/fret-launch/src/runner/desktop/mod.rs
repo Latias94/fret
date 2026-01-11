@@ -1993,9 +1993,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 self.config.streaming_staging_budget_bytes,
                 self.config.streaming_update_ack_enabled,
             );
-            if self.config.streaming_perf_snapshot_enabled
-                || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
-            {
+            let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
+                || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
+            let streaming_stats_have_activity = stats.update_effects_seen > 0
+                || stats.update_effects_enqueued > 0
+                || stats.update_effects_replaced > 0
+                || stats.update_effects_applied > 0
+                || stats.update_effects_delayed_budget > 0
+                || stats.update_effects_dropped_staging > 0
+                || stats.upload_bytes_applied > 0
+                || stats.pending_updates > 0
+                || stats.pending_staging_bytes > 0
+                || stats.yuv_conversions_attempted > 0
+                || stats.yuv_convert_us > 0;
+            if streaming_snapshot_enabled && streaming_stats_have_activity {
                 self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
                     frame_id: self.frame_id,
                     upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
