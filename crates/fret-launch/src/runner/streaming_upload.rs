@@ -1,9 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use fret_core::{
-    AlphaMode, AppWindowId, FrameId, ImageColorInfo, ImageId, ImageUpdateDropReason,
-    ImageUpdateToken, RectPx,
-};
+use fret_core::{AppWindowId, FrameId, ImageId, ImageUpdateDropReason, ImageUpdateToken, RectPx};
 use fret_runtime::Effect;
 
 use super::yuv;
@@ -138,6 +135,65 @@ fn estimate_upload_bytes(effect: &Effect) -> u64 {
     }
 }
 
+fn chroma_dims_420(width: u32, height: u32) -> (u32, u32) {
+    ((width + 1) / 2, (height + 1) / 2)
+}
+
+fn validate_nv12_payload(
+    width: u32,
+    height: u32,
+    update_rect_px: Option<RectPx>,
+    y_bytes_per_row: u32,
+    y_plane: &[u8],
+    uv_bytes_per_row: u32,
+    uv_plane: &[u8],
+) -> bool {
+    if width == 0 || height == 0 {
+        return false;
+    }
+    if yuv::normalize_update_rect_420(width, height, update_rect_px).is_err() {
+        return false;
+    }
+
+    let (cw, ch) = chroma_dims_420(width, height);
+    if y_bytes_per_row < width || uv_bytes_per_row < cw.saturating_mul(2) {
+        return false;
+    }
+
+    let y_expected = (y_bytes_per_row as usize).saturating_mul(height as usize);
+    let uv_expected = (uv_bytes_per_row as usize).saturating_mul(ch as usize);
+    y_plane.len() == y_expected && uv_plane.len() == uv_expected
+}
+
+fn validate_i420_payload(
+    width: u32,
+    height: u32,
+    update_rect_px: Option<RectPx>,
+    y_bytes_per_row: u32,
+    y_plane: &[u8],
+    u_bytes_per_row: u32,
+    u_plane: &[u8],
+    v_bytes_per_row: u32,
+    v_plane: &[u8],
+) -> bool {
+    if width == 0 || height == 0 {
+        return false;
+    }
+    if yuv::normalize_update_rect_420(width, height, update_rect_px).is_err() {
+        return false;
+    }
+
+    let (cw, ch) = chroma_dims_420(width, height);
+    if y_bytes_per_row < width || u_bytes_per_row < cw || v_bytes_per_row < cw {
+        return false;
+    }
+
+    let y_expected = (y_bytes_per_row as usize).saturating_mul(height as usize);
+    let u_expected = (u_bytes_per_row as usize).saturating_mul(ch as usize);
+    let v_expected = (v_bytes_per_row as usize).saturating_mul(ch as usize);
+    y_plane.len() == y_expected && u_plane.len() == u_expected && v_plane.len() == v_expected
+}
+
 fn streaming_update_token_and_image(effect: &Effect) -> Option<(ImageUpdateToken, ImageId)> {
     match effect {
         Effect::ImageUpdateRgba8 { token, image, .. }
@@ -207,6 +263,71 @@ impl StreamingUploadQueue {
         stats: &mut StreamingUploadStats,
         ack_enabled: bool,
     ) {
+        let (window_hint, payload_ok) = match &effect {
+            Effect::ImageUpdateNv12 {
+                window,
+                width,
+                height,
+                update_rect_px,
+                y_bytes_per_row,
+                y_plane,
+                uv_bytes_per_row,
+                uv_plane,
+                ..
+            } => (
+                *window,
+                validate_nv12_payload(
+                    *width,
+                    *height,
+                    *update_rect_px,
+                    *y_bytes_per_row,
+                    y_plane,
+                    *uv_bytes_per_row,
+                    uv_plane,
+                ),
+            ),
+            Effect::ImageUpdateI420 {
+                window,
+                width,
+                height,
+                update_rect_px,
+                y_bytes_per_row,
+                y_plane,
+                u_bytes_per_row,
+                u_plane,
+                v_bytes_per_row,
+                v_plane,
+                ..
+            } => (
+                *window,
+                validate_i420_payload(
+                    *width,
+                    *height,
+                    *update_rect_px,
+                    *y_bytes_per_row,
+                    y_plane,
+                    *u_bytes_per_row,
+                    u_plane,
+                    *v_bytes_per_row,
+                    v_plane,
+                ),
+            ),
+            Effect::ImageUpdateRgba8 { window, .. } => (*window, true),
+            _ => (None, true),
+        };
+
+        if !payload_ok {
+            if ack_enabled && let Some((token, image)) = streaming_update_token_and_image(&effect) {
+                self.pending_acks.push(StreamingUploadAck {
+                    window_hint,
+                    token,
+                    image,
+                    kind: StreamingUploadAckKind::Dropped(ImageUpdateDropReason::InvalidPayload),
+                });
+            }
+            return;
+        }
+
         let (window, image, stream_generation) = match &effect {
             Effect::ImageUpdateRgba8 {
                 window,
@@ -352,7 +473,7 @@ impl StreamingUploadQueue {
         &mut self,
         per_window_upload_budget_bytes: u64,
         stats: &mut StreamingUploadStats,
-        ack_enabled: bool,
+        _ack_enabled: bool,
     ) -> Vec<Effect> {
         let mut out: Vec<Effect> = Vec::new();
         if self.pending.is_empty() {
@@ -399,126 +520,10 @@ impl StreamingUploadQueue {
                         *bytes = bytes.saturating_sub(removed.staging_bytes);
                     }
 
-                    let token_and_image = streaming_update_token_and_image(&removed.effect);
-                    let maybe_effect = match removed.effect {
-                        effect @ Effect::ImageUpdateRgba8 { .. } => Ok(Some(effect)),
-                        Effect::ImageUpdateNv12 {
-                            window,
-                            token,
-                            image,
-                            stream_generation,
-                            width,
-                            height,
-                            update_rect_px,
-                            y_bytes_per_row,
-                            y_plane,
-                            uv_bytes_per_row,
-                            uv_plane,
-                            color_info,
-                            alpha_mode: _,
-                        } => {
-                            stats.yuv_conversions_attempted =
-                                stats.yuv_conversions_attempted.saturating_add(1);
-                            let t0 = std::time::Instant::now();
-                            yuv::nv12_to_rgba8_rect(
-                                width,
-                                height,
-                                update_rect_px,
-                                y_bytes_per_row,
-                                &y_plane,
-                                uv_bytes_per_row,
-                                &uv_plane,
-                                color_info.range,
-                                color_info.matrix,
-                            )
-                            .map(|(rect, bytes)| {
-                                stats.yuv_convert_us = stats
-                                    .yuv_convert_us
-                                    .saturating_add(t0.elapsed().as_micros() as u64);
-                                stats.yuv_convert_output_bytes = stats
-                                    .yuv_convert_output_bytes
-                                    .saturating_add(bytes.len() as u64);
-                                stats.yuv_conversions_applied =
-                                    stats.yuv_conversions_applied.saturating_add(1);
-                                Some(Effect::ImageUpdateRgba8 {
-                                    window,
-                                    token,
-                                    image,
-                                    stream_generation,
-                                    width,
-                                    height,
-                                    update_rect_px: Some(rect),
-                                    bytes_per_row: rect.w.saturating_mul(4),
-                                    bytes,
-                                    color_info: ImageColorInfo::srgb_rgba(),
-                                    alpha_mode: AlphaMode::Opaque,
-                                })
-                            })
-                            .map_err(|e| e)
-                        }
-                        Effect::ImageUpdateI420 {
-                            window,
-                            token,
-                            image,
-                            stream_generation,
-                            width,
-                            height,
-                            update_rect_px,
-                            y_bytes_per_row,
-                            y_plane,
-                            u_bytes_per_row,
-                            u_plane,
-                            v_bytes_per_row,
-                            v_plane,
-                            color_info,
-                            alpha_mode: _,
-                        } => {
-                            stats.yuv_conversions_attempted =
-                                stats.yuv_conversions_attempted.saturating_add(1);
-                            let t0 = std::time::Instant::now();
-                            yuv::i420_to_rgba8_rect(
-                                width,
-                                height,
-                                update_rect_px,
-                                y_bytes_per_row,
-                                &y_plane,
-                                u_bytes_per_row,
-                                &u_plane,
-                                v_bytes_per_row,
-                                &v_plane,
-                                color_info.range,
-                                color_info.matrix,
-                            )
-                            .map(|(rect, bytes)| {
-                                stats.yuv_convert_us = stats
-                                    .yuv_convert_us
-                                    .saturating_add(t0.elapsed().as_micros() as u64);
-                                stats.yuv_convert_output_bytes = stats
-                                    .yuv_convert_output_bytes
-                                    .saturating_add(bytes.len() as u64);
-                                stats.yuv_conversions_applied =
-                                    stats.yuv_conversions_applied.saturating_add(1);
-                                Some(Effect::ImageUpdateRgba8 {
-                                    window,
-                                    token,
-                                    image,
-                                    stream_generation,
-                                    width,
-                                    height,
-                                    update_rect_px: Some(rect),
-                                    bytes_per_row: rect.w.saturating_mul(4),
-                                    bytes,
-                                    color_info: ImageColorInfo::srgb_rgba(),
-                                    alpha_mode: AlphaMode::Opaque,
-                                })
-                            })
-                            .map_err(|e| e)
-                        }
-                        other => Ok(Some(other)),
-                    };
-
-                    match maybe_effect {
-                        Ok(Some(effect)) => {
+                    match removed.effect {
+                        effect @ (Effect::ImageUpdateRgba8 { .. }
+                        | Effect::ImageUpdateNv12 { .. }
+                        | Effect::ImageUpdateI420 { .. }) => {
                             used = used.saturating_add(upload_bytes);
                             applied_any = true;
                             stats.update_effects_applied =
@@ -527,19 +532,7 @@ impl StreamingUploadQueue {
                                 stats.upload_bytes_applied.saturating_add(upload_bytes);
                             out.push(effect);
                         }
-                        Ok(None) => {}
-                        Err(_message) => {
-                            if ack_enabled && let Some((token, image)) = token_and_image {
-                                self.pending_acks.push(StreamingUploadAck {
-                                    window_hint: removed.window_hint,
-                                    token,
-                                    image,
-                                    kind: StreamingUploadAckKind::Dropped(
-                                        ImageUpdateDropReason::InvalidPayload,
-                                    ),
-                                });
-                            }
-                        }
+                        other => out.push(other),
                     }
                 }
             }
