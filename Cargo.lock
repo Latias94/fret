@@ -1059,6 +1059,7 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "cocoa",
  "fret-app",
  "fret-core",

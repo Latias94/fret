@@ -90,6 +90,9 @@ Useful env vars:
 # Update `StreamingUploadPerfSnapshot` and log budget/drops (when relevant).
 $env:FRET_STREAMING_DEBUG="1"
 
+# Optional: try a GPU path for NV12 conversion (experimental; falls back to CPU).
+$env:FRET_STREAMING_GPU_YUV="1"
+
 # Demo-only helpers (apps/fret-examples streaming_*_demo.rs).
 $env:FRET_DEMO_STREAMING_PERF_EVERY="60"
 $env:FRET_DEMO_AUTO_EXIT_FRAMES="240"
@@ -102,6 +105,13 @@ cargo run -p fret-demo --bin streaming_nv12_demo
 # or:
 cargo run -p fret-demo --bin streaming_i420_demo
 ```
+
+Notes on the NV12 GPU path (`FRET_STREAMING_GPU_YUV=1`):
+
+- Currently only accelerates `Effect::ImageUpdateNv12` into `Rgba8UnormSrgb` image storage (sRGB) and forces
+  `AlphaMode::Opaque` for the target image.
+- `StreamingUploadPerfSnapshot.yuv_convert_us` measures CPU-side work (plane repack + command encoding), not GPU time.
+- A quick sanity check is that `streaming_nv12_demo` should show a significantly smaller `yuv_us` vs CPU fallback.
 
 If you need structured logs from the runner:
 

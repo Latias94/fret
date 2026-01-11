@@ -198,6 +198,13 @@ accepted as ADRs, but they help keep early implementation aligned with long-term
 
 This section is intentionally lightweight and should be updated as work lands.
 
+- Streaming images/video ingestion is wired through a cross-frame latest-wins queue with per-window budgets
+  (ADR 0123 / ADR 0126): `crates/fret-launch/src/runner/streaming_upload.rs`.
+- YUV updates are applied in the runner at drain time (queue coalescing stays separate from apply), keeping a clean
+  extension point for future zero-copy imports/capability gates (ADR 0124).
+- An experimental NV12 GPU conversion path exists behind `FRET_STREAMING_GPU_YUV=1` (NV12 planes + a tiny conversion
+  pass into RGBA8 sRGB image storage): `crates/fret-launch/src/runner/yuv_gpu.rs`.
+
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`

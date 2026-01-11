@@ -872,6 +872,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
     streaming_uploads: StreamingUploadQueue,
+    nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
 
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,
@@ -883,6 +884,7 @@ struct UploadedImageEntry {
     uploaded: UploadedRgba8Image,
     stream_generation: u64,
     alpha_mode: fret_core::AlphaMode,
+    nv12_planes: Option<super::yuv_gpu::Nv12Planes>,
 }
 
 #[derive(Debug, Clone)]
@@ -1284,6 +1286,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             entry.uploaded = uploaded;
             entry.alpha_mode = alpha_mode;
+            entry.nv12_planes = None;
         } else {
             entry.uploaded.write_region(
                 &context.queue,
@@ -1310,6 +1313,339 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 state.window.request_redraw();
             }
         }
+    }
+
+    fn try_apply_streaming_image_update_nv12_gpu(
+        &mut self,
+        stats: &mut super::streaming_upload::StreamingUploadStats,
+        window: Option<fret_core::AppWindowId>,
+        token: fret_core::ImageUpdateToken,
+        image: fret_core::ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<fret_core::RectPx>,
+        y_bytes_per_row: u32,
+        y_plane: &[u8],
+        uv_bytes_per_row: u32,
+        uv_plane: &[u8],
+        color_info: fret_core::ImageColorInfo,
+    ) -> bool {
+        if std::env::var_os("FRET_STREAMING_GPU_YUV")
+            .filter(|v| !v.is_empty())
+            .is_none()
+        {
+            return false;
+        }
+
+        if width == 0 || height == 0 {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                        },
+                    );
+                }
+            }
+            return true;
+        }
+
+        let Some(context) = self.context.as_ref() else {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::RendererNotReady,
+                        },
+                    );
+                }
+            }
+            return true;
+        };
+        let Some(renderer) = self.renderer.as_mut() else {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::RendererNotReady,
+                        },
+                    );
+                }
+            }
+            return true;
+        };
+
+        let Some(entry) = self.uploaded_images.get_mut(&image) else {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                        },
+                    );
+                }
+            }
+            return true;
+        };
+
+        if stream_generation < entry.stream_generation {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::Coalesced,
+                        },
+                    );
+                }
+            }
+            return true;
+        }
+        entry.stream_generation = stream_generation;
+
+        let Ok(rect) = super::yuv::normalize_update_rect_420(width, height, update_rect_px) else {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                        },
+                    );
+                }
+            }
+            return true;
+        };
+
+        let color_space = match color_info.encoding {
+            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+            fret_core::ImageEncoding::Linear => fret_render::ImageColorSpace::Linear,
+        };
+
+        if entry.uploaded.format != wgpu::TextureFormat::Rgba8UnormSrgb {
+            return false;
+        }
+        if color_space != fret_render::ImageColorSpace::Srgb {
+            return false;
+        }
+
+        let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
+        let needs_replace =
+            entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
+        if needs_replace {
+            if !is_full_update {
+                if self.config.streaming_update_ack_enabled {
+                    let target = window
+                        .or(self.main_window)
+                        .or_else(|| self.windows.keys().next());
+                    if let Some(target) = target {
+                        self.deliver_window_event_now(
+                            target,
+                            &Event::ImageUpdateDropped {
+                                token,
+                                image,
+                                reason: fret_core::ImageUpdateDropReason::Unsupported,
+                            },
+                        );
+                    }
+                }
+                return true;
+            }
+
+            let uploaded = fret_render::create_rgba8_image_storage(
+                &context.device,
+                (width, height),
+                color_space,
+            );
+            let view = uploaded
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            if !renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view,
+                    size: uploaded.size,
+                    format: uploaded.format,
+                    color_space: uploaded.color_space,
+                    alpha_mode: fret_core::AlphaMode::Opaque,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    let target = window
+                        .or(self.main_window)
+                        .or_else(|| self.windows.keys().next());
+                    if let Some(target) = target {
+                        self.deliver_window_event_now(
+                            target,
+                            &Event::ImageUpdateDropped {
+                                token,
+                                image,
+                                reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                            },
+                        );
+                    }
+                }
+                return true;
+            }
+            entry.uploaded = uploaded;
+            entry.alpha_mode = fret_core::AlphaMode::Opaque;
+            entry.nv12_planes = None;
+        }
+
+        if entry.alpha_mode != fret_core::AlphaMode::Opaque {
+            if !renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view: entry.uploaded.view.clone(),
+                    size: entry.uploaded.size,
+                    format: entry.uploaded.format,
+                    color_space: entry.uploaded.color_space,
+                    alpha_mode: fret_core::AlphaMode::Opaque,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    let target = window
+                        .or(self.main_window)
+                        .or_else(|| self.windows.keys().next());
+                    if let Some(target) = target {
+                        self.deliver_window_event_now(
+                            target,
+                            &Event::ImageUpdateDropped {
+                                token,
+                                image,
+                                reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                            },
+                        );
+                    }
+                }
+                return true;
+            }
+            entry.alpha_mode = fret_core::AlphaMode::Opaque;
+        }
+
+        if entry
+            .nv12_planes
+            .as_ref()
+            .is_none_or(|p| p.size != (width, height))
+        {
+            entry.nv12_planes = Some(super::yuv_gpu::Nv12Planes::new(
+                &context.device,
+                (width, height),
+            ));
+        }
+        if self.nv12_gpu.is_none() {
+            self.nv12_gpu = Some(super::yuv_gpu::Nv12GpuConverter::new(&context.device));
+        }
+
+        let Some(planes) = entry.nv12_planes.as_ref() else {
+            return false;
+        };
+        let Some(converter) = self.nv12_gpu.as_ref() else {
+            return false;
+        };
+
+        let t0 = std::time::Instant::now();
+        if let Err(_message) = super::yuv_gpu::write_nv12_rect(
+            &context.queue,
+            planes,
+            rect,
+            y_bytes_per_row,
+            y_plane,
+            uv_bytes_per_row,
+            uv_plane,
+        ) {
+            if self.config.streaming_update_ack_enabled {
+                let target = window
+                    .or(self.main_window)
+                    .or_else(|| self.windows.keys().next());
+                if let Some(target) = target {
+                    self.deliver_window_event_now(
+                        target,
+                        &Event::ImageUpdateDropped {
+                            token,
+                            image,
+                            reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                        },
+                    );
+                }
+            }
+            return true;
+        }
+
+        converter.convert_rect_into(
+            &context.device,
+            &context.queue,
+            &entry.uploaded.view,
+            rect,
+            &planes.y_view,
+            &planes.uv_view,
+            color_info.range,
+            color_info.matrix,
+        );
+
+        stats.yuv_conversions_applied = stats.yuv_conversions_applied.saturating_add(1);
+        stats.yuv_convert_us = stats
+            .yuv_convert_us
+            .saturating_add(t0.elapsed().as_micros() as u64);
+        stats.yuv_convert_output_bytes = stats
+            .yuv_convert_output_bytes
+            .saturating_add(rect.w.saturating_mul(rect.h).saturating_mul(4) as u64);
+
+        if self.config.streaming_update_ack_enabled {
+            let target = window
+                .or(self.main_window)
+                .or_else(|| self.windows.keys().next());
+            if let Some(target) = target {
+                self.deliver_window_event_now(target, &Event::ImageUpdateApplied { token, image });
+            }
+        }
+
+        if let Some(state) = window.and_then(|w| self.windows.get(w)) {
+            state.window.request_redraw();
+        } else {
+            for (_id, state) in self.windows.iter() {
+                state.window.request_redraw();
+            }
+        }
+
+        true
     }
 
     fn virtual_desktop_bounds(window: &dyn Window) -> Option<MonitorRectF64> {
@@ -1559,6 +1895,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             external_drop: NativeExternalDrop::default(),
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
+            nv12_gpu: None,
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
@@ -2767,6 +3104,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 uploaded,
                                 stream_generation: 0,
                                 alpha_mode,
+                                nv12_planes: None,
                             },
                         );
 
@@ -2827,6 +3165,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     } => {
                         stats.yuv_conversions_attempted =
                             stats.yuv_conversions_attempted.saturating_add(1);
+                        if self.try_apply_streaming_image_update_nv12_gpu(
+                            &mut stats,
+                            window,
+                            token,
+                            image,
+                            stream_generation,
+                            width,
+                            height,
+                            update_rect_px,
+                            y_bytes_per_row,
+                            &y_plane,
+                            uv_bytes_per_row,
+                            &uv_plane,
+                            color_info,
+                        ) {
+                            continue;
+                        }
+
                         let t0 = std::time::Instant::now();
                         match super::yuv::nv12_to_rgba8_rect(
                             width,
@@ -2874,7 +3230,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                             &Event::ImageUpdateDropped {
                                                 token,
                                                 image,
-                                                reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                                                reason:
+                                                    fret_core::ImageUpdateDropReason::InvalidPayload,
                                             },
                                         );
                                     }

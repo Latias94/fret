@@ -23,6 +23,7 @@ fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit = { path = "../fret-runner-winit" }
+bytemuck.workspace = true
 thiserror.workspace = true
 wgpu.workspace = true
 winit.workspace = true
