@@ -159,6 +159,7 @@ Fret's current contract:
 | Rotation snap step | Yes (degrees) | Yes (radians) | **Aligned** | `rotate_snap_step_radians: Option<f32>`; note unit differences vs ImGuizmo. |
 | Scale snap step | Yes | Yes | **Aligned** | `scale_snap_step: Option<f32>`. |
 | Snap visualization (rotation ticks) | No (varies) | Yes (visuals) | **Aligned (basic)** | Fret renders rotate tick marks plus translate/scale snap guides when snapping is active: `draw_rotate_feedback`, `draw_translate_feedback`, `draw_scale_feedback` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
+| Numeric HUD (snap + delta readout) | Yes (typical editor UX) | Partial | **Aligned (basic)** | `apps/fret-examples/src/gizmo3d_demo.rs` renders a small viewport HUD showing active/hover handle, snapping state + step, and `GizmoResult` delta/total during drags. |
 | Bounds snap | Yes (`boundsSnap`) | No | **Aligned (basic)** | `GizmoConfig::bounds_snap_step` snaps bounds scaling to per-axis extent steps (ImGuizmo-style), gated by `GizmoInput.snap` (`ecosystem/fret-gizmo/src/gizmo.rs`). |
 
 ### E) Interaction lifecycle and "editor feel"

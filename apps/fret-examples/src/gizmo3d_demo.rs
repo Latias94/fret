@@ -8,9 +8,9 @@ use fret_core::{
 };
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoSizePolicy, GizmoTarget3d,
-    GizmoTargetId, Transform3d, ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput,
-    ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
+    GizmoTarget3d, GizmoTargetId, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
+    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -25,6 +25,7 @@ use fret_ui::UiTree;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
@@ -192,6 +193,179 @@ impl ViewGizmoLabelCache {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, Default, Clone)]
+struct GizmoHudCache {
+    last_text: String,
+    last_scale_bits: u32,
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<fret_core::text::TextMetrics>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GizmoHudLastUpdate {
+    phase: GizmoPhase,
+    active: HandleId,
+    result: GizmoResult,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct GizmoHudState {
+    hovered: Option<HandleId>,
+    hovered_kind: Option<GizmoMode>,
+    active: Option<HandleId>,
+    last: Option<GizmoHudLastUpdate>,
+    snap: bool,
+}
+
+fn gizmo_handle_label(handle: HandleId) -> String {
+    match handle.0 {
+        1 => "X".to_string(),
+        2 => "Y".to_string(),
+        3 => "Z".to_string(),
+        4 => "Plane XY".to_string(),
+        5 => "Plane XZ".to_string(),
+        6 => "Plane YZ".to_string(),
+        7 => "Uniform".to_string(),
+        8 => "View ring".to_string(),
+        9 => "Arcball".to_string(),
+        10 => "Screen".to_string(),
+        14 => "Scale plane XY".to_string(),
+        15 => "Scale plane XZ".to_string(),
+        16 => "Scale plane YZ".to_string(),
+        20..=27 => {
+            let bits = (handle.0 - 20) as u32;
+            let sx = if (bits & 1) != 0 { "+" } else { "-" };
+            let sy = if (bits & 2) != 0 { "+" } else { "-" };
+            let sz = if (bits & 4) != 0 { "+" } else { "-" };
+            format!("Bounds corner (X{sx} Y{sy} Z{sz})")
+        }
+        30..=35 => {
+            let v = (handle.0 - 30) as u32;
+            let axis = (v / 2) as usize;
+            let max_side = (v % 2) == 1;
+            let sign = if max_side { "+" } else { "-" };
+            let axis_name = match axis {
+                0 => "X",
+                1 => "Y",
+                _ => "Z",
+            };
+            format!("Bounds face ({axis_name}{sign})")
+        }
+        _ => format!("Handle {}", handle.0),
+    }
+}
+
+fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
+    let show = state.active.is_some() || state.hovered.is_some();
+    if !show {
+        return None;
+    }
+
+    let mut out = String::new();
+
+    if let Some(active) = state.active {
+        let _ = writeln!(&mut out, "Active: {}", gizmo_handle_label(active));
+    } else if let Some(hovered) = state.hovered {
+        let kind = state
+            .hovered_kind
+            .map(|k| format!("{k:?} "))
+            .unwrap_or_default();
+        let _ = writeln!(&mut out, "Hover: {kind}{}", gizmo_handle_label(hovered));
+    }
+
+    let snap = if state.snap { "ON" } else { "OFF" };
+    let _ = write!(&mut out, "Snap: {snap}");
+    if state.snap {
+        if let Some(last) = state.last {
+            match last.result {
+                GizmoResult::Translation { .. } => {
+                    if let Some(step) = config.translate_snap_step {
+                        let _ = write!(&mut out, " (step={step:.3})");
+                    }
+                }
+                GizmoResult::Rotation { .. } => {
+                    if let Some(step) = config.rotate_snap_step_radians {
+                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                    }
+                }
+                GizmoResult::Arcball { .. } => {
+                    if let Some(step) = config.rotate_snap_step_radians {
+                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                    }
+                }
+                GizmoResult::Scale { .. } => {
+                    if last.active.0 >= 20 && last.active.0 <= 35 {
+                        if let Some(step) = config.bounds_snap_step {
+                            let _ = write!(
+                                &mut out,
+                                " (bounds_step=({:.2}, {:.2}, {:.2}))",
+                                step.x, step.y, step.z
+                            );
+                        }
+                    } else if let Some(step) = config.scale_snap_step {
+                        let _ = write!(&mut out, " (step={step:.3})");
+                    }
+                }
+            }
+        }
+    }
+    out.push('\n');
+
+    if let Some(last) = state.last {
+        match last.result {
+            GizmoResult::Translation { delta, total } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δt=({:.3}, {:.3}, {:.3})   Σt=({:.3}, {:.3}, {:.3})",
+                    delta.x, delta.y, delta.z, total.x, total.y, total.z
+                );
+            }
+            GizmoResult::Rotation {
+                axis,
+                delta_radians,
+                total_radians,
+            } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δr={:.1}°   Σr={:.1}°   axis=({:.2}, {:.2}, {:.2})",
+                    delta_radians.to_degrees(),
+                    total_radians.to_degrees(),
+                    axis.x,
+                    axis.y,
+                    axis.z
+                );
+            }
+            GizmoResult::Arcball { delta, total } => {
+                let (_axis_d, angle_d) = delta.to_axis_angle();
+                let (_axis_t, angle_t) = total.to_axis_angle();
+                let _ = writeln!(
+                    &mut out,
+                    "Δr={:.1}°   Σr={:.1}°   (arcball)",
+                    angle_d.to_degrees(),
+                    angle_t.to_degrees()
+                );
+            }
+            GizmoResult::Scale { delta, total } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δs=({:.3}, {:.3}, {:.3})   Σs=({:.3}, {:.3}, {:.3})",
+                    delta.x, delta.y, delta.z, total.x, total.y, total.z
+                );
+            }
+        }
+
+        let phase = match last.phase {
+            GizmoPhase::Begin => "Begin",
+            GizmoPhase::Update => "Update",
+            GizmoPhase::Commit => "Commit",
+            GizmoPhase::Cancel => "Cancel",
+        };
+        let _ = writeln!(&mut out, "Phase: {phase}");
+    }
+
+    Some(out)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -766,6 +940,7 @@ struct Gizmo3dDemoModel {
     input: GizmoInput,
     camera: OrbitCamera,
     last_frame_instant: Option<Instant>,
+    hud: GizmoHudState,
 }
 
 impl Gizmo3dDemoModel {
@@ -927,6 +1102,7 @@ impl Default for Gizmo3dDemoModel {
             },
             camera: OrbitCamera::default(),
             last_frame_instant: None,
+            hud: GizmoHudState::default(),
         }
     }
 }
@@ -1098,6 +1274,7 @@ struct Gizmo3dDemoWindowState {
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
     overlay: OverlayTextCache,
     view_gizmo_labels: ViewGizmoLabelCache,
+    hud: GizmoHudCache,
     target: Option<Gizmo3dDemoTarget>,
     gpu: Option<Gizmo3dDemoGpu>,
     doc: DocumentId,
@@ -1142,6 +1319,7 @@ impl Gizmo3dDemoDriver {
             demo,
             overlay: OverlayTextCache::default(),
             view_gizmo_labels: ViewGizmoLabelCache::default(),
+            hud: GizmoHudCache::default(),
             target: None,
             gpu: None,
             doc,
@@ -3060,6 +3238,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.active_target,
                 &selected,
             ) {
+                m.hud.last = Some(GizmoHudLastUpdate {
+                    phase: update.phase,
+                    active: update.active,
+                    result: update.result,
+                });
                 match update.phase {
                     GizmoPhase::Begin => {
                         m.drag_start_targets = Some(selected.clone());
@@ -3110,6 +3293,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 }
             }
+
+            m.hud.hovered = m.gizmo.state.hovered;
+            m.hud.hovered_kind = m.gizmo.state.hovered_kind;
+            m.hud.active = m.gizmo.state.active;
+            m.hud.snap = m.input.snap;
 
             rec_to_record
         });
@@ -3640,15 +3828,23 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             .plot
             .read(app, |_app, m| m.viewport)
             .unwrap_or_default();
-        let (viewport_px, camera, view_gizmo) = state
+        let (viewport_px, camera, view_gizmo, gizmo_cfg, hud_state) = state
             .demo
             .read(app, |_app, m| {
-                (m.viewport_px, m.camera, m.view_gizmo.clone())
+                (
+                    m.viewport_px,
+                    m.camera,
+                    m.view_gizmo.clone(),
+                    m.gizmo.config,
+                    m.hud,
+                )
             })
             .unwrap_or((
                 (1, 1),
                 OrbitCamera::default(),
                 ViewGizmo::new(ViewGizmoConfig::default()),
+                GizmoConfig::default(),
+                GizmoHudState::default(),
             ));
 
         let draw_rect = viewport.draw_rect(bounds);
@@ -3724,6 +3920,90 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     a: label.color.a,
                 },
             });
+        }
+
+        if let Some(text) = gizmo_hud_text(hud_state, gizmo_cfg) {
+            let scale_bits = scale_factor.to_bits();
+            if state.hud.last_text != text || state.hud.last_scale_bits != scale_bits {
+                if let Some(blob) = state.hud.blob.take() {
+                    services.text().release(blob);
+                }
+
+                let style = TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: Px(12.0),
+                    weight: FontWeight::MEDIUM,
+                    slant: fret_core::text::TextSlant::Normal,
+                    line_height: Some(Px(14.0)),
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: Some(Px(340.0)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor,
+                };
+
+                let (blob, metrics) = services.text().prepare(&text, &style, constraints);
+                state.hud.last_text = text;
+                state.hud.last_scale_bits = scale_bits;
+                state.hud.blob = Some(blob);
+                state.hud.metrics = Some(metrics);
+            }
+
+            if let (Some(blob), Some(metrics)) = (state.hud.blob, state.hud.metrics) {
+                let pad = Px(10.0);
+                let outer_pad = Px(12.0);
+
+                let origin = Point::new(
+                    Px(draw_rect.origin.x.0 + outer_pad.0),
+                    Px(draw_rect.origin.y.0 + draw_rect.size.height.0 - outer_pad.0),
+                );
+
+                let bg_rect = Rect::new(
+                    Point::new(
+                        Px(origin.x.0),
+                        Px(origin.y.0 - (metrics.size.height.0 + pad.0 * 2.0)),
+                    ),
+                    Size::new(
+                        Px(metrics.size.width.0 + pad.0 * 2.0),
+                        Px(metrics.size.height.0 + pad.0 * 2.0),
+                    ),
+                );
+
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(49_200),
+                    rect: bg_rect,
+                    background: Color {
+                        r: 0.06,
+                        g: 0.06,
+                        b: 0.07,
+                        a: 0.62,
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        r: 0.35,
+                        g: 0.35,
+                        b: 0.40,
+                        a: 0.85,
+                    },
+                    corner_radii: Corners::all(Px(12.0)),
+                });
+                scene.push(SceneOp::Text {
+                    order: DrawOrder(49_210),
+                    origin: Point::new(
+                        Px(bg_rect.origin.x.0 + pad.0),
+                        Px(bg_rect.origin.y.0 + pad.0),
+                    ),
+                    text: blob,
+                    color: Color {
+                        r: 0.92,
+                        g: 0.92,
+                        b: 0.94,
+                        a: 0.95,
+                    },
+                });
+            }
         }
 
         if state.warmup_frames_remaining > 0 {
