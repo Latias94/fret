@@ -651,7 +651,10 @@ pub struct GizmoState {
     drag_origin_z01: f32,
     drag_size_length_world: f32,
     drag_plane_normal: Vec3,
+    drag_start_hit_world: Vec3,
     drag_prev_hit_world: Vec3,
+    drag_translate_prev_axis_raw: f32,
+    drag_translate_prev_plane_raw: Vec2,
     drag_total_axis_raw: f32,
     drag_total_axis_applied: f32,
     drag_translate_is_plane: bool,
@@ -728,7 +731,10 @@ impl Default for GizmoState {
             drag_origin_z01: 0.0,
             drag_size_length_world: 1.0,
             drag_plane_normal: Vec3::Z,
+            drag_start_hit_world: Vec3::ZERO,
             drag_prev_hit_world: Vec3::ZERO,
+            drag_translate_prev_axis_raw: 0.0,
+            drag_translate_prev_plane_raw: Vec2::ZERO,
             drag_total_axis_raw: 0.0,
             drag_total_axis_applied: 0.0,
             drag_translate_is_plane: false,
@@ -1614,14 +1620,16 @@ impl Gizmo {
                             .unwrap_or(self.state.drag_origin)
                         });
 
-                        let delta_world = (hit_world - self.state.drag_prev_hit_world) * precision;
+                        let diff_world = hit_world - self.state.drag_start_hit_world;
                         self.state.drag_prev_hit_world = hit_world;
 
                         if self.state.drag_translate_is_plane {
                             let u = self.state.drag_translate_u;
                             let v = self.state.drag_translate_v;
-                            self.state.drag_total_plane_raw +=
-                                Vec2::new(delta_world.dot(u), delta_world.dot(v));
+                            let raw = Vec2::new(diff_world.dot(u), diff_world.dot(v));
+                            let delta_raw = raw - self.state.drag_translate_prev_plane_raw;
+                            self.state.drag_translate_prev_plane_raw = raw;
+                            self.state.drag_total_plane_raw += delta_raw * precision;
                             let desired_total = if input.snap {
                                 self.config
                                     .translate_snap_step
@@ -1644,7 +1652,10 @@ impl Gizmo {
                             let total = u * desired_total.x + v * desired_total.y;
                             (delta, total)
                         } else {
-                            self.state.drag_total_axis_raw += delta_world.dot(axis_dir);
+                            let raw = diff_world.dot(axis_dir);
+                            let delta_raw = raw - self.state.drag_translate_prev_axis_raw;
+                            self.state.drag_translate_prev_axis_raw = raw;
+                            self.state.drag_total_axis_raw += delta_raw * precision;
                             let desired_total = if input.snap {
                                 self.config
                                     .translate_snap_step
@@ -3149,7 +3160,10 @@ impl Gizmo {
                 )
                 .unwrap_or(origin)
             });
+        self.state.drag_start_hit_world = start_hit_world;
         self.state.drag_prev_hit_world = start_hit_world;
+        self.state.drag_translate_prev_axis_raw = 0.0;
+        self.state.drag_translate_prev_plane_raw = Vec2::ZERO;
 
         Some(GizmoUpdate {
             phase: GizmoPhase::Begin,
