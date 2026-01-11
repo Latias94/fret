@@ -10,13 +10,21 @@
 //! This module provides an object-safe callback trait and an adapter that can be installed into
 //! a store subscription.
 
-use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId};
+use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId, StickyNoteId};
 use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 use crate::rules::EdgeEndpoint;
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
 use crate::runtime::store::NodeGraphStore;
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DeleteChange {
+    pub nodes: Vec<NodeId>,
+    pub edges: Vec<EdgeId>,
+    pub groups: Vec<GroupId>,
+    pub sticky_notes: Vec<StickyNoteId>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EdgeConnection {
@@ -121,6 +129,17 @@ pub trait NodeGraphCallbacks: 'static {
     /// This hook is derived from committed ops (headless-safe), just like `on_reconnect`.
     fn on_edge_update(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {}
 
+    /// ReactFlow-style delete hook (`onNodesDelete`).
+    fn on_nodes_delete(&mut self, _nodes: &[NodeId]) {}
+    /// ReactFlow-style delete hook (`onEdgesDelete`).
+    fn on_edges_delete(&mut self, _edges: &[EdgeId]) {}
+    /// Delete hook for group containers.
+    fn on_groups_delete(&mut self, _groups: &[GroupId]) {}
+    /// Delete hook for sticky notes.
+    fn on_sticky_notes_delete(&mut self, _notes: &[StickyNoteId]) {}
+    /// Combined delete hook (ReactFlow `onDelete`-like).
+    fn on_delete(&mut self, _change: DeleteChange) {}
+
     fn on_view_change(&mut self, _changes: &[ViewChange]) {}
 
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
@@ -183,6 +202,27 @@ pub fn install_callbacks(
                     }
                 }
             }
+
+            let deleted = delete_changes_from_transaction(committed);
+            if !deleted.nodes.is_empty() {
+                callbacks.on_nodes_delete(&deleted.nodes);
+            }
+            if !deleted.edges.is_empty() {
+                callbacks.on_edges_delete(&deleted.edges);
+            }
+            if !deleted.groups.is_empty() {
+                callbacks.on_groups_delete(&deleted.groups);
+            }
+            if !deleted.sticky_notes.is_empty() {
+                callbacks.on_sticky_notes_delete(&deleted.sticky_notes);
+            }
+            if !deleted.nodes.is_empty()
+                || !deleted.edges.is_empty()
+                || !deleted.groups.is_empty()
+                || !deleted.sticky_notes.is_empty()
+            {
+                callbacks.on_delete(deleted);
+            }
         }
         NodeGraphStoreEvent::ViewChanged { changes, .. } => {
             callbacks.on_view_change(changes);
@@ -208,6 +248,7 @@ pub fn connection_changes_from_transaction(tx: &GraphTransaction) -> Vec<Connect
     let mut out = Vec::new();
     out.reserve(tx.ops.len().min(8));
 
+    let mut removed_edges: std::collections::BTreeSet<EdgeId> = std::collections::BTreeSet::new();
     for op in &tx.ops {
         match op {
             GraphOp::AddEdge { id, edge } => {
@@ -218,7 +259,34 @@ pub fn connection_changes_from_transaction(tx: &GraphTransaction) -> Vec<Connect
                     kind: edge.kind,
                 }))
             }
+            GraphOp::RemoveNode { edges, .. } => {
+                for (id, edge) in edges {
+                    if !removed_edges.insert(*id) {
+                        continue;
+                    }
+                    out.push(ConnectionChange::Disconnected(EdgeConnection {
+                        edge: *id,
+                        from: edge.from,
+                        to: edge.to,
+                        kind: edge.kind,
+                    }))
+                }
+            }
+            GraphOp::RemovePort { edges, .. } => {
+                for (id, edge) in edges {
+                    if !removed_edges.insert(*id) {
+                        continue;
+                    }
+                    out.push(ConnectionChange::Disconnected(EdgeConnection {
+                        edge: *id,
+                        from: edge.from,
+                        to: edge.to,
+                        kind: edge.kind,
+                    }))
+                }
+            }
             GraphOp::RemoveEdge { id, edge } => {
+                let _ = removed_edges.insert(*id);
                 out.push(ConnectionChange::Disconnected(EdgeConnection {
                     edge: *id,
                     from: edge.from,
@@ -234,6 +302,41 @@ pub fn connection_changes_from_transaction(tx: &GraphTransaction) -> Vec<Connect
             _ => {}
         }
     }
+
+    out
+}
+
+pub fn delete_changes_from_transaction(tx: &GraphTransaction) -> DeleteChange {
+    let mut out = DeleteChange::default();
+
+    for op in &tx.ops {
+        match op {
+            GraphOp::RemoveNode { id, edges, .. } => {
+                out.nodes.push(*id);
+                for (edge_id, _edge) in edges {
+                    out.edges.push(*edge_id);
+                }
+            }
+            GraphOp::RemoveEdge { id, .. } => out.edges.push(*id),
+            GraphOp::RemoveGroup { id, .. } => out.groups.push(*id),
+            GraphOp::RemoveStickyNote { id, .. } => out.sticky_notes.push(*id),
+            GraphOp::RemovePort { edges, .. } => {
+                for (edge_id, _edge) in edges {
+                    out.edges.push(*edge_id);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    out.nodes.sort_unstable();
+    out.nodes.dedup();
+    out.edges.sort_unstable();
+    out.edges.dedup();
+    out.groups.sort_unstable();
+    out.groups.dedup();
+    out.sticky_notes.sort_unstable();
+    out.sticky_notes.dedup();
 
     out
 }

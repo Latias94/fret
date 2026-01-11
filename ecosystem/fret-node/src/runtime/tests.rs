@@ -513,6 +513,65 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
 }
 
 #[test]
+fn install_callbacks_calls_delete_hooks_for_remove_node() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use crate::ops::GraphOpBuilderExt;
+
+    #[derive(Clone)]
+    struct Recorder {
+        nodes_deleted: Rc<RefCell<Vec<NodeId>>>,
+        edges_deleted: Rc<RefCell<Vec<EdgeId>>>,
+        disconnected: Rc<RefCell<Vec<EdgeId>>>,
+    }
+
+    impl NodeGraphCallbacks for Recorder {
+        fn on_nodes_delete(&mut self, nodes: &[NodeId]) {
+            self.nodes_deleted.borrow_mut().extend_from_slice(nodes);
+        }
+
+        fn on_edges_delete(&mut self, edges: &[EdgeId]) {
+            self.edges_deleted.borrow_mut().extend_from_slice(edges);
+        }
+
+        fn on_disconnect(&mut self, conn: crate::runtime::callbacks::EdgeConnection) {
+            self.disconnected.borrow_mut().push(conn.edge);
+        }
+    }
+
+    let (g0, a, _b, _out_port, _in_port, eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let nodes_deleted: Rc<RefCell<Vec<NodeId>>> = Rc::new(RefCell::new(Vec::new()));
+    let edges_deleted: Rc<RefCell<Vec<EdgeId>>> = Rc::new(RefCell::new(Vec::new()));
+    let disconnected: Rc<RefCell<Vec<EdgeId>>> = Rc::new(RefCell::new(Vec::new()));
+
+    let _token = install_callbacks(
+        &mut store,
+        Recorder {
+            nodes_deleted: nodes_deleted.clone(),
+            edges_deleted: edges_deleted.clone(),
+            disconnected: disconnected.clone(),
+        },
+    );
+
+    let op = store
+        .graph()
+        .build_remove_node_op(a)
+        .expect("remove node op");
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![op],
+    };
+    let _ = store.dispatch_transaction(&tx).expect("dispatch remove");
+
+    assert!(nodes_deleted.borrow().contains(&a));
+    assert!(edges_deleted.borrow().contains(&eid));
+    assert!(disconnected.borrow().contains(&eid));
+}
+
+#[test]
 fn store_dispatch_changes_records_history_and_supports_undo() {
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
     let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
