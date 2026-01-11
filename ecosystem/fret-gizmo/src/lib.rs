@@ -11,6 +11,7 @@ mod grid;
 mod math;
 mod style;
 mod view_gizmo;
+mod viewport_input;
 
 pub use gizmo::{
     Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoHandedness, GizmoInput, GizmoMode,
@@ -27,4 +28,7 @@ pub use style::{GizmoVisualPreset, ViewGizmoVisualPreset};
 pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
+};
+pub use viewport_input::{
+    viewport_input_cursor_target_px, viewport_input_cursor_target_px_clamped,
 };

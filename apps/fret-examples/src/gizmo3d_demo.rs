@@ -11,7 +11,7 @@ use fret_gizmo::{
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
     GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, Transform3d, ViewGizmo,
     ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate,
-    ViewGizmoVisualPreset, ViewportRect,
+    ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -2767,9 +2767,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 return None;
             }
 
-            // Use UV instead of integer target pixels to avoid cursor quantization.
-            let (tw, th) = event.geometry.target_px_size;
-            let cursor_px = Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32);
+            let cursor_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
+                // Fallback: use UV instead of integer target pixels to avoid quantization.
+                let (tw, th) = event.geometry.target_px_size;
+                Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
+            });
 
             let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
 
