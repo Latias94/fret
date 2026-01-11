@@ -4231,6 +4231,45 @@ impl NodeGraphCanvas {
         self.cached_zoom = new_zoom;
     }
 
+    fn zoom_about_pointer_factor(&mut self, position: Point, factor: f32) {
+        let zoom = self.cached_zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+        if !factor.is_finite() || factor <= 0.0 {
+            return;
+        }
+        if !position.x.0.is_finite() || !position.y.0.is_finite() {
+            return;
+        }
+
+        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        if (new_zoom - zoom).abs() <= 1.0e-6 {
+            return;
+        }
+
+        let pan_x = self.cached_pan.x;
+        let pan_y = self.cached_pan.y;
+
+        // `position` is in the widget's local (canvas) coordinates.
+        // Compute the pivot in screen coordinates (relative to bounds origin) to keep the
+        // graph point under the cursor stable.
+        let pivot_screen_x = (position.x.0 + pan_x) * zoom;
+        let pivot_screen_y = (position.y.0 + pan_y) * zoom;
+
+        let g0_x = pivot_screen_x / zoom - pan_x;
+        let g0_y = pivot_screen_y / zoom - pan_y;
+
+        let new_pan_x = pivot_screen_x / new_zoom - g0_x;
+        let new_pan_y = pivot_screen_y / new_zoom - g0_y;
+
+        self.cached_pan = CanvasPoint {
+            x: new_pan_x,
+            y: new_pan_y,
+        };
+        self.cached_zoom = new_zoom;
+    }
+
     fn stop_auto_pan_timer<H: UiHost>(&mut self, host: &mut H) {
         let Some(timer) = self.interaction.auto_pan_timer.take() else {
             return;
@@ -6111,6 +6150,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 position,
                 button,
                 modifiers,
+                click_count,
                 ..
             }) => {
                 self.stop_pan_inertia_timer(cx.app);
@@ -6133,6 +6173,85 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             cx.stop_propagation();
                             return;
                         }
+                    }
+                }
+
+                if *button == MouseButton::Left
+                    && *click_count == 2
+                    && snapshot.interaction.zoom_on_double_click
+                    && self.interaction.searcher.is_none()
+                    && self.interaction.context_menu.is_none()
+                {
+                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
+                    let is_background = self
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            let mut scratch_ports: Vec<PortId> = Vec::new();
+                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
+
+                            if self
+                                .hit_port(
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_ports,
+                                )
+                                .is_some()
+                            {
+                                return false;
+                            }
+                            if self
+                                .hit_edge_focus_anchor(
+                                    graph,
+                                    &snapshot,
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_edges,
+                                )
+                                .is_some()
+                            {
+                                return false;
+                            }
+                            if geom.nodes.values().any(|ng| ng.rect.contains(*position)) {
+                                return false;
+                            }
+                            if self
+                                .hit_edge(
+                                    graph,
+                                    &snapshot,
+                                    geom.as_ref(),
+                                    index.as_ref(),
+                                    *position,
+                                    zoom,
+                                    &mut scratch_edges,
+                                )
+                                .is_some()
+                            {
+                                return false;
+                            }
+                            !graph.groups.values().any(|group| {
+                                group_resize::group_rect_to_px(group.rect).contains(*position)
+                            })
+                        })
+                        .unwrap_or(false);
+
+                    if is_background {
+                        self.stop_pan_inertia_timer(cx.app);
+                        let factor = if modifiers.shift { 0.5 } else { 2.0 };
+                        self.zoom_about_pointer_factor(*position, factor);
+                        let pan = self.cached_pan;
+                        let zoom = self.cached_zoom;
+                        self.update_view_state(cx.app, |s| {
+                            s.pan = pan;
+                            s.zoom = zoom;
+                        });
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
                     }
                 }
 
@@ -8169,6 +8288,89 @@ mod tests {
         );
         let after2 = canvas.sync_view_state(cx.app).pan;
         assert!((after2.y - after.y - 120.0).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn double_click_background_zooms_in_about_pointer() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_double_click = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let pos = Point::new(Px(600.0), Px(500.0));
+        let before = canvas.sync_view_state(cx.app);
+        assert_eq!(before.zoom, 1.0);
+        assert_eq!(before.pan, CanvasPoint::default());
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert!((after.zoom - 2.0).abs() <= 1.0e-6);
+        assert!((after.pan.x - -300.0).abs() <= 1.0e-3);
+        assert!((after.pan.y - -250.0).abs() <= 1.0e-3);
+        assert!(canvas.interaction.pending_marquee.is_none());
+        assert!(canvas.interaction.marquee.is_none());
+    }
+
+    #[test]
+    fn shift_double_click_background_zooms_out_about_pointer() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.zoom_on_double_click = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let pos = Point::new(Px(600.0), Px(500.0));
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Modifiers::default()
+                },
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let after = canvas.sync_view_state(cx.app);
+        assert!((after.zoom - 0.5).abs() <= 1.0e-6);
+        assert!((after.pan.x - 600.0).abs() <= 1.0e-3);
+        assert!((after.pan.y - 500.0).abs() <= 1.0e-3);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{

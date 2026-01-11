@@ -478,6 +478,10 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_zoom_on_scroll_speed")]
     pub zoom_on_scroll_speed: f32,
 
+    /// Whether double-click zoom is enabled (XyFlow `zoomOnDoubleClick`).
+    #[serde(default = "default_zoom_on_double_click")]
+    pub zoom_on_double_click: bool,
+
     /// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey`).
     #[serde(default)]
     pub zoom_activation_key: NodeGraphZoomActivationKey,
@@ -560,6 +564,7 @@ impl Default for NodeGraphInteractionState {
             pan_inertia: NodeGraphPanInertiaTuning::default(),
             zoom_on_scroll: default_zoom_on_scroll(),
             zoom_on_scroll_speed: default_zoom_on_scroll_speed(),
+            zoom_on_double_click: default_zoom_on_double_click(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
             node_drag_threshold: default_node_drag_threshold(),
             node_drag_handle_mode: NodeGraphDragHandleMode::default(),
@@ -607,6 +612,10 @@ fn default_zoom_on_scroll() -> bool {
 
 fn default_zoom_on_scroll_speed() -> f32 {
     1.0
+}
+
+fn default_zoom_on_double_click() -> bool {
+    true
 }
 
 fn default_connection_radius() -> f32 {

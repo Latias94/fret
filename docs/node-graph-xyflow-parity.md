@@ -236,7 +236,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Zoom on wheel / pinch / double click**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
-  - fret-node: `NodeGraphCanvas` supports wheel zoom; pinch/double-click parity TBD
+  - fret-node:
+    - wheel zoom: supported
+    - double click zoom: supported (`NodeGraphInteractionState.zoom_on_double_click`; Shift+double-click zooms out)
+    - pinch zoom parity TBD
 
 - [x] **Pan on scroll**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnScroll`, `panOnScrollMode`, `panOnScrollSpeed`)
