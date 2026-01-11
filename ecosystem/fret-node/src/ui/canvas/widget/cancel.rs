@@ -72,6 +72,15 @@ fn cancel_active_gestures_inner<H: UiHost>(
         );
         canceled = true;
     }
+    if canvas.interaction.pan_inertia.is_some() {
+        canvas.stop_pan_inertia_timer(cx.app);
+        canvas.emit_move_end(
+            &snapshot,
+            ViewportMoveKind::Pan,
+            ViewportMoveEndOutcome::Canceled,
+        );
+        canceled = true;
+    }
     if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
         cx.app
             .push_effect(Effect::CancelTimer { token: state.timer });
@@ -107,7 +116,6 @@ fn cancel_active_gestures_inner<H: UiHost>(
 
     if canceled {
         canvas.stop_auto_pan_timer(cx.app);
-        canvas.stop_pan_inertia_timer(cx.app);
         cx.release_pointer_capture();
         if consume {
             cx.stop_propagation();

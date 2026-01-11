@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use fret_core::{Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size};
 use fret_ui::retained_bridge::Widget as _;
@@ -511,6 +512,81 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
         got.iter()
             .any(|s| s.contains("node_drag_end") && s.contains("Canceled"))
     );
+}
+
+#[test]
+fn pan_inertia_defers_move_end_until_inertia_stops() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.pan_inertia.enabled = true;
+        s.interaction.pan_inertia.decay_per_s = 200.0;
+        s.interaction.pan_inertia.min_speed = 1.0;
+    });
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(100.0), Px(100.0));
+    assert!(super::super::pan_zoom::begin_panning(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        MouseButton::Middle,
+    ));
+    assert!(super::super::pan_zoom::handle_panning_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(200.0), Px(200.0)),
+    ));
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        MouseButton::Middle,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.starts_with("move_start:Pan")));
+    assert!(
+        !got.iter().any(|s| s.contains("move_end:Pan:Ended")),
+        "move_end should be deferred while inertia is active"
+    );
+
+    let token = canvas
+        .interaction
+        .pan_inertia
+        .as_ref()
+        .expect("pan inertia started")
+        .timer;
+    canvas
+        .interaction
+        .pan_inertia
+        .as_mut()
+        .expect("pan inertia started")
+        .last_tick_at = Instant::now() - Duration::from_millis(200);
+
+    canvas.event(&mut cx, &Event::Timer { token });
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.contains("move_end:Pan:Ended")));
 }
 
 #[test]

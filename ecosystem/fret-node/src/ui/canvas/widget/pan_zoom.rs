@@ -15,7 +15,14 @@ pub(super) fn begin_panning<H: UiHost>(
     start_pos: Point,
     button: MouseButton,
 ) -> bool {
-    canvas.stop_pan_inertia_timer(cx.app);
+    if canvas.interaction.pan_inertia.is_some() {
+        canvas.stop_pan_inertia_timer(cx.app);
+        canvas.emit_move_end(
+            snapshot,
+            ViewportMoveKind::Pan,
+            ViewportMoveEndOutcome::Ended,
+        );
+    }
     if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
         cx.app
             .push_effect(Effect::CancelTimer { token: state.timer });

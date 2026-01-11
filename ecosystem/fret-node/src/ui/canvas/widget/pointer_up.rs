@@ -41,12 +41,14 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         canvas.interaction.pan_last_screen_pos = None;
         canvas.interaction.pan_last_sample_at = None;
         canvas.stop_auto_pan_timer(cx.app);
-        canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
-        canvas.emit_move_end(
-            snapshot,
-            ViewportMoveKind::Pan,
-            ViewportMoveEndOutcome::Ended,
-        );
+        let started_inertia = canvas.maybe_start_pan_inertia_timer(cx.app, cx.window, snapshot);
+        if !started_inertia {
+            canvas.emit_move_end(
+                snapshot,
+                ViewportMoveKind::Pan,
+                ViewportMoveEndOutcome::Ended,
+            );
+        }
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

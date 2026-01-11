@@ -4723,28 +4723,28 @@ impl NodeGraphCanvas {
         host: &mut H,
         window: Option<AppWindowId>,
         snapshot: &ViewSnapshot,
-    ) {
+    ) -> bool {
         self.stop_pan_inertia_timer(host);
 
         let tuning = &snapshot.interaction.pan_inertia;
         if !tuning.enabled {
-            return;
+            return false;
         }
 
         let zoom = snapshot.zoom;
         if !zoom.is_finite() || zoom <= 0.0 {
-            return;
+            return false;
         }
 
         let mut velocity = self.interaction.pan_velocity;
         if !velocity.x.is_finite() || !velocity.y.is_finite() {
-            return;
+            return false;
         }
 
         let speed_screen = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt() * zoom;
         let min_speed = tuning.min_speed.max(0.0);
         if !speed_screen.is_finite() || speed_screen < min_speed {
-            return;
+            return false;
         }
 
         let max_speed = tuning.max_speed.max(min_speed);
@@ -4770,6 +4770,7 @@ impl NodeGraphCanvas {
             velocity,
             last_tick_at: Instant::now(),
         });
+        true
     }
 
     fn ensure_auto_pan_timer_running<H: UiHost>(
@@ -6339,6 +6340,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         return;
                     };
                     let timer = inertia.timer;
+                    let mut end_move = false;
 
                     if !tuning.enabled
                         || !self.pan_inertia_should_tick()
@@ -6348,8 +6350,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         || tuning.decay_per_s <= 0.0
                     {
                         cx.app.push_effect(Effect::CancelTimer { token: timer });
+                        end_move = true;
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
+                        if end_move {
+                            let snap = self.sync_view_state(cx.app);
+                            self.emit_move_end(
+                                &snap,
+                                ViewportMoveKind::Pan,
+                                ViewportMoveEndOutcome::Ended,
+                            );
+                        }
                         return;
                     }
 
@@ -6388,12 +6399,21 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         || !inertia.velocity.y.is_finite()
                     {
                         cx.app.push_effect(Effect::CancelTimer { token: timer });
+                        end_move = true;
                     } else {
                         self.interaction.pan_inertia = Some(inertia);
                     }
 
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
+                    if end_move {
+                        let snap = self.sync_view_state(cx.app);
+                        self.emit_move_end(
+                            &snap,
+                            ViewportMoveKind::Pan,
+                            ViewportMoveEndOutcome::Ended,
+                        );
+                    }
                     return;
                 }
 
@@ -6634,7 +6654,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 click_count,
                 ..
             }) => {
-                self.stop_pan_inertia_timer(cx.app);
+                if self.interaction.pan_inertia.is_some() {
+                    self.stop_pan_inertia_timer(cx.app);
+                    self.emit_move_end(
+                        &snapshot,
+                        ViewportMoveKind::Pan,
+                        ViewportMoveEndOutcome::Ended,
+                    );
+                }
                 self.interaction.last_pos = Some(*position);
                 self.interaction.last_modifiers = *modifiers;
                 self.interaction.multi_selection_active = snapshot
@@ -7033,7 +7060,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 modifiers,
                 ..
             }) => {
-                self.stop_pan_inertia_timer(cx.app);
+                if self.interaction.pan_inertia.is_some() {
+                    self.stop_pan_inertia_timer(cx.app);
+                    self.emit_move_end(
+                        &snapshot,
+                        ViewportMoveKind::Pan,
+                        ViewportMoveEndOutcome::Ended,
+                    );
+                }
                 self.interaction.last_modifiers = *modifiers;
                 self.interaction.multi_selection_active = snapshot
                     .interaction
@@ -7105,7 +7139,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::Pointer(fret_core::PointerEvent::PinchGesture {
                 position, delta, ..
             }) => {
-                self.stop_pan_inertia_timer(cx.app);
+                if self.interaction.pan_inertia.is_some() {
+                    self.stop_pan_inertia_timer(cx.app);
+                    self.emit_move_end(
+                        &snapshot,
+                        ViewportMoveKind::Pan,
+                        ViewportMoveEndOutcome::Ended,
+                    );
+                }
                 if !snapshot.interaction.zoom_on_pinch {
                     return;
                 }
