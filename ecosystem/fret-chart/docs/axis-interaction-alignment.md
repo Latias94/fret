@@ -109,4 +109,8 @@ Current behavior is intentionally ImPlot-like:
 - Axis rendering is intentionally minimal (no grid lines, titles, or rich formatting yet).
 - Crosshair is currently rendered as solid lines (no dash pattern yet).
 - Fit/reset requires focus (currently acquired by clicking the canvas).
-- Brush selection highlight is minimal in v1: a selection rect is rendered, and non-matching axis-pair series are dimmed.
+- Brush selection highlight is UI-only in v1:
+  - A selection rect is rendered in plot space.
+  - Series not on the selected axis pair are dimmed.
+  - Series on the selected axis pair are re-painted inside the selection rect via clip-based highlighting
+    (outside the rect is dimmed).

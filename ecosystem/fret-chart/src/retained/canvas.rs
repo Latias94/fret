@@ -3019,8 +3019,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             rect: self.last_layout.plot,
         });
 
-        let model = self.engine.model();
         let brush = self.engine.state().brush_selection_2d;
+        let brush_rect_px = if let Some(brush) = brush {
+            self.brush_rect_px(brush)
+                .filter(|rect| rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0)
+        } else {
+            None
+        };
+        let model = self.engine.model();
 
         for cached in &self.cached_rects {
             let base_order = self
@@ -3034,18 +3040,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.stroke_color.a;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                fill_color.a *= 0.25;
-            }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                fill_color.a *= 0.25;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                fill_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
             }
             fill_color.a *= self.style.bar_fill_alpha;
 
@@ -3071,18 +3084,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 stroke_color = self.series_color(series);
                 stroke_color.a *= self.style.stroke_color.a;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                stroke_color.a *= 0.25;
-            }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                stroke_color.a *= 0.25;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                stroke_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    stroke_color.a *= 0.25;
+                }
             }
 
             if let Some(fill) = cached.fill {
@@ -3129,18 +3149,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 fill_color = self.series_color(series);
                 fill_color.a *= self.style.scatter_fill_alpha;
             }
-            if let Some(brush) = brush
-                && let Some(series_id) = cached.source_series
-                && let Some(series) = model.series.get(&series_id)
-                && (series.x_axis != brush.x_axis || series.y_axis != brush.y_axis)
-            {
-                fill_color.a *= 0.25;
-            }
-            if let Some(hover) = self.legend_hover
-                && cached.source_series.is_some()
-                && cached.source_series != Some(hover)
-            {
-                fill_color.a *= 0.25;
+            if let Some(series_id) = cached.source_series {
+                let brush_dim = if let Some(brush) = brush
+                    && let Some(series) = model.series.get(&series_id)
+                {
+                    if series.x_axis == brush.x_axis && series.y_axis == brush.y_axis {
+                        0.25
+                    } else {
+                        0.25
+                    }
+                } else {
+                    1.0
+                };
+                fill_color.a *= brush_dim;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
             }
 
             cx.scene.push(SceneOp::Quad {
@@ -3157,6 +3184,154 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(point_r)),
             });
+        }
+
+        if let Some(brush) = brush
+            && let Some(brush_rect_px) = brush_rect_px
+        {
+            cx.scene.push(SceneOp::PushClipRect {
+                rect: brush_rect_px,
+            });
+
+            let highlight_bias = 2u32;
+
+            for cached in &self.cached_rects {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4));
+
+                let mut fill_color = self.series_color(series_id);
+                fill_color.a *= self.style.stroke_color.a;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
+                fill_color.a *= self.style.bar_fill_alpha;
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                    rect: cached.rect,
+                    background: fill_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            for (mark_id, cached) in &self.cached_paths {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4));
+
+                let mut stroke_color = self.series_color(series_id);
+                stroke_color.a *= self.style.stroke_color.a;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    stroke_color.a *= 0.25;
+                }
+
+                if let Some(fill) = cached.fill {
+                    let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
+                    let mut fill_color = stroke_color;
+                    fill_color.a = fill_alpha;
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                        origin: self.last_layout.plot.origin,
+                        path: fill,
+                        color: fill_color,
+                    });
+                }
+
+                let suppress_stroke =
+                    cached.source_series.is_some_and(|series_id| {
+                        model.series.get(&series_id).is_some_and(|s| {
+                            s.kind == delinea::SeriesKind::Area && s.stack.is_some()
+                        }) && (mark_id.0 & 0x7) == 1
+                    });
+                if !suppress_stroke {
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(base_order.saturating_add(highlight_bias + 1)),
+                        origin: self.last_layout.plot.origin,
+                        path: cached.stroke,
+                        color: stroke_color,
+                    });
+                }
+            }
+
+            let point_r = self.style.scatter_point_radius.0.max(1.0);
+            let point_order_bias = 2u32;
+            for cached in &self.cached_points {
+                let Some(series_id) = cached.source_series else {
+                    continue;
+                };
+                let Some(series) = model.series.get(&series_id) else {
+                    continue;
+                };
+                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                    continue;
+                }
+
+                let base_order = self
+                    .style
+                    .draw_order
+                    .0
+                    .saturating_add(cached.order.saturating_mul(4))
+                    .saturating_add(point_order_bias);
+
+                let mut fill_color = self.series_color(series_id);
+                fill_color.a *= self.style.scatter_fill_alpha;
+                if let Some(hover) = self.legend_hover
+                    && cached.source_series.is_some()
+                    && cached.source_series != Some(hover)
+                {
+                    fill_color.a *= 0.25;
+                }
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(base_order.saturating_add(highlight_bias)),
+                    rect: Rect::new(
+                        Point::new(
+                            Px(cached.point.x.0 - point_r),
+                            Px(cached.point.y.0 - point_r),
+                        ),
+                        Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
+                    ),
+                    background: fill_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(point_r)),
+                });
+            }
+
+            cx.scene.push(SceneOp::PopClip);
         }
 
         if let Some((x_axis, _y_axis)) = self.active_axes(&self.last_layout)
@@ -3420,19 +3595,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
-        if let Some(brush) = self.engine.state().brush_selection_2d
-            && let Some(rect) = self.brush_rect_px(brush)
-        {
-            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
-                    rect,
-                    background: self.style.selection_fill,
-                    border: Edges::all(self.style.selection_stroke_width),
-                    border_color: self.style.selection_stroke,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
+        if let Some(rect) = brush_rect_px {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
+                rect,
+                background: self.style.selection_fill,
+                border: Edges::all(self.style.selection_stroke_width),
+                border_color: self.style.selection_stroke,
+                corner_radii: Corners::all(Px(0.0)),
+            });
         }
 
         if let Some(drag) = self.brush_drag {
