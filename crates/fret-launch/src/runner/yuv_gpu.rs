@@ -115,6 +115,87 @@ pub(crate) fn write_nv12_rect(
         return Err("rect out of bounds".to_string());
     }
 
+    // Fast-path: if the source planes already satisfy wgpu's row-alignment requirements and the
+    // copy rect starts at x=0, we can upload directly from the caller-provided planes without
+    // repacking into an aligned staging buffer.
+    //
+    // This is a common case for decoders that already provide 256-byte-aligned strides.
+    let x_uv = rect.x / 2;
+    let y_uv = rect.y / 2;
+    let w_uv = rect.w.div_ceil(2);
+    let h_uv = rect.h.div_ceil(2);
+    let can_direct_upload = rect.x == 0
+        && x_uv == 0
+        && y_bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0
+        && uv_bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0
+        && y_bytes_per_row >= rect.w
+        && uv_bytes_per_row >= w_uv.saturating_mul(2);
+    if can_direct_upload {
+        let y_off = (rect.y as usize).saturating_mul(y_bytes_per_row as usize);
+        let y_needed = (y_bytes_per_row as usize).saturating_mul(rect.h as usize);
+        if y_off.saturating_add(y_needed) > y_plane.len() {
+            return Err("rect exceeds source plane bytes".to_string());
+        }
+
+        let uv_off = (y_uv as usize).saturating_mul(uv_bytes_per_row as usize);
+        let uv_needed = (uv_bytes_per_row as usize).saturating_mul(h_uv as usize);
+        if uv_off.saturating_add(uv_needed) > uv_plane.len() {
+            return Err("rect exceeds source plane bytes".to_string());
+        }
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &planes.y,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: rect.x,
+                    y: rect.y,
+                    z: 0,
+                },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &y_plane[y_off..y_off.saturating_add(y_needed)],
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(y_bytes_per_row),
+                rows_per_image: Some(rect.h),
+            },
+            wgpu::Extent3d {
+                width: rect.w,
+                height: rect.h,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &planes.uv,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: x_uv,
+                    y: y_uv,
+                    z: 0,
+                },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &uv_plane[uv_off..uv_off.saturating_add(uv_needed)],
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(uv_bytes_per_row),
+                rows_per_image: Some(h_uv),
+            },
+            wgpu::Extent3d {
+                width: w_uv,
+                height: h_uv,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        let uploaded_y = (y_bytes_per_row as u64).saturating_mul(rect.h as u64);
+        let uploaded_uv = (uv_bytes_per_row as u64).saturating_mul(h_uv as u64);
+        return Ok(uploaded_y.saturating_add(uploaded_uv));
+    }
+
     // Y plane upload (1 byte per pixel).
     let (y_bytes, y_bpr) =
         repack_rect_u8(y_bytes_per_row, y_plane, rect.x, rect.y, rect.w, rect.h)?;
