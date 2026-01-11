@@ -341,11 +341,6 @@ pub(super) fn handle_pointer_up<H: UiHost>(
                                 s.selected_nodes.push(node);
                             }
                         }
-                        PendingNodeSelectAction::Add => {
-                            if !s.selected_nodes.iter().any(|id| *id == node) {
-                                s.selected_nodes.push(node);
-                            }
-                        }
                         PendingNodeSelectAction::None => {}
                     }
 

@@ -360,15 +360,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - TODO: parity knobs:
     - [x] selectionOnDrag vs pan-on-drag conflict resolution:
       - background drag defaults to pan when `pan_on_drag.left = true`
-      - selection box starts when `selection_on_drag = true` or while holding Shift (selection key)
-      - Shift-clicking a node starts a selection session without clearing selection (mirrors Pane capture semantics)
+      - selection box starts when `selection_on_drag = true` or while holding `selection_key` (default: Shift)
+      - holding `selection_key` while pressing on a node starts a selection session without clearing selection (mirrors Pane capture semantics)
     - [x] paneClickDistance (pane click threshold): `NodeGraphInteractionState.pane_click_distance`
 
 ## 3.3 Multi-selection and selection transform
 
 - [~] **Shift-add / toggle selection**
   - XyFlow: multiSelection key / store `multiSelectionActive`
-  - fret-node: supports additive selection modes; needs explicit key policy in docs + tests
+  - fret-node:
+    - toggle selection is supported via `multi_selection_key` (default: Ctrl/Cmd)
+    - selection-key (marquee) is configured separately via `selection_key` (default: Shift)
 
 - [ ] **Box selection includes edges (optional)**
   - XyFlow: edge selection can follow node selection depending on config

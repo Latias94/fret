@@ -151,8 +151,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             .unwrap_or(Hit::Background)
     };
 
+    let selection_key_pressed = snapshot.interaction.selection_key.is_pressed(modifiers);
+    let multi_selection_pressed = snapshot
+        .interaction
+        .multi_selection_key
+        .is_pressed(modifiers);
+
     if snapshot.interaction.elements_selectable
-        && modifiers.shift
+        && selection_key_pressed
         && !matches!(
             hit,
             Hit::Port(_) | Hit::EdgeAnchor(_, _, _) | Hit::Resize(_, _, _) | Hit::GroupResize(_, _)
@@ -277,7 +283,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let selectable =
                 snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
             if selectable {
-                let multi = modifiers.ctrl || modifiers.meta;
+                let multi = multi_selection_pressed;
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_nodes.clear();
                     s.selected_groups.clear();
@@ -390,19 +396,14 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 Px(position.y.0 - rect.origin.y.0),
             );
             let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
             let selectable = snapshot.interaction.elements_selectable;
-            let select_action = if selectable && multi_mod {
-                if modifiers.shift && !(modifiers.ctrl || modifiers.meta) {
-                    PendingNodeSelectAction::Add
-                } else {
-                    PendingNodeSelectAction::Toggle
-                }
+            let select_action = if selectable && multi_selection_pressed {
+                PendingNodeSelectAction::Toggle
             } else {
                 PendingNodeSelectAction::None
             };
 
-            if selectable && !multi_mod {
+            if selectable && !multi_selection_pressed {
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_groups.clear();
@@ -453,7 +454,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
-            let multi = modifiers.ctrl || modifiers.meta;
+            let multi = multi_selection_pressed;
             let selectable =
                 snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
             if selectable {
@@ -499,12 +500,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
-            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_nodes.clear();
                     s.selected_edges.clear();
-                    if multi_mod {
+                    if multi_selection_pressed {
                         if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
                             s.selected_groups.remove(ix);
                         } else {
@@ -546,12 +546,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
-            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_nodes.clear();
                     s.selected_edges.clear();
-                    if multi_mod {
+                    if multi_selection_pressed {
                         if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
                             s.selected_groups.remove(ix);
                         } else {

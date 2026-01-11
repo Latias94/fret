@@ -201,7 +201,6 @@ pub(crate) struct SearcherState {
 pub(crate) enum PendingNodeSelectAction {
     None,
     Toggle,
-    Add,
 }
 
 impl Default for PendingNodeSelectAction {

@@ -234,10 +234,13 @@ impl Default for NodeGraphDragHandleMode {
     }
 }
 
-/// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey` mental model).
+/// Modifier requirement for interaction activation (XyFlow mental model).
+///
+/// This is used for zoom activation (`zoomActivationKey`), selection activation (`selectionKeyCode`),
+/// and multi-selection (`multiSelectionKeyCode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum NodeGraphZoomActivationKey {
+pub enum NodeGraphModifierKey {
     /// Wheel zoom is always active (no activation modifier required).
     None,
     /// Wheel zoom is active only while Ctrl or Meta is held (recommended default).
@@ -248,7 +251,10 @@ pub enum NodeGraphZoomActivationKey {
     Alt,
 }
 
-impl NodeGraphZoomActivationKey {
+/// Backward-compat alias for older API surface.
+pub type NodeGraphZoomActivationKey = NodeGraphModifierKey;
+
+impl NodeGraphModifierKey {
     pub fn is_pressed(self, modifiers: Modifiers) -> bool {
         match self {
             Self::None => true,
@@ -259,7 +265,7 @@ impl NodeGraphZoomActivationKey {
     }
 }
 
-impl Default for NodeGraphZoomActivationKey {
+impl Default for NodeGraphModifierKey {
     fn default() -> Self {
         Self::CtrlOrMeta
     }
@@ -452,6 +458,18 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub selection_on_drag: bool,
 
+    /// Modifier used to activate selection box interactions (XyFlow `selectionKeyCode`).
+    ///
+    /// Default: Shift.
+    #[serde(default = "default_selection_key")]
+    pub selection_key: NodeGraphModifierKey,
+
+    /// Modifier used to toggle/add to the current selection (XyFlow `multiSelectionKeyCode`).
+    ///
+    /// Default: Ctrl/Cmd.
+    #[serde(default = "default_multi_selection_key")]
+    pub multi_selection_key: NodeGraphModifierKey,
+
     /// Background click distance threshold in screen pixels (XyFlow `paneClickDistance`).
     ///
     /// This controls when a background drag transitions from a "click" into an interaction
@@ -573,6 +591,8 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
+            selection_key: default_selection_key(),
+            multi_selection_key: default_multi_selection_key(),
             pane_click_distance: default_pane_click_distance(),
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
@@ -618,6 +638,14 @@ fn default_pan_on_scroll() -> bool {
 
 fn default_space_to_pan() -> bool {
     true
+}
+
+fn default_selection_key() -> NodeGraphModifierKey {
+    NodeGraphModifierKey::Shift
+}
+
+fn default_multi_selection_key() -> NodeGraphModifierKey {
+    NodeGraphModifierKey::CtrlOrMeta
 }
 
 fn default_pane_click_distance() -> f32 {
