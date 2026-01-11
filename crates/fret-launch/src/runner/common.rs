@@ -151,6 +151,8 @@ pub struct WinitRunnerConfig {
     /// Note: this is a forward-looking knob. The initial streaming update MVP applies coalescing
     /// and per-frame budget at drain points but does not yet maintain a cross-frame pending queue.
     pub streaming_staging_budget_bytes: u64,
+    /// When enabled, the runner updates `fret_core::StreamingUploadPerfSnapshot` as an app global.
+    pub streaming_perf_snapshot_enabled: bool,
 }
 
 pub enum WgpuInit {
@@ -198,6 +200,7 @@ impl Default for WinitRunnerConfig {
             web_canvas_id: "fret-canvas".to_string(),
             streaming_upload_budget_bytes_per_frame: 64 * 1024 * 1024,
             streaming_staging_budget_bytes: 128 * 1024 * 1024,
+            streaming_perf_snapshot_enabled: false,
         }
     }
 }

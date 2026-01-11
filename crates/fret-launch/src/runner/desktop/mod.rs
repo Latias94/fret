@@ -50,7 +50,7 @@ mod app_handler;
 mod no_services;
 mod renderdoc_capture;
 
-use super::streaming_upload::coalesce_and_budget_streaming_image_updates;
+use super::streaming_upload::StreamingUploadQueue;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
@@ -871,6 +871,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     external_drop: NativeExternalDrop,
 
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
+    streaming_uploads: StreamingUploadQueue,
 
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,
@@ -1190,6 +1191,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             internal_drag_hover_pos: None,
             external_drop: NativeExternalDrop::default(),
             uploaded_images: HashMap::new(),
+            streaming_uploads: StreamingUploadQueue::default(),
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
@@ -1983,22 +1985,48 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
             let effects = self.app.flush_effects();
-            let (effects, stats) = coalesce_and_budget_streaming_image_updates(
+            let (effects, stats) = self.streaming_uploads.process_effects(
+                self.frame_id,
                 effects,
                 self.config.streaming_upload_budget_bytes_per_frame,
+                self.config.streaming_staging_budget_bytes,
             );
-            if (stats.update_effects_dropped_budget > 0
-                || stats.update_effects_dropped_coalesced > 0)
+            if self.config.streaming_perf_snapshot_enabled
+                || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+            {
+                self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
+                    frame_id: self.frame_id,
+                    upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
+                    staging_budget_bytes: stats.staging_budget_bytes,
+                    update_effects_seen: u64::from(stats.update_effects_seen),
+                    update_effects_enqueued: u64::from(stats.update_effects_enqueued),
+                    update_effects_replaced: u64::from(stats.update_effects_replaced),
+                    update_effects_applied: u64::from(stats.update_effects_applied),
+                    update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
+                    update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                    upload_bytes_applied: stats.upload_bytes_applied,
+                    pending_updates: u64::from(stats.pending_updates),
+                    pending_staging_bytes: stats.pending_staging_bytes,
+                });
+            }
+            if (stats.update_effects_delayed_budget > 0
+                || stats.update_effects_dropped_staging > 0
+                || stats.update_effects_replaced > 0)
                 && std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
             {
                 tracing::debug!(
                     seen = stats.update_effects_seen,
-                    kept = stats.update_effects_kept,
-                    dropped_coalesced = stats.update_effects_dropped_coalesced,
-                    dropped_budget = stats.update_effects_dropped_budget,
-                    upload_bytes_kept = stats.upload_bytes_kept,
-                    upload_budget_bytes_per_frame = stats.upload_bytes_budgeted,
-                    "streaming image updates coalesced/budgeted"
+                    enqueued = stats.update_effects_enqueued,
+                    replaced = stats.update_effects_replaced,
+                    applied = stats.update_effects_applied,
+                    delayed_budget = stats.update_effects_delayed_budget,
+                    dropped_staging = stats.update_effects_dropped_staging,
+                    upload_bytes_applied = stats.upload_bytes_applied,
+                    upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
+                    staging_budget_bytes = stats.staging_budget_bytes,
+                    pending_updates = stats.pending_updates,
+                    pending_staging_bytes = stats.pending_staging_bytes,
+                    "streaming image updates queued/budgeted"
                 );
             }
 
@@ -2725,6 +2753,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             did_work |= self.clear_internal_drag_hover_if_needed();
             did_work |= self.propagate_model_changes();
             did_work |= self.propagate_global_changes();
+
+            if self.streaming_uploads.has_pending() {
+                match self.streaming_uploads.pending_redraw_hint() {
+                    Some(windows) if windows.is_empty() => {
+                        for (_id, state) in self.windows.iter() {
+                            state.window.request_redraw();
+                        }
+                    }
+                    Some(windows) => {
+                        for window in windows {
+                            if let Some(state) = self.windows.get(window) {
+                                state.window.request_redraw();
+                            }
+                        }
+                    }
+                    None => {}
+                }
+            }
 
             if !did_work {
                 break;

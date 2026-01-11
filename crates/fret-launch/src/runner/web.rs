@@ -23,7 +23,7 @@ use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
 use fret_platform_web::WebPlatformServices;
 
-use super::streaming_upload::coalesce_and_budget_streaming_image_updates;
+use super::streaming_upload::StreamingUploadQueue;
 use super::{
     RenderTargetUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -58,6 +58,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     frame_id: FrameId,
 
     uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
+    streaming_uploads: StreamingUploadQueue,
 
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
@@ -159,6 +160,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
             uploaded_images: HashMap::new(),
+            streaming_uploads: StreamingUploadQueue::default(),
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
@@ -322,29 +324,59 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         state: &mut D::WindowState,
     ) -> bool {
         let effects = self.app.flush_effects();
-        if effects.is_empty() {
-            return false;
-        }
-
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
 
-        let (effects, stats) = coalesce_and_budget_streaming_image_updates(
+        let (effects, stats) = self.streaming_uploads.process_effects(
+            self.frame_id,
             effects,
             self.config.streaming_upload_budget_bytes_per_frame,
+            self.config.streaming_staging_budget_bytes,
         );
-        if (stats.update_effects_dropped_budget > 0 || stats.update_effects_dropped_coalesced > 0)
+        if self.config.streaming_perf_snapshot_enabled
+            || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+        {
+            self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
+                frame_id: self.frame_id,
+                upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
+                staging_budget_bytes: stats.staging_budget_bytes,
+                update_effects_seen: u64::from(stats.update_effects_seen),
+                update_effects_enqueued: u64::from(stats.update_effects_enqueued),
+                update_effects_replaced: u64::from(stats.update_effects_replaced),
+                update_effects_applied: u64::from(stats.update_effects_applied),
+                update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
+                update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                upload_bytes_applied: stats.upload_bytes_applied,
+                pending_updates: u64::from(stats.pending_updates),
+                pending_staging_bytes: stats.pending_staging_bytes,
+            });
+        }
+        if (stats.update_effects_delayed_budget > 0
+            || stats.update_effects_dropped_staging > 0
+            || stats.update_effects_replaced > 0)
             && std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
         {
             tracing::debug!(
                 seen = stats.update_effects_seen,
-                kept = stats.update_effects_kept,
-                dropped_coalesced = stats.update_effects_dropped_coalesced,
-                dropped_budget = stats.update_effects_dropped_budget,
-                upload_bytes_kept = stats.upload_bytes_kept,
-                upload_budget_bytes_per_frame = stats.upload_bytes_budgeted,
-                "streaming image updates coalesced/budgeted"
+                enqueued = stats.update_effects_enqueued,
+                replaced = stats.update_effects_replaced,
+                applied = stats.update_effects_applied,
+                delayed_budget = stats.update_effects_delayed_budget,
+                dropped_staging = stats.update_effects_dropped_staging,
+                upload_bytes_applied = stats.upload_bytes_applied,
+                upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
+                staging_budget_bytes = stats.staging_budget_bytes,
+                pending_updates = stats.pending_updates,
+                pending_staging_bytes = stats.pending_staging_bytes,
+                "streaming image updates queued/budgeted"
             );
+        }
+
+        if effects.is_empty() {
+            if self.streaming_uploads.has_pending() {
+                window.request_redraw();
+            }
+            return false;
         }
 
         for effect in effects {

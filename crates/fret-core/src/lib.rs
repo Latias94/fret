@@ -11,6 +11,7 @@ pub mod panels;
 pub mod scene;
 pub mod semantics;
 pub mod services;
+pub mod streaming;
 pub mod svg;
 pub mod text;
 pub mod time;
@@ -54,6 +55,7 @@ pub use semantics::{
     SemanticsSnapshot,
 };
 pub use services::UiServices;
+pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     CaretAffinity, FontWeight, HitTestResult, RichText, TextConstraints, TextFontFamilyConfig,
