@@ -978,6 +978,7 @@ mod tests {
                 points: range_b,
                 fill: None,
                 opacity_mul: None,
+                radius_mul: None,
                 stroke: None,
             }),
         });
@@ -994,6 +995,7 @@ mod tests {
                 points: range_a,
                 fill: None,
                 opacity_mul: None,
+                radius_mul: None,
                 stroke: None,
             }),
         });

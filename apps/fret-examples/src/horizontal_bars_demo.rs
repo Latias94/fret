@@ -114,6 +114,7 @@ impl HorizontalBarsDemoDriver {
                 domain: (-80.0, 80.0),
                 initial_range: Some((-20.0, 20.0)),
                 initial_piece_mask: None,
+                point_radius_mul_range: None,
                 buckets: 8,
                 out_of_range_opacity: 0.25,
             }],

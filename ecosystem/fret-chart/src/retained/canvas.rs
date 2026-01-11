@@ -62,6 +62,7 @@ struct CachedPoint {
     source_series: Option<delinea::SeriesId>,
     fill: Option<delinea::PaintId>,
     opacity_mul: f32,
+    radius_mul: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2203,12 +2204,17 @@ impl ChartCanvas {
             }
             self.cached_points.reserve(end - start);
             for p in &marks.arena.points[start..end] {
+                let radius_mul = points
+                    .radius_mul
+                    .filter(|v| v.is_finite() && *v > 0.0)
+                    .unwrap_or(1.0);
                 self.cached_points.push(CachedPoint {
                     point: *p,
                     order: node.order.0,
                     source_series: node.source_series,
                     fill: points.fill,
                     opacity_mul: points.opacity_mul.unwrap_or(1.0),
+                    radius_mul,
                 });
             }
         }
@@ -3622,9 +3628,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
         }
 
-        let point_r = self.style.scatter_point_radius.0.max(1.0);
+        let base_point_r = self.style.scatter_point_radius.0.max(1.0);
         let point_order_bias = 2u32;
         for cached in &self.cached_points {
+            let point_r = (base_point_r * cached.radius_mul).max(1.0);
             let base_order = self
                 .style
                 .draw_order
@@ -3782,7 +3789,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
             }
 
-            let point_r = self.style.scatter_point_radius.0.max(1.0);
+            let base_point_r = self.style.scatter_point_radius.0.max(1.0);
             let point_order_bias = 2u32;
             for cached in &self.cached_points {
                 let Some(series_id) = cached.source_series else {
@@ -3795,6 +3802,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     continue;
                 }
 
+                let point_r = (base_point_r * cached.radius_mul).max(1.0);
                 let base_order = self
                     .style
                     .draw_order
@@ -4493,6 +4501,7 @@ mod tests {
             domain: (-1.0, 1.0),
             initial_range: Some((-0.25, 0.75)),
             initial_piece_mask: None,
+            point_radius_mul_range: None,
             buckets: 8,
             out_of_range_opacity: 0.25,
         });

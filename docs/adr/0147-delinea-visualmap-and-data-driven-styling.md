@@ -73,6 +73,7 @@ VisualMap can write a small set of channels in v1:
 
 - `color` (primary, most common ECharts usage),
 - `opacity` (often combined with `outOfRange` dimming).
+- `point radius multiplier` (scatter-only; bucketized batches, adapter multiplies its base radius).
 
 Future extensions (P1+) may add:
 

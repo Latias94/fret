@@ -85,6 +85,7 @@ mod tests {
             },
             initial_range: None,
             initial_piece_mask: None,
+            point_radius_mul_range: None,
             buckets: 5,
             out_of_range_opacity: 0.25,
         }

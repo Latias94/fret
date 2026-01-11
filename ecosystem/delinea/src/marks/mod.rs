@@ -66,6 +66,10 @@ pub struct MarkPointsRef {
     pub fill: Option<PaintId>,
     /// Optional opacity multiplier applied by the adapter when drawing this batch.
     pub opacity_mul: Option<f32>,
+    /// Optional point radius multiplier applied by the adapter when drawing this batch.
+    ///
+    /// v1: used by VisualMap bucket batches for scatter point size mapping.
+    pub radius_mul: Option<f32>,
     pub stroke: Option<(PaintId, StrokeStyleV2)>,
 }
 

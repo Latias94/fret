@@ -566,6 +566,7 @@ impl MarksStage {
                                 points: range.clone(),
                                 fill: None,
                                 opacity_mul: None,
+                                radius_mul: None,
                                 stroke: None,
                             }),
                         });
@@ -727,6 +728,12 @@ impl MarksStage {
 
                             let paint_bucket = (bucket_key % (vm.buckets as usize)) as u16;
                             let in_range = bucket_key < (vm.buckets as usize);
+                            let radius_mul = vm.point_radius_mul_range.and_then(|(a, b)| {
+                                let denom = (vm.buckets.saturating_sub(1) as f32).max(1.0);
+                                let t = (paint_bucket as f32 / denom).clamp(0.0, 1.0);
+                                let v = a + t * (b - a);
+                                (v.is_finite() && v > 0.0).then_some(v)
+                            });
 
                             marks.nodes.push(MarkNode {
                                 id: series_mark_id(series.id, 16 + bucket_key as u64),
@@ -739,6 +746,7 @@ impl MarksStage {
                                     points: range.clone(),
                                     fill: Some(crate::ids::PaintId::new(paint_bucket as u64)),
                                     opacity_mul: (!in_range).then_some(vm.out_of_range_opacity),
+                                    radius_mul,
                                     stroke: None,
                                 }),
                             });
@@ -786,6 +794,7 @@ impl MarksStage {
                             points: range,
                             fill: None,
                             opacity_mul: None,
+                            radius_mul: None,
                             stroke: None,
                         }),
                     });
