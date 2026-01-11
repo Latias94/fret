@@ -409,6 +409,18 @@ impl ElementHostWidget {
                 // Layout-driven anchored placement. We measure the child subtree first, then
                 // compute a placement transform relative to the wrapper bounds.
 
+                let anchor = props
+                    .anchor_element
+                    .and_then(|element| {
+                        crate::elements::node_for_element(
+                            cx.app,
+                            window,
+                            crate::elements::GlobalElementId(element),
+                        )
+                    })
+                    .and_then(|node| cx.tree.debug_node_bounds(node))
+                    .unwrap_or(props.anchor);
+
                 #[cfg(feature = "layout-engine-v2")]
                 if cx.children.len() == 1 {
                     let child = cx.children[0];
@@ -423,7 +435,7 @@ impl ElementHostWidget {
                             crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
                         let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
                             outer,
-                            props.anchor,
+                            anchor,
                             desired_child,
                             props.side_offset,
                             props.side,
@@ -487,7 +499,7 @@ impl ElementHostWidget {
                 let outer = crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
                 let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
                     outer,
-                    props.anchor,
+                    anchor,
                     desired_child,
                     props.side_offset,
                     props.side,
