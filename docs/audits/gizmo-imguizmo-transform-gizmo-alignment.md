@@ -229,6 +229,9 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
    - Explicit priority ordering (e.g. active > hovered; center/plane/axis; rotate view ring) with tunable bias.
 4. **Projection edge-case audit**
    - Validate orthographic, near-plane clipping, behind-camera cases with tests (project/unproject + pick stability).
+5. **First-frame presentation / redraw robustness**
+   - Ensure viewport + gizmo visuals present without requiring any user input (no "click to see the first frame").
+   - Handle transient `wgpu::SurfaceError::{Timeout,Outdated}` by scheduling a one-shot redraw/RAF retry.
 
 ### P1 (feature breadth parity)
 
