@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, Modifiers, MouseButton, MouseButtons, Point, PointerEvent,
+    AppWindowId, Event, FrameId, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
 };
 use fret_runtime::Model;
@@ -334,6 +334,76 @@ fn fret_rect_to_dom(rect: Rect) -> DomRect {
         w: rect.size.width.0,
         h: rect.size.height.0,
     }
+}
+
+fn find_best_overlay_panel_rect_in_subtree(
+    ui: &UiTree<App>,
+    root: NodeId,
+    window_bounds: Rect,
+) -> Option<Rect> {
+    let mut stack = vec![root];
+    let mut best: Option<(f32, Rect)> = None;
+
+    while let Some(node) = stack.pop() {
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+
+        let bounds = ui
+            .debug_node_visual_bounds(node)
+            .or_else(|| ui.debug_node_bounds(node))?;
+
+        let is_fullscreen =
+            bounds.origin == window_bounds.origin && bounds.size == window_bounds.size;
+        if is_fullscreen {
+            continue;
+        }
+
+        let w = bounds.size.width.0;
+        let h = bounds.size.height.0;
+        if w < 100.0 || h < 80.0 {
+            continue;
+        }
+
+        if w > window_bounds.size.width.0 - 1.0 || h > window_bounds.size.height.0 - 1.0 {
+            continue;
+        }
+
+        let area = w * h;
+        if best.as_ref().is_none_or(|(best_area, _)| area > *best_area) {
+            best = Some((area, bounds));
+        }
+    }
+
+    best.map(|(_, rect)| rect)
+}
+
+fn find_overlay_panel_rect(ui: &UiTree<App>, window_bounds: Rect) -> Rect {
+    let layers = ui.debug_layers_in_paint_order();
+
+    for layer in layers.iter().rev() {
+        if !layer.visible || !layer.hit_testable || !layer.blocks_underlay_input {
+            continue;
+        }
+
+        if let Some(found) = find_best_overlay_panel_rect_in_subtree(ui, layer.root, window_bounds)
+        {
+            return found;
+        }
+    }
+
+    for layer in layers.iter().rev() {
+        if !layer.visible || !layer.hit_testable {
+            continue;
+        }
+
+        if let Some(found) = find_best_overlay_panel_rect_in_subtree(ui, layer.root, window_bounds)
+        {
+            return found;
+        }
+    }
+
+    panic!("failed to locate overlay panel rect in debug layers");
 }
 
 fn fixed_size_container(cx: &mut ElementContext<'_, App>, w: f32, h: f32) -> AnyElement {
@@ -1916,6 +1986,175 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
 
     assert_close("context-menu main gap", fret_gap, web_gap, 2.0);
     assert_close("context-menu cross delta", fret_cross, web_cross, 2.0);
+}
+
+#[test]
+fn radix_web_navigation_menu_open_geometry_matches_fret() {
+    let golden = read_timeline("navigation-menu-example.navigation-menu.open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "navigation-menu-example");
+    assert_eq!(golden.primitive, "navigation-menu");
+    assert_eq!(golden.scenario, "open-close");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("data-slot")
+                .is_some_and(|v| v == "navigation-menu-trigger")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.text.as_deref() == Some("Getting started")
+    })
+    .expect("web trigger node");
+
+    let web_viewport = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "navigation-menu-viewport")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web viewport node");
+
+    let side = Side::Bottom;
+    let align = Align::Start;
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_viewport_rect = require_rect(web_viewport, "web viewport");
+    let web_gap = rect_main_gap(side, web_trigger_rect, web_viewport_rect);
+    let web_cross = rect_cross_delta(side, align, web_trigger_rect, web_viewport_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None::<Arc<str>>);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    // Frame 1: closed (establish anchor bounds for the trigger element).
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+            root_layout.position = PositionStyle::Relative;
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    ..Default::default()
+                },
+                |cx| {
+                    let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                        "getting_started",
+                        "Getting started",
+                        vec![fixed_size_container(
+                            cx,
+                            web_viewport_rect.w.max(200.0),
+                            web_viewport_rect.h.max(120.0),
+                        )],
+                    )];
+                    vec![
+                        fret_ui_shadcn::NavigationMenu::new(model.clone())
+                            .items(items)
+                            .into_element(cx),
+                    ]
+                },
+            )]
+        },
+    );
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    app.models_mut()
+        .update(&model, |selected| {
+            *selected = Some(Arc::from("getting_started"));
+        })
+        .expect("update navigation-menu model");
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let mut root_layout = LayoutStyle::default();
+                root_layout.size.width = Length::Fill;
+                root_layout.size.height = Length::Fill;
+                root_layout.position = PositionStyle::Relative;
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: root_layout,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                            "getting_started",
+                            "Getting started",
+                            vec![fixed_size_container(
+                                cx,
+                                web_viewport_rect.w.max(200.0),
+                                web_viewport_rect.h.max(120.0),
+                            )],
+                        )];
+                        vec![
+                            fret_ui_shadcn::NavigationMenu::new(model.clone())
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    },
+                )]
+            },
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger = find_semantics(&snap, SemanticsRole::Button, Some("Getting started"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret navigation-menu trigger semantics");
+        });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_viewport_rect = fret_rect_to_dom(find_overlay_panel_rect(&ui, bounds));
+
+    let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_viewport_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_viewport_rect);
+
+    assert_close("navigation-menu main gap", fret_gap, web_gap, 2.0);
+    assert_close("navigation-menu cross delta", fret_cross, web_cross, 2.0);
 }
 
 #[test]
