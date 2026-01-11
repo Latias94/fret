@@ -175,6 +175,8 @@ impl WinitAppDriver for PlotStressDriver {
         if should_report {
             if let Some(snap) = renderer.take_perf_snapshot() {
                 if snap.frames != 0 {
+                    let pipeline_breakdown =
+                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
                     try_println!(
                         "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
                         snap.frames,
@@ -201,6 +203,21 @@ impl WinitAppDriver for PlotStressDriver {
                         snap.scene_encoding_cache_hits,
                         snap.scene_encoding_cache_misses
                     );
+                    if pipeline_breakdown {
+                        try_println!(
+                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                            snap.pipeline_switches_quad,
+                            snap.pipeline_switches_viewport,
+                            snap.pipeline_switches_mask,
+                            snap.pipeline_switches_text_mask,
+                            snap.pipeline_switches_text_color,
+                            snap.pipeline_switches_path,
+                            snap.pipeline_switches_path_msaa,
+                            snap.pipeline_switches_composite,
+                            snap.pipeline_switches_fullscreen,
+                            snap.pipeline_switches_clip_mask,
+                        );
+                    }
                 }
             }
             state.last_renderer_report = Some(now);

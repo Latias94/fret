@@ -446,6 +446,8 @@ impl Renderer {
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
                                                 frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_quad =
+                                                frame_perf.pipeline_switches_quad.saturating_add(1);
                                         }
                                         pass.set_vertex_buffer(0, instance_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Quad;
@@ -505,6 +507,9 @@ impl Renderer {
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
                                                 frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_viewport = frame_perf
+                                                .pipeline_switches_viewport
+                                                .saturating_add(1);
                                         }
                                         pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Viewport;
@@ -579,6 +584,9 @@ impl Renderer {
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
                                                 frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_viewport = frame_perf
+                                                .pipeline_switches_viewport
+                                                .saturating_add(1);
                                         }
                                         pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Viewport;
@@ -651,6 +659,8 @@ impl Renderer {
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
                                                 frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_mask =
+                                                frame_perf.pipeline_switches_mask.saturating_add(1);
                                         }
                                         pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Mask;
@@ -727,6 +737,10 @@ impl Renderer {
                                                     frame_perf.pipeline_switches = frame_perf
                                                         .pipeline_switches
                                                         .saturating_add(1);
+                                                    frame_perf.pipeline_switches_text_mask =
+                                                        frame_perf
+                                                            .pipeline_switches_text_mask
+                                                            .saturating_add(1);
                                                 }
                                                 pass.set_vertex_buffer(
                                                     0,
@@ -757,6 +771,10 @@ impl Renderer {
                                                     frame_perf.pipeline_switches = frame_perf
                                                         .pipeline_switches
                                                         .saturating_add(1);
+                                                    frame_perf.pipeline_switches_text_color =
+                                                        frame_perf
+                                                            .pipeline_switches_text_color
+                                                            .saturating_add(1);
                                                 }
                                                 pass.set_vertex_buffer(
                                                     0,
@@ -834,6 +852,8 @@ impl Renderer {
                                         if perf_enabled {
                                             frame_perf.pipeline_switches =
                                                 frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_path =
+                                                frame_perf.pipeline_switches_path.saturating_add(1);
                                         }
                                         pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Path;
@@ -975,6 +995,8 @@ impl Renderer {
                         if perf_enabled {
                             frame_perf.pipeline_switches =
                                 frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_path_msaa =
+                                frame_perf.pipeline_switches_path_msaa.saturating_add(1);
                         }
                         path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
 
@@ -1115,6 +1137,8 @@ impl Renderer {
                     if perf_enabled {
                         frame_perf.pipeline_switches =
                             frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_composite =
+                            frame_perf.pipeline_switches_composite.saturating_add(1);
                     }
                     let uniform_offset =
                         (u64::from(path_pass.batch_uniform_index) * self.uniform_stride) as u32;
@@ -1276,6 +1300,8 @@ impl Renderer {
                         if perf_enabled {
                             frame_perf.pipeline_switches =
                                 frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
                         }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                         if perf_enabled {
@@ -1290,9 +1316,18 @@ impl Renderer {
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
                         let pipeline = self
@@ -1331,16 +1366,40 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
                         if perf_enabled {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
                         }
                     } else {
                         let layout = self
@@ -1488,25 +1547,37 @@ impl Renderer {
                         if perf_enabled {
                             frame_perf.pipeline_switches =
                                 frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
                         }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
                         }
                         rp.set_bind_group(1, &bind_group, &[]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
                         if perf_enabled {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
                         }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let layout = self
@@ -1556,23 +1627,38 @@ impl Renderer {
                         if perf_enabled {
                             frame_perf.pipeline_switches =
                                 frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
                         }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
                         }
                         rp.set_bind_group(1, &bind_group, &[]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else {
                         let layout = self
                             .blit_bind_group_layout
@@ -1791,16 +1877,40 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
                         if perf_enabled {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
                         }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let layout = self
@@ -1841,25 +1951,37 @@ impl Renderer {
                         if perf_enabled {
                             frame_perf.pipeline_switches =
                                 frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
                         }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
                         }
                         rp.set_bind_group(1, &bind_group, &[]);
                         if perf_enabled {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
                         if perf_enabled {
                             frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
                         }
                     } else {
                         let layout = self
@@ -2069,6 +2191,8 @@ impl Renderer {
                     if perf_enabled {
                         frame_perf.pipeline_switches =
                             frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_composite =
+                            frame_perf.pipeline_switches_composite.saturating_add(1);
                     }
                     if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let uniform_offset =
@@ -2158,6 +2282,8 @@ impl Renderer {
                     if perf_enabled {
                         frame_perf.pipeline_switches =
                             frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_clip_mask =
+                            frame_perf.pipeline_switches_clip_mask.saturating_add(1);
                     }
                     rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
                     if perf_enabled {
@@ -2240,6 +2366,46 @@ impl Renderer {
                 .perf
                 .pipeline_switches
                 .saturating_add(frame_perf.pipeline_switches);
+            self.perf.pipeline_switches_quad = self
+                .perf
+                .pipeline_switches_quad
+                .saturating_add(frame_perf.pipeline_switches_quad);
+            self.perf.pipeline_switches_viewport = self
+                .perf
+                .pipeline_switches_viewport
+                .saturating_add(frame_perf.pipeline_switches_viewport);
+            self.perf.pipeline_switches_mask = self
+                .perf
+                .pipeline_switches_mask
+                .saturating_add(frame_perf.pipeline_switches_mask);
+            self.perf.pipeline_switches_text_mask = self
+                .perf
+                .pipeline_switches_text_mask
+                .saturating_add(frame_perf.pipeline_switches_text_mask);
+            self.perf.pipeline_switches_text_color = self
+                .perf
+                .pipeline_switches_text_color
+                .saturating_add(frame_perf.pipeline_switches_text_color);
+            self.perf.pipeline_switches_path = self
+                .perf
+                .pipeline_switches_path
+                .saturating_add(frame_perf.pipeline_switches_path);
+            self.perf.pipeline_switches_path_msaa = self
+                .perf
+                .pipeline_switches_path_msaa
+                .saturating_add(frame_perf.pipeline_switches_path_msaa);
+            self.perf.pipeline_switches_composite = self
+                .perf
+                .pipeline_switches_composite
+                .saturating_add(frame_perf.pipeline_switches_composite);
+            self.perf.pipeline_switches_fullscreen = self
+                .perf
+                .pipeline_switches_fullscreen
+                .saturating_add(frame_perf.pipeline_switches_fullscreen);
+            self.perf.pipeline_switches_clip_mask = self
+                .perf
+                .pipeline_switches_clip_mask
+                .saturating_add(frame_perf.pipeline_switches_clip_mask);
             self.perf.bind_group_switches = self
                 .perf
                 .bind_group_switches
