@@ -869,8 +869,6 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     external_drop: NativeExternalDrop,
 
-    renderdoc: Option<RenderDocCapture>,
-
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,
     #[cfg(feature = "hotpatch-subsecond")]
@@ -1183,7 +1181,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             external_drop: NativeExternalDrop::default(),
-            renderdoc: None,
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
