@@ -609,6 +609,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
         out.push_str("  L: local/world   P: pivot active/center\n");
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
+        out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
         out.push_str("  Ctrl+A: select all (Shift: clear)\n");
@@ -617,6 +618,12 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Mode: {:?}   Orientation: {:?}   Pivot: {:?}\n",
             self.gizmo.config.mode, self.gizmo.config.orientation, self.gizmo.config.pivot_mode
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
+            self.gizmo.config.size_px,
+            self.gizmo.config.line_thickness_px,
+            self.gizmo.config.pick_radius_px
         ));
 
         if self.op_mask_enabled {
@@ -1920,6 +1927,76 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     } else {
                         m.apply_op_mask();
                     }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Minus,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px - step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Equal,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px + step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Comma,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px - step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px - step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Period,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px + step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px + step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px + step).clamp(6.0, 32.0);
                 });
                 app.request_redraw(window);
             }
