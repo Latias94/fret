@@ -379,9 +379,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - when active, clicking a node/edge/group toggles only that element and does not clear other selected element kinds (XyFlow parity)
     - selection-key (marquee) is configured separately via `selection_key` (default: Shift)
 
-- [ ] **Box selection includes edges (optional)**
-  - XyFlow: edge selection can follow node selection depending on config
-  - fret-node: TBD
+- [x] **Box selection includes edges**
+  - XyFlow: during marquee selection, edges connected to the selected nodes are also selected.
+  - fret-node:
+    - default on: `NodeGraphInteractionState.box_select_connected_edges = true`
+    - gated by: `NodeGraphInteractionState.edges_selectable`
 
 ---
 

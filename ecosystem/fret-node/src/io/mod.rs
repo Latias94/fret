@@ -429,6 +429,10 @@ fn default_pan_on_drag_buttons() -> NodeGraphPanOnDragButtons {
     }
 }
 
+fn default_box_select_connected_edges() -> bool {
+    true
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeGraphPanOnScrollMode {
@@ -509,6 +513,13 @@ pub struct NodeGraphInteractionState {
     /// This matches XyFlow's `selectionOnDrag`.
     #[serde(default)]
     pub selection_on_drag: bool,
+
+    /// When marquee-selecting nodes, also include their incident edges (XyFlow behavior).
+    ///
+    /// In XyFlow, the selection rectangle selects nodes and then adds all edges connected to
+    /// those nodes (subject to edge selectability).
+    #[serde(default = "default_box_select_connected_edges")]
+    pub box_select_connected_edges: bool,
 
     /// Modifier used to activate selection box interactions (XyFlow `selectionKeyCode`).
     ///
@@ -674,6 +685,7 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
+            box_select_connected_edges: default_box_select_connected_edges(),
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
             delete_key: NodeGraphDeleteKey::default(),
