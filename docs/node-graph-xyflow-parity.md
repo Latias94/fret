@@ -221,7 +221,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **Pan on drag (background)**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`panOnDrag`, filters, handlers)
   - fret-node: `NodeGraphCanvas` (background drag pans; behavior lives in canvas event handling)
-  - Notes: parity knobs still TBD (left/middle/right mouse, “space to pan”, touch), but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
+  - Notes:
+    - parity knobs still TBD (left/middle/right mouse, “space to pan”, touch), but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
+    - Implementation detail: `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event positions are in the widget's local (canvas) coordinates and change as pan changes.
+      Panning deltas must be computed in a stable coordinate space (screen/global) to avoid feedback jitter.
+      See `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (`pan_last_screen_pos` sampling).
 
 - [~] **Zoom on wheel / pinch / double click**
   - XyFlow: `packages/system/src/xypanzoom/XYPanZoom.ts` (`zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick`)
