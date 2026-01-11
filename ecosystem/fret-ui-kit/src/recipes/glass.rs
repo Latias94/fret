@@ -2,28 +2,8 @@ use fret_core::{Color, EffectChain, EffectStep, Px};
 use fret_ui::Theme;
 
 use crate::ChromeRefinement;
+use crate::recipes::effect_recipe::{alpha_mul, alpha_set, clamp_u32_from_metric};
 use crate::style::{ColorFallback, ColorRef, MetricFallback, MetricRef};
-
-fn clamp_u32_from_metric(px: Px, min: u32, max: u32, default: u32) -> u32 {
-    if min > max {
-        return default;
-    }
-    let raw = px.0.round();
-    if !raw.is_finite() {
-        return default;
-    }
-    (raw as i64).clamp(min as i64, max as i64) as u32
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-fn alpha_set(mut c: Color, a: f32) -> Color {
-    c.a = a.clamp(0.0, 1.0);
-    c
-}
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlassTokenKeys {

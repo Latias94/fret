@@ -1,4 +1,4 @@
-use fret_core::geometry::{Corners, Edges, Px};
+use fret_core::geometry::{Corners, Edges};
 use fret_core::scene::{EffectMode, EffectQuality};
 use fret_ui::element::{
     AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow,
