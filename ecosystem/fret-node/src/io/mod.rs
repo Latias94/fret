@@ -487,6 +487,10 @@ fn default_box_select_edges() -> NodeGraphBoxSelectEdges {
     NodeGraphBoxSelectEdges::Connected
 }
 
+fn default_nodes_draggable() -> bool {
+    true
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeGraphPanOnScrollMode {
@@ -502,6 +506,10 @@ pub struct NodeGraphInteractionState {
     /// Global master switch for selecting graph elements (nodes/edges/groups).
     #[serde(default = "default_elements_selectable")]
     pub elements_selectable: bool,
+
+    /// Whether nodes can be dragged with pointer interactions (XyFlow `nodesDraggable`).
+    #[serde(default = "default_nodes_draggable")]
+    pub nodes_draggable: bool,
 
     /// Whether edges can be selected via pointer/keyboard.
     #[serde(default = "default_edges_selectable")]
@@ -728,6 +736,7 @@ impl Default for NodeGraphInteractionState {
     fn default() -> Self {
         Self {
             elements_selectable: default_elements_selectable(),
+            nodes_draggable: default_nodes_draggable(),
             edges_selectable: default_edges_selectable(),
             edges_focusable: default_edges_focusable(),
             edges_reconnectable: default_edges_reconnectable(),
@@ -1080,6 +1089,7 @@ mod tests {
                 kind_version: 1,
                 pos: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,

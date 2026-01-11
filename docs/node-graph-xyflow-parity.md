@@ -402,6 +402,14 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 4.1 Drag threshold + click distance
 
+- [~] **Node drag enablement (`nodesDraggable` / `node.draggable`)**
+  - XyFlow: store `nodesDraggable` + `node.draggable?: boolean` (see `packages/system/src/types/nodes.ts`)
+  - fret-node:
+    - global gate: `NodeGraphInteractionState.nodes_draggable` (`ecosystem/fret-node/src/io/mod.rs`)
+    - per-node override: `Node.draggable: Option<bool>` (`ecosystem/fret-node/src/core/model.rs`)
+    - enforced by: `NodeGraphCanvas::node_is_draggable` + `left_click.rs` + `pending_drag.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+
 - [~] **Node drag threshold**
   - XyFlow: store `nodeDragThreshold`; used by `XYDrag` (`packages/system/src/xydrag/XYDrag.ts`)
   - fret-node: `NodeGraphInteractionState.node_drag_threshold` (screen px), used by pending node/group/resize/connect workflows

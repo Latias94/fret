@@ -54,6 +54,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
                 .nodes
                 .iter()
                 .copied()
+                .filter(|id| NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, *id))
                 .filter_map(|id| g.nodes.get(&id).map(|n| (id, n.pos)))
                 .collect::<Vec<_>>()
         })

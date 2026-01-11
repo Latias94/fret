@@ -207,6 +207,7 @@ impl InsertNodeTemplate {
                 kind_version: self.kind_version,
                 pos: at,
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: self.collapsed,

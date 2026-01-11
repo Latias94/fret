@@ -106,6 +106,12 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selectable: Option<bool>,
 
+    /// Whether the node can be dragged with pointer interactions (XyFlow `node.draggable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_draggable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub draggable: Option<bool>,
+
     /// Optional group container id (subflow / parent frame).
     ///
     /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally

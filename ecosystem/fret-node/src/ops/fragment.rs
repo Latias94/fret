@@ -158,6 +158,7 @@ mod tests {
             kind_version: 1,
             pos: CanvasPoint { x: pos.0, y: pos.1 },
             selectable: None,
+            draggable: None,
             parent,
             size: None,
             collapsed: false,

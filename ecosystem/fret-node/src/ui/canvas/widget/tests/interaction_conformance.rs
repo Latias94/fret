@@ -9,7 +9,7 @@ use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
 use super::super::super::state::{EdgeDrag, WireDragKind};
-use super::super::{NodeGraphCanvas, edge_drag, left_click, marquee, pointer_up};
+use super::super::{NodeGraphCanvas, edge_drag, left_click, marquee, pending_drag, pointer_up};
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
 use fret_ui::retained_bridge::Widget as _;
 
@@ -26,6 +26,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             kind_version: 1,
             pos: CanvasPoint { x: 0.0, y: 0.0 },
             selectable: None,
+            draggable: None,
             parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
@@ -58,6 +59,7 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             kind_version: 1,
             pos: CanvasPoint { x: 320.0, y: 0.0 },
             selectable: None,
+            draggable: None,
             parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
@@ -923,6 +925,120 @@ fn node_click_does_not_select_node_when_node_selectable_is_false() {
         .read_ref(&host, |s| s.selected_nodes.clone())
         .unwrap_or_default();
     assert_eq!(selected_nodes, vec![b]);
+}
+
+#[test]
+fn node_drag_does_not_start_when_node_draggable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, a, _b) = make_test_graph_two_nodes_with_size();
+    graph_value
+        .nodes
+        .get_mut(&a)
+        .expect("node exists")
+        .draggable = Some(false);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.nodes_draggable = true;
+        s.interaction.node_drag_threshold = 0.0;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let pos = Point::new(Px(20.0), Px(10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert!(canvas.interaction.pending_node_drag.is_some());
+
+    let moved = Point::new(Px(120.0), Px(60.0));
+    assert!(pending_drag::handle_pending_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        moved,
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.node_drag.is_none());
+    assert!(canvas.interaction.pending_node_drag.is_none());
+
+    let a_pos = graph
+        .read_ref(&host, |g| g.nodes.get(&a).map(|n| n.pos))
+        .ok()
+        .flatten()
+        .unwrap();
+    assert_eq!(a_pos, CanvasPoint { x: 0.0, y: 0.0 });
+}
+
+#[test]
+fn node_drag_does_not_start_when_nodes_draggable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.nodes_draggable = false;
+        s.interaction.node_drag_threshold = 0.0;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let pos = Point::new(Px(20.0), Px(10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert!(canvas.interaction.pending_node_drag.is_some());
+
+    let moved = Point::new(Px(120.0), Px(60.0));
+    assert!(pending_drag::handle_pending_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        moved,
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.node_drag.is_none());
+    assert!(canvas.interaction.pending_node_drag.is_none());
+
+    let a_pos = graph
+        .read_ref(&host, |g| g.nodes.get(&a).map(|n| n.pos))
+        .ok()
+        .flatten()
+        .unwrap();
+    assert_eq!(a_pos, CanvasPoint { x: 0.0, y: 0.0 });
 }
 
 #[test]

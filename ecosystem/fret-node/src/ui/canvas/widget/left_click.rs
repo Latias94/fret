@@ -411,6 +411,13 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 })
                 .ok()
                 .unwrap_or(false);
+            let node_draggable = canvas
+                .graph
+                .read_ref(cx.app, |g| {
+                    NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, node)
+                })
+                .ok()
+                .unwrap_or(false);
             let select_action = if node_selectable && multi_selection_pressed {
                 PendingNodeSelectAction::Toggle
             } else {
@@ -430,16 +437,35 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 });
             }
 
-            let nodes_for_drag =
-                (node_selectable && already_selected && snapshot.selected_nodes.len() > 1)
-                    .then(|| snapshot.selected_nodes.clone())
-                    .unwrap_or_else(|| vec![node]);
+            let nodes_for_drag = if node_draggable
+                && node_selectable
+                && already_selected
+                && snapshot.selected_nodes.len() > 1
+            {
+                snapshot.selected_nodes.clone()
+            } else {
+                vec![node]
+            };
+            let nodes_for_drag = canvas
+                .graph
+                .read_ref(cx.app, |g| {
+                    nodes_for_drag
+                        .iter()
+                        .copied()
+                        .filter(|id| {
+                            NodeGraphCanvas::node_is_draggable(g, &snapshot.interaction, *id)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .ok()
+                .unwrap_or_else(|| vec![node]);
             let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
                 NodeGraphDragHandleMode::Any => true,
                 NodeGraphDragHandleMode::Header => {
                     node_header_hit(rect, canvas.style.node_header_height, zoom, position)
                 }
             };
+            let drag_enabled = drag_enabled && node_draggable;
             canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
                 primary: node,
                 nodes: nodes_for_drag,

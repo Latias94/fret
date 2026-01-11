@@ -105,6 +105,7 @@ fn loose_mode_ignores_same_side_ports_when_picking_target() {
             kind_version: 1,
             pos: crate::core::CanvasPoint { x: 260.0, y: 60.0 },
             selectable: None,
+            draggable: None,
             parent: None,
             size: None,
             collapsed: false,

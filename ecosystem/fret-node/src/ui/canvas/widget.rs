@@ -3012,6 +3012,7 @@ impl NodeGraphCanvas {
             kind_version: 1,
             pos: at,
             selectable: None,
+            draggable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -4131,6 +4132,20 @@ impl NodeGraphCanvas {
             return false;
         };
         node.selectable.unwrap_or(true)
+    }
+
+    fn node_is_draggable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        node: GraphNodeId,
+    ) -> bool {
+        if !interaction.nodes_draggable {
+            return false;
+        }
+        let Some(node) = graph.nodes.get(&node) else {
+            return false;
+        };
+        node.draggable.unwrap_or(true)
     }
 
     fn should_add_bundle_port(
@@ -9063,6 +9078,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9077,6 +9093,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9102,6 +9119,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9119,6 +9137,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 5.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9147,6 +9166,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9188,6 +9208,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 200.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9266,6 +9287,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9296,6 +9318,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9365,6 +9388,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9519,6 +9543,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9550,6 +9575,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 100.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9662,6 +9688,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
                 selectable: None,
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9676,6 +9703,7 @@ mod tests {
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
                 selectable: Some(false),
+                draggable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
