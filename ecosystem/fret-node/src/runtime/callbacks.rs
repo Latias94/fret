@@ -125,6 +125,18 @@ pub trait NodeGraphCallbacks: 'static {
     fn on_connect_start(&mut self, _ev: ConnectStart) {}
     /// UI-driven hook: called when a connection gesture ends (commit/reject/cancel/picker).
     fn on_connect_end(&mut self, _ev: ConnectEnd) {}
+
+    /// UI-driven hook: called when a reconnect gesture starts.
+    ///
+    /// This is a reconnect-only alias that mirrors ReactFlow's `onReconnectStart`.
+    /// Note that `on_connect_start` is still emitted (with `ConnectDragKind::Reconnect*`).
+    fn on_reconnect_start(&mut self, _ev: ConnectStart) {}
+
+    /// UI-driven hook: called when a reconnect gesture ends.
+    ///
+    /// This is a reconnect-only alias that mirrors ReactFlow's `onReconnectEnd`.
+    /// Note that `on_connect_end` is still emitted (with `ConnectDragKind::Reconnect*`).
+    fn on_reconnect_end(&mut self, _ev: ConnectEnd) {}
 }
 
 /// Installs callbacks into a store via a subscription.

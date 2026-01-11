@@ -267,10 +267,17 @@ impl NodeGraphCanvas {
         let Some(callbacks) = self.callbacks.as_mut() else {
             return;
         };
-        callbacks.on_connect_start(ConnectStart {
+        let ev = ConnectStart {
             kind: Self::drag_kind_from_wire_drag_kind(kind),
             mode: snapshot.interaction.connection_mode,
-        });
+        };
+        callbacks.on_connect_start(ev.clone());
+        if matches!(
+            kind,
+            WireDragKind::Reconnect { .. } | WireDragKind::ReconnectMany { .. }
+        ) {
+            callbacks.on_reconnect_start(ev);
+        }
     }
 
     pub(super) fn emit_connect_end(
@@ -283,12 +290,19 @@ impl NodeGraphCanvas {
         let Some(callbacks) = self.callbacks.as_mut() else {
             return;
         };
-        callbacks.on_connect_end(ConnectEnd {
+        let ev = ConnectEnd {
             kind: Self::drag_kind_from_wire_drag_kind(kind),
             mode,
             target,
             outcome,
-        });
+        };
+        callbacks.on_connect_end(ev.clone());
+        if matches!(
+            kind,
+            WireDragKind::Reconnect { .. } | WireDragKind::ReconnectMany { .. }
+        ) {
+            callbacks.on_reconnect_end(ev);
+        }
     }
 
     fn emit_view_callbacks(&mut self, changes: &[ViewChange]) {

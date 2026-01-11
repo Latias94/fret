@@ -135,6 +135,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - Convenience hooks are provided alongside the raw streams:
       - connections: `on_connect` / `on_disconnect` / `on_reconnect` (derived from committed ops)
       - connection lifecycle: `on_connect_start` / `on_connect_end` (UI-driven; includes cancel/reject/picker)
+      - reconnect lifecycle: `on_reconnect_start` / `on_reconnect_end` (reconnect-only aliases)
       - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
     - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
 
