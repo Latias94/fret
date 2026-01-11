@@ -23,7 +23,10 @@ pub enum GizmoOrientation {
 pub enum GizmoPivotMode {
     /// The gizmo is positioned at the active target's pivot.
     Active,
-    /// The gizmo is positioned at the selection center (average translation of targets).
+    /// The gizmo is positioned at the selection center.
+    ///
+    /// When `GizmoTarget3d::local_bounds` are available, this uses the selection world AABB center
+    /// (editor convention). Otherwise it falls back to the average of target translations.
     Center,
 }
 
@@ -789,6 +792,28 @@ impl Gizmo {
         1.0
     }
 
+    fn pivot_origin(
+        active_transform: Transform3d,
+        targets: &[GizmoTarget3d],
+        mode: GizmoPivotMode,
+    ) -> Vec3 {
+        match mode {
+            GizmoPivotMode::Active => active_transform.translation,
+            GizmoPivotMode::Center => {
+                // Editor convention: "center" means the selection bounds center, not the average
+                // of entity origins (which can drift for uneven distributions).
+                if let Some(bounds) = Self::selection_world_aabb(targets) {
+                    (bounds.min + bounds.max) * 0.5
+                } else {
+                    let sum = targets
+                        .iter()
+                        .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
+                    sum / (targets.len().max(1) as f32)
+                }
+            }
+        }
+    }
+
     fn selection_world_aabb(targets: &[GizmoTarget3d]) -> Option<Aabb3> {
         let mut min_v = Vec3::splat(f32::INFINITY);
         let mut max_v = Vec3::splat(f32::NEG_INFINITY);
@@ -1130,15 +1155,7 @@ impl Gizmo {
             .map(|t| t.transform)
             .unwrap_or_else(|| targets[0].transform);
 
-        let origin = match self.config.pivot_mode {
-            GizmoPivotMode::Active => active_transform.translation,
-            GizmoPivotMode::Center => {
-                let sum = targets
-                    .iter()
-                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
-                sum / (targets.len().max(1) as f32)
-            }
-        };
+        let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
         let Some(cursor_ray) = ray_from_screen(
             view_projection,
             viewport,
@@ -2250,15 +2267,7 @@ impl Gizmo {
             .map(|t| t.transform)
             .unwrap_or_else(|| targets[0].transform);
 
-        let origin = match self.config.pivot_mode {
-            GizmoPivotMode::Active => active_transform.translation,
-            GizmoPivotMode::Center => {
-                let sum = targets
-                    .iter()
-                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
-                sum / (targets.len().max(1) as f32)
-            }
-        };
+        let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
         let size_length_world =
             self.size_length_world_or_one(view_projection, viewport, origin, targets);
         let axes_raw = self.axis_dirs(&active_transform);
@@ -8048,6 +8057,62 @@ mod tests {
         assert!(
             (length_world - expected).abs() < 1e-3,
             "length_world={length_world} expected={expected}"
+        );
+    }
+
+    #[test]
+    fn pivot_center_uses_selection_bounds_center_when_bounds_present() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.pivot_mode = GizmoPivotMode::Center;
+        let mut gizmo = Gizmo::new(config);
+
+        let aabb = Aabb3 {
+            min: Vec3::new(-1.0, -1.0, -1.0),
+            max: Vec3::new(3.0, 1.0, 1.0),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d {
+                translation: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            local_bounds: Some(aabb),
+        }];
+
+        // Center should come from bounds, not translation average.
+        let expected_origin = targets[0]
+            .transform
+            .to_mat4()
+            .transform_point3((aabb.min + aabb.max) * 0.5);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let center_px = project_point(view_proj, vp, expected_origin, gizmo.config.depth_range)
+            .unwrap()
+            .screen;
+
+        let input_down = GizmoInput {
+            cursor_px: center_px,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        // If we used translation average instead, the center handle would not be hit here and the
+        // drag would not activate.
+        assert!(
+            gizmo.state.active.is_some(),
+            "expected gizmo to start using the center handle at bounds center"
         );
     }
 
