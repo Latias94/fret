@@ -31,6 +31,20 @@ pub enum GizmoPivotMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GizmoHandedness {
+    /// Right-handed coordinate convention.
+    RightHanded,
+    /// Left-handed coordinate convention.
+    LeftHanded,
+}
+
+impl Default for GizmoHandedness {
+    fn default() -> Self {
+        Self::RightHanded
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DepthMode {
     Test,
     /// Draws regardless of depth but should be rendered *before* `Test` so visible parts can
@@ -207,6 +221,13 @@ pub struct GizmoConfig {
     pub operation_mask: Option<GizmoOps>,
     pub orientation: GizmoOrientation,
     pub pivot_mode: GizmoPivotMode,
+    /// Coordinate system handedness used to interpret rotation direction.
+    ///
+    /// Most picking math is purely geometric and works for either convention as long as the host
+    /// provides a consistent `view_projection`. The primary behavioral difference is the sign of
+    /// "positive rotation" around an axis, which is editor-facing and should match the host
+    /// engine's convention.
+    pub handedness: GizmoHandedness,
     pub depth_mode: DepthMode,
     pub depth_range: DepthRange,
     /// Determines how the gizmo's world-space size is derived.
@@ -307,6 +328,7 @@ impl Default for GizmoConfig {
             operation_mask: None,
             orientation: GizmoOrientation::World,
             pivot_mode: GizmoPivotMode::Active,
+            handedness: GizmoHandedness::default(),
             depth_mode: DepthMode::Test,
             depth_range: DepthRange::default(),
             size_policy: GizmoSizePolicy::ConstantPixels,
@@ -833,6 +855,13 @@ impl Gizmo {
             }
         }
         1.0
+    }
+
+    fn handedness_rotation_sign(&self) -> f32 {
+        match self.config.handedness {
+            GizmoHandedness::RightHanded => 1.0,
+            GizmoHandedness::LeftHanded => -1.0,
+        }
     }
 
     fn pivot_origin(
@@ -1802,7 +1831,7 @@ impl Gizmo {
                             .unwrap_or(self.state.drag_origin)
                         });
 
-                        let Some(angle) = angle_on_plane(
+                        let Some(mut angle) = angle_on_plane(
                             self.state.drag_origin,
                             hit_world,
                             axis_dir,
@@ -1811,6 +1840,7 @@ impl Gizmo {
                         ) else {
                             return None;
                         };
+                        angle *= self.handedness_rotation_sign();
 
                         let delta_angle = wrap_angle(angle - self.state.drag_prev_angle);
                         self.state.drag_prev_angle = angle;
@@ -3080,7 +3110,8 @@ impl Gizmo {
                 .unwrap_or(origin + u)
             });
 
-        let angle = angle_on_plane(origin, start_hit_world, axis_dir, u, v)?;
+        let mut angle = angle_on_plane(origin, start_hit_world, axis_dir, u, v)?;
+        angle *= self.handedness_rotation_sign();
         self.state.drag_start_angle = angle;
         self.state.drag_prev_angle = angle;
 
@@ -6181,6 +6212,15 @@ mod tests {
         proj * view
     }
 
+    fn test_view_projection_lh(viewport_px: (f32, f32)) -> Mat4 {
+        let aspect = viewport_px.0.max(1.0) / viewport_px.1.max(1.0);
+        let eye = Vec3::new(3.0, 2.0, 4.0);
+        let target = Vec3::ZERO;
+        let view = Mat4::look_at_lh(eye, target, Vec3::Y);
+        let proj = Mat4::perspective_lh(60.0_f32.to_radians(), aspect, 0.05, 100.0);
+        proj * view
+    }
+
     fn test_view_projection_fov(viewport_px: (f32, f32), fov_degrees: f32, eye: Vec3) -> Mat4 {
         let aspect = viewport_px.0.max(1.0) / viewport_px.1.max(1.0);
         let target = Vec3::ZERO;
@@ -7590,6 +7630,198 @@ mod tests {
         let mut gizmo = base_gizmo(GizmoMode::Rotate);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        let (u, v) = plane_basis(axis_dir);
+        let p_start_world = origin + u * radius_world;
+        let p_move_world = origin + (u * 0.98 + v * 0.2).normalize_or_zero() * radius_world;
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(moved_total.is_finite());
+        assert!(moved_total.abs() > 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(back_total.abs() < 1e-3, "total={back_total}");
+    }
+
+    #[test]
+    fn rotate_axis_drag_sign_flips_with_handedness() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let mut base_cfg = GizmoConfig::default();
+        base_cfg.mode = GizmoMode::Rotate;
+        base_cfg.depth_range = DepthRange::ZeroToOne;
+        base_cfg.drag_start_threshold_px = 0.0;
+        base_cfg.allow_axis_flip = false;
+        base_cfg.axis_fade_px = (f32::NAN, f32::NAN);
+        base_cfg.plane_fade_px2 = (f32::NAN, f32::NAN);
+        base_cfg.show_view_axis_ring = false;
+        base_cfg.show_arcball = false;
+
+        let mut gizmo_rh = Gizmo::new(base_cfg);
+        gizmo_rh.config.handedness = GizmoHandedness::RightHanded;
+
+        let mut gizmo_lh = Gizmo::new(base_cfg);
+        gizmo_lh.config.handedness = GizmoHandedness::LeftHanded;
+
+        let axes = gizmo_rh.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo_rh.config.depth_range,
+            gizmo_rh.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        let (u, v) = plane_basis(axis_dir);
+        let p_start_world = origin + u * radius_world;
+        let p_move_world = origin + (u * 0.98 + v * 0.2).normalize_or_zero() * radius_world;
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo_rh.config.depth_range).unwrap();
+        let p_move =
+            project_point(view_proj, vp, p_move_world, gizmo_rh.config.depth_range).unwrap();
+
+        let drag = |gizmo: &mut Gizmo| -> (f32, f32) {
+            let input_down = GizmoInput {
+                cursor_px: p_start.screen,
+                hovered: true,
+                drag_started: true,
+                dragging: true,
+                snap: false,
+                cancel: false,
+            };
+            let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+            let input_move = GizmoInput {
+                cursor_px: p_move.screen,
+                hovered: true,
+                drag_started: false,
+                dragging: true,
+                snap: false,
+                cancel: false,
+            };
+            let moved = gizmo
+                .update(view_proj, vp, input_move, targets[0].id, &targets)
+                .unwrap();
+            let moved_total = match moved.result {
+                GizmoResult::Rotation { total_radians, .. } => total_radians,
+                _ => panic!("expected rotation"),
+            };
+
+            let input_back = GizmoInput {
+                cursor_px: p_start.screen,
+                hovered: true,
+                drag_started: false,
+                dragging: true,
+                snap: false,
+                cancel: false,
+            };
+            let back = gizmo
+                .update(view_proj, vp, input_back, targets[0].id, &targets)
+                .unwrap();
+            let back_total = match back.result {
+                GizmoResult::Rotation { total_radians, .. } => total_radians,
+                _ => panic!("expected rotation"),
+            };
+
+            (moved_total, back_total)
+        };
+
+        let (moved_rh, back_rh) = drag(&mut gizmo_rh);
+        let (moved_lh, back_lh) = drag(&mut gizmo_lh);
+
+        assert!(moved_rh.is_finite() && moved_lh.is_finite());
+        assert!(moved_rh.abs() > 1e-6 && moved_lh.abs() > 1e-6);
+        assert!(
+            moved_rh * moved_lh < 0.0,
+            "expected opposite signs, rh={moved_rh} lh={moved_lh}"
+        );
+        assert!(
+            (moved_rh.abs() - moved_lh.abs()).abs() < 1e-5,
+            "expected same magnitude, rh={moved_rh} lh={moved_lh}"
+        );
+        assert!(back_rh.abs() < 1e-3, "rh total={back_rh}");
+        assert!(back_lh.abs() < 1e-3, "lh total={back_lh}");
+    }
+
+    #[test]
+    fn rotate_axis_drag_returns_to_zero_when_cursor_returns_with_left_handed_view_projection() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        gizmo.config.show_view_axis_ring = false;
+        gizmo.config.show_arcball = false;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_lh((800.0, 600.0));
 
         let origin = Vec3::ZERO;
         let axes = gizmo.axis_dirs(&Transform3d::default());

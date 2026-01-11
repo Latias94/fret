@@ -195,7 +195,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | --- | --- | --- | --- | --- |
 | Perspective camera | Yes | Yes | **Aligned** | Primary path; demo uses perspective. |
 | Orthographic camera | Yes (`SetOrthographic`) | Yes (projection inference) | **Aligned (basic)** | Ortho projection is covered by invariants tests (translate axis drag stability) in `ecosystem/fret-gizmo/src/gizmo.rs`. |
-| Left-handed vs right-handed | N/A (depends) | Yes (detects) | **Not implemented** | Fret assumes a `Mat4` VP and a depth convention (`DepthRange`), but does not explicitly model handedness. |
+| Left-handed vs right-handed | N/A (depends) | Yes (detects) | **Partially aligned** | Fret models handedness via `GizmoConfig::handedness` to control the user-facing rotation sign (evidence: `GizmoHandedness`, `handedness_rotation_sign`, tests in `ecosystem/fret-gizmo/src/gizmo.rs`). Auto-detection from `view_projection` is not implemented. |
 | Behind-camera culling / stability | Yes | Yes | **Aligned (basic)** | `project_point` rejects behind-camera points (`clip.w <= 0`), and regression tests cover translate/rotate/scale (including Universal) behind-camera and near-plane scenarios in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Numeric stability at large scales | Mixed | Better (f64) | **Partially aligned** | Fret uses `glam` f32 types; consider f64 internal math if large-world support becomes a requirement. |
 
