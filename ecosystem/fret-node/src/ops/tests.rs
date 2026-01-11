@@ -32,6 +32,9 @@ fn make_port(node: NodeId, key: &str, dir: PortDirection) -> Port {
         dir,
         kind: PortKind::Data,
         capacity: PortCapacity::Multi,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
         ty: None,
         data: serde_json::Value::Null,
     }

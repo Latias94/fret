@@ -34,6 +34,9 @@ fn make_port(
         dir,
         kind,
         capacity,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
         ty: None,
         data: serde_json::Value::Null,
     }

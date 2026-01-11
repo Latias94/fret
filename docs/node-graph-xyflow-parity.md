@@ -490,6 +490,28 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - forced-target / sticky-wire gating: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
     - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 
+## 5.0.1 Handle/port connectability (`isConnectable*`)
+
+- [~] **Per-handle connectability (base + start/end)**
+  - XyFlow:
+    - type surface: `HandleProps` (`isConnectable`, `isConnectableStart`, `isConnectableEnd`) in
+      `repo-ref/xyflow/packages/system/src/types/handles.ts`
+    - start gating: `Handle` checks `isConnectableStart` before calling `XYHandle.onPointerDown(...)` in
+      `repo-ref/xyflow/packages/react/src/components/Handle/index.tsx`
+    - end gating: `XYHandle.isValid(...)` requires the target handle to have `connectable` and `connectableend` classes
+      (`isConnectable && isConnectableEnd`) in `repo-ref/xyflow/packages/system/src/xyhandle/XYHandle.ts`
+  - fret-node:
+    - model: `Port.connectable`, `Port.connectable_start`, `Port.connectable_end` in `ecosystem/fret-node/src/core/model.rs`
+    - resolution:
+      - base: `Port.connectable` overrides node/global connectability; otherwise falls back to `Node.connectable` / `nodes_connectable`
+      - start: `connectable_start` gates creating a new wire drag from a port click
+      - end: `connectable_end` gates target port selection and forced-target connections (incl. click-to-connect)
+    - enforced by:
+      - start gating: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
+      - end gating: `NodeGraphCanvas::pick_target_port` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - forced-target + sticky-wire: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+
 ## 5.1 Connection mode (Strict vs Loose)
 
 - [x] **Strict / Loose connection modes**

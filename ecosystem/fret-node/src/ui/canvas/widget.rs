@@ -2651,11 +2651,14 @@ impl NodeGraphCanvas {
         geom: &CanvasGeometry,
         index: &CanvasSpatialIndex,
         from: PortId,
+        require_from_connectable_start: bool,
         pos: Point,
         zoom: f32,
         scratch: &mut Vec<PortId>,
     ) -> Option<PortId> {
-        if !Self::port_is_connectable(graph, &snapshot.interaction, from) {
+        if require_from_connectable_start
+            && !Self::port_is_connectable_start(graph, &snapshot.interaction, from)
+        {
             return None;
         }
 
@@ -2671,7 +2674,7 @@ impl NodeGraphCanvas {
                 let port = graph.ports.get(&candidate)?;
                 (candidate != from
                     && port.dir == desired_dir
-                    && Self::port_is_connectable(graph, &snapshot.interaction, candidate))
+                    && Self::port_is_connectable_end(graph, &snapshot.interaction, candidate))
                 .then_some(candidate)
             }
             NodeGraphConnectionMode::Loose => {
@@ -2681,7 +2684,7 @@ impl NodeGraphCanvas {
                     let port = graph.ports.get(&candidate)?;
                     return (candidate != from
                         && port.dir == desired_dir
-                        && Self::port_is_connectable(graph, &snapshot.interaction, candidate))
+                        && Self::port_is_connectable_end(graph, &snapshot.interaction, candidate))
                     .then_some(candidate);
                 }
                 let r = radius_screen / zoom;
@@ -2702,7 +2705,7 @@ impl NodeGraphCanvas {
                     if handle.dir != desired_dir {
                         continue;
                     }
-                    if !Self::port_is_connectable(graph, &snapshot.interaction, port_id) {
+                    if !Self::port_is_connectable_end(graph, &snapshot.interaction, port_id) {
                         continue;
                     }
                     let d2 = Self::distance_sq_point_to_rect(pos, handle.bounds);
@@ -3085,6 +3088,9 @@ impl NodeGraphCanvas {
             dir: PortDirection::In,
             kind: crate::core::PortKind::Data,
             capacity: crate::core::PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         };
@@ -3095,6 +3101,9 @@ impl NodeGraphCanvas {
             dir: PortDirection::Out,
             kind: crate::core::PortKind::Data,
             capacity: crate::core::PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         };
@@ -4257,7 +4266,7 @@ impl NodeGraphCanvas {
         node.draggable.unwrap_or(true)
     }
 
-    fn port_is_connectable(
+    fn port_is_connectable_base(
         graph: &Graph,
         interaction: &NodeGraphInteractionState,
         port: PortId,
@@ -4265,7 +4274,36 @@ impl NodeGraphCanvas {
         let Some(port) = graph.ports.get(&port) else {
             return false;
         };
-        Self::node_is_connectable(graph, interaction, port.node)
+        let node_connectable = Self::node_is_connectable(graph, interaction, port.node);
+        port.connectable.unwrap_or(node_connectable)
+    }
+
+    fn port_is_connectable_start(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        port: PortId,
+    ) -> bool {
+        let Some(port_value) = graph.ports.get(&port) else {
+            return false;
+        };
+        if !Self::port_is_connectable_base(graph, interaction, port) {
+            return false;
+        }
+        port_value.connectable_start.unwrap_or(true)
+    }
+
+    fn port_is_connectable_end(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        port: PortId,
+    ) -> bool {
+        let Some(port_value) = graph.ports.get(&port) else {
+            return false;
+        };
+        if !Self::port_is_connectable_base(graph, interaction, port) {
+            return false;
+        }
+        port_value.connectable_end.unwrap_or(true)
     }
 
     fn node_is_connectable(
@@ -9376,6 +9414,9 @@ mod tests {
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9388,6 +9429,9 @@ mod tests {
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9420,6 +9464,9 @@ mod tests {
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9501,6 +9548,9 @@ mod tests {
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9535,6 +9585,9 @@ mod tests {
                     dir: PortDirection::In,
                     kind: PortKind::Data,
                     capacity: PortCapacity::Single,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
                     ty: None,
                     data: Value::Null,
                 },
@@ -9611,6 +9664,9 @@ mod tests {
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9623,6 +9679,9 @@ mod tests {
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9635,6 +9694,9 @@ mod tests {
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9768,6 +9830,9 @@ mod tests {
                     dir: PortDirection::Out,
                     kind: PortKind::Data,
                     capacity: PortCapacity::Multi,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
                     ty: None,
                     data: Value::Null,
                 },
@@ -9801,6 +9866,9 @@ mod tests {
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9936,6 +10004,9 @@ mod tests {
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },
@@ -9948,6 +10019,9 @@ mod tests {
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
                 ty: None,
                 data: Value::Null,
             },

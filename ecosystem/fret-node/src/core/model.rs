@@ -200,6 +200,27 @@ pub struct Port {
     /// Capacity rule.
     pub capacity: PortCapacity,
 
+    /// Whether this port can be used for creating/accepting connections via editor interactions.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectable`. When omitted, the owning node's
+    /// `Node.connectable` / global `NodeGraphInteractionState.nodes_connectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable: Option<bool>,
+
+    /// Dictates whether a connection can start from this port.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectableStart`. When omitted, the port is treated as
+    /// start-connectable (subject to `connectable`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable_start: Option<bool>,
+
+    /// Dictates whether a connection can end on this port.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectableEnd`. When omitted, the port is treated as
+    /// end-connectable (subject to `connectable`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable_end: Option<bool>,
+
     /// Optional type descriptor.
     ///
     /// Profiles may choose to infer or override this via concretization.

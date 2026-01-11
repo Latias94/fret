@@ -114,7 +114,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     let this = &*canvas;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            if !NodeGraphCanvas::port_is_connectable(
+                            if !NodeGraphCanvas::port_is_connectable_start(
                                 graph,
                                 &snapshot.interaction,
                                 candidate,
@@ -133,10 +133,10 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         }
     }
 
-    let from_port = match &w.kind {
-        WireDragKind::New { from, .. } => Some(*from),
-        WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
-        WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+    let (from_port, require_from_connectable_start) = match &w.kind {
+        WireDragKind::New { from, .. } => (Some(*from), true),
+        WireDragKind::Reconnect { fixed, .. } => (Some(*fixed), false),
+        WireDragKind::ReconnectMany { edges } => (edges.first().map(|e| e.2), false),
     };
 
     let new_hover = if let Some(from_port) = from_port {
@@ -152,6 +152,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     geom.as_ref(),
                     index.as_ref(),
                     from_port,
+                    require_from_connectable_start,
                     pos,
                     zoom,
                     &mut scratch_ports,
@@ -306,27 +307,31 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
     let window = cx.window();
     let bounds = cx.bounds(canvas);
 
-    let from_port = match &w.kind {
-        WireDragKind::New { from, .. } => Some(*from),
-        WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
-        WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+    let (from_port, require_from_connectable_start) = match &w.kind {
+        WireDragKind::New { from, .. } => (Some(*from), true),
+        WireDragKind::Reconnect { fixed, .. } => (Some(*fixed), false),
+        WireDragKind::ReconnectMany { edges } => (edges.first().map(|e| e.2), false),
     };
 
     let from_port_connectable = from_port
-        .and_then(|port| {
+        .map(|port| {
+            if !require_from_connectable_start {
+                return true;
+            }
             canvas
                 .graph
                 .read_ref(cx.host(), |graph| {
-                    NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, port)
+                    NodeGraphCanvas::port_is_connectable_start(graph, &snapshot.interaction, port)
                 })
                 .ok()
+                .unwrap_or(false)
         })
         .unwrap_or(false);
     let forced_target = forced_target.filter(|port| {
         canvas
             .graph
             .read_ref(cx.host(), |graph| {
-                NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, *port)
+                NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, *port)
             })
             .ok()
             .unwrap_or(false)
@@ -348,6 +353,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost>(
                         geom.as_ref(),
                         index.as_ref(),
                         from_port,
+                        require_from_connectable_start,
                         w.pos,
                         zoom,
                         &mut scratch_ports,

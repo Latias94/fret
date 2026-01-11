@@ -53,7 +53,7 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
         canvas
             .graph
             .read_ref(cx.app, |graph| {
-                NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, *target)
+                NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, *target)
             })
             .ok()
             .unwrap_or(false)

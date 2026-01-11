@@ -192,13 +192,33 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     match hit {
         Hit::Port(port) => {
             canvas.interaction.focused_edge = None;
-            let port_connectable = canvas
+            let port_base_connectable = canvas
                 .graph
                 .read_ref(cx.app, |graph| {
-                    NodeGraphCanvas::port_is_connectable(graph, &snapshot.interaction, port)
+                    NodeGraphCanvas::port_is_connectable_base(graph, &snapshot.interaction, port)
                 })
                 .ok()
                 .unwrap_or(false);
+            let port_connectable_start = port_base_connectable
+                && canvas
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        NodeGraphCanvas::port_is_connectable_start(
+                            graph,
+                            &snapshot.interaction,
+                            port,
+                        )
+                    })
+                    .ok()
+                    .unwrap_or(false);
+            let port_connectable_end = port_base_connectable
+                && canvas
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        NodeGraphCanvas::port_is_connectable_end(graph, &snapshot.interaction, port)
+                    })
+                    .ok()
+                    .unwrap_or(false);
 
             if snapshot.interaction.connect_on_click
                 && canvas.interaction.click_connect
@@ -206,7 +226,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             {
                 // When click-to-connect is active, ignore clicks on non-connectable ports so we do
                 // not accidentally trigger the "drop on empty" picker.
-                if !port_connectable {
+                if !port_connectable_end {
                     return true;
                 }
                 if let Some(mut w) = canvas.interaction.wire_drag.take() {
@@ -225,7 +245,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 }
             }
 
-            if !port_connectable {
+            if !port_base_connectable {
                 canvas.interaction.click_connect = false;
                 return true;
             }
@@ -280,6 +300,10 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                     bundle: vec![port],
                 },
             };
+
+            if matches!(kind, WireDragKind::New { .. }) && !port_connectable_start {
+                return true;
+            }
 
             canvas.interaction.pending_wire_drag = Some(PendingWireDrag {
                 kind,

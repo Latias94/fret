@@ -48,6 +48,9 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         },
@@ -83,6 +86,9 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         },
@@ -1214,6 +1220,137 @@ fn port_click_starts_wire_drag_when_node_connectable_true_even_if_nodes_connecta
 }
 
 #[test]
+fn port_click_does_not_start_wire_drag_when_port_connectable_start_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    graph_value
+        .ports
+        .get_mut(&from)
+        .expect("from port must exist")
+        .connectable_start = Some(false);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = true;
+        s.interaction.connect_on_click = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_wire_drag.is_none());
+    assert!(canvas.interaction.wire_drag.is_none());
+}
+
+#[test]
+fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    graph_value
+        .ports
+        .get_mut(&from)
+        .expect("from port must exist")
+        .connectable = Some(true);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = false;
+        s.interaction.connect_on_click = false;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let pos = geom.port_center(from).expect("from port center");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_wire_drag.is_some());
+    assert!(canvas.interaction.wire_drag.is_none());
+}
+
+#[test]
+fn pick_target_port_respects_port_connectable_end() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _edge, from, to) = make_test_graph_edge_reconnect();
+    graph_value
+        .ports
+        .get_mut(&to)
+        .expect("to port must exist")
+        .connectable_end = Some(false);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.nodes_connectable = true;
+        s.interaction.connection_mode = crate::io::NodeGraphConnectionMode::Strict;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let to_center = geom.port_center(to).expect("to port center");
+
+    let (derived, index) = canvas.canvas_derived(&host, &snapshot);
+    let hit = canvas
+        .graph
+        .read_ref(&host, |g| {
+            let mut scratch: Vec<PortId> = Vec::new();
+            canvas.pick_target_port(
+                g,
+                &snapshot,
+                derived.as_ref(),
+                index.as_ref(),
+                from,
+                true,
+                to_center,
+                snapshot.zoom,
+                &mut scratch,
+            )
+        })
+        .ok()
+        .flatten();
+    assert!(hit.is_none());
+}
+
+#[test]
 fn connectable_false_prevents_connecting_to_target_port() {
     let mut host = TestUiHostImpl::default();
     let mut graph_value = Graph::new(GraphId::new());
@@ -1249,6 +1386,9 @@ fn connectable_false_prevents_connecting_to_target_port() {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         },
@@ -1284,6 +1424,9 @@ fn connectable_false_prevents_connecting_to_target_port() {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: None,
             data: serde_json::Value::Null,
         },
