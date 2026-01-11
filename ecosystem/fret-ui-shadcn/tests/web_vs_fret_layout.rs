@@ -461,6 +461,88 @@ fn web_vs_fret_layout_tabs_demo_tab_list_height() {
 }
 
 #[test]
+fn web_vs_fret_layout_tabs_demo_active_tab_height() {
+    let web = read_web_golden("tabs-demo");
+    let theme = web_theme(&web);
+    let web_active_tab = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|r| r == "tab")
+            && n.attrs.get("aria-selected").is_some_and(|v| v == "true")
+            && contains_text(n, "Account")
+    })
+    .expect("web active tab");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let items = vec![
+            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+        ];
+
+        vec![
+            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+                .items(items)
+                .into_element(cx),
+        ]
+    });
+
+    let tab = find_semantics(&snap, SemanticsRole::Tab, Some("Account"))
+        .expect("fret active tab semantics node");
+
+    assert_close_px(
+        "tab height",
+        tab.bounds.size.height,
+        web_active_tab.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_tabs_demo_panel_gap() {
+    let web = read_web_golden("tabs-demo");
+    let theme = web_theme(&web);
+    let web_tab_list = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|r| r == "tablist")
+    })
+    .expect("web tablist role");
+    let web_panel = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|r| r == "tabpanel")
+    })
+    .expect("web tabpanel role");
+
+    let web_gap_y = web_panel.rect.y - (web_tab_list.rect.y + web_tab_list.rect.h);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let items = vec![
+            fret_ui_shadcn::TabsItem::new("account", "Account", vec![cx.text("Panel")]),
+            fret_ui_shadcn::TabsItem::new("password", "Password", vec![cx.text("Panel")]),
+        ];
+
+        vec![
+            fret_ui_shadcn::Tabs::uncontrolled(Some("account"))
+                .items(items)
+                .into_element(cx),
+        ]
+    });
+
+    let tab_list = find_semantics(&snap, SemanticsRole::TabList, None).expect("fret tab list");
+    let panel = find_semantics(&snap, SemanticsRole::TabPanel, None).expect("fret tab panel");
+
+    let fret_gap_y =
+        panel.bounds.origin.y.0 - (tab_list.bounds.origin.y.0 + tab_list.bounds.size.height.0);
+
+    assert_close_px("tab panel gap", Px(fret_gap_y), web_gap_y, 1.0);
+}
+
+#[test]
 fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
