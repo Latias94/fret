@@ -40,8 +40,8 @@ pub use image::ImageColorSpace;
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
-    ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton, PointerEvent,
-    PointerType, keycode_to_ascii_lowercase,
+    ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton,
+    PointerCancelEvent, PointerCancelReason, PointerEvent, PointerType, keycode_to_ascii_lowercase,
 };
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
 pub use panels::{PanelKey, PanelKind};

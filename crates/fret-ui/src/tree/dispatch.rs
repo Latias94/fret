@@ -393,7 +393,7 @@ impl<H: UiHost> UiTree<H> {
         // Pointer capture only affects pointer events. Drag-and-drop style events
         // (external/internal) must continue to follow the cursor for correct cross-window UX.
         let captured = match event {
-            Event::Pointer(_) => self.captured,
+            Event::Pointer(_) | Event::PointerCancel(_) => self.captured,
             _ => None,
         };
 
@@ -847,6 +847,10 @@ impl<H: UiHost> UiTree<H> {
                     None => break,
                 };
             }
+        }
+
+        if matches!(event, Event::PointerCancel(_)) {
+            self.captured = None;
         }
 
         if defer_keydown_shortcuts_until_after_dispatch

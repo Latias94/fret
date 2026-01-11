@@ -140,6 +140,22 @@ pub enum PointerEvent {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PointerCancelReason {
+    /// The pointer left the window (e.g. cursor left the window, or touch tracking was canceled).
+    LeftWindow,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PointerCancelEvent {
+    /// When provided by the platform, this is the last known pointer position (logical pixels).
+    pub position: Option<Point>,
+    pub buttons: MouseButtons,
+    pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
+    pub reason: PointerCancelReason,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExternalDragKind {
     EnterFiles(ExternalDragFiles),
@@ -220,6 +236,7 @@ pub struct InternalDragEvent {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     Pointer(PointerEvent),
+    PointerCancel(PointerCancelEvent),
     Timer {
         token: TimerToken,
     },

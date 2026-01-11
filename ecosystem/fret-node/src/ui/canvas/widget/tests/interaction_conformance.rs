@@ -399,6 +399,57 @@ fn window_focus_lost_cancels_wire_drag() {
 }
 
 #[test]
+fn pointer_left_cancels_wire_drag() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+        kind: WireDragKind::Reconnect {
+            edge,
+            endpoint: EdgeEndpoint::From,
+            fixed: to,
+        },
+        pos: Point::new(Px(10.0), Px(10.0)),
+    });
+    assert!(canvas.interaction.wire_drag.is_some());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            position: None,
+            buttons: MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    assert!(canvas.interaction.wire_drag.is_none());
+
+    // Graph should remain unchanged (disconnect on drop empty is a separate opt-in behavior).
+    let edge_still_exists = canvas
+        .graph
+        .read_ref(cx.app, |g| g.edges.contains_key(&edge))
+        .unwrap_or(false);
+    assert!(edge_still_exists);
+
+    // Cancel should not change graph history.
+    assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
 fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();

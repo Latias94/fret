@@ -5794,6 +5794,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cancel::handle_escape_cancel(self, cx);
                 return;
             }
+            Event::PointerCancel(_) => {
+                cancel::cancel_active_gestures(self, cx);
+                return;
+            }
             Event::Timer { token } => {
                 if self
                     .interaction

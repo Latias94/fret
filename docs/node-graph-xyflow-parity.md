@@ -495,7 +495,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - [~] outside press / pointer-capture loss:
         - inferred from `PointerEvent::Move.buttons` when an expected "up" is missed: `ecosystem/fret-node/src/ui/canvas/widget.rs`
         - right click cancels active gestures before opening the context menu: `ecosystem/fret-node/src/ui/canvas/widget.rs`
-        - true capture-loss platform event parity TBD
+        - [x] platform pointer-left maps to `Event::PointerCancel` and clears capture:
+          - winit mapping: `crates/fret-runner-winit/src/lib.rs`
+          - capture routing + auto-release: `crates/fret-ui/src/tree/dispatch.rs`
+          - canvas cancel handling: `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - reconnect on drop on empty canvas: `NodeGraphInteractionState.reconnect_on_drop_empty`
 
 ## 6.4 Edge split / reroute node
