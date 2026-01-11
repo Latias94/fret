@@ -69,9 +69,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
         selected.sort();
         selected.dedup();
 
-        let selected_edges = if snapshot.interaction.box_select_connected_edges
-            && snapshot.interaction.edges_selectable
-        {
+        let selected_edges = if snapshot.interaction.edges_selectable {
             let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
             canvas
                 .graph
@@ -82,8 +80,17 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                         .filter_map(|(edge_id, edge)| {
                             let from_node = graph.ports.get(&edge.from).map(|p| p.node)?;
                             let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
-                            (nodes.contains(&from_node) || nodes.contains(&to_node))
-                                .then_some(*edge_id)
+                            match snapshot.interaction.box_select_edges {
+                                crate::io::NodeGraphBoxSelectEdges::None => None,
+                                crate::io::NodeGraphBoxSelectEdges::Connected => {
+                                    (nodes.contains(&from_node) || nodes.contains(&to_node))
+                                        .then_some(*edge_id)
+                                }
+                                crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
+                                    (nodes.contains(&from_node) && nodes.contains(&to_node))
+                                        .then_some(*edge_id)
+                                }
+                            }
                         })
                         .collect::<Vec<_>>()
                 })
@@ -143,9 +150,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                     selected.sort();
                     selected.dedup();
 
-                    let selected_edges = if snapshot.interaction.box_select_connected_edges
-                        && snapshot.interaction.edges_selectable
-                    {
+                    let selected_edges = if snapshot.interaction.edges_selectable {
                         let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
                         canvas
                             .graph
@@ -157,8 +162,18 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                                         let from_node =
                                             graph.ports.get(&edge.from).map(|p| p.node)?;
                                         let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
-                                        (nodes.contains(&from_node) || nodes.contains(&to_node))
-                                            .then_some(*edge_id)
+                                        match snapshot.interaction.box_select_edges {
+                                            crate::io::NodeGraphBoxSelectEdges::None => None,
+                                            crate::io::NodeGraphBoxSelectEdges::Connected => (nodes
+                                                .contains(&from_node)
+                                                || nodes.contains(&to_node))
+                                            .then_some(*edge_id),
+                                            crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
+                                                (nodes.contains(&from_node)
+                                                    && nodes.contains(&to_node))
+                                                .then_some(*edge_id)
+                                            }
+                                        }
                                     })
                                     .collect::<Vec<_>>()
                             })

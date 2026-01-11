@@ -273,6 +273,60 @@ impl Default for NodeGraphModifierKey {
     }
 }
 
+/// Behavior for selecting edges during marquee (box) selection.
+///
+/// XyFlow selects edges connected to the selected nodes.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphBoxSelectEdges {
+    /// Do not select edges from a marquee selection.
+    None,
+    /// Select edges connected to any selected node (XyFlow default).
+    #[default]
+    Connected,
+    /// Select edges only when both endpoints are within the marquee-selected node set.
+    BothEndpoints,
+}
+
+impl<'de> Deserialize<'de> for NodeGraphBoxSelectEdges {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = NodeGraphBoxSelectEdges;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a bool or one of: none, connected, both_endpoints")
+            }
+
+            fn visit_bool<E: serde::de::Error>(self, v: bool) -> Result<Self::Value, E> {
+                Ok(if v {
+                    NodeGraphBoxSelectEdges::Connected
+                } else {
+                    NodeGraphBoxSelectEdges::None
+                })
+            }
+
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                match v {
+                    "none" => Ok(NodeGraphBoxSelectEdges::None),
+                    "connected" => Ok(NodeGraphBoxSelectEdges::Connected),
+                    "both_endpoints" => Ok(NodeGraphBoxSelectEdges::BothEndpoints),
+                    other => Err(E::custom(format!(
+                        "unrecognized box select edges mode: {other}"
+                    ))),
+                }
+            }
+
+            fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
+                self.visit_str(&v)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
 /// Serialized key code (a `keyboard_types::Code`), stored as a string like `"Space"` or `"KeyA"`.
 ///
 /// This is intentionally aligned with the `KeyboardEvent.code` naming used by XyFlow for
@@ -429,8 +483,8 @@ fn default_pan_on_drag_buttons() -> NodeGraphPanOnDragButtons {
     }
 }
 
-fn default_box_select_connected_edges() -> bool {
-    true
+fn default_box_select_edges() -> NodeGraphBoxSelectEdges {
+    NodeGraphBoxSelectEdges::Connected
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -514,12 +568,16 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub selection_on_drag: bool,
 
-    /// When marquee-selecting nodes, also include their incident edges (XyFlow behavior).
+    /// How to select edges when marquee-selecting nodes (XyFlow behavior).
     ///
-    /// In XyFlow, the selection rectangle selects nodes and then adds all edges connected to
-    /// those nodes (subject to edge selectability).
-    #[serde(default = "default_box_select_connected_edges")]
-    pub box_select_connected_edges: bool,
+    /// Backward compatibility: this field accepts either:
+    /// - a bool (`true` => `connected`, `false` => `none`), or
+    /// - a snake_case string (`none`, `connected`, `both_endpoints`).
+    #[serde(
+        default = "default_box_select_edges",
+        alias = "box_select_connected_edges"
+    )]
+    pub box_select_edges: NodeGraphBoxSelectEdges,
 
     /// Modifier used to activate selection box interactions (XyFlow `selectionKeyCode`).
     ///
@@ -685,7 +743,7 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
-            box_select_connected_edges: default_box_select_connected_edges(),
+            box_select_edges: default_box_select_edges(),
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
             delete_key: NodeGraphDeleteKey::default(),

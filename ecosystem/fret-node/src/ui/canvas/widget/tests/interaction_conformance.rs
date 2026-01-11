@@ -332,7 +332,7 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         s.interaction.edges_selectable = true;
         s.interaction.selection_on_drag = true;
         s.interaction.pane_click_distance = 0.0;
-        s.interaction.box_select_connected_edges = true;
+        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
     });
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
@@ -371,6 +371,183 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         .read_ref(&host, |s| s.selected_nodes.clone())
         .unwrap_or_default();
     assert_eq!(selected_nodes, vec![a]);
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_edges, vec![edge]);
+}
+
+#[test]
+fn marquee_does_not_select_edges_when_box_select_edges_is_none() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, from, _to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let a = graph
+        .read_ref(&host, |g| g.ports.get(&from).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("from port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.interaction.selection_on_drag = true;
+        s.interaction.pane_click_distance = 0.0;
+        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::None;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(-10.0), Px(-10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let end = Point::new(Px(250.0), Px(120.0));
+    assert!(marquee::handle_marquee_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        end,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
+
+    let selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_nodes, vec![a]);
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert!(selected_edges.is_empty());
+
+    let selected_groups = view
+        .read_ref(&host, |s| s.selected_groups.clone())
+        .unwrap_or_default();
+    assert!(selected_groups.is_empty());
+
+    let _ = edge;
+}
+
+#[test]
+fn marquee_selects_edges_only_when_both_endpoints_selected_in_both_endpoints_mode() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let a = graph
+        .read_ref(&host, |g| g.ports.get(&from).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("from port exists");
+    let b = graph
+        .read_ref(&host, |g| g.ports.get(&to).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("to port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.interaction.selection_on_drag = true;
+        s.interaction.pane_click_distance = 0.0;
+        s.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::BothEndpoints;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+
+    // Cover only node A (exclude B) -> edge should not be selected.
+    {
+        let snapshot = canvas.sync_view_state(&mut host);
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let start = Point::new(Px(-10.0), Px(-10.0));
+        assert!(left_click::handle_left_click_pointer_down(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            start,
+            Modifiers::default(),
+            snapshot.zoom,
+        ));
+        let end = Point::new(Px(250.0), Px(120.0));
+        assert!(marquee::handle_marquee_move(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            end,
+            Modifiers::default(),
+            snapshot.zoom,
+        ));
+        assert!(marquee::handle_left_up(&mut canvas, &mut cx));
+    }
+
+    let selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_nodes, vec![a]);
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert!(selected_edges.is_empty());
+
+    // Cover both A and B -> edge should be selected.
+    {
+        let snapshot = canvas.sync_view_state(&mut host);
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let start = Point::new(Px(-10.0), Px(-10.0));
+        assert!(left_click::handle_left_click_pointer_down(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            start,
+            Modifiers::default(),
+            snapshot.zoom,
+        ));
+        let end = Point::new(Px(600.0), Px(120.0));
+        assert!(marquee::handle_marquee_move(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            end,
+            Modifiers::default(),
+            snapshot.zoom,
+        ));
+        assert!(marquee::handle_left_up(&mut canvas, &mut cx));
+    }
+
+    let mut selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    selected_nodes.sort();
+    let mut expected = vec![a, b];
+    expected.sort();
+    assert_eq!(selected_nodes, expected);
 
     let selected_edges = view
         .read_ref(&host, |s| s.selected_edges.clone())

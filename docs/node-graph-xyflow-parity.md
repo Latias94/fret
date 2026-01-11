@@ -382,7 +382,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [x] **Box selection includes edges**
   - XyFlow: during marquee selection, edges connected to the selected nodes are also selected.
   - fret-node:
-    - default on: `NodeGraphInteractionState.box_select_connected_edges = true`
+    - default: `NodeGraphInteractionState.box_select_edges = connected` (also accepts legacy `box_select_connected_edges: true`)
     - gated by: `NodeGraphInteractionState.edges_selectable`
 
 ---
