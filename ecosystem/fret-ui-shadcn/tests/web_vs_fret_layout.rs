@@ -1,6 +1,7 @@
 use fret_app::App;
-use fret_core::{AppWindowId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
+use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;
+use fret_ui::element::{ContainerProps, LayoutStyle, Length, SizeStyle};
 use fret_ui::tree::UiTree;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -213,6 +214,44 @@ fn run_fret_root(
         .expect("expected semantics snapshot")
 }
 
+fn run_fret_root_with_ui(
+    bounds: Rect,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        f,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    (ui, snap, root)
+}
+
 fn find_semantics<'a>(
     snap: &'a fret_core::SemanticsSnapshot,
     role: SemanticsRole,
@@ -421,6 +460,120 @@ fn web_vs_fret_layout_radio_group_demo_row_geometry() {
 
     assert_close_px("radio-group row height", Px(fret_row_h), web_row_h, 1.0);
     assert_close_px("radio-group row gap", Px(fret_gap_y), web_gap_y, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_slider_demo_geometry() {
+    let web = read_web_golden("slider-demo");
+    let theme = web_theme(&web);
+    let web_track = web_find_by_class_contains(
+        &theme.root,
+        "bg-muted relative grow overflow-hidden rounded-full",
+    )
+    .expect("web slider track");
+    let web_range = web_find_by_class_contains(
+        &theme.root,
+        "bg-primary absolute data-[orientation=horizontal]:h-full",
+    )
+    .expect("web slider range");
+    let web_thumb = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|r| r == "slider")
+    })
+    .expect("web slider thumb");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let t = (web_thumb.rect.x + web_thumb.rect.w * 0.5) / web_track.rect.w.max(1.0);
+    let initial_value = 100.0 * t.clamp(0.0, 1.0);
+
+    let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
+        let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![initial_value]);
+        let slider = fret_ui_shadcn::Slider::new(model)
+            .range(0.0, 100.0)
+            .a11y_label("Slider")
+            .into_element(cx);
+
+        vec![cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_track.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![slider],
+        )]
+    });
+
+    let slider = find_semantics(&snap, SemanticsRole::Slider, Some("Slider"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Slider, None))
+        .expect("fret slider semantics");
+
+    assert_close_px(
+        "slider layout width",
+        slider.bounds.size.width,
+        web_track.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "slider layout height",
+        slider.bounds.size.height,
+        web_track.rect.h,
+        1.0,
+    );
+
+    let mut stack = vec![slider.id];
+    let mut rects: Vec<(NodeId, Rect)> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push((node, bounds));
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let pick_best = |label: &str, expected: WebRect, rects: &[(NodeId, Rect)]| -> Rect {
+        let mut best: Option<Rect> = None;
+        let mut best_score = f32::INFINITY;
+        for (_, rect) in rects {
+            let score = (rect.origin.x.0 - expected.x).abs()
+                + (rect.origin.y.0 - expected.y).abs()
+                + (rect.size.width.0 - expected.w).abs()
+                + (rect.size.height.0 - expected.h).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(*rect);
+            }
+        }
+        best.unwrap_or_else(|| panic!("missing {label} match"))
+    };
+
+    let fret_track = pick_best("track", web_track.rect, &rects);
+    let fret_range = pick_best("range", web_range.rect, &rects);
+    let fret_thumb = pick_best("thumb", web_thumb.rect, &rects);
+
+    assert_close_px("track x", fret_track.origin.x, web_track.rect.x, 1.0);
+    assert_close_px("track y", fret_track.origin.y, web_track.rect.y, 1.0);
+    assert_close_px("track w", fret_track.size.width, web_track.rect.w, 1.0);
+    assert_close_px("track h", fret_track.size.height, web_track.rect.h, 1.0);
+
+    assert_close_px("range x", fret_range.origin.x, web_range.rect.x, 1.0);
+    assert_close_px("range y", fret_range.origin.y, web_range.rect.y, 1.0);
+    assert_close_px("range w", fret_range.size.width, web_range.rect.w, 1.0);
+    assert_close_px("range h", fret_range.size.height, web_range.rect.h, 1.0);
+
+    assert_close_px("thumb x", fret_thumb.origin.x, web_thumb.rect.x, 1.0);
+    assert_close_px("thumb y", fret_thumb.origin.y, web_thumb.rect.y, 1.0);
+    assert_close_px("thumb w", fret_thumb.size.width, web_thumb.rect.w, 1.0);
+    assert_close_px("thumb h", fret_thumb.size.height, web_thumb.rect.h, 1.0);
 }
 
 #[test]
