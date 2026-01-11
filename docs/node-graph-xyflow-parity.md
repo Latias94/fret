@@ -224,6 +224,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - Notes:
     - parity knobs:
       - [x] space-to-pan (hold Space + drag with left mouse): `NodeGraphInteractionState.space_to_pan`
+      - [x] `panOnDrag` button set: `NodeGraphInteractionState.pan_on_drag`
+      - [x] `selectionOnDrag` (selection box without Shift): `NodeGraphInteractionState.selection_on_drag`
       - [~] touch / trackpad gesture parity still TBD, but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
     - Implementation detail: `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event positions are in the widget's local (canvas) coordinates and change as pan changes.
       Panning deltas must be computed in a stable coordinate space (screen/global) to avoid feedback jitter.

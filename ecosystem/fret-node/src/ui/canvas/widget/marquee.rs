@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use fret_core::{Modifiers, Point};
+use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
 use crate::core::NodeId as GraphNodeId;
@@ -118,40 +118,59 @@ pub(super) fn handle_marquee_move<H: UiHost>(
             let dx = position.x.0 - pending.start_pos.x.0;
             let dy = position.y.0 - pending.start_pos.y.0;
             if threshold_graph <= 0.0 || dx * dx + dy * dy >= threshold_graph * threshold_graph {
-                canvas.interaction.pending_marquee = None;
-                let marquee = MarqueeDrag {
-                    start_pos: pending.start_pos,
-                    pos: position,
-                    base_nodes: pending.base_nodes.clone(),
-                    mode: pending.mode,
-                };
-                canvas.interaction.marquee = Some(marquee.clone());
+                let selection_box_active = snapshot.interaction.selection_on_drag
+                    || modifiers.shift
+                    || modifiers.ctrl
+                    || modifiers.meta;
 
-                let (geom, _index) = canvas.canvas_derived(&*cx.app, snapshot);
-                let selection = canvas
-                    .graph
-                    .read_ref(cx.app, |graph| {
-                        nodes_in_marquee(graph, geom.as_ref(), marquee.start_pos, marquee.pos)
-                    })
-                    .ok()
-                    .unwrap_or_default();
+                if selection_box_active {
+                    canvas.interaction.pending_marquee = None;
+                    let marquee = MarqueeDrag {
+                        start_pos: pending.start_pos,
+                        pos: position,
+                        base_nodes: pending.base_nodes.clone(),
+                        mode: pending.mode,
+                    };
+                    canvas.interaction.marquee = Some(marquee.clone());
 
-                let mut selected: Vec<GraphNodeId> = match marquee.mode {
-                    MarqueeMode::Replace => selection,
-                    MarqueeMode::Add => union_nodes(&marquee.base_nodes, &selection),
-                    MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
-                };
-                selected.sort();
-                selected.dedup();
+                    let (geom, _index) = canvas.canvas_derived(&*cx.app, snapshot);
+                    let selection = canvas
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            nodes_in_marquee(graph, geom.as_ref(), marquee.start_pos, marquee.pos)
+                        })
+                        .ok()
+                        .unwrap_or_default();
 
-                canvas.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_nodes = selected;
-                });
+                    let mut selected: Vec<GraphNodeId> = match marquee.mode {
+                        MarqueeMode::Replace => selection,
+                        MarqueeMode::Add => union_nodes(&marquee.base_nodes, &selection),
+                        MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
+                    };
+                    selected.sort();
+                    selected.dedup();
 
-                cx.request_redraw();
-                cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-                return true;
+                    canvas.update_view_state(cx.app, |s| {
+                        s.selected_edges.clear();
+                        s.selected_nodes = selected;
+                    });
+
+                    cx.request_redraw();
+                    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+                    return true;
+                }
+
+                if snapshot.interaction.pan_on_drag.left {
+                    canvas.interaction.pending_marquee = None;
+                    let _ = super::pan_zoom::begin_panning(
+                        canvas,
+                        cx,
+                        snapshot,
+                        pending.start_pos,
+                        MouseButton::Left,
+                    );
+                    return true;
+                }
             }
         }
     }

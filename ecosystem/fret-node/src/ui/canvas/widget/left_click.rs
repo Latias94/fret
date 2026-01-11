@@ -568,7 +568,25 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
             if snapshot.interaction.elements_selectable {
-                super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers);
+                // XyFlow semantics: background drags pan by default, and selection boxes are
+                // activated by Shift unless `selection_on_drag` is enabled.
+                //
+                // We still begin a pending marquee so a click (no drag) can clear selection. Once
+                // the drag exceeds the threshold, `marquee::handle_marquee_move` will decide
+                // whether to start a selection box or switch into panning.
+                let mut mods = modifiers;
+                if !snapshot.interaction.selection_on_drag && mods.shift {
+                    mods.shift = false;
+                }
+                super::marquee::begin_background_marquee(canvas, cx, snapshot, position, mods);
+            } else if snapshot.interaction.pan_on_drag.left {
+                let _ = super::pan_zoom::begin_panning(
+                    canvas,
+                    cx,
+                    snapshot,
+                    position,
+                    fret_core::MouseButton::Left,
+                );
             }
         }
     }

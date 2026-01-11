@@ -347,6 +347,30 @@ impl Default for NodeGraphPanInertiaTuning {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NodeGraphPanOnDragButtons {
+    /// Pan the canvas by dragging on empty background with the left mouse button.
+    #[serde(default)]
+    pub left: bool,
+    /// Pan the canvas by dragging with the middle mouse button.
+    #[serde(default)]
+    pub middle: bool,
+    /// Pan the canvas by dragging with the right mouse button.
+    ///
+    /// When enabled, apps should provide an alternate way to open context menus (or make context
+    /// menus conditional on "click without pan"), matching XyFlow's `panOnDrag={[2]}` patterns.
+    #[serde(default)]
+    pub right: bool,
+}
+
+fn default_pan_on_drag_buttons() -> NodeGraphPanOnDragButtons {
+    NodeGraphPanOnDragButtons {
+        left: true,
+        middle: true,
+        right: false,
+    }
+}
+
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
@@ -408,6 +432,16 @@ pub struct NodeGraphInteractionState {
     /// Enables panning the canvas via wheel / touchpad scroll (XyFlow `panOnScroll`).
     #[serde(default = "default_pan_on_scroll")]
     pub pan_on_scroll: bool,
+
+    /// Configures which mouse buttons may pan the canvas via drag (XyFlow `panOnDrag`).
+    #[serde(default = "default_pan_on_drag_buttons")]
+    pub pan_on_drag: NodeGraphPanOnDragButtons,
+
+    /// Select multiple elements with a selection box without holding down Shift.
+    ///
+    /// This matches XyFlow's `selectionOnDrag`.
+    #[serde(default)]
+    pub selection_on_drag: bool,
 
     /// Enables panning the canvas by holding Space and dragging with the left mouse button.
     ///
@@ -505,6 +539,8 @@ impl Default for NodeGraphInteractionState {
             snaplines: default_snaplines(),
             snaplines_threshold: default_snaplines_threshold(),
             pan_on_scroll: default_pan_on_scroll(),
+            pan_on_drag: default_pan_on_drag_buttons(),
+            selection_on_drag: false,
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
             pan_inertia: NodeGraphPanInertiaTuning::default(),

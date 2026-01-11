@@ -1,9 +1,58 @@
 use std::time::Instant;
 
-use fret_core::Point;
+use fret_core::{MouseButton, Point};
 use fret_ui::UiHost;
 
 use super::{NodeGraphCanvas, ViewSnapshot};
+use crate::core::CanvasPoint;
+
+pub(super) fn begin_panning<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    start_pos: Point,
+    button: MouseButton,
+) -> bool {
+    canvas.stop_pan_inertia_timer(cx.app);
+
+    canvas.interaction.hover_edge = None;
+    canvas.interaction.pending_group_drag = None;
+    canvas.interaction.group_drag = None;
+    canvas.interaction.pending_group_resize = None;
+    canvas.interaction.group_resize = None;
+    canvas.interaction.pending_node_drag = None;
+    canvas.interaction.node_drag = None;
+    canvas.interaction.pending_node_resize = None;
+    canvas.interaction.node_resize = None;
+    canvas.interaction.pending_wire_drag = None;
+    canvas.interaction.wire_drag = None;
+    canvas.interaction.click_connect = false;
+    canvas.interaction.edge_drag = None;
+    canvas.interaction.pending_marquee = None;
+    canvas.interaction.marquee = None;
+    canvas.interaction.focused_edge = None;
+    canvas.interaction.hover_port = None;
+    canvas.interaction.hover_port_valid = false;
+    canvas.interaction.hover_port_convertible = false;
+
+    canvas.interaction.panning = true;
+    canvas.interaction.panning_button = Some(button);
+
+    let zoom = snapshot.zoom;
+    let pan = snapshot.pan;
+    let screen_pos = Point::new(
+        fret_core::Px(cx.bounds.origin.x.0 + (start_pos.x.0 + pan.x) * zoom),
+        fret_core::Px(cx.bounds.origin.y.0 + (start_pos.y.0 + pan.y) * zoom),
+    );
+    canvas.interaction.pan_last_screen_pos = Some(screen_pos);
+    canvas.interaction.pan_last_sample_at = Some(Instant::now());
+    canvas.interaction.pan_velocity = CanvasPoint::default();
+
+    cx.capture_pointer(cx.node);
+    cx.request_redraw();
+    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    true
+}
 
 pub(super) fn handle_panning_move<H: UiHost>(
     canvas: &mut NodeGraphCanvas,

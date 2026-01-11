@@ -6159,48 +6159,24 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     && self.interaction.space_pan_held
                     && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
                 {
-                    self.interaction.hover_edge = None;
-                    self.interaction.pending_group_drag = None;
-                    self.interaction.group_drag = None;
-                    self.interaction.pending_group_resize = None;
-                    self.interaction.group_resize = None;
-                    self.interaction.pending_node_drag = None;
-                    self.interaction.node_drag = None;
-                    self.interaction.pending_node_resize = None;
-                    self.interaction.node_resize = None;
-                    self.interaction.wire_drag = None;
-                    self.interaction.edge_drag = None;
-                    self.interaction.panning = true;
-                    self.interaction.panning_button = Some(MouseButton::Left);
-                    self.interaction.pan_last_screen_pos = None;
-                    self.interaction.pan_last_sample_at = Some(Instant::now());
-                    self.interaction.pan_velocity = CanvasPoint::default();
-                    cx.capture_pointer(cx.node);
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                    let _ = pan_zoom::begin_panning(
+                        self,
+                        cx,
+                        &snapshot,
+                        *position,
+                        fret_core::MouseButton::Left,
+                    );
                     return;
                 }
 
-                if *button == MouseButton::Middle {
-                    self.interaction.hover_edge = None;
-                    self.interaction.pending_group_drag = None;
-                    self.interaction.group_drag = None;
-                    self.interaction.pending_group_resize = None;
-                    self.interaction.group_resize = None;
-                    self.interaction.pending_node_drag = None;
-                    self.interaction.node_drag = None;
-                    self.interaction.pending_node_resize = None;
-                    self.interaction.node_resize = None;
-                    self.interaction.wire_drag = None;
-                    self.interaction.edge_drag = None;
-                    self.interaction.panning = true;
-                    self.interaction.panning_button = Some(MouseButton::Middle);
-                    self.interaction.pan_last_screen_pos = None;
-                    self.interaction.pan_last_sample_at = Some(Instant::now());
-                    self.interaction.pan_velocity = CanvasPoint::default();
-                    cx.capture_pointer(cx.node);
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if *button == MouseButton::Middle && snapshot.interaction.pan_on_drag.middle {
+                    let _ = pan_zoom::begin_panning(
+                        self,
+                        cx,
+                        &snapshot,
+                        *position,
+                        fret_core::MouseButton::Middle,
+                    );
                     return;
                 }
 
