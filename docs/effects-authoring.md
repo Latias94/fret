@@ -13,6 +13,7 @@ For the recommended user-facing story (Tier A vs Tier B) and the recipe authorin
   to define clipping behavior (ADR 0078).
 - For heavy GPU panels (video playback, game viewports, NLE-class effects), prefer Tier A (`RenderTargetId` + `SceneOp::ViewportSurface`)
   instead of trying to expose `wgpu` to components (ADR 0125).
+  - Declarative helper: `cx.viewport_surface(...)` (`crates/fret-ui/src/elements/cx.rs`)
 
 ## Declarative usage (recommended)
 

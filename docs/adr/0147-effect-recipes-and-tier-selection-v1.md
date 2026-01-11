@@ -46,7 +46,7 @@ Use Tier A for:
 Contract:
 
 - app/plugin renders into a texture registered as `RenderTargetId`,
-- UI composites it via `SceneOp::ViewportSurface`,
+- UI composites it via `SceneOp::ViewportSurface` (or `fret-ui`'s declarative `ViewportSurface` element),
 - queue ownership and submission order are coordinated by the runner (ADR 0038).
 
 #### Tier B: UI-native effects (light / framework-controlled)
