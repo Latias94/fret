@@ -358,6 +358,13 @@ impl ElementHostWidget {
         } else {
             desired.height
         };
+        // Ensure the scroll content bounds never underflow the viewport bounds.
+        //
+        // This matches DOM behavior (the scrollable content box is at least the viewport size),
+        // and prevents `Length::Fill` descendants from collapsing when we probe with
+        // `AvailableSpace::MaxContent` on the scroll axis.
+        let content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
+        let content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
 
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
