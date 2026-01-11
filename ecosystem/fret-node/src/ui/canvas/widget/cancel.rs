@@ -2,9 +2,10 @@ use fret_ui::UiHost;
 
 use super::NodeGraphCanvas;
 
-pub(super) fn handle_escape_cancel<H: UiHost>(
+fn cancel_active_gestures_inner<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    consume: bool,
 ) {
     let mut canceled = false;
     if canvas.interaction.wire_drag.take().is_some() {
@@ -75,8 +76,24 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
         canvas.stop_auto_pan_timer(cx.app);
         canvas.stop_pan_inertia_timer(cx.app);
         cx.release_pointer_capture();
-        cx.stop_propagation();
+        if consume {
+            cx.stop_propagation();
+        }
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     }
+}
+
+pub(super) fn cancel_active_gestures<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+) {
+    cancel_active_gestures_inner(canvas, cx, false);
+}
+
+pub(super) fn handle_escape_cancel<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+) {
+    cancel_active_gestures_inner(canvas, cx, true);
 }

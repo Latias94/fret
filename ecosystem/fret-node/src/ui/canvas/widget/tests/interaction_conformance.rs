@@ -458,3 +458,43 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
         .unwrap();
     assert_eq!(pos, CanvasPoint { x: 40.0, y: 10.0 });
 }
+
+#[test]
+fn right_click_cancels_wire_drag_and_opens_context_menu() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+
+    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+        kind: WireDragKind::Reconnect {
+            edge,
+            endpoint: EdgeEndpoint::From,
+            fixed: to,
+        },
+        pos: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(400.0), Px(300.0)),
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(canvas.interaction.wire_drag.is_none());
+    assert!(canvas.interaction.context_menu.is_some());
+}

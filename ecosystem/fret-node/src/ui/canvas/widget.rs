@@ -6125,6 +6125,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if *button == MouseButton::Right {
+                    cancel::cancel_active_gestures(self, cx);
+                }
+
                 if sticky_wire::handle_sticky_wire_pointer_down(
                     self, cx, &snapshot, *position, *button, zoom,
                 ) {
