@@ -1948,7 +1948,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
                         GizmoSizePolicy::ConstantPixels => {
                             GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                                min_fraction_of_max_extent: 0.25,
+                                min_fraction_of_max_extent: 0.0,
                                 max_fraction_of_max_extent: 1.50,
                             }
                         }
