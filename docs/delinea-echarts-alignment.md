@@ -28,11 +28,12 @@ Status symbols:
   - Axis locks + shortcuts: `docs/adr/0135-delinea-axis-interaction-locks-and-shortcuts.md`
   - DataZoom Y + 2D semantics (v1 divergence): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`
   - Row selection + filtering: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
-  - DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
-  - Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
-  - Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
-  - Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
-  - Brush selection link events: `docs/adr/0146-delinea-link-events-for-brush-selection.md`
+- DataZoom composition + span policy: `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
+- Dataset storage + indices: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
+- Brush selection output: `docs/adr/0144-delinea-brush-selection-and-output-contract.md`
+- Brush selection row-range fast path: `docs/adr/0145-delinea-brush-selection-to-row-selection-fast-path.md`
+- Brush selection link events: `docs/adr/0146-delinea-link-events-for-brush-selection.md`
+- VisualMap (data-driven styling): `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`
 
 ## Quick Manual Validation
 
@@ -269,6 +270,6 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 
 ## Recommended Next Steps (P0 -> P1)
 
-1. P0: Decide how brush selection maps to `RowSelection` / highlight semantics (contiguous range fast path vs sparse indices; ADR 0137), then add conformance tests.
+1. P0: Lock VisualMap semantics for data-driven styling (`docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`), then land a minimal bucketed `color/opacity` implementation for scatter.
 2. P1: Category axis indexing under zoom for non-bar series (may require dataset/index contract extensions).
-3. P1: VisualMap-style data-driven color mapping (continuous + piecewise), with a durable spec surface and allocation-aware evaluation.
+3. P1: Append/update semantics (ECharts `appendData`) on top of the dataset storage/index contract (ADR 0140), with explicit budgeting and determinism requirements.

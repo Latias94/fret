@@ -180,3 +180,4 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0144-delinea-brush-selection-and-output-contract.md`](0144-delinea-brush-selection-and-output-contract.md) | Accepted | Not audited |  |
 | [`0145-delinea-brush-selection-to-row-selection-fast-path.md`](0145-delinea-brush-selection-to-row-selection-fast-path.md) | Accepted | Not audited |  |
 | [`0146-delinea-link-events-for-brush-selection.md`](0146-delinea-link-events-for-brush-selection.md) | Accepted | Not audited |  |
+| [`0147-delinea-visualmap-and-data-driven-styling.md`](0147-delinea-visualmap-and-data-driven-styling.md) | Proposed | Not implemented | ADR only; VisualMap spec/actions/output are not wired yet. |
