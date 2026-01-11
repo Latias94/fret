@@ -882,6 +882,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
 struct UploadedImageEntry {
     uploaded: UploadedRgba8Image,
     stream_generation: u64,
+    alpha_mode: fret_core::AlphaMode,
 }
 
 #[derive(Debug, Clone)]
@@ -2355,7 +2356,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         height,
                         bytes,
                         color_info,
-                        alpha_mode: _,
+                        alpha_mode,
                     } => {
                         let Some(context) = self.context.as_ref() else {
                             self.deliver_window_event_now(
@@ -2430,12 +2431,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             size: uploaded.size,
                             format: uploaded.format,
                             color_space: uploaded.color_space,
+                            alpha_mode,
                         });
                         self.uploaded_images.insert(
                             image,
                             UploadedImageEntry {
                                 uploaded,
                                 stream_generation: 0,
+                                alpha_mode,
                             },
                         );
 
@@ -2463,7 +2466,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         bytes_per_row,
                         bytes,
                         color_info,
-                        alpha_mode: _,
+                        alpha_mode,
                     } => {
                         let Some(context) = self.context.as_ref() else {
                             if self.config.streaming_update_ack_enabled {
@@ -2676,6 +2679,39 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
 
+                        if entry.alpha_mode != alpha_mode {
+                            if !renderer.update_image(
+                                image,
+                                fret_render::ImageDescriptor {
+                                    view: entry.uploaded.view.clone(),
+                                    size: entry.uploaded.size,
+                                    format: entry.uploaded.format,
+                                    color_space: entry.uploaded.color_space,
+                                    alpha_mode,
+                                },
+                            ) {
+                                self.uploaded_images.remove(&image);
+                                if self.config.streaming_update_ack_enabled {
+                                    let target = window
+                                        .or(self.main_window)
+                                        .or_else(|| self.windows.keys().next());
+                                    if let Some(target) = target {
+                                        self.deliver_window_event_now(
+                                            target,
+                                            &Event::ImageUpdateDropped {
+                                                token,
+                                                image,
+                                                reason:
+                                                    fret_core::ImageUpdateDropReason::UnknownImage,
+                                            },
+                                        );
+                                    }
+                                }
+                                continue;
+                            }
+                            entry.alpha_mode = alpha_mode;
+                        }
+
                         let needs_replace = entry.uploaded.size != (width, height)
                             || entry.uploaded.color_space != color_space;
                         if needs_replace {
@@ -2746,6 +2782,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     size: uploaded.size,
                                     format: uploaded.format,
                                     color_space: uploaded.color_space,
+                                    alpha_mode,
                                 },
                             ) {
                                 self.uploaded_images.remove(&image);
@@ -2768,6 +2805,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 continue;
                             }
                             entry.uploaded = uploaded;
+                            entry.alpha_mode = alpha_mode;
                         } else {
                             entry.uploaded.write_region(
                                 &context.queue,

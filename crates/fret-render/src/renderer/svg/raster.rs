@@ -1,5 +1,6 @@
 use super::super::*;
 use super::SvgRasterGpu;
+use fret_core::AlphaMode;
 use fret_core::time::Instant;
 
 use crate::images::{ImageColorSpace, ImageDescriptor};
@@ -91,6 +92,7 @@ impl Renderer {
                         size: uploaded.size_px,
                         format: wgpu::TextureFormat::R8Unorm,
                         color_space: ImageColorSpace::Linear,
+                        alpha_mode: AlphaMode::Straight,
                     });
                     let approx_bytes =
                         u64::from(uploaded.size_px.0).saturating_mul(u64::from(uploaded.size_px.1));
@@ -127,6 +129,7 @@ impl Renderer {
                     size: uploaded.size_px,
                     format: wgpu::TextureFormat::Rgba8UnormSrgb,
                     color_space: ImageColorSpace::Srgb,
+                    alpha_mode: AlphaMode::Straight,
                 });
                 let approx_bytes = u64::from(uploaded.size_px.0)
                     .saturating_mul(u64::from(uploaded.size_px.1))

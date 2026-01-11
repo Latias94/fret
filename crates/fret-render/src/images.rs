@@ -1,5 +1,5 @@
-pub use fret_core::ImageColorSpace;
 use fret_core::ImageId;
+pub use fret_core::{AlphaMode, ImageColorSpace};
 use slotmap::SlotMap;
 
 pub struct UploadedRgba8Image {
@@ -28,6 +28,7 @@ pub struct ImageDescriptor {
     pub size: (u32, u32),
     pub format: wgpu::TextureFormat,
     pub color_space: ImageColorSpace,
+    pub alpha_mode: AlphaMode,
 }
 
 struct ImageEntry {
@@ -38,6 +39,8 @@ struct ImageEntry {
     format: wgpu::TextureFormat,
     #[allow(dead_code)]
     color_space: ImageColorSpace,
+    #[allow(dead_code)]
+    alpha_mode: AlphaMode,
 }
 
 #[derive(Default)]
@@ -57,6 +60,7 @@ impl ImageRegistry {
             size: desc.size,
             format: desc.format,
             color_space: desc.color_space,
+            alpha_mode: desc.alpha_mode,
         })
     }
 
@@ -73,6 +77,7 @@ impl ImageRegistry {
         entry.size = desc.size;
         entry.format = desc.format;
         entry.color_space = desc.color_space;
+        entry.alpha_mode = desc.alpha_mode;
         true
     }
 
@@ -82,6 +87,10 @@ impl ImageRegistry {
 
     pub(crate) fn get(&self, id: ImageId) -> Option<&wgpu::TextureView> {
         self.images.get(id).map(|t| &t.view)
+    }
+
+    pub(crate) fn alpha_mode(&self, id: ImageId) -> Option<AlphaMode> {
+        self.images.get(id).map(|t| t.alpha_mode)
     }
 }
 
