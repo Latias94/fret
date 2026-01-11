@@ -164,11 +164,12 @@ impl DockViewportHarness {
     }
 
     fn viewport_point(&self) -> Point {
-        let rect = self
+        let layout = self
             .app
             .global::<DockManager>()
-            .and_then(|dock| dock.viewport_content_rect(self.window, self.target))
-            .expect("expected viewport content rect to be recorded during paint");
+            .and_then(|dock| dock.viewport_layout(self.window, self.target))
+            .expect("expected viewport layout to be recorded during paint");
+        let rect = layout.content_rect;
         Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
     }
 }
