@@ -1,0 +1,1120 @@
+use fret_app::App;
+use fret_core::{
+    AppWindowId, Event, FrameId, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px,
+    Rect, SemanticsRole, Size as CoreSize,
+};
+use fret_runtime::Model;
+use fret_ui::ElementContext;
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
+};
+use fret_ui::tree::UiTree;
+use fret_ui_kit::OverlayController;
+use serde::Deserialize;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, Deserialize)]
+struct TimelineGolden {
+    version: u32,
+    base: String,
+    theme: String,
+    item: String,
+    primitive: String,
+    scenario: String,
+    steps: Vec<Step>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct Step {
+    snapshot: Snapshot,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct Snapshot {
+    dom: DomNode,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+struct DomRect {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct DomNode {
+    tag: String,
+    #[serde(default)]
+    attrs: BTreeMap<String, String>,
+    #[serde(default)]
+    rect: Option<DomRect>,
+    #[serde(default)]
+    text: Option<String>,
+    #[serde(default)]
+    children: Vec<DomNode>,
+}
+
+fn repo_root() -> PathBuf {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    manifest_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(Path::to_path_buf)
+        .expect("repo root")
+}
+
+fn radix_web_path(file_stem: &str) -> PathBuf {
+    repo_root()
+        .join("goldens")
+        .join("radix-web")
+        .join("v4")
+        .join("radix-vega")
+        .join(format!("{file_stem}.json"))
+}
+
+fn read_timeline(file_stem: &str) -> TimelineGolden {
+    let path = radix_web_path(file_stem);
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+        panic!(
+            "missing radix web golden: {}\nerror: {err}\n\nRe-generate it via (PowerShell):\n  pnpm -C repo-ref/ui/apps/v4 build\n  $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json F:/SourceCodes/Rust/fret-worktrees/wt-layout-engine2/goldens/radix-web/scripts/extract-behavior.mts --all --update --baseUrl=http://localhost:4020\n\nDocs:\n  goldens/radix-web/README.md",
+            path.display()
+        )
+    });
+    serde_json::from_str(&text).unwrap_or_else(|err| {
+        panic!(
+            "failed to parse radix web golden: {}\nerror: {err}",
+            path.display()
+        )
+    })
+}
+
+fn find_first<'a>(node: &'a DomNode, pred: &impl Fn(&'a DomNode) -> bool) -> Option<&'a DomNode> {
+    if pred(node) {
+        return Some(node);
+    }
+    for child in &node.children {
+        if let Some(found) = find_first(child, pred) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+fn require_rect(node: &DomNode, label: &str) -> DomRect {
+    node.rect
+        .unwrap_or_else(|| panic!("missing rect for {label} (tag={})", node.tag))
+}
+
+fn rect_right(r: DomRect) -> f32 {
+    r.x + r.w
+}
+
+fn rect_bottom(r: DomRect) -> f32 {
+    r.y + r.h
+}
+
+fn rect_center_x(r: DomRect) -> f32 {
+    r.x + r.w * 0.5
+}
+
+fn rect_center_y(r: DomRect) -> f32 {
+    r.y + r.h * 0.5
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Side {
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Align {
+    Start,
+    Center,
+    End,
+}
+
+fn parse_side(value: &str) -> Side {
+    match value {
+        "top" => Side::Top,
+        "right" => Side::Right,
+        "bottom" => Side::Bottom,
+        "left" => Side::Left,
+        other => panic!("unsupported data-side: {other}"),
+    }
+}
+
+fn parse_align(value: &str) -> Align {
+    match value {
+        "start" => Align::Start,
+        "center" => Align::Center,
+        "end" => Align::End,
+        other => panic!("unsupported data-align: {other}"),
+    }
+}
+
+fn rect_main_gap(side: Side, trigger: DomRect, content: DomRect) -> f32 {
+    match side {
+        Side::Bottom => content.y - rect_bottom(trigger),
+        Side::Top => trigger.y - rect_bottom(content),
+        Side::Right => content.x - rect_right(trigger),
+        Side::Left => trigger.x - rect_right(content),
+    }
+}
+
+fn rect_cross_delta(side: Side, align: Align, trigger: DomRect, content: DomRect) -> f32 {
+    match side {
+        Side::Top | Side::Bottom => match align {
+            Align::Start => content.x - trigger.x,
+            Align::Center => rect_center_x(content) - rect_center_x(trigger),
+            Align::End => rect_right(content) - rect_right(trigger),
+        },
+        Side::Left | Side::Right => match align {
+            Align::Start => content.y - trigger.y,
+            Align::Center => rect_center_y(content) - rect_center_y(trigger),
+            Align::End => rect_bottom(content) - rect_bottom(trigger),
+        },
+    }
+}
+
+fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
+    let delta = (actual - expected).abs();
+    assert!(
+        delta <= tol,
+        "{label}: expected≈{expected} (±{tol}) got={actual} (Δ={delta})"
+    );
+}
+
+#[derive(Default)]
+struct FakeServices;
+
+impl fret_core::TextService for FakeServices {
+    fn prepare(
+        &mut self,
+        text: &str,
+        style: &fret_core::TextStyle,
+        constraints: fret_core::TextConstraints,
+    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let mut advance_em: f32 = 0.0;
+        let mut char_count: usize = 0;
+        for ch in text.chars() {
+            char_count += 1;
+            advance_em += match ch {
+                ' ' | '\t' => 0.25,
+                'i' | 'l' | 'I' => 0.30,
+                'm' | 'w' | 'M' | 'W' => 0.80,
+                '0'..='9' => 0.52,
+                'A'..='Z' => 0.60,
+                _ => 0.46,
+            };
+        }
+
+        let font_size = style.size.0;
+        let mut width = Px(font_size * advance_em);
+        if let Some(tracking_em) = style.letter_spacing_em {
+            width.0 += font_size * tracking_em * (char_count.saturating_sub(1) as f32);
+        }
+        if let Some(max_width) = constraints.max_width {
+            width.0 = width.0.min(max_width.0);
+        }
+
+        let line_height = style.line_height.unwrap_or(Px(font_size * 1.2));
+        (
+            fret_core::TextBlobId::default(),
+            fret_core::TextMetrics {
+                size: CoreSize::new(width, line_height),
+                baseline: Px(line_height.0 * 0.8),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for FakeServices {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for FakeServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+fn render_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    frame_id: FrameId,
+    request_semantics: bool,
+    render: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+) {
+    app.set_frame_id(frame_id);
+    OverlayController::begin_frame(app, window);
+    let root = fret_ui::declarative::render_root(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "radix-web-overlay-geometry",
+        render,
+    );
+    ui.set_root(root);
+    OverlayController::render(ui, app, services, window, bounds);
+    if request_semantics {
+        ui.request_semantics_snapshot();
+    }
+    ui.layout_all(app, services, bounds, 1.0);
+}
+
+fn find_semantics<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    role: SemanticsRole,
+    label: Option<&str>,
+) -> Option<&'a fret_core::SemanticsNode> {
+    snap.nodes.iter().find(|n| {
+        if n.role != role {
+            return false;
+        }
+        if let Some(label) = label {
+            return n.label.as_deref() == Some(label);
+        }
+        true
+    })
+}
+
+fn dump_semantics(snap: &fret_core::SemanticsSnapshot) {
+    eprintln!("-- semantics nodes: {}", snap.nodes.len());
+    for n in &snap.nodes {
+        if let Some(label) = n.label.as_deref() {
+            eprintln!("- {:?} label={label}", n.role);
+        } else {
+            eprintln!("- {:?}", n.role);
+        }
+    }
+}
+
+fn fret_rect_to_dom(rect: Rect) -> DomRect {
+    DomRect {
+        x: rect.origin.x.0,
+        y: rect.origin.y.0,
+        w: rect.size.width.0,
+        h: rect.size.height.0,
+    }
+}
+
+fn fixed_size_container(cx: &mut ElementContext<'_, App>, w: f32, h: f32) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(w));
+                layout.size.height = Length::Px(Px(h));
+                layout
+            },
+            ..Default::default()
+        },
+        |_cx| Vec::new(),
+    )
+}
+
+fn fixed_trigger(
+    cx: &mut ElementContext<'_, App>,
+    label: &str,
+    left: f32,
+    top: f32,
+    w: f32,
+    h: f32,
+) -> AnyElement {
+    cx.pressable(
+        PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(w));
+                layout.size.height = Length::Px(Px(h));
+                layout.inset.left = Some(Px(left));
+                layout.inset.top = Some(Px(top));
+                layout.position = PositionStyle::Absolute;
+                layout
+            },
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(Arc::from(label)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        |cx, _st| vec![fixed_size_container(cx, w, h)],
+    )
+}
+
+#[test]
+fn radix_web_popover_open_geometry_matches_fret() {
+    let golden = read_timeline("popover-example.popover.open-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "popover-example");
+    assert_eq!(golden.primitive, "popover");
+    assert_eq!(golden.scenario, "open-close");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.tag == "button"
+            && n.attrs.get("aria-haspopup").is_some_and(|v| v == "dialog")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.text.as_deref() == Some("Open Popover")
+    })
+    .expect("web trigger node");
+
+    let web_content = find_first(dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "popover-content")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web popover-content node");
+
+    let side_str = web_content
+        .attrs
+        .get("data-side")
+        .map(String::as_str)
+        .unwrap_or("bottom");
+    let align_str = web_content
+        .attrs
+        .get("data-align")
+        .map(String::as_str)
+        .unwrap_or("center");
+
+    let side = parse_side(side_str);
+    let align = parse_align(align_str);
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_content_rect = require_rect(web_content, "web content");
+    let web_gap = rect_main_gap(side, web_trigger_rect, web_content_rect);
+    let web_cross = rect_cross_delta(side, align, web_trigger_rect, web_content_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+
+    // Frame 1: closed (establish anchor bounds).
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+            root_layout.position = PositionStyle::Relative;
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    ..Default::default()
+                },
+                |cx| {
+                    let popover = fret_ui_shadcn::Popover::new(open.clone())
+                        .side(match parse_side(side_str) {
+                            Side::Top => fret_ui_shadcn::PopoverSide::Top,
+                            Side::Right => fret_ui_shadcn::PopoverSide::Right,
+                            Side::Bottom => fret_ui_shadcn::PopoverSide::Bottom,
+                            Side::Left => fret_ui_shadcn::PopoverSide::Left,
+                        })
+                        .align(match parse_align(align_str) {
+                            Align::Start => fret_ui_shadcn::PopoverAlign::Start,
+                            Align::Center => fret_ui_shadcn::PopoverAlign::Center,
+                            Align::End => fret_ui_shadcn::PopoverAlign::End,
+                        })
+                        .into_element(
+                            cx,
+                            |cx| {
+                                let trigger = fixed_trigger(
+                                    cx,
+                                    "Open Popover",
+                                    web_trigger_rect.x,
+                                    web_trigger_rect.y,
+                                    web_trigger_rect.w,
+                                    web_trigger_rect.h,
+                                );
+                                trigger_id_out.set(Some(trigger.id));
+                                trigger
+                            },
+                            |cx| {
+                                fret_ui_shadcn::PopoverContent::new(vec![fixed_size_container(
+                                    cx,
+                                    web_content_rect.w,
+                                    web_content_rect.h,
+                                )])
+                                .a11y_label("Popover Content")
+                                .into_element(cx)
+                            },
+                        );
+                    vec![popover]
+                },
+            )]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let mut root_layout = LayoutStyle::default();
+                root_layout.size.width = Length::Fill;
+                root_layout.size.height = Length::Fill;
+                root_layout.position = PositionStyle::Relative;
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: root_layout,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        let popover = fret_ui_shadcn::Popover::new(open.clone())
+                            .side(match parse_side(side_str) {
+                                Side::Top => fret_ui_shadcn::PopoverSide::Top,
+                                Side::Right => fret_ui_shadcn::PopoverSide::Right,
+                                Side::Bottom => fret_ui_shadcn::PopoverSide::Bottom,
+                                Side::Left => fret_ui_shadcn::PopoverSide::Left,
+                            })
+                            .align(match parse_align(align_str) {
+                                Align::Start => fret_ui_shadcn::PopoverAlign::Start,
+                                Align::Center => fret_ui_shadcn::PopoverAlign::Center,
+                                Align::End => fret_ui_shadcn::PopoverAlign::End,
+                            })
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    let trigger = fixed_trigger(
+                                        cx,
+                                        "Open Popover",
+                                        web_trigger_rect.x,
+                                        web_trigger_rect.y,
+                                        web_trigger_rect.w,
+                                        web_trigger_rect.h,
+                                    );
+                                    trigger_id_out.set(Some(trigger.id));
+                                    trigger
+                                },
+                                |cx| {
+                                    fret_ui_shadcn::PopoverContent::new(vec![fixed_size_container(
+                                        cx,
+                                        web_content_rect.w,
+                                        web_content_rect.h,
+                                    )])
+                                    .a11y_label("Popover Content")
+                                    .into_element(cx)
+                                },
+                            );
+                        vec![popover]
+                    },
+                )]
+            },
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger = find_semantics(&snap, SemanticsRole::Button, Some("Open Popover"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret trigger semantics");
+        });
+    let fret_content = find_semantics(&snap, SemanticsRole::Panel, Some("Popover Content"))
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret popover content semantics");
+        });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_content_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_content.id)
+            .expect("fret popover content visual bounds"),
+    );
+
+    let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_content_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_content_rect);
+
+    if (fret_gap - web_gap).abs() > 2.0 {
+        eprintln!("-- popover mismatch debug");
+        eprintln!("side={side_str} align={align_str}");
+        eprintln!("web trigger rect:  {:?}", web_trigger_rect);
+        eprintln!("web content rect:  {:?}", web_content_rect);
+        eprintln!("fret trigger rect: {:?}", fret_trigger_rect);
+        eprintln!("fret content rect: {:?}", fret_content_rect);
+        eprintln!("web gap={web_gap} cross={web_cross}");
+        eprintln!("fret gap={fret_gap} cross={fret_cross}");
+        if let Some(trigger) = trigger_id_out.get() {
+            let last_bounds = fret_ui::elements::bounds_for_element(&mut app, window, trigger);
+            let last_visual =
+                fret_ui::elements::visual_bounds_for_element(&mut app, window, trigger);
+            let node = fret_ui::elements::node_for_element(&mut app, window, trigger);
+            eprintln!("fret trigger last bounds:  {last_bounds:?}");
+            eprintln!("fret trigger last visual:  {last_visual:?}");
+            eprintln!("fret trigger node:         {node:?}");
+            if let Some(node) = node {
+                eprintln!(
+                    "fret trigger node bounds:  {:?}",
+                    ui.debug_node_bounds(node)
+                );
+                eprintln!(
+                    "fret trigger node visual:  {:?}",
+                    ui.debug_node_visual_bounds(node)
+                );
+            }
+        }
+    }
+
+    assert_close("popover main gap", fret_gap, web_gap, 2.0);
+    assert_close("popover cross delta", fret_cross, web_cross, 2.0);
+}
+
+#[test]
+fn radix_web_dropdown_menu_open_geometry_matches_fret() {
+    let golden = read_timeline("dropdown-menu-example.dropdown-menu.open-navigate-select.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "dropdown-menu-example");
+    assert_eq!(golden.primitive, "dropdown-menu");
+    assert_eq!(golden.scenario, "open-navigate-select");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.tag == "button"
+            && n.attrs.get("aria-haspopup").is_some_and(|v| v == "menu")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.text.as_deref() == Some("Open")
+    })
+    .expect("web trigger node");
+
+    let web_menu = find_first(dom, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "menu")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    })
+    .expect("web menu node");
+
+    let side_str = web_menu
+        .attrs
+        .get("data-side")
+        .map(String::as_str)
+        .unwrap_or("bottom");
+    let align_str = web_menu
+        .attrs
+        .get("data-align")
+        .map(String::as_str)
+        .unwrap_or("start");
+
+    let side = parse_side(side_str);
+    let align = parse_align(align_str);
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_menu_rect = require_rect(web_menu, "web menu");
+    let web_gap = rect_main_gap(side, web_trigger_rect, web_menu_rect);
+    let web_cross = rect_cross_delta(side, align, web_trigger_rect, web_menu_rect);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    // Frame 1: closed (establish anchor bounds).
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
+            let menu = fret_ui_shadcn::DropdownMenu::new(open.clone())
+                .side(match parse_side(side_str) {
+                    Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
+                    Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
+                    Side::Bottom => fret_ui_shadcn::DropdownMenuSide::Bottom,
+                    Side::Left => fret_ui_shadcn::DropdownMenuSide::Left,
+                })
+                .align(match parse_align(align_str) {
+                    Align::Start => fret_ui_shadcn::DropdownMenuAlign::Start,
+                    Align::Center => fret_ui_shadcn::DropdownMenuAlign::Center,
+                    Align::End => fret_ui_shadcn::DropdownMenuAlign::End,
+                })
+                .into_element(
+                    cx,
+                    |_cx| trigger,
+                    |_cx| {
+                        vec![
+                            fret_ui_shadcn::DropdownMenuEntry::Item(
+                                fret_ui_shadcn::DropdownMenuItem::new("Undo"),
+                            ),
+                            fret_ui_shadcn::DropdownMenuEntry::Item(
+                                fret_ui_shadcn::DropdownMenuItem::new("Redo"),
+                            ),
+                            fret_ui_shadcn::DropdownMenuEntry::Separator,
+                            fret_ui_shadcn::DropdownMenuEntry::Item(
+                                fret_ui_shadcn::DropdownMenuItem::new("Cut"),
+                            ),
+                        ]
+                    },
+                );
+            vec![menu]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    // Frame 2+: open, then settle motion (scale/opacity/translation) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let trigger = fixed_trigger(cx, "Open", 200.0, 200.0, 80.0, 36.0);
+                let menu = fret_ui_shadcn::DropdownMenu::new(open.clone())
+                    .side(match parse_side(side_str) {
+                        Side::Top => fret_ui_shadcn::DropdownMenuSide::Top,
+                        Side::Right => fret_ui_shadcn::DropdownMenuSide::Right,
+                        Side::Bottom => fret_ui_shadcn::DropdownMenuSide::Bottom,
+                        Side::Left => fret_ui_shadcn::DropdownMenuSide::Left,
+                    })
+                    .align(match parse_align(align_str) {
+                        Align::Start => fret_ui_shadcn::DropdownMenuAlign::Start,
+                        Align::Center => fret_ui_shadcn::DropdownMenuAlign::Center,
+                        Align::End => fret_ui_shadcn::DropdownMenuAlign::End,
+                    })
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |_cx| {
+                            vec![
+                                fret_ui_shadcn::DropdownMenuEntry::Item(
+                                    fret_ui_shadcn::DropdownMenuItem::new("Undo"),
+                                ),
+                                fret_ui_shadcn::DropdownMenuEntry::Item(
+                                    fret_ui_shadcn::DropdownMenuItem::new("Redo"),
+                                ),
+                                fret_ui_shadcn::DropdownMenuEntry::Separator,
+                                fret_ui_shadcn::DropdownMenuEntry::Item(
+                                    fret_ui_shadcn::DropdownMenuItem::new("Cut"),
+                                ),
+                            ]
+                        },
+                    );
+                vec![menu]
+            },
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger =
+        find_semantics(&snap, SemanticsRole::Button, Some("Open")).unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret trigger semantics");
+        });
+    let menu_id = fret_trigger.controls.first().copied().unwrap_or_else(|| {
+        dump_semantics(&snap);
+        panic!("expected dropdown trigger.controls to include menu root");
+    });
+    let menu_root = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == menu_id)
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("fret menu semantics node by trigger.controls");
+        });
+    let menu_panel = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.parent == Some(menu_root.id)
+                && n.role == SemanticsRole::Generic
+                && n.bounds.size.width.0 < bounds.size.width.0
+                && n.bounds.size.height.0 < bounds.size.height.0
+        })
+        .unwrap_or_else(|| {
+            dump_semantics(&snap);
+            panic!("expected menu panel node under menu_root");
+        });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_menu_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(menu_panel.id)
+            .expect("fret menu panel visual bounds"),
+    );
+
+    let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_menu_rect);
+    let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_menu_rect);
+
+    assert_close("dropdown-menu main gap", fret_gap, web_gap, 2.0);
+    assert_close("dropdown-menu cross delta", fret_cross, web_cross, 2.0);
+}
+
+#[test]
+fn radix_web_select_item_aligned_geometry_matches_fret() {
+    let golden = read_timeline("select-example.select.open-navigate-select.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.theme, "light");
+    assert_eq!(golden.item, "select-example");
+    assert_eq!(golden.primitive, "select");
+    assert_eq!(golden.scenario, "open-navigate-select");
+    assert!(golden.steps.len() >= 2);
+
+    let dom = &golden.steps[1].snapshot.dom;
+    let web_trigger = find_first(dom, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "combobox")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.text.as_deref() == Some("Select a fruit")
+    })
+    .expect("web trigger node");
+
+    let web_listbox = find_first(dom, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "listbox")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.attrs
+                .get("data-slot")
+                .is_some_and(|v| v == "select-content")
+    })
+    .expect("web listbox node");
+
+    let web_trigger_rect = require_rect(web_trigger, "web trigger");
+    let web_listbox_rect = require_rect(web_listbox, "web listbox");
+    let web_top_delta = web_listbox_rect.y - web_trigger_rect.y;
+    let web_left_delta = web_listbox_rect.x - web_trigger_rect.x;
+    let web_width_delta = web_listbox_rect.w - web_trigger_rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(1280.0), Px(800.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let items = vec![
+        fret_ui_shadcn::SelectItem::new("apple", "Apple"),
+        fret_ui_shadcn::SelectItem::new("banana", "Banana"),
+        fret_ui_shadcn::SelectItem::new("blueberry", "Blueberry"),
+        fret_ui_shadcn::SelectItem::new("grapes", "Grapes").disabled(true),
+        fret_ui_shadcn::SelectItem::new("pineapple", "Pineapple"),
+    ];
+
+    let trigger_origin = Point::new(Px(web_trigger_rect.x), Px(web_trigger_rect.y));
+
+    // Frame 1: closed (establish trigger bounds).
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+            root_layout.position = PositionStyle::Relative;
+
+            let mut trigger_layout = LayoutStyle::default();
+            trigger_layout.position = PositionStyle::Absolute;
+            trigger_layout.inset.left = Some(trigger_origin.x);
+            trigger_layout.inset.top = Some(trigger_origin.y);
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: trigger_layout,
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                                    .placeholder("Select a fruit")
+                                    .a11y_label("Select a fruit")
+                                    .position(fret_ui_shadcn::select::SelectPosition::ItemAligned)
+                                    .items(items.clone())
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+
+    // Open via a real trigger click so the component can initialize its internal item-aligned state.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(web_trigger_rect.x + 10.0), Px(web_trigger_rect.y + 10.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(web_trigger_rect.x + 10.0), Px(web_trigger_rect.y + 10.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Frame 2+: open, then settle (motion + item-aligned bookkeeping) before measuring geometry.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 4;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let mut root_layout = LayoutStyle::default();
+                root_layout.size.width = Length::Fill;
+                root_layout.size.height = Length::Fill;
+                root_layout.position = PositionStyle::Relative;
+
+                let mut trigger_layout = LayoutStyle::default();
+                trigger_layout.position = PositionStyle::Absolute;
+                trigger_layout.inset.left = Some(trigger_origin.x);
+                trigger_layout.inset.top = Some(trigger_origin.y);
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: root_layout,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: trigger_layout,
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                                        .placeholder("Select a fruit")
+                                        .a11y_label("Select a fruit")
+                                        .position(
+                                            fret_ui_shadcn::select::SelectPosition::ItemAligned,
+                                        )
+                                        .items(items.clone())
+                                        .into_element(cx),
+                                ]
+                            },
+                        )]
+                    },
+                )]
+            },
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_trigger = find_semantics(&snap, SemanticsRole::ComboBox, Some("Select a fruit"))
+        .unwrap_or_else(|| {
+            find_semantics(&snap, SemanticsRole::ComboBox, None).expect("fret combobox semantics")
+        });
+    let fret_listbox = find_semantics(&snap, SemanticsRole::ListBox, None).unwrap_or_else(|| {
+        dump_semantics(&snap);
+        panic!("fret listbox semantics");
+    });
+
+    let fret_trigger_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_trigger.id)
+            .expect("fret trigger visual bounds"),
+    );
+    let fret_listbox_rect = fret_rect_to_dom(
+        ui.debug_node_visual_bounds(fret_listbox.id)
+            .expect("fret listbox visual bounds"),
+    );
+
+    let fret_top_delta = fret_listbox_rect.y - fret_trigger_rect.y;
+    let fret_left_delta = fret_listbox_rect.x - fret_trigger_rect.x;
+    let fret_width_delta = fret_listbox_rect.w - fret_trigger_rect.w;
+
+    if (fret_top_delta - web_top_delta).abs() > 2.5 {
+        eprintln!("-- select mismatch debug");
+        eprintln!("web trigger rect:   {:?}", web_trigger_rect);
+        eprintln!("web listbox rect:   {:?}", web_listbox_rect);
+        eprintln!("fret trigger rect:  {:?}", fret_trigger_rect);
+        eprintln!("fret listbox rect:  {:?}", fret_listbox_rect);
+        eprintln!("web top={web_top_delta} left={web_left_delta} w={web_width_delta}");
+        eprintln!("fret top={fret_top_delta} left={fret_left_delta} w={fret_width_delta}");
+
+        let listboxes: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBox)
+            .collect();
+        eprintln!("listbox nodes: {}", listboxes.len());
+        for n in listboxes {
+            let vb = ui.debug_node_visual_bounds(n.id);
+            eprintln!(
+                "- id={:?} parent={:?} bounds={:?} visual={:?} label={:?}",
+                n.id, n.parent, n.bounds, vb, n.label
+            );
+        }
+
+        let candidates: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| {
+                n.bounds.size.width.0 < bounds.size.width.0
+                    && n.bounds.size.height.0 < bounds.size.height.0
+            })
+            .take(20)
+            .collect();
+        eprintln!("non-window nodes (first 20): {}", candidates.len());
+        for n in candidates {
+            let vb = ui.debug_node_visual_bounds(n.id);
+            eprintln!(
+                "- role={:?} id={:?} bounds={:?} visual={:?} label={:?}",
+                n.role, n.id, n.bounds, vb, n.label
+            );
+        }
+    }
+
+    assert_close(
+        "select item-aligned top delta",
+        fret_top_delta,
+        web_top_delta,
+        2.5,
+    );
+    assert_close(
+        "select item-aligned left delta",
+        fret_left_delta,
+        web_left_delta,
+        2.5,
+    );
+    assert_close(
+        "select item-aligned width delta",
+        fret_width_delta,
+        web_width_delta,
+        3.0,
+    );
+}
