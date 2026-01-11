@@ -331,6 +331,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **Click to select node**
   - XyFlow: `handleNodeClick(...)` used by `NodeWrapper` (`components/NodeWrapper/index.tsx`)
   - fret-node: selection logic in `NodeGraphCanvas` (click selects; supports marquee)
+    - per-node override: `Node.selectable` (XyFlow `node.selectable`)
+      - XyFlow: `repo-ref/xyflow/packages/system/src/types/nodes.ts` (`NodeBase.selectable?: boolean`)
+      - fret-node: `ecosystem/fret-node/src/core/model.rs` (`Node.selectable: Option<bool>`)
+      - enforced by: `NodeGraphCanvas::node_is_selectable` + `left_click.rs` + `marquee.rs` + `focus_next_node` + `CMD_NODE_GRAPH_SELECT_ALL`
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 
 - [~] **Select edge / edge focus**
   - XyFlow: edges are focusable and selectable; store fields `edgesFocusable`, `edgesReconnectable`, `elementsSelectable`

@@ -100,6 +100,12 @@ pub struct Node {
     /// Top-left position in canvas space.
     pub pos: CanvasPoint,
 
+    /// Whether the node can be selected (XyFlow `node.selectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.elements_selectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selectable: Option<bool>,
+
     /// Optional group container id (subflow / parent frame).
     ///
     /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally

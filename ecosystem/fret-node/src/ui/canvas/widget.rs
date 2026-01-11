@@ -3011,6 +3011,7 @@ impl NodeGraphCanvas {
             kind: NodeKindKey::new(REROUTE_KIND),
             kind_version: 1,
             pos: at,
+            selectable: None,
             parent: None,
             size: None,
             collapsed: false,
@@ -4118,6 +4119,20 @@ impl NodeGraphCanvas {
         edge.selectable.unwrap_or(true)
     }
 
+    fn node_is_selectable(
+        graph: &Graph,
+        interaction: &NodeGraphInteractionState,
+        node: GraphNodeId,
+    ) -> bool {
+        if !interaction.elements_selectable {
+            return false;
+        }
+        let Some(node) = graph.nodes.get(&node) else {
+            return false;
+        };
+        node.selectable.unwrap_or(true)
+    }
+
     fn should_add_bundle_port(
         graph: &Graph,
         from: PortId,
@@ -4478,7 +4493,7 @@ impl NodeGraphCanvas {
                 let mut used: HashSet<GraphNodeId> = HashSet::new();
 
                 for id in &snapshot.draw_order {
-                    if g.nodes.contains_key(id) && used.insert(*id) {
+                    if Self::node_is_selectable(g, &snapshot.interaction, *id) && used.insert(*id) {
                         out.push(*id);
                     }
                 }
@@ -4487,6 +4502,7 @@ impl NodeGraphCanvas {
                     .nodes
                     .keys()
                     .copied()
+                    .filter(|id| Self::node_is_selectable(g, &snapshot.interaction, *id))
                     .filter(|id| used.insert(*id))
                     .collect();
                 rest.sort_unstable();
@@ -5403,7 +5419,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 let (nodes, groups, edges) = self
                     .graph
                     .read_ref(cx.app, |graph| {
-                        let nodes = graph.nodes.keys().copied().collect::<Vec<_>>();
+                        let nodes = graph
+                            .nodes
+                            .keys()
+                            .copied()
+                            .filter(|id| {
+                                Self::node_is_selectable(graph, &snapshot.interaction, *id)
+                            })
+                            .collect::<Vec<_>>();
                         let groups = graph.groups.keys().copied().collect::<Vec<_>>();
                         let edges = if snapshot.interaction.edges_selectable {
                             graph
@@ -9039,6 +9062,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9052,6 +9076,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9076,6 +9101,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9092,6 +9118,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 5.0 },
+                selectable: None,
                 parent: None,
                 size: Some(CanvasSize {
                     width: 40.0,
@@ -9119,6 +9146,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9159,6 +9187,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 200.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9236,6 +9265,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9265,6 +9295,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9333,6 +9364,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9486,6 +9518,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9516,6 +9549,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 100.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9627,6 +9661,7 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9640,6 +9675,7 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 10.0, y: 0.0 },
+                selectable: Some(false),
                 parent: None,
                 size: None,
                 collapsed: false,
@@ -9751,7 +9787,7 @@ mod tests {
             .read_ref(&host, |s| s.selected_nodes.clone())
             .unwrap_or_default();
         selected_nodes.sort();
-        assert_eq!(selected_nodes, vec![a, b]);
+        assert_eq!(selected_nodes, vec![a]);
 
         let mut selected_groups = view
             .read_ref(&host, |s| s.selected_groups.clone())
@@ -9848,6 +9884,42 @@ mod tests {
             .read_ref(&host, |s| s.selected_nodes.clone())
             .unwrap_or_default();
         assert_eq!(selected, vec![a]);
+    }
+
+    #[test]
+    fn focus_next_skips_unselectable_nodes() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, a, b) = make_test_graph_two_nodes();
+        graph_value
+            .nodes
+            .get_mut(&a)
+            .expect("node exists")
+            .selectable = Some(false);
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+        canvas.sync_view_state(&mut host);
+
+        view.update(&mut host, |s, _cx| {
+            s.interaction.elements_selectable = true;
+            s.draw_order = vec![a, b];
+            s.selected_nodes.clear();
+            s.selected_edges.clear();
+            s.selected_groups.clear();
+        })
+        .unwrap();
+
+        let mut services = NullServices::default();
+        let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
+        let mut cx = command_cx(&mut host, &mut services, &mut tree);
+
+        assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT)));
+        let selected = view
+            .read_ref(&host, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        assert_eq!(selected, vec![b]);
     }
 
     #[test]

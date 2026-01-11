@@ -1079,6 +1079,7 @@ mod tests {
                 kind: crate::core::NodeKindKey::new("test"),
                 kind_version: 1,
                 pos: crate::core::CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,

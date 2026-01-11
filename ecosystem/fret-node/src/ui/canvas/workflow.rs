@@ -216,6 +216,7 @@ mod tests {
                 kind: NodeKindKey::new("demo.src"),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: false,

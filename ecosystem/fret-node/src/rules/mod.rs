@@ -206,6 +206,7 @@ impl InsertNodeTemplate {
                 kind: self.kind.clone(),
                 kind_version: self.kind_version,
                 pos: at,
+                selectable: None,
                 parent: None,
                 size: None,
                 collapsed: self.collapsed,

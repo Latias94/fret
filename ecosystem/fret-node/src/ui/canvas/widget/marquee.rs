@@ -18,11 +18,11 @@ fn nodes_in_marquee(
     geom.nodes
         .iter()
         .filter_map(|(id, ng)| {
-            graph
-                .nodes
-                .contains_key(id)
-                .then_some(*id)
-                .filter(|_| super::rects_intersect(rect, ng.rect))
+            let node = graph.nodes.get(id)?;
+            if !node.selectable.unwrap_or(true) {
+                return None;
+            }
+            super::rects_intersect(rect, ng.rect).then_some(*id)
         })
         .collect()
 }

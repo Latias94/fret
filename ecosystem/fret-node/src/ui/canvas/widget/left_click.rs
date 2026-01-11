@@ -404,14 +404,20 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 Px(position.y.0 - rect.origin.y.0),
             );
             let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-            let selectable = snapshot.interaction.elements_selectable;
-            let select_action = if selectable && multi_selection_pressed {
+            let node_selectable = canvas
+                .graph
+                .read_ref(cx.app, |g| {
+                    NodeGraphCanvas::node_is_selectable(g, &snapshot.interaction, node)
+                })
+                .ok()
+                .unwrap_or(false);
+            let select_action = if node_selectable && multi_selection_pressed {
                 PendingNodeSelectAction::Toggle
             } else {
                 PendingNodeSelectAction::None
             };
 
-            if selectable && !multi_selection_pressed {
+            if node_selectable && !multi_selection_pressed {
                 canvas.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_groups.clear();
@@ -425,7 +431,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             }
 
             let nodes_for_drag =
-                (selectable && already_selected && snapshot.selected_nodes.len() > 1)
+                (node_selectable && already_selected && snapshot.selected_nodes.len() > 1)
                     .then(|| snapshot.selected_nodes.clone())
                     .unwrap_or_else(|| vec![node]);
             let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
