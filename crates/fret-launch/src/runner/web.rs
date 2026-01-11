@@ -370,10 +370,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
         }
-        if (stats.update_effects_delayed_budget > 0
-            || stats.update_effects_dropped_staging > 0
-            || stats.update_effects_replaced > 0)
-            && std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+        if std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+            && (stats.update_effects_delayed_budget > 0
+                || stats.update_effects_dropped_staging > 0
+                || stats.update_effects_replaced > 0
+                || stats.yuv_conversions_attempted > 0)
         {
             tracing::debug!(
                 seen = stats.update_effects_seen,
@@ -387,6 +388,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 staging_budget_bytes = stats.staging_budget_bytes,
                 pending_updates = stats.pending_updates,
                 pending_staging_bytes = stats.pending_staging_bytes,
+                yuv_attempted = stats.yuv_conversions_attempted,
+                yuv_applied = stats.yuv_conversions_applied,
+                yuv_convert_us = stats.yuv_convert_us,
+                yuv_output_bytes = stats.yuv_convert_output_bytes,
                 "streaming image updates queued/budgeted"
             );
         }
