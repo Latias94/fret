@@ -41,6 +41,10 @@ Fret does not use the DOM or native scroll containers. Scrolling is an explicit 
   descendants from collapsing when the scroll axis is probed with `MaxContent` during intrinsic
   measurement. In Fret, this is enforced by clamping the scroll content bounds to at least the
   viewport bounds during layout (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`).
+- Pass: Scroll axes are gated by mounted scrollbars (Radix `overflowX/overflowY` only enable when
+  the corresponding `ScrollAreaScrollbar` is present). In Fret's shadcn/Radix-shaped surface, the
+  underlying `Scroll` axis is derived from the requested scrollbar orientations, so horizontal
+  scrolling is disabled by default unless a horizontal scrollbar is mounted.
 
 ## Follow-ups (recommended)
 

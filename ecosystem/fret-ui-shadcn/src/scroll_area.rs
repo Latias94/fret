@@ -54,7 +54,7 @@ impl ScrollAreaViewport {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
-            axis: ScrollAxis::Both,
+            axis: ScrollAxis::Y,
             probe_unbounded: true,
         }
     }
@@ -240,6 +240,13 @@ impl ScrollAreaRoot {
                 .iter()
                 .any(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical);
 
+            let axis = match (wants_x, wants_y) {
+                (true, true) => ScrollAxis::Both,
+                (true, false) => ScrollAxis::X,
+                (false, true) => ScrollAxis::Y,
+                (false, false) => viewport.axis,
+            };
+
             let show_scrollbar_x = wants_x && visible && max_offset.x.0 > 0.01;
             let show_scrollbar_y = wants_y && visible && max_offset.y.0 > 0.01;
 
@@ -256,7 +263,7 @@ impl ScrollAreaRoot {
                 let scroll = cx.scroll(
                     ScrollProps {
                         layout: scroll_layout,
-                        axis: viewport.axis,
+                        axis,
                         scroll_handle: Some(handle.clone()),
                         probe_unbounded: viewport.probe_unbounded,
                     },
@@ -394,7 +401,7 @@ impl ScrollArea {
     pub fn new(children: Vec<AnyElement>) -> Self {
         Self {
             children,
-            axis: ScrollAxis::Both,
+            axis: ScrollAxis::Y,
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
@@ -546,29 +553,6 @@ mod tests {
         content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
     ) -> fret_core::NodeId {
         render_with_axis(ui, app, services, window, ScrollAxis::Y, ty, content)
-    }
-
-    fn render_with_axis(
-        ui: &mut UiTree<App>,
-        app: &mut App,
-        services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        axis: ScrollAxis,
-        ty: ScrollAreaType,
-        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-    ) -> fret_core::NodeId {
-        let root =
-            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
-                vec![
-                    ScrollArea::new(content(cx))
-                        .axis(axis)
-                        .type_(ty)
-                        .into_element(cx),
-                ]
-            });
-        ui.set_root(root);
-        ui.layout_all(app, services, bounds(), 1.0);
-        root
     }
 
     fn render_with_axis(
