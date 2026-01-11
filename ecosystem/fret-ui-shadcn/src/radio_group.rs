@@ -49,8 +49,7 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
         .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.radio_group.line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or(px);
 
     TextStyle {
         font: FontId::default(),
