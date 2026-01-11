@@ -1504,6 +1504,13 @@ impl DropdownMenu {
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
+                                                        let submenu_row_count_for_hint =
+                                                            item.submenu.clone().map(|entries| {
+                                                                let mut flat: Vec<DropdownMenuEntry> =
+                                                                    Vec::new();
+                                                                flatten_entries(&mut flat, entries);
+                                                                flat.len()
+                                                            });
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
@@ -1519,9 +1526,22 @@ impl DropdownMenu {
                                                                             cx.bounds,
                                                                             window_margin,
                                                                         );
-                                                                    let desired = Size::new(
+                                                                    let submenu_max_h = theme
+                                                                        .metric_by_key(
+                                                                            "component.dropdown_menu.max_height",
+                                                                        )
+                                                                        .map(|h| {
+                                                                            Px(h.0.min(
+                                                                                outer.size.height.0,
+                                                                            ))
+                                                                        })
+                                                                        .unwrap_or(outer.size.height);
+                                                                    let desired = menu::sub::estimated_desired_size_for_row_count(
                                                                         Px(192.0),
-                                                                        Px(1.0e9),
+                                                                        Px(28.0),
+                                                                        submenu_row_count_for_hint
+                                                                            .unwrap_or(1),
+                                                                        submenu_max_h,
                                                                     );
                                                                     menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                         outer,
@@ -1716,13 +1736,46 @@ impl DropdownMenu {
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
                     let mut children = vec![content];
-                    let desired = Size::new(Px(192.0), Px(1.0e9));
                     let submenu_open_value = cx
                         .app
                         .models_mut()
                         .read(&submenu_for_panel.open_value, |v| v.clone())
                         .ok()
                         .flatten();
+                    let desired = submenu_open_value
+                        .as_deref()
+                        .and_then(|open_value| {
+                            entries_for_submenu.iter().find_map(|e| {
+                                let DropdownMenuEntry::Item(item) = e else {
+                                    return None;
+                                };
+                                let Some(sub) = item.submenu.clone() else {
+                                    return None;
+                                };
+                                (item.value.as_ref() == open_value).then_some(sub)
+                            })
+                        })
+                        .map(|submenu_entries| {
+                            let mut flat: Vec<DropdownMenuEntry> = Vec::new();
+                            flatten_entries(&mut flat, submenu_entries);
+                            let submenu_max_h = theme
+                                .metric_by_key("component.dropdown_menu.max_height")
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            menu::sub::estimated_desired_size_for_row_count(
+                                Px(192.0),
+                                Px(28.0),
+                                flat.len(),
+                                submenu_max_h,
+                            )
+                        })
+                        .unwrap_or_else(|| {
+                            let submenu_max_h = theme
+                                .metric_by_key("component.dropdown_menu.max_height")
+                                .map(|h| Px(h.0.min(outer.size.height.0)))
+                                .unwrap_or(outer.size.height);
+                            Size::new(Px(192.0), submenu_max_h)
+                        });
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
@@ -1736,7 +1789,7 @@ impl DropdownMenu {
                     let submenu_opacity = submenu_motion.opacity;
                     let submenu_scale = submenu_motion.scale;
 
-                    let open_submenu = menu::sub::with_open_submenu(
+                    let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
                         &submenu_for_panel,
                         outer,
@@ -1875,7 +1928,7 @@ impl DropdownMenu {
                                             };
 
                                             let submenu_models_for_panel = submenu_for_panel.clone();
-                                            let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
+                                            let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                                 cx,
                                                 open_value.clone(),
                                                 geometry.floating,
@@ -2333,7 +2386,7 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                    let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
                                                         cx,
                                                         RovingFlexProps {
                                                             flex: FlexProps {
@@ -2350,7 +2403,8 @@ impl DropdownMenu {
                                                         submenu_labels_arc.clone(),
                                                         typeahead_timeout_ticks,
                                                         move |_cx| rows.clone(),
-                                                    )]
+                                                    );
+                                                    vec![roving]
                                                 },
                                             );
 
@@ -4118,6 +4172,169 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
             "submenu should unmount after the close transition completes"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_wheel_scroll_brings_late_items_into_view() {
+        use std::time::Duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let submenu_entries: Vec<DropdownMenuEntry> = (0..40)
+            .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
+            .collect();
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(submenu_entries)),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+        ];
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: open the menu.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        let more_bounds = more.bounds;
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: rect_center(more_bounds),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect");
+        };
+
+        // Third frame: hover does not open the submenu immediately.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+
+        // Fourth frame: open submenu.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let first = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 0"))
+            .expect("Sub 0 menu item");
+        let wheel_pos = rect_center(first.bounds);
+
+        let submenu_menu_bounds = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Menu)
+            .map(|n| n.bounds)
+            .find(|b| b.contains(wheel_pos))
+            .expect("submenu menu bounds");
+
+        for _ in 0..60 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel");
+        let last = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 39"))
+            .expect("last submenu item");
+        let last_bounds = ui.debug_node_bounds(last.id).expect("last bounds");
+
+        let menu_top = submenu_menu_bounds.origin.y.0;
+        let menu_bottom = submenu_menu_bounds.origin.y.0 + submenu_menu_bounds.size.height.0;
+        let last_top = last_bounds.origin.y.0;
+        let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
+
+        assert!(
+            last_bottom > menu_top + 0.01 && last_top < menu_bottom - 0.01,
+            "expected last submenu item to be visible after wheel scrolling; menu={submenu_menu_bounds:?} last={last_bounds:?}"
         );
     }
 

@@ -706,7 +706,32 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 source: wgpu::SurfaceError::Lost,
                             } => {
                                 let size = state.window.surface_size();
-                                self.resize_surface(app_window, size.width, size.height);
+                                state
+                                    .surface
+                                    .resize(&context.device, size.width, size.height);
+                                state.window.request_redraw();
+                                self.raf_windows.insert(app_window);
+                                return;
+                            }
+                            fret_render::RenderError::SurfaceAcquireFailed {
+                                source: wgpu::SurfaceError::Outdated,
+                            } => {
+                                let size = state.window.surface_size();
+                                state
+                                    .surface
+                                    .resize(&context.device, size.width, size.height);
+                                state.window.request_redraw();
+                                self.raf_windows.insert(app_window);
+                                return;
+                            }
+                            fret_render::RenderError::SurfaceAcquireFailed {
+                                source: wgpu::SurfaceError::Timeout,
+                            } => {
+                                // Transient on some platforms (especially during startup / resize).
+                                // Schedule a one-shot redraw so the window doesn't stay blank until
+                                // the next user input arrives.
+                                state.window.request_redraw();
+                                self.raf_windows.insert(app_window);
                                 return;
                             }
                             fret_render::RenderError::SurfaceAcquireFailed {

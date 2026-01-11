@@ -1,12 +1,16 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
+use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
+use fret_core::scene::{Color, DrawOrder, SceneOp};
+use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
 use fret_core::{
     AppWindowId, Event, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
 };
 use fret_gizmo::{
-    DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId, Transform3d,
-    ViewportRect,
+    Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
+    GizmoTarget3d, GizmoTargetId, Grid3d, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
+    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -14,24 +18,381 @@ use fret_launch::{
     record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
-use fret_render::viewport_overlay::ViewportOverlay3dContext;
+use fret_render::viewport_overlay::{
+    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dLineVertex, Overlay3dPipelines,
+    Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext, push_thick_line_quad,
+    push_triangle,
+};
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
+use fret_ui::{Theme, ThemeConfig};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
+use std::fmt::Write as _;
+use std::fs;
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GizmoOpMaskPreset {
+    Translate,
+    Rotate,
+    Scale,
+    Universal,
+    UniversalArcball,
+    BoundsOnly,
+}
+
+impl GizmoOpMaskPreset {
+    const ALL: [Self; 6] = [
+        Self::Translate,
+        Self::Rotate,
+        Self::Scale,
+        Self::Universal,
+        Self::UniversalArcball,
+        Self::BoundsOnly,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Translate => "Translate (axis+plane+view)",
+            Self::Rotate => "Rotate (axis+view+arcball)",
+            Self::Scale => "Scale (axis+plane+uniform+bounds)",
+            Self::Universal => "Universal (t + r + s-axis)",
+            Self::UniversalArcball => "Universal (t + r + arcball + s-axis)",
+            Self::BoundsOnly => "Bounds (box scaling only)",
+        }
+    }
+
+    fn mask(self) -> GizmoOps {
+        match self {
+            Self::Translate => GizmoOps::translate_all(),
+            Self::Rotate => GizmoOps::rotate_all(),
+            Self::Scale => GizmoOps::scale_all(),
+            Self::Universal => {
+                GizmoOps::translate_all()
+                    | GizmoOps::rotate_axis()
+                    | GizmoOps::rotate_view()
+                    | GizmoOps::scale_axis()
+            }
+            Self::UniversalArcball => {
+                GizmoOps::translate_all()
+                    | GizmoOps::rotate_axis()
+                    | GizmoOps::rotate_view()
+                    | GizmoOps::rotate_arcball()
+                    | GizmoOps::scale_axis()
+            }
+            Self::BoundsOnly => GizmoOps::scale_bounds(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct OverlayTextCache {
+    last_text: String,
+    last_scale_bits: u32,
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<fret_core::text::TextMetrics>,
+}
+
+impl Default for OverlayTextCache {
+    fn default() -> Self {
+        Self {
+            last_text: String::new(),
+            last_scale_bits: 0,
+            blob: None,
+            metrics: None,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct ViewGizmoLabelCache {
+    last_scale_bits: u32,
+    blob_x: Option<fret_core::TextBlobId>,
+    blob_y: Option<fret_core::TextBlobId>,
+    blob_z: Option<fret_core::TextBlobId>,
+    blob_p: Option<fret_core::TextBlobId>,
+    blob_o: Option<fret_core::TextBlobId>,
+    metrics_x: Option<fret_core::text::TextMetrics>,
+    metrics_y: Option<fret_core::text::TextMetrics>,
+    metrics_z: Option<fret_core::text::TextMetrics>,
+    metrics_p: Option<fret_core::text::TextMetrics>,
+    metrics_o: Option<fret_core::text::TextMetrics>,
+}
+
+impl ViewGizmoLabelCache {
+    fn release_all(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in [
+            self.blob_x.take(),
+            self.blob_y.take(),
+            self.blob_z.take(),
+            self.blob_p.take(),
+            self.blob_o.take(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            services.text().release(blob);
+        }
+        self.metrics_x = None;
+        self.metrics_y = None;
+        self.metrics_z = None;
+        self.metrics_p = None;
+        self.metrics_o = None;
+    }
+
+    fn ensure(&mut self, services: &mut dyn fret_core::UiServices, scale_factor: f32) {
+        let scale_bits = scale_factor.to_bits();
+        if self.last_scale_bits != scale_bits {
+            self.release_all(services);
+            self.last_scale_bits = scale_bits;
+        }
+
+        let style = TextStyle {
+            font: fret_core::FontId::default(),
+            size: Px(12.0),
+            weight: FontWeight::BOLD,
+            slant: fret_core::text::TextSlant::Normal,
+            line_height: Some(Px(14.0)),
+            letter_spacing_em: None,
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+
+        let mut prepare =
+            |text: &'static str,
+             blob: &mut Option<fret_core::TextBlobId>,
+             metrics: &mut Option<fret_core::text::TextMetrics>| {
+                if blob.is_some() && metrics.is_some() {
+                    return;
+                }
+                let (b, m) = services.text().prepare(text, &style, constraints);
+                *blob = Some(b);
+                *metrics = Some(m);
+            };
+
+        prepare("X", &mut self.blob_x, &mut self.metrics_x);
+        prepare("Y", &mut self.blob_y, &mut self.metrics_y);
+        prepare("Z", &mut self.blob_z, &mut self.metrics_z);
+        prepare("P", &mut self.blob_p, &mut self.metrics_p);
+        prepare("O", &mut self.blob_o, &mut self.metrics_o);
+    }
+
+    fn blob_and_metrics(
+        &self,
+        text: &'static str,
+    ) -> Option<(fret_core::TextBlobId, fret_core::text::TextMetrics)> {
+        match text {
+            "X" => self.blob_x.zip(self.metrics_x),
+            "Y" => self.blob_y.zip(self.metrics_y),
+            "Z" => self.blob_z.zip(self.metrics_z),
+            "P" => self.blob_p.zip(self.metrics_p),
+            "O" => self.blob_o.zip(self.metrics_o),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct GizmoHudCache {
+    last_text: String,
+    last_scale_bits: u32,
+    blob: Option<fret_core::TextBlobId>,
+    metrics: Option<fret_core::text::TextMetrics>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GizmoHudLastUpdate {
+    phase: GizmoPhase,
+    active: HandleId,
+    result: GizmoResult,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct GizmoHudState {
+    hovered: Option<HandleId>,
+    hovered_kind: Option<GizmoMode>,
+    active: Option<HandleId>,
+    last: Option<GizmoHudLastUpdate>,
+    snap: bool,
+}
+
+fn gizmo_handle_label(handle: HandleId) -> String {
+    match handle.0 {
+        1 => "X".to_string(),
+        2 => "Y".to_string(),
+        3 => "Z".to_string(),
+        4 => "Plane XY".to_string(),
+        5 => "Plane XZ".to_string(),
+        6 => "Plane YZ".to_string(),
+        7 => "Uniform".to_string(),
+        8 => "View ring".to_string(),
+        9 => "Arcball".to_string(),
+        10 => "Screen".to_string(),
+        14 => "Scale plane XY".to_string(),
+        15 => "Scale plane XZ".to_string(),
+        16 => "Scale plane YZ".to_string(),
+        20..=27 => {
+            let bits = (handle.0 - 20) as u32;
+            let sx = if (bits & 1) != 0 { "+" } else { "-" };
+            let sy = if (bits & 2) != 0 { "+" } else { "-" };
+            let sz = if (bits & 4) != 0 { "+" } else { "-" };
+            format!("Bounds corner (X{sx} Y{sy} Z{sz})")
+        }
+        30..=35 => {
+            let v = (handle.0 - 30) as u32;
+            let axis = (v / 2) as usize;
+            let max_side = (v % 2) == 1;
+            let sign = if max_side { "+" } else { "-" };
+            let axis_name = match axis {
+                0 => "X",
+                1 => "Y",
+                _ => "Z",
+            };
+            format!("Bounds face ({axis_name}{sign})")
+        }
+        _ => format!("Handle {}", handle.0),
+    }
+}
+
+fn gizmo_hud_text(state: GizmoHudState, config: GizmoConfig) -> Option<String> {
+    let show = state.active.is_some() || state.hovered.is_some();
+    if !show {
+        return None;
+    }
+
+    let mut out = String::new();
+
+    if let Some(active) = state.active {
+        let _ = writeln!(&mut out, "Active: {}", gizmo_handle_label(active));
+    } else if let Some(hovered) = state.hovered {
+        let kind = state
+            .hovered_kind
+            .map(|k| format!("{k:?} "))
+            .unwrap_or_default();
+        let _ = writeln!(&mut out, "Hover: {kind}{}", gizmo_handle_label(hovered));
+    }
+
+    let snap = if state.snap { "ON" } else { "OFF" };
+    let _ = write!(&mut out, "Snap: {snap}");
+    if state.snap {
+        if let Some(last) = state.last {
+            match last.result {
+                GizmoResult::Translation { .. } => {
+                    if let Some(step) = config.translate_snap_step {
+                        let _ = write!(&mut out, " (step={step:.3})");
+                    }
+                }
+                GizmoResult::Rotation { .. } => {
+                    if let Some(step) = config.rotate_snap_step_radians {
+                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                    }
+                }
+                GizmoResult::Arcball { .. } => {
+                    if let Some(step) = config.rotate_snap_step_radians {
+                        let _ = write!(&mut out, " (step={:.1}°)", step.to_degrees());
+                    }
+                }
+                GizmoResult::Scale { .. } => {
+                    if last.active.0 >= 20 && last.active.0 <= 35 {
+                        if let Some(step) = config.bounds_snap_step {
+                            let _ = write!(
+                                &mut out,
+                                " (bounds_step=({:.2}, {:.2}, {:.2}))",
+                                step.x, step.y, step.z
+                            );
+                        }
+                    } else if let Some(step) = config.scale_snap_step {
+                        let _ = write!(&mut out, " (step={step:.3})");
+                    }
+                }
+            }
+        }
+    }
+    out.push('\n');
+
+    if let Some(last) = state.last {
+        match last.result {
+            GizmoResult::Translation { delta, total } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δt=({:.3}, {:.3}, {:.3})   Σt=({:.3}, {:.3}, {:.3})",
+                    delta.x, delta.y, delta.z, total.x, total.y, total.z
+                );
+            }
+            GizmoResult::Rotation {
+                axis,
+                delta_radians,
+                total_radians,
+            } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δr={:.1}°   Σr={:.1}°   axis=({:.2}, {:.2}, {:.2})",
+                    delta_radians.to_degrees(),
+                    total_radians.to_degrees(),
+                    axis.x,
+                    axis.y,
+                    axis.z
+                );
+            }
+            GizmoResult::Arcball { delta, total } => {
+                let (_axis_d, angle_d) = delta.to_axis_angle();
+                let (_axis_t, angle_t) = total.to_axis_angle();
+                let _ = writeln!(
+                    &mut out,
+                    "Δr={:.1}°   Σr={:.1}°   (arcball)",
+                    angle_d.to_degrees(),
+                    angle_t.to_degrees()
+                );
+            }
+            GizmoResult::Scale { delta, total } => {
+                let _ = writeln!(
+                    &mut out,
+                    "Δs=({:.3}, {:.3}, {:.3})   Σs=({:.3}, {:.3}, {:.3})",
+                    delta.x, delta.y, delta.z, total.x, total.y, total.z
+                );
+            }
+        }
+
+        let phase = match last.phase {
+            GizmoPhase::Begin => "Begin",
+            GizmoPhase::Update => "Update",
+            GizmoPhase::Commit => "Commit",
+            GizmoPhase::Cancel => "Cancel",
+        };
+        let _ = writeln!(&mut out, "Phase: {phase}");
+    }
+
+    Some(out)
+}
 
 #[derive(Debug, Clone, Copy)]
 struct FrameAnim {
     target: Vec3,
     distance: f32,
+    yaw_radians: f32,
+    pitch_radians: f32,
+    ortho_half_height: f32,
     target_velocity: Vec3,
     distance_velocity: f32,
+    yaw_velocity: f32,
+    pitch_velocity: f32,
+    ortho_half_height_velocity: f32,
     smooth_time_s: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OrbitProjection {
+    Perspective,
+    Orthographic,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,6 +401,8 @@ struct OrbitCamera {
     yaw_radians: f32,
     pitch_radians: f32,
     distance: f32,
+    ortho_half_height: f32,
+    projection: OrbitProjection,
     orbiting: bool,
     panning: bool,
     last_cursor_px: Vec2,
@@ -49,11 +412,14 @@ struct OrbitCamera {
 impl Default for OrbitCamera {
     fn default() -> Self {
         // Roughly matches the previous hard-coded view: eye = (1.6, 1.2, 2.2), target = (0,0,0).
+        let distance = 2.95;
         Self {
             target: Vec3::ZERO,
             yaw_radians: 0.94,
             pitch_radians: 0.42,
-            distance: 2.95,
+            distance,
+            ortho_half_height: distance_to_ortho_half_height(distance),
+            projection: OrbitProjection::Perspective,
             orbiting: false,
             panning: false,
             last_cursor_px: Vec2::ZERO,
@@ -62,103 +428,28 @@ impl Default for OrbitCamera {
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct Vertex {
-    pos: [f32; 3],
-    color: [f32; 4],
+type Vertex = Overlay3dVertex;
+type LineVertex = Overlay3dLineVertex;
+
+const CAMERA_NEAR: f32 = 0.05;
+const CAMERA_FAR: f32 = 50.0;
+const CAMERA_FOV_Y_RADIANS: f32 = 55.0_f32.to_radians();
+
+fn distance_to_ortho_half_height(distance: f32) -> f32 {
+    (distance.max(0.0) * (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.01)
 }
 
-unsafe impl bytemuck::Zeroable for Vertex {}
-unsafe impl bytemuck::Pod for Vertex {}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct LineVertex {
-    a: [f32; 3],
-    b: [f32; 3],
-    t: f32,
-    side: f32,
-    color: [f32; 4],
+fn ortho_half_height_to_distance(ortho_half_height: f32) -> f32 {
+    (ortho_half_height.max(0.0) / (CAMERA_FOV_Y_RADIANS * 0.5).tan()).max(0.05)
 }
 
-unsafe impl bytemuck::Zeroable for LineVertex {}
-unsafe impl bytemuck::Pod for LineVertex {}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct Uniforms {
-    view_proj: [[f32; 4]; 4],
-    /// x = viewport_w_px, y = viewport_h_px, z = line_thickness_px, w = unused
-    viewport_and_thickness: [f32; 4],
-}
-
-unsafe impl bytemuck::Zeroable for Uniforms {}
-unsafe impl bytemuck::Pod for Uniforms {}
-
-fn push_thick_line_quad(out: &mut Vec<LineVertex>, a: [f32; 3], b: [f32; 3], color: [f32; 4]) {
-    // Two triangles (6 vertices) for a screen-space thick line quad.
-    out.extend_from_slice(&[
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: -1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 0.0,
-            side: -1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: 1.0,
-            color,
-        },
-        LineVertex {
-            a,
-            b,
-            t: 1.0,
-            side: -1.0,
-            color,
-        },
-    ]);
-}
+type Uniforms = Overlay3dUniforms;
 
 struct Gizmo3dDemoTarget {
     id: RenderTargetId,
     size: (u32, u32),
     color: wgpu::Texture,
     depth: wgpu::Texture,
-}
-
-struct Gizmo3dDemoGpu {
-    uniform: wgpu::Buffer,
-    bind_group: wgpu::BindGroup,
-    tri_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
-    thick_line_depth_pipeline: wgpu::RenderPipeline,
-    thick_line_always_pipeline: wgpu::RenderPipeline,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -384,6 +675,34 @@ fn smooth_damp_vec3(
     Vec3::new(x, y, z)
 }
 
+fn wrap_angle_pi(radians: f32) -> f32 {
+    let two_pi = std::f32::consts::PI * 2.0;
+    let mut x = radians % two_pi;
+    if x > std::f32::consts::PI {
+        x -= two_pi;
+    } else if x < -std::f32::consts::PI {
+        x += two_pi;
+    }
+    x
+}
+
+fn smooth_damp_angle(
+    current: f32,
+    target: f32,
+    current_velocity: &mut f32,
+    smooth_time_s: f32,
+    dt_seconds: f32,
+) -> f32 {
+    let adjusted_target = current + wrap_angle_pi(target - current);
+    smooth_damp_f32(
+        current,
+        adjusted_target,
+        current_velocity,
+        smooth_time_s,
+        dt_seconds,
+    )
+}
+
 fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     if camera.orbiting || camera.panning {
         camera.frame_anim = None;
@@ -416,14 +735,46 @@ fn step_frame_anim(camera: &mut OrbitCamera, dt_seconds: f32) -> bool {
     )
     .clamp(0.2, 25.0);
 
+    camera.yaw_radians = smooth_damp_angle(
+        camera.yaw_radians,
+        anim.yaw_radians,
+        &mut anim.yaw_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    );
+    camera.pitch_radians = smooth_damp_f32(
+        camera.pitch_radians,
+        anim.pitch_radians,
+        &mut anim.pitch_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(-1.55, 1.55);
+
+    camera.ortho_half_height = smooth_damp_f32(
+        camera.ortho_half_height,
+        anim.ortho_half_height,
+        &mut anim.ortho_half_height_velocity,
+        anim.smooth_time_s,
+        dt_seconds,
+    )
+    .clamp(0.01, 1000.0);
+
     let done = (camera.target - anim.target).length() <= 1e-3
         && (camera.distance - anim.distance).abs() <= 1e-3
+        && wrap_angle_pi(camera.yaw_radians - anim.yaw_radians).abs() <= 1e-3
+        && (camera.pitch_radians - anim.pitch_radians).abs() <= 1e-3
+        && (camera.ortho_half_height - anim.ortho_half_height).abs() <= 1e-3
         && anim.target_velocity.length() <= 1e-3
-        && anim.distance_velocity.abs() <= 1e-3;
+        && anim.distance_velocity.abs() <= 1e-3
+        && anim.ortho_half_height_velocity.abs() <= 1e-3;
 
     if done {
         camera.target = anim.target;
         camera.distance = anim.distance.clamp(0.2, 25.0);
+        camera.yaw_radians = anim.yaw_radians;
+        camera.pitch_radians = anim.pitch_radians.clamp(-1.55, 1.55);
+        camera.ortho_half_height = anim.ortho_half_height.clamp(0.01, 1000.0);
         camera.frame_anim = None;
         false
     } else {
@@ -445,18 +796,32 @@ fn frame_aabb(
     let (w, h) = viewport_px;
     let aspect = (w.max(1) as f32) / (h.max(1) as f32);
 
-    let fov_y = 55.0_f32.to_radians();
-    let fov_x = 2.0 * ((fov_y * 0.5).tan() * aspect).atan();
-    let fov = fov_y.min(fov_x).max(0.001);
-
     let margin = 1.25;
-    let dist = (radius * margin) / (fov * 0.5).tan();
+    let (dist, ortho_half_height) = match camera.projection {
+        OrbitProjection::Perspective => {
+            let fov_x = 2.0 * ((CAMERA_FOV_Y_RADIANS * 0.5).tan() * aspect).atan();
+            let fov = CAMERA_FOV_Y_RADIANS.min(fov_x).max(0.001);
+            let dist = (radius * margin) / (fov * 0.5).tan();
+            (dist, camera.ortho_half_height)
+        }
+        OrbitProjection::Orthographic => {
+            let half_h = (radius * margin / aspect.min(1.0)).max(0.01);
+            let dist = camera.distance.max(radius * margin * 2.0);
+            (dist, half_h)
+        }
+    };
 
     camera.frame_anim = Some(FrameAnim {
         target: center,
         distance: dist.clamp(0.2, 25.0),
+        yaw_radians: camera.yaw_radians,
+        pitch_radians: camera.pitch_radians,
+        ortho_half_height: ortho_half_height.clamp(0.01, 1000.0),
         target_velocity: Vec3::ZERO,
         distance_velocity: 0.0,
+        yaw_velocity: 0.0,
+        pitch_velocity: 0.0,
+        ortho_half_height_velocity: 0.0,
         smooth_time_s: smooth_time_s.max(1e-4),
     });
 }
@@ -478,6 +843,11 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     gizmo: Gizmo,
+    view_gizmo: ViewGizmo,
+    theme_preset_index: usize,
+    op_mask_enabled: bool,
+    op_mask_preset_index: usize,
+    show_help: bool,
     targets: Vec<GizmoTarget3d>,
     selection: Vec<GizmoTargetId>,
     marquee_preview: Vec<GizmoTargetId>,
@@ -490,12 +860,109 @@ struct Gizmo3dDemoModel {
     input: GizmoInput,
     camera: OrbitCamera,
     last_frame_instant: Option<Instant>,
+    hud: GizmoHudState,
+}
+
+impl Gizmo3dDemoModel {
+    fn is_busy(&self) -> bool {
+        self.input.dragging
+            || self.gizmo.state.active.is_some()
+            || self.pending_selection.is_some()
+            || self.marquee.is_some()
+    }
+
+    fn op_mask_preset(&self) -> GizmoOpMaskPreset {
+        let idx = self.op_mask_preset_index % GizmoOpMaskPreset::ALL.len();
+        GizmoOpMaskPreset::ALL[idx]
+    }
+
+    fn set_op_mask_preset(&mut self, preset: GizmoOpMaskPreset) {
+        let idx = GizmoOpMaskPreset::ALL
+            .iter()
+            .position(|p| *p == preset)
+            .unwrap_or(0);
+        self.op_mask_preset_index = idx;
+        self.apply_op_mask();
+    }
+
+    fn apply_op_mask(&mut self) {
+        if self.op_mask_enabled {
+            let preset = self.op_mask_preset();
+            self.gizmo.config.operation_mask = Some(preset.mask());
+        } else {
+            self.gizmo.config.operation_mask = None;
+        }
+    }
+
+    fn overlay_text(&self) -> String {
+        let mut out = String::new();
+        out.push_str("Gizmo3D Demo\n");
+        out.push_str("Controls:\n");
+        out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
+        out.push_str("  L: local/world   P: pivot active/center\n");
+        out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
+        out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
+        out.push_str("  O: toggle depth mode (depth test / on top)\n");
+        out.push_str("  Y: cycle theme (Fret/Godot/HardHacker)\n");
+        out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
+        out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
+        out.push_str("  H: toggle help\n");
+        out.push_str("  Esc: cancel drag / selection\n");
+        out.push_str("  Ctrl+A: select all (Shift: clear)\n");
+        out.push('\n');
+
+        out.push_str(&format!(
+            "Mode: {:?}   Orientation: {:?}   Pivot: {:?}\n",
+            self.gizmo.config.mode, self.gizmo.config.orientation, self.gizmo.config.pivot_mode
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
+            self.gizmo.config.size_px,
+            self.gizmo.config.line_thickness_px,
+            self.gizmo.config.pick_radius_px
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_policy={:?}\n",
+            self.gizmo.config.size_policy
+        ));
+        out.push_str(&format!(
+            "Gizmo: depth_mode={:?}\n",
+            self.gizmo.config.depth_mode
+        ));
+        out.push_str(&format!(
+            "Theme preset: {}\n",
+            DEMO_THEME_PRESETS[self.theme_preset_index % DEMO_THEME_PRESETS.len()].0
+        ));
+
+        if self.op_mask_enabled {
+            let preset = self.op_mask_preset();
+            out.push_str(&format!("Op mask: ON   Preset: {}\n", preset.name()));
+            out.push_str(&format!(
+                "  mask={:?}\n",
+                self.gizmo
+                    .config
+                    .operation_mask
+                    .unwrap_or_else(GizmoOps::empty)
+            ));
+        } else {
+            out.push_str("Op mask: OFF\n");
+        }
+
+        out.push_str(&format!(
+            "Selection: {}   Active: {}\n",
+            self.selection.len(),
+            self.active_target.0
+        ));
+        out
+    }
 }
 
 impl Default for Gizmo3dDemoModel {
     fn default() -> Self {
-        let mut gizmo_cfg = GizmoConfig::default();
+        let mut gizmo_cfg = GizmoConfig::editor_default();
         gizmo_cfg.translate_snap_step = Some(0.25);
+        gizmo_cfg.bounds_snap_step = Some(Vec3::splat(0.5));
+        gizmo_cfg.show_bounds = true;
         let targets = vec![
             GizmoTarget3d {
                 id: GizmoTargetId(1),
@@ -504,6 +971,10 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
             GizmoTarget3d {
                 id: GizmoTargetId(2),
@@ -512,6 +983,10 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
             GizmoTarget3d {
                 id: GizmoTargetId(3),
@@ -520,12 +995,25 @@ impl Default for Gizmo3dDemoModel {
                     rotation: Quat::IDENTITY,
                     scale: Vec3::ONE,
                 },
+                local_bounds: Some(Aabb3 {
+                    min: Vec3::splat(-0.5),
+                    max: Vec3::splat(0.5),
+                }),
             },
         ];
+        let mut view_gizmo_cfg = ViewGizmoConfig::default();
+        view_gizmo_cfg.depth_range = gizmo_cfg.depth_range;
+        view_gizmo_cfg.anchor = ViewGizmoAnchor::TopRight;
+        let view_gizmo = ViewGizmo::new(view_gizmo_cfg);
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
+            view_gizmo,
+            theme_preset_index: 0,
+            op_mask_enabled: false,
+            op_mask_preset_index: 0,
+            show_help: true,
             targets,
             selection: vec![GizmoTargetId(1)],
             marquee_preview: Vec::new(),
@@ -545,8 +1033,29 @@ impl Default for Gizmo3dDemoModel {
             },
             camera: OrbitCamera::default(),
             last_frame_instant: None,
+            hud: GizmoHudState::default(),
         }
     }
+}
+
+const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
+    ("Fret Default", "themes/fret-default-dark.json"),
+    ("Godot Default", "themes/godot-default-dark.json"),
+    ("HardHacker", "themes/hardhacker-dark.json"),
+];
+
+fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
+    model.gizmo.config.x_color = theme.color_required("color.viewport.gizmo.x");
+    model.gizmo.config.y_color = theme.color_required("color.viewport.gizmo.y");
+    model.gizmo.config.z_color = theme.color_required("color.viewport.gizmo.z");
+    model.gizmo.config.hover_color = theme.color_required("color.viewport.gizmo.hover");
+
+    model.view_gizmo.config.x_color = model.gizmo.config.x_color;
+    model.view_gizmo.config.y_color = model.gizmo.config.y_color;
+    model.view_gizmo.config.z_color = model.gizmo.config.z_color;
+    model.view_gizmo.config.hover_color = model.gizmo.config.hover_color;
+    model.view_gizmo.config.face_color = theme.color_required("color.viewport.view_gizmo.face");
+    model.view_gizmo.config.edge_color = theme.color_required("color.viewport.view_gizmo.edge");
 }
 
 #[derive(Default)]
@@ -554,140 +1063,51 @@ struct Gizmo3dDemoService {
     per_window: HashMap<AppWindowId, fret_runtime::Model<Gizmo3dDemoModel>>,
 }
 
-#[derive(Clone)]
-struct OverlayDrawBuffer {
-    buffer: wgpu::Buffer,
-    vertex_count: u32,
-}
-
-#[derive(Clone)]
-struct Gizmo3dDemoViewportOverlayWindow {
-    bind_group: wgpu::BindGroup,
-    gizmo_solid_depth_pipeline: wgpu::RenderPipeline,
-    gizmo_solid_always_pipeline: wgpu::RenderPipeline,
-    thick_line_depth_pipeline: wgpu::RenderPipeline,
-    thick_line_always_pipeline: wgpu::RenderPipeline,
-    solid_test: Option<OverlayDrawBuffer>,
-    solid_ghost: Option<OverlayDrawBuffer>,
-    solid_always: Option<OverlayDrawBuffer>,
-    line_test: Option<OverlayDrawBuffer>,
-    line_ghost: Option<OverlayDrawBuffer>,
-    line_always: Option<OverlayDrawBuffer>,
-}
-
-#[derive(Default)]
 struct Gizmo3dDemoViewportOverlayService {
-    per_viewport: HashMap<(AppWindowId, RenderTargetId), Gizmo3dDemoViewportOverlayWindow>,
+    cache: Overlay3dCache<(AppWindowId, RenderTargetId)>,
+}
+
+impl Default for Gizmo3dDemoViewportOverlayService {
+    fn default() -> Self {
+        Self {
+            cache: Overlay3dCache::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::TextureFormat::Depth24Plus,
+            ),
+        }
+    }
 }
 
 impl Gizmo3dDemoViewportOverlayService {
-    fn ensure_entry(
+    fn upload(
         &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         window: AppWindowId,
         target: RenderTargetId,
-        gpu: &Gizmo3dDemoGpu,
-    ) -> &mut Gizmo3dDemoViewportOverlayWindow {
-        self.per_viewport
-            .entry((window, target))
-            .or_insert_with(|| Gizmo3dDemoViewportOverlayWindow {
-                bind_group: gpu.bind_group.clone(),
-                gizmo_solid_depth_pipeline: gpu.gizmo_solid_depth_pipeline.clone(),
-                gizmo_solid_always_pipeline: gpu.gizmo_solid_always_pipeline.clone(),
-                thick_line_depth_pipeline: gpu.thick_line_depth_pipeline.clone(),
-                thick_line_always_pipeline: gpu.thick_line_always_pipeline.clone(),
-                solid_test: None,
-                solid_ghost: None,
-                solid_always: None,
-                line_test: None,
-                line_ghost: None,
-                line_always: None,
-            })
-    }
-
-    fn update_buffers(
-        &mut self,
-        window: AppWindowId,
-        target: RenderTargetId,
-        gpu: &Gizmo3dDemoGpu,
-        solid_vb_test: Option<wgpu::Buffer>,
-        solid_count_test: u32,
-        solid_vb_ghost: Option<wgpu::Buffer>,
-        solid_count_ghost: u32,
-        solid_vb_always: Option<wgpu::Buffer>,
-        solid_count_always: u32,
-        line_vb_test: Option<wgpu::Buffer>,
-        line_count_test: u32,
-        line_vb_ghost: Option<wgpu::Buffer>,
-        line_count_ghost: u32,
-        line_vb_always: Option<wgpu::Buffer>,
-        line_count_always: u32,
-    ) {
-        let entry = self.ensure_entry(window, target, gpu);
-        entry.solid_test = solid_vb_test.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_test,
-        });
-        entry.solid_ghost = solid_vb_ghost.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_ghost,
-        });
-        entry.solid_always = solid_vb_always.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: solid_count_always,
-        });
-        entry.line_test = line_vb_test.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_test,
-        });
-        entry.line_ghost = line_vb_ghost.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_ghost,
-        });
-        entry.line_always = line_vb_always.map(|buffer| OverlayDrawBuffer {
-            buffer,
-            vertex_count: line_count_always,
-        });
+        uniforms: Uniforms,
+        cpu: &Overlay3dCpuBuilder,
+    ) -> Overlay3dPipelines {
+        let entry = self.cache.ensure(device, (window, target));
+        entry.update_uniform(queue, &uniforms);
+        entry.batch.upload(
+            device,
+            queue,
+            cpu.solid_test(),
+            cpu.solid_ghost(),
+            cpu.solid_always(),
+            cpu.line_test(),
+            cpu.line_ghost(),
+            cpu.line_always(),
+        );
+        entry.overlay.clone()
     }
 
     fn record(&self, window: AppWindowId, target: RenderTargetId, pass: &mut wgpu::RenderPass<'_>) {
-        let Some(overlays) = self.per_viewport.get(&(window, target)) else {
+        let Some(entry) = self.cache.get(&(window, target)) else {
             return;
         };
-
-        pass.set_bind_group(0, &overlays.bind_group, &[]);
-
-        if let Some(buf) = &overlays.solid_ghost {
-            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_ghost {
-            pass.set_pipeline(&overlays.thick_line_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-
-        if let Some(buf) = &overlays.solid_test {
-            pass.set_pipeline(&overlays.gizmo_solid_depth_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_test {
-            pass.set_pipeline(&overlays.thick_line_depth_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-
-        if let Some(buf) = &overlays.solid_always {
-            pass.set_pipeline(&overlays.gizmo_solid_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
-        if let Some(buf) = &overlays.line_always {
-            pass.set_pipeline(&overlays.thick_line_always_pipeline);
-            pass.set_vertex_buffer(0, buf.buffer.slice(..));
-            pass.draw(0..buf.vertex_count, 0..1);
-        }
+        entry.batch.record(&entry.overlay, pass);
     }
 }
 
@@ -714,9 +1134,13 @@ struct Gizmo3dDemoWindowState {
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<Plot3dModel>,
     demo: fret_runtime::Model<Gizmo3dDemoModel>,
+    overlay: OverlayTextCache,
+    view_gizmo_labels: ViewGizmoLabelCache,
+    hud: GizmoHudCache,
+    overlay_cpu: Overlay3dCpuBuilder,
     target: Option<Gizmo3dDemoTarget>,
-    gpu: Option<Gizmo3dDemoGpu>,
     doc: DocumentId,
+    warmup_frames_remaining: u8,
 }
 
 #[derive(Default)]
@@ -734,6 +1158,10 @@ impl Gizmo3dDemoDriver {
         });
 
         let demo = app.models_mut().insert(Gizmo3dDemoModel::default());
+        let theme = Theme::global(&*app).clone();
+        let _ = demo.update(app, |m, _cx| {
+            apply_viewport_gizmo_theme(&theme, m);
+        });
 
         app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
             svc.per_window.insert(window, demo.clone());
@@ -755,9 +1183,13 @@ impl Gizmo3dDemoDriver {
             root: None,
             plot,
             demo,
+            overlay: OverlayTextCache::default(),
+            view_gizmo_labels: ViewGizmoLabelCache::default(),
+            hud: GizmoHudCache::default(),
+            overlay_cpu: Overlay3dCpuBuilder::default(),
             target: None,
-            gpu: None,
             doc,
+            warmup_frames_remaining: 3,
         }
     }
 
@@ -867,17 +1299,28 @@ impl Gizmo3dDemoDriver {
         (target.id, color_view, depth_view, target.size)
     }
 
+    #[cfg(any())]
     fn ensure_gpu(state: &mut Gizmo3dDemoWindowState, context: &WgpuContext) {
         if state.gpu.is_some() {
             return;
         }
 
-        let shader = context
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("gizmo3d demo shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    r#"
+        state.gpu = Some(Gizmo3dDemoGpu {
+            overlay: Overlay3dPipelines::new(
+                &context.device,
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                wgpu::TextureFormat::Depth24Plus,
+            ),
+        });
+
+        #[cfg(any())]
+        {
+            let shader = context
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("gizmo3d demo shader"),
+                    source: wgpu::ShaderSource::Wgsl(
+                        r#"
 struct Globals {
   view_proj: mat4x4f,
   viewport_and_thickness: vec4f,
@@ -946,277 +1389,279 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
   return in.color;
 }
 "#
-                    .into(),
-                ),
+                        .into(),
+                    ),
+                });
+
+            let uniform = context.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("gizmo3d demo view_proj uniform"),
+                size: std::mem::size_of::<Uniforms>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
 
-        let uniform = context.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("gizmo3d demo view_proj uniform"),
-            size: std::mem::size_of::<Uniforms>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+            let bind_group_layout =
+                context
+                    .device
+                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                        label: Some("gizmo3d demo bgl"),
+                        entries: &[wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::VERTEX,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        }],
+                    });
 
-        let bind_group_layout =
-            context
+            let bind_group = context
                 .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("gizmo3d demo bgl"),
-                    entries: &[wgpu::BindGroupLayoutEntry {
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("gizmo3d demo bind group"),
+                    layout: &bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
+                        resource: uniform.as_entire_binding(),
                     }],
                 });
 
-        let bind_group = context
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("gizmo3d demo bind group"),
-                layout: &bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                }],
-            });
+            let pipeline_layout =
+                context
+                    .device
+                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                        label: Some("gizmo3d demo pipeline layout"),
+                        bind_group_layouts: &[&bind_group_layout],
+                        immediate_size: 0,
+                    });
 
-        let pipeline_layout =
-            context
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("gizmo3d demo pipeline layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    immediate_size: 0,
-                });
+            let vertex_layout = wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<Vertex>() as u64,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
+            };
 
-        let vertex_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Vertex>() as u64,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
-        };
+            let line_vertex_layout = wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<LineVertex>() as u64,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &wgpu::vertex_attr_array![
+                    0 => Float32x3, // a
+                    1 => Float32x3, // b
+                    2 => Float32,   // t
+                    3 => Float32,   // side
+                    4 => Float32x4  // color
+                ],
+            };
 
-        let line_vertex_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<LineVertex>() as u64,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![
-                0 => Float32x3, // a
-                1 => Float32x3, // b
-                2 => Float32,   // t
-                3 => Float32,   // side
-                4 => Float32x4  // color
-            ],
-        };
+            let depth_state = wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth24Plus,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::LessEqual,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            };
 
-        let depth_state = wgpu::DepthStencilState {
-            format: wgpu::TextureFormat::Depth24Plus,
-            depth_write_enabled: true,
-            depth_compare: wgpu::CompareFunction::LessEqual,
-            stencil: wgpu::StencilState::default(),
-            bias: wgpu::DepthBiasState::default(),
-        };
-
-        let tri_pipeline = context
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("gizmo3d demo tri pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main_tri"),
-                    buffers: &[vertex_layout.clone()],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    ..Default::default()
-                },
-                depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-
-        let gizmo_solid_depth_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo gizmo solid depth pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_tri"),
-                        buffers: &[vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        depth_write_enabled: false,
-                        bias: wgpu::DepthBiasState {
-                            constant: -2,
-                            slope_scale: -1.0,
-                            clamp: 0.0,
+            let tri_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo tri pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
                         },
-                        ..depth_state.clone()
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-
-        let gizmo_solid_always_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo gizmo solid always pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_tri"),
-                        buffers: &[vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        format: wgpu::TextureFormat::Depth24Plus,
-                        depth_write_enabled: false,
-                        depth_compare: wgpu::CompareFunction::Always,
-                        stencil: wgpu::StencilState::default(),
-                        bias: wgpu::DepthBiasState::default(),
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-
-        let thick_line_depth_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo thick line depth pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_thick_line"),
-                        buffers: &[line_vertex_layout.clone()],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        depth_write_enabled: false,
-                        // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
-                        bias: wgpu::DepthBiasState {
-                            constant: -2,
-                            slope_scale: -1.0,
-                            clamp: 0.0,
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
                         },
-                        ..depth_state.clone()
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
+                        depth_stencil: Some(depth_state.clone()),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
 
-        let thick_line_always_pipeline =
-            context
-                .device
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("gizmo3d demo thick line always pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vs_main_thick_line"),
-                        buffers: &[line_vertex_layout],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some("fs_main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(wgpu::DepthStencilState {
-                        format: wgpu::TextureFormat::Depth24Plus,
-                        depth_write_enabled: false,
-                        depth_compare: wgpu::CompareFunction::Always,
-                        stencil: wgpu::StencilState::default(),
-                        bias: wgpu::DepthBiasState::default(),
-                    }),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
+            let gizmo_solid_depth_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo gizmo solid depth pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            depth_write_enabled: false,
+                            bias: wgpu::DepthBiasState {
+                                constant: -2,
+                                slope_scale: -1.0,
+                                clamp: 0.0,
+                            },
+                            ..depth_state.clone()
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
 
-        state.gpu = Some(Gizmo3dDemoGpu {
-            uniform,
-            bind_group,
-            tri_pipeline,
-            gizmo_solid_depth_pipeline,
-            gizmo_solid_always_pipeline,
-            thick_line_depth_pipeline,
-            thick_line_always_pipeline,
-        });
+            let gizmo_solid_always_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo gizmo solid always pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_tri"),
+                            buffers: &[vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            format: wgpu::TextureFormat::Depth24Plus,
+                            depth_write_enabled: false,
+                            depth_compare: wgpu::CompareFunction::Always,
+                            stencil: wgpu::StencilState::default(),
+                            bias: wgpu::DepthBiasState::default(),
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let thick_line_depth_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo thick line depth pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_thick_line"),
+                            buffers: &[line_vertex_layout.clone()],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            depth_write_enabled: false,
+                            // Pull gizmo slightly toward the camera to reduce z-fighting with scene geometry.
+                            bias: wgpu::DepthBiasState {
+                                constant: -2,
+                                slope_scale: -1.0,
+                                clamp: 0.0,
+                            },
+                            ..depth_state.clone()
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let thick_line_always_pipeline =
+                context
+                    .device
+                    .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                        label: Some("gizmo3d demo thick line always pipeline"),
+                        layout: Some(&pipeline_layout),
+                        vertex: wgpu::VertexState {
+                            module: &shader,
+                            entry_point: Some("vs_main_thick_line"),
+                            buffers: &[line_vertex_layout],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        },
+                        fragment: Some(wgpu::FragmentState {
+                            module: &shader,
+                            entry_point: Some("fs_main"),
+                            targets: &[Some(wgpu::ColorTargetState {
+                                format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                                write_mask: wgpu::ColorWrites::ALL,
+                            })],
+                            compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        }),
+                        primitive: wgpu::PrimitiveState {
+                            topology: wgpu::PrimitiveTopology::TriangleList,
+                            ..Default::default()
+                        },
+                        depth_stencil: Some(wgpu::DepthStencilState {
+                            format: wgpu::TextureFormat::Depth24Plus,
+                            depth_write_enabled: false,
+                            depth_compare: wgpu::CompareFunction::Always,
+                            stencil: wgpu::StencilState::default(),
+                            bias: wgpu::DepthBiasState::default(),
+                        }),
+                        multisample: wgpu::MultisampleState::default(),
+                        multiview_mask: None,
+                        cache: None,
+                    });
+
+            let _ = (
+                uniform,
+                bind_group,
+                tri_pipeline,
+                gizmo_solid_depth_pipeline,
+                gizmo_solid_always_pipeline,
+                thick_line_depth_pipeline,
+                thick_line_always_pipeline,
+            );
+        }
     }
 
     fn handle_undo_redo_shortcut(
@@ -1512,7 +1957,16 @@ fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     );
     let eye = camera.target + dir * distance;
     let view = Mat4::look_at_rh(eye, camera.target, Vec3::Y);
-    let proj = Mat4::perspective_rh(55.0_f32.to_radians(), aspect, 0.05, 50.0);
+    let proj = match camera.projection {
+        OrbitProjection::Perspective => {
+            Mat4::perspective_rh(CAMERA_FOV_Y_RADIANS, aspect, CAMERA_NEAR, CAMERA_FAR)
+        }
+        OrbitProjection::Orthographic => {
+            let half_h = camera.ortho_half_height.max(0.01);
+            let half_w = half_h * aspect.max(1e-6);
+            Mat4::orthographic_rh(-half_w, half_w, -half_h, half_h, CAMERA_NEAR, CAMERA_FAR)
+        }
+    };
     proj * view
 }
 
@@ -1530,6 +1984,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
         // the first input event happens to request a redraw.
         app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
         state
     }
 
@@ -1657,7 +2112,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Rotate;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Rotate;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1667,7 +2129,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Scale;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Scale;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1677,7 +2146,14 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Translate;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Translate;
+                    }
                 });
                 app.request_redraw(window);
             }
@@ -1687,7 +2163,286 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    m.gizmo.config.mode = GizmoMode::Universal;
+                    if m.is_busy() {
+                        return;
+                    }
+                    if m.op_mask_enabled {
+                        m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
+                    } else {
+                        m.gizmo.config.mode = GizmoMode::Universal;
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyH,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.show_help = !m.show_help;
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyM,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.op_mask_enabled = !m.op_mask_enabled;
+                    if m.op_mask_enabled {
+                        // Pick a reasonable starting preset based on the current coarse mode.
+                        let preset = match m.gizmo.config.mode {
+                            GizmoMode::Translate => GizmoOpMaskPreset::Translate,
+                            GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
+                            GizmoMode::Scale => GizmoOpMaskPreset::Scale,
+                            GizmoMode::Universal => GizmoOpMaskPreset::Universal,
+                        };
+                        m.set_op_mask_preset(preset);
+                    } else {
+                        m.apply_op_mask();
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyO,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.depth_mode = match m.gizmo.config.depth_mode {
+                        DepthMode::Test => DepthMode::Always,
+                        DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
+                    };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyY,
+                repeat: false,
+                ..
+            } => {
+                let mut next_index: Option<usize> = None;
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    let idx = (m.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
+                    next_index = Some(idx);
+                });
+
+                let Some(next_index) = next_index else {
+                    return;
+                };
+                let (_name, path) = DEMO_THEME_PRESETS[next_index];
+
+                let Some(bytes) = fs::read(path).ok() else {
+                    return;
+                };
+                let Ok(cfg) = ThemeConfig::from_slice(&bytes) else {
+                    return;
+                };
+
+                Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+
+                let theme = Theme::global(&*app).clone();
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.theme_preset_index = next_index;
+                    apply_viewport_gizmo_theme(&theme, m);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyV,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::ConstantPixels => {
+                            GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                                min_fraction_of_max_extent: 0.0,
+                                max_fraction_of_max_extent: 1.50,
+                            }
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
+                            GizmoSizePolicy::SelectionBounds {
+                                fraction_of_max_extent: 1.2,
+                            }
+                        }
+                        GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
+                    };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Semicolon,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            ref mut min_fraction_of_max_extent,
+                            max_fraction_of_max_extent,
+                        } => {
+                            *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
+                                .clamp(0.0, max_fraction_of_max_extent);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Quote,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent + step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            min_fraction_of_max_extent,
+                            ref mut max_fraction_of_max_extent,
+                        } => {
+                            *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
+                                .clamp(min_fraction_of_max_extent, 5.0);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Minus,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px - step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Equal,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px + step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Comma,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px - step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px - step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Period,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px + step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px + step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px + step).clamp(6.0, 32.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::BracketLeft,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() || !m.op_mask_enabled {
+                        return;
+                    }
+                    let n = GizmoOpMaskPreset::ALL.len();
+                    m.op_mask_preset_index = (m.op_mask_preset_index + n - 1) % n;
+                    m.apply_op_mask();
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::BracketRight,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() || !m.op_mask_enabled {
+                        return;
+                    }
+                    let n = GizmoOpMaskPreset::ALL.len();
+                    m.op_mask_preset_index = (m.op_mask_preset_index + 1) % n;
+                    m.apply_op_mask();
                 });
                 app.request_redraw(window);
             }
@@ -1942,6 +2697,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
                             let yaw = m.camera.yaw_radians;
                             let distance = m.camera.distance.max(0.05);
+                            let pan_scale = match m.camera.projection {
+                                OrbitProjection::Perspective => distance,
+                                OrbitProjection::Orthographic => {
+                                    m.camera.ortho_half_height.max(0.05)
+                                }
+                            };
 
                             let dir = Vec3::new(
                                 yaw.cos() * pitch.cos(),
@@ -1955,7 +2716,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
                             if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
                                 let pan = (-right * delta.x + up * delta.y)
-                                    * (distance * pan_sensitivity);
+                                    * (pan_scale * pan_sensitivity);
                                 m.camera.target += pan;
                             }
                         }
@@ -1967,7 +2728,15 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     let zoom_sensitivity = 0.0015;
                     let scroll = delta.y.0;
                     let factor = (-scroll * zoom_sensitivity).exp();
-                    m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                    match m.camera.projection {
+                        OrbitProjection::Perspective => {
+                            m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                        }
+                        OrbitProjection::Orthographic => {
+                            m.camera.ortho_half_height =
+                                (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
+                        }
+                    }
                 }
                 _ => {}
             };
@@ -2007,7 +2776,171 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
             );
 
-            if hovered {
+            let (view_gizmo_drag_started, view_gizmo_dragging) = match event.kind {
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                } => (true, true),
+                ViewportInputKind::PointerMove { buttons, .. } => (false, buttons.left),
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                } => (false, false),
+                _ => (false, false),
+            };
+            let view_gizmo_input = ViewGizmoInput {
+                cursor_px,
+                hovered,
+                drag_started: view_gizmo_drag_started,
+                dragging: view_gizmo_dragging,
+            };
+            let view_gizmo_update =
+                m.view_gizmo
+                    .update(view_projection, viewport, view_gizmo_input);
+
+            let clear_other_interactions = |m: &mut Gizmo3dDemoModel| {
+                m.gizmo.state.hovered = None;
+                m.pending_selection = None;
+                m.marquee = None;
+                m.marquee_preview.clear();
+                m.selection_before_select = None;
+                m.active_before_select = None;
+                m.input = GizmoInput {
+                    cursor_px,
+                    hovered: false,
+                    drag_started: false,
+                    dragging: false,
+                    snap,
+                    cancel: false,
+                };
+            };
+
+            // If the left press starts on the view gizmo, consume the interaction so it doesn't
+            // become a selection click or a transform gizmo drag.
+            if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
+                clear_other_interactions(m);
+                return rec_to_record;
+            }
+
+            if !m.is_busy() {
+                match view_gizmo_update {
+                    Some(ViewGizmoUpdate::OrbitDelta {
+                        delta_yaw_radians,
+                        delta_pitch_radians,
+                    }) => {
+                        clear_other_interactions(m);
+                        m.camera.frame_anim = None;
+                        m.camera.yaw_radians += delta_yaw_radians;
+                        m.camera.pitch_radians =
+                            (m.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
+                        return rec_to_record;
+                    }
+                    Some(ViewGizmoUpdate::ToggleProjection) => {
+                        clear_other_interactions(m);
+                        let target = m.camera.target;
+                        let yaw_radians = m.camera.yaw_radians;
+                        let pitch_radians = m.camera.pitch_radians;
+                        let smooth_time_s = 0.12;
+
+                        match m.camera.projection {
+                            OrbitProjection::Perspective => {
+                                let ortho_half_height =
+                                    distance_to_ortho_half_height(m.camera.distance);
+                                m.camera.projection = OrbitProjection::Orthographic;
+                                m.camera.frame_anim = Some(FrameAnim {
+                                    target,
+                                    distance: m.camera.distance,
+                                    yaw_radians,
+                                    pitch_radians,
+                                    ortho_half_height,
+                                    target_velocity: Vec3::ZERO,
+                                    distance_velocity: 0.0,
+                                    yaw_velocity: 0.0,
+                                    pitch_velocity: 0.0,
+                                    ortho_half_height_velocity: 0.0,
+                                    smooth_time_s,
+                                });
+                            }
+                            OrbitProjection::Orthographic => {
+                                let distance =
+                                    ortho_half_height_to_distance(m.camera.ortho_half_height);
+                                m.camera.projection = OrbitProjection::Perspective;
+                                m.camera.frame_anim = Some(FrameAnim {
+                                    target,
+                                    distance,
+                                    yaw_radians,
+                                    pitch_radians,
+                                    ortho_half_height: m.camera.ortho_half_height,
+                                    target_velocity: Vec3::ZERO,
+                                    distance_velocity: 0.0,
+                                    yaw_velocity: 0.0,
+                                    pitch_velocity: 0.0,
+                                    ortho_half_height_velocity: 0.0,
+                                    smooth_time_s,
+                                });
+                            }
+                        }
+                        return rec_to_record;
+                    }
+                    Some(ViewGizmoUpdate::SnapView {
+                        snap: _,
+                        view_dir,
+                        up: _,
+                    }) => {
+                        clear_other_interactions(m);
+                        let pivot = if m.selection.is_empty() {
+                            m.camera.target
+                        } else {
+                            let selected: Vec<GizmoTarget3d> = m
+                                .targets
+                                .iter()
+                                .copied()
+                                .filter(|t| m.selection.contains(&t.id))
+                                .collect();
+                            targets_world_aabb(&selected)
+                                .map(|(min, max)| (min + max) * 0.5)
+                                .unwrap_or(m.camera.target)
+                        };
+
+                        let desired_eye_dir = (-view_dir).normalize_or_zero();
+                        if desired_eye_dir.length_squared() > 0.0 {
+                            let (yaw_radians, pitch_radians) =
+                                if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
+                                    (m.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
+                                } else {
+                                    (
+                                        desired_eye_dir.z.atan2(desired_eye_dir.x),
+                                        desired_eye_dir.y.asin(),
+                                    )
+                                };
+
+                            m.camera.frame_anim = Some(FrameAnim {
+                                target: pivot,
+                                distance: m.camera.distance,
+                                yaw_radians,
+                                pitch_radians: pitch_radians.clamp(-1.55, 1.55),
+                                ortho_half_height: m.camera.ortho_half_height,
+                                target_velocity: Vec3::ZERO,
+                                distance_velocity: 0.0,
+                                yaw_velocity: 0.0,
+                                pitch_velocity: 0.0,
+                                ortho_half_height_velocity: 0.0,
+                                smooth_time_s: 0.12,
+                            });
+                        }
+
+                        return rec_to_record;
+                    }
+                    _ => {}
+                }
+            }
+
+            let over_view_gizmo = m.view_gizmo.state.drag_active
+                || m.view_gizmo.state.hovered.is_some()
+                || m.view_gizmo.state.hovered_center_button;
+            let scene_hovered = hovered && !over_view_gizmo;
+
+            if scene_hovered {
                 match event.kind {
                     ViewportInputKind::PointerDown {
                         button: fret_core::MouseButton::Left,
@@ -2205,7 +3138,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
 
             m.input = GizmoInput {
                 cursor_px,
-                hovered,
+                hovered: scene_hovered,
                 drag_started,
                 dragging,
                 snap,
@@ -2235,6 +3168,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 m.active_target,
                 &selected,
             ) {
+                m.hud.last = Some(GizmoHudLastUpdate {
+                    phase: update.phase,
+                    active: update.active,
+                    result: update.result,
+                });
                 match update.phase {
                     GizmoPhase::Begin => {
                         m.drag_start_targets = Some(selected.clone());
@@ -2258,6 +3196,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             let tool = match update.result {
                                 fret_gizmo::GizmoResult::Translation { .. } => "gizmo.translate",
                                 fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
                                 fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
                             };
 
@@ -2284,6 +3223,11 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 }
             }
+
+            m.hud.hovered = m.gizmo.state.hovered;
+            m.hud.hovered_kind = m.gizmo.state.hovered_kind;
+            m.hud.active = m.gizmo.state.active;
+            m.hud.snap = m.input.snap;
 
             rec_to_record
         });
@@ -2313,7 +3257,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
     ) -> EngineFrameUpdate {
         let (target_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
-        Self::ensure_gpu(state, context);
 
         let animating = state
             .demo
@@ -2330,8 +3273,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         if animating {
             app.request_redraw(window);
         }
-
-        let gpu = state.gpu.as_ref().expect("gpu ensured");
 
         let (
             scene_targets,
@@ -2359,7 +3300,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     selection.first().copied().unwrap_or(m.active_target)
                 };
 
-                let draw = if marquee.is_some() {
+                let viewport =
+                    ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+                let mut draw = if marquee.is_some() {
                     GizmoDrawList3d::default()
                 } else {
                     let gizmo_targets: Vec<GizmoTarget3d> = m
@@ -2368,13 +3311,25 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.gizmo.draw(
-                        view_proj,
-                        ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32)),
-                        active_target,
-                        &gizmo_targets,
-                    )
+                    m.gizmo
+                        .draw(view_proj, viewport, active_target, &gizmo_targets)
                 };
+                if marquee.is_none() {
+                    let projection = match m.camera.projection {
+                        OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+                        OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+                    };
+                    let view_draw = m
+                        .view_gizmo
+                        .draw_with_projection(view_proj, viewport, projection);
+                    draw.lines.extend(view_draw.lines);
+                    draw.triangles.extend(view_draw.triangles);
+                }
+
+                let grid = Grid3d::default().draw();
+                draw.lines.extend(grid.lines);
+                draw.triangles.extend(grid.triangles);
+
                 let thickness_px = m.gizmo.config.line_thickness_px;
                 let depth = m.gizmo.config.depth_range;
 
@@ -2406,9 +3361,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             view_proj: view_proj.to_cols_array_2d(),
             viewport_and_thickness: [size.0 as f32, size.1 as f32, thickness_px, 0.0],
         };
-        context
-            .queue
-            .write_buffer(&gpu.uniform, 0, bytemuck::bytes_of(&uniforms));
+        let cpu = &mut state.overlay_cpu;
+        cpu.clear();
 
         let mut cube_verts: Vec<Vertex> = Vec::new();
         for t in &scene_targets {
@@ -2433,39 +3387,26 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 })
         });
 
-        let mut solid_verts_test: Vec<Vertex> = Vec::new();
-        let mut solid_verts_ghost: Vec<Vertex> = Vec::new();
-        let mut solid_verts_always: Vec<Vertex> = Vec::new();
-
         for tri in draw.triangles {
             let a = tri.a.to_array();
             let b = tri.b.to_array();
             let c = tri.c.to_array();
             let color = [tri.color.r, tri.color.g, tri.color.b, tri.color.a];
-            let push = |out: &mut Vec<Vertex>| {
-                out.push(Vertex { pos: a, color });
-                out.push(Vertex { pos: b, color });
-                out.push(Vertex { pos: c, color });
-            };
             match tri.depth {
-                DepthMode::Test => push(&mut solid_verts_test),
-                DepthMode::Ghost => push(&mut solid_verts_ghost),
-                DepthMode::Always => push(&mut solid_verts_always),
+                DepthMode::Test => push_triangle(cpu.solid_test_mut(), a, b, c, color),
+                DepthMode::Ghost => push_triangle(cpu.solid_ghost_mut(), a, b, c, color),
+                DepthMode::Always => push_triangle(cpu.solid_always_mut(), a, b, c, color),
             }
         }
-
-        let mut line_verts_test: Vec<LineVertex> = Vec::new();
-        let mut line_verts_ghost: Vec<LineVertex> = Vec::new();
-        let mut line_verts_always: Vec<LineVertex> = Vec::new();
 
         for line in draw.lines {
             let a = line.a.to_array();
             let b = line.b.to_array();
             let color = [line.color.r, line.color.g, line.color.b, line.color.a];
             match line.depth {
-                DepthMode::Test => push_thick_line_quad(&mut line_verts_test, a, b, color),
-                DepthMode::Ghost => push_thick_line_quad(&mut line_verts_ghost, a, b, color),
-                DepthMode::Always => push_thick_line_quad(&mut line_verts_always, a, b, color),
+                DepthMode::Test => push_thick_line_quad(cpu.line_test_mut(), a, b, color),
+                DepthMode::Ghost => push_thick_line_quad(cpu.line_ghost_mut(), a, b, color),
+                DepthMode::Always => push_thick_line_quad(cpu.line_always_mut(), a, b, color),
             }
         }
 
@@ -2505,35 +3446,25 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
                 };
 
-                solid_verts_always.push(Vertex {
-                    pos: w[0].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[1].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[2].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[0].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[2].to_array(),
-                    color: fill,
-                });
-                solid_verts_always.push(Vertex {
-                    pos: w[3].to_array(),
-                    color: fill,
-                });
+                push_triangle(
+                    cpu.solid_always_mut(),
+                    w[0].to_array(),
+                    w[1].to_array(),
+                    w[2].to_array(),
+                    fill,
+                );
+                push_triangle(
+                    cpu.solid_always_mut(),
+                    w[0].to_array(),
+                    w[2].to_array(),
+                    w[3].to_array(),
+                    fill,
+                );
 
                 let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
                 for (a, b) in edges {
                     push_thick_line_quad(
-                        &mut line_verts_always,
+                        cpu.line_always_mut(),
                         w[a].to_array(),
                         w[b].to_array(),
                         border,
@@ -2542,88 +3473,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             }
         }
 
-        let solid_vb_test = (!solid_verts_test.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (test)"),
-                    contents: bytemuck::cast_slice(&solid_verts_test),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let solid_vb_ghost = (!solid_verts_ghost.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (ghost)"),
-                    contents: bytemuck::cast_slice(&solid_verts_ghost),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let solid_vb_always = (!solid_verts_always.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo gizmo solid vb (always)"),
-                    contents: bytemuck::cast_slice(&solid_verts_always),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-
-        let line_vb_test = (!line_verts_test.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (test)"),
-                    contents: bytemuck::cast_slice(&line_verts_test),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let line_vb_ghost = (!line_verts_ghost.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (ghost)"),
-                    contents: bytemuck::cast_slice(&line_verts_ghost),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-        let line_vb_always = (!line_verts_always.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo thick line vb (always)"),
-                    contents: bytemuck::cast_slice(&line_verts_always),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-
-        let solid_count_test = solid_verts_test.len().min(u32::MAX as usize) as u32;
-        let solid_count_ghost = solid_verts_ghost.len().min(u32::MAX as usize) as u32;
-        let solid_count_always = solid_verts_always.len().min(u32::MAX as usize) as u32;
-        let line_count_test = line_verts_test.len().min(u32::MAX as usize) as u32;
-        let line_count_ghost = line_verts_ghost.len().min(u32::MAX as usize) as u32;
-        let line_count_always = line_verts_always.len().min(u32::MAX as usize) as u32;
-
-        app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
-            svc.update_buffers(
-                window,
-                target_id,
-                gpu,
-                solid_vb_test.clone(),
-                solid_count_test,
-                solid_vb_ghost.clone(),
-                solid_count_ghost,
-                solid_vb_always.clone(),
-                solid_count_always,
-                line_vb_test.clone(),
-                line_count_test,
-                line_vb_ghost.clone(),
-                line_count_ghost,
-                line_vb_always.clone(),
-                line_count_always,
-            );
-        });
+        let overlay =
+            app.with_global_mut(Gizmo3dDemoViewportOverlayService::default, |svc, _app| {
+                svc.upload(
+                    &context.device,
+                    &context.queue,
+                    window,
+                    target_id,
+                    uniforms,
+                    cpu,
+                )
+            });
 
         let clear = wgpu::Color {
             r: 0.08,
@@ -2664,8 +3524,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             });
 
             if let Some(cube_vb) = &cube_vb {
-                pass.set_bind_group(0, &gpu.bind_group, &[]);
-                pass.set_pipeline(&gpu.tri_pipeline);
+                pass.set_bind_group(0, &overlay.bind_group, &[]);
+                pass.set_pipeline(&overlay.tri_pipeline);
                 pass.set_vertex_buffer(0, cube_vb.slice(..));
                 pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
             }
@@ -2714,6 +3574,279 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
         frame.paint_all(scene);
+
+        let (show_help, overlay_text) = state
+            .demo
+            .read(app, |_app, m| (m.show_help, m.overlay_text()))
+            .unwrap_or((false, String::new()));
+
+        if show_help {
+            let scale_bits = scale_factor.to_bits();
+            if state.overlay.last_text != overlay_text
+                || state.overlay.last_scale_bits != scale_bits
+            {
+                if let Some(blob) = state.overlay.blob.take() {
+                    services.text().release(blob);
+                }
+
+                let style = TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: Px(13.0),
+                    weight: FontWeight::MEDIUM,
+                    slant: fret_core::text::TextSlant::Normal,
+                    line_height: Some(Px(16.0)),
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: Some(Px(bounds.size.width.0 - 24.0)),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    scale_factor,
+                };
+
+                let (blob, metrics) = services.text().prepare(&overlay_text, &style, constraints);
+                state.overlay.last_text = overlay_text;
+                state.overlay.last_scale_bits = scale_bits;
+                state.overlay.blob = Some(blob);
+                state.overlay.metrics = Some(metrics);
+            }
+
+            if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
+                let pad = Px(10.0);
+                let outer_pad = Px(12.0);
+
+                let bg_rect = Rect::new(
+                    Point::new(
+                        Px(bounds.origin.x.0 + outer_pad.0),
+                        Px(bounds.origin.y.0 + outer_pad.0),
+                    ),
+                    Size::new(
+                        Px(metrics.size.width.0 + pad.0 * 2.0),
+                        Px(metrics.size.height.0 + pad.0 * 2.0),
+                    ),
+                );
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(50_000),
+                    rect: bg_rect,
+                    background: Color {
+                        r: 0.08,
+                        g: 0.08,
+                        b: 0.09,
+                        a: 0.78,
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        r: 0.35,
+                        g: 0.35,
+                        b: 0.40,
+                        a: 0.85,
+                    },
+                    corner_radii: Corners::all(Px(12.0)),
+                });
+                scene.push(SceneOp::Text {
+                    order: DrawOrder(50_010),
+                    origin: Point::new(
+                        Px(bg_rect.origin.x.0 + pad.0),
+                        Px(bg_rect.origin.y.0 + pad.0),
+                    ),
+                    text: blob,
+                    color: Color {
+                        r: 0.92,
+                        g: 0.92,
+                        b: 0.94,
+                        a: 0.95,
+                    },
+                });
+            }
+        }
+
+        // View gizmo labels (X/Y/Z + P/O).
+        let viewport = state
+            .plot
+            .read(app, |_app, m| m.viewport)
+            .unwrap_or_default();
+        let (viewport_px, camera, view_gizmo, gizmo_cfg, hud_state) = state
+            .demo
+            .read(app, |_app, m| {
+                (
+                    m.viewport_px,
+                    m.camera,
+                    m.view_gizmo.clone(),
+                    m.gizmo.config,
+                    m.hud,
+                )
+            })
+            .unwrap_or((
+                (1, 1),
+                OrbitCamera::default(),
+                ViewGizmo::new(ViewGizmoConfig::default()),
+                GizmoConfig::default(),
+                GizmoHudState::default(),
+            ));
+
+        let draw_rect = viewport.draw_rect(bounds);
+        let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
+        let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
+        let scale = scale_x.min(scale_y).max(1e-6);
+
+        let view_proj = camera_view_projection(viewport_px, camera);
+        let viewport_rect = ViewportRect::new(
+            Vec2::ZERO,
+            Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
+        );
+        let projection = match camera.projection {
+            OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+            OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+        };
+
+        let labels = view_gizmo.labels(view_proj, viewport_rect, projection);
+        if !labels.is_empty() {
+            state.view_gizmo_labels.ensure(services, scale_factor);
+        }
+
+        for label in labels {
+            let Some((blob, metrics)) = state.view_gizmo_labels.blob_and_metrics(label.text) else {
+                continue;
+            };
+
+            let x = draw_rect.origin.x.0 + label.screen_px.x * scale;
+            let y = draw_rect.origin.y.0 + label.screen_px.y * scale;
+
+            let pad = Px(3.0);
+            let bg = Rect::new(
+                Point::new(
+                    Px(x - metrics.size.width.0 * 0.5 - pad.0),
+                    Px(y - metrics.size.height.0 * 0.5 - pad.0),
+                ),
+                Size::new(
+                    Px(metrics.size.width.0 + pad.0 * 2.0),
+                    Px(metrics.size.height.0 + pad.0 * 2.0),
+                ),
+            );
+
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(49_000),
+                rect: bg,
+                background: Color {
+                    r: 0.06,
+                    g: 0.06,
+                    b: 0.07,
+                    a: 0.55,
+                },
+                border: Edges::all(Px(1.0)),
+                border_color: Color {
+                    r: label.color.r,
+                    g: label.color.g,
+                    b: label.color.b,
+                    a: 0.85,
+                },
+                corner_radii: Corners::all(Px(8.0)),
+            });
+
+            scene.push(SceneOp::Text {
+                order: DrawOrder(49_010),
+                origin: Point::new(
+                    Px(x - metrics.size.width.0 * 0.5),
+                    Px(y - metrics.size.height.0 * 0.5),
+                ),
+                text: blob,
+                color: Color {
+                    r: label.color.r,
+                    g: label.color.g,
+                    b: label.color.b,
+                    a: label.color.a,
+                },
+            });
+        }
+
+        if let Some(text) = gizmo_hud_text(hud_state, gizmo_cfg) {
+            let scale_bits = scale_factor.to_bits();
+            if state.hud.last_text != text || state.hud.last_scale_bits != scale_bits {
+                if let Some(blob) = state.hud.blob.take() {
+                    services.text().release(blob);
+                }
+
+                let style = TextStyle {
+                    font: fret_core::FontId::default(),
+                    size: Px(12.0),
+                    weight: FontWeight::MEDIUM,
+                    slant: fret_core::text::TextSlant::Normal,
+                    line_height: Some(Px(14.0)),
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: Some(Px(340.0)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor,
+                };
+
+                let (blob, metrics) = services.text().prepare(&text, &style, constraints);
+                state.hud.last_text = text;
+                state.hud.last_scale_bits = scale_bits;
+                state.hud.blob = Some(blob);
+                state.hud.metrics = Some(metrics);
+            }
+
+            if let (Some(blob), Some(metrics)) = (state.hud.blob, state.hud.metrics) {
+                let pad = Px(10.0);
+                let outer_pad = Px(12.0);
+
+                let origin = Point::new(
+                    Px(draw_rect.origin.x.0 + outer_pad.0),
+                    Px(draw_rect.origin.y.0 + draw_rect.size.height.0 - outer_pad.0),
+                );
+
+                let bg_rect = Rect::new(
+                    Point::new(
+                        Px(origin.x.0),
+                        Px(origin.y.0 - (metrics.size.height.0 + pad.0 * 2.0)),
+                    ),
+                    Size::new(
+                        Px(metrics.size.width.0 + pad.0 * 2.0),
+                        Px(metrics.size.height.0 + pad.0 * 2.0),
+                    ),
+                );
+
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(49_200),
+                    rect: bg_rect,
+                    background: Color {
+                        r: 0.06,
+                        g: 0.06,
+                        b: 0.07,
+                        a: 0.62,
+                    },
+                    border: Edges::all(Px(1.0)),
+                    border_color: Color {
+                        r: 0.35,
+                        g: 0.35,
+                        b: 0.40,
+                        a: 0.85,
+                    },
+                    corner_radii: Corners::all(Px(12.0)),
+                });
+                scene.push(SceneOp::Text {
+                    order: DrawOrder(49_210),
+                    origin: Point::new(
+                        Px(bg_rect.origin.x.0 + pad.0),
+                        Px(bg_rect.origin.y.0 + pad.0),
+                    ),
+                    text: blob,
+                    color: Color {
+                        r: 0.92,
+                        g: 0.92,
+                        b: 0.94,
+                        a: 0.95,
+                    },
+                });
+            }
+        }
+
+        if state.warmup_frames_remaining > 0 {
+            state.warmup_frames_remaining = state.warmup_frames_remaining.saturating_sub(1);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
     }
 }
 
