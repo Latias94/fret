@@ -6,6 +6,7 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
+use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
 use super::super::super::state::{EdgeDrag, WireDragKind};
 use super::super::{NodeGraphCanvas, edge_drag, left_click, marquee, pointer_up};
@@ -382,6 +383,84 @@ fn multi_selection_active_does_not_clear_edge_selection_when_clicking_node() {
         .unwrap_or_default();
     selected_nodes.sort();
     assert_eq!(selected_nodes, vec![b]);
+}
+
+#[test]
+fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let a = graph
+        .read_ref(&host, |g| g.ports.get(&from).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("from port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.selected_nodes = vec![a];
+        s.selected_edges.clear();
+        s.selected_groups.clear();
+    });
+
+    let edge_types =
+        NodeGraphEdgeTypes::new().register(EdgeTypeKey::new("data"), |_g, _e, _s, mut h| {
+            h.route = crate::ui::presenter::EdgeRouteKind::Straight;
+            h
+        });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_edge_types(edge_types);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let geom = canvas.canvas_geometry(&host, &snapshot);
+    let from_center = geom.port_center(from).expect("from port center");
+    let to_center = geom.port_center(to).expect("to port center");
+    let pos = Point::new(
+        Px(0.5 * (from_center.x.0 + to_center.x.0)),
+        Px(0.5 * (from_center.y.0 + to_center.y.0)),
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    assert!(
+        selected_nodes.is_empty(),
+        "clicking an edge should clear node selection in non-multi mode"
+    );
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_edges, vec![edge]);
 }
 
 #[test]
