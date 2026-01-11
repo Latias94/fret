@@ -49,6 +49,13 @@ For a concrete, token-driven recipe example (suitable as a copy/paste template f
 
 The `glass_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
 
+## Pixelate recipe template (fret-ui-kit)
+
+- Token/resolve/clamp helpers: `ecosystem/fret-ui-kit/src/recipes/pixelate.rs`
+- Declarative wrapper (feature-gated): `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
+
+The `pixelate_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
+
 ## When to use Tier A instead (video / viewport / NLE-class)
 
 If your "component" wants to do substantial rendering work (custom shaders, video decoding, engine viewports):
