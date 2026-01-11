@@ -14,6 +14,19 @@ use fret_ui::UiTree;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+fn try_println(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let _ = out.write_fmt(args);
+    let _ = out.write_all(b"\n");
+}
+
+macro_rules! try_println {
+    ($($tt:tt)*) => {
+        try_println(format_args!($($tt)*))
+    };
+}
+
 const DEFAULT_POINTS: usize = 200_000;
 const DEFAULT_SERIES: usize = 3;
 
@@ -39,10 +52,10 @@ struct PlotStressDriver {
 
 impl PlotStressDriver {
     fn print_help() {
-        println!("plot_stress_demo controls:");
-        println!("  Space: toggle animated bounds (forces path rebuild)");
-        println!("  H: print this help");
-        println!("  Esc: close");
+        try_println!("plot_stress_demo controls:");
+        try_println!("  Space: toggle animated bounds (forces path rebuild)");
+        try_println!("  H: print this help");
+        try_println!("  Esc: close");
     }
 
     fn build_series(points: usize, series_index: usize) -> Series {
@@ -162,15 +175,26 @@ impl WinitAppDriver for PlotStressDriver {
         if should_report {
             if let Some(snap) = renderer.take_perf_snapshot() {
                 if snap.frames != 0 {
-                    println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    try_println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
                         snap.frames,
                         snap.encode_scene_us as f64 / 1000.0,
                         snap.prepare_svg_us as f64 / 1000.0,
                         snap.prepare_text_us as f64 / 1000.0,
                         snap.draw_calls,
+                        snap.quad_draw_calls,
+                        snap.viewport_draw_calls,
+                        snap.image_draw_calls,
+                        snap.text_draw_calls,
+                        snap.path_draw_calls,
+                        snap.mask_draw_calls,
+                        snap.fullscreen_draw_calls,
+                        snap.clip_mask_draw_calls,
                         snap.pipeline_switches,
                         snap.bind_group_switches,
+                        snap.uniform_bind_group_switches,
+                        snap.texture_bind_group_switches,
+                        snap.scissor_sets,
                         snap.uniform_bytes / 1024,
                         snap.instance_bytes / 1024,
                         snap.vertex_bytes / 1024,
@@ -325,9 +349,13 @@ impl WinitAppDriver for PlotStressDriver {
 
             let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
 
-            println!(
+            try_println!(
                 "frames={} points={} series={} animate={} avg_driver_render={:.1}us",
-                state.frame, self.points, self.series, animate, avg_us
+                state.frame,
+                self.points,
+                self.series,
+                animate,
+                avg_us
             );
 
             state.last_report = Some(Instant::now());
@@ -421,7 +449,7 @@ pub fn run() -> anyhow::Result<()> {
                 max_frames = Some(value.parse()?);
             }
             "--help" | "-h" => {
-                println!(
+                try_println!(
                     "Usage: plot_stress_demo [--points N] [--series N] [--frames N]\n\nThis is a minimal stress harness aligned with ADR 0096 conventions (deterministic scene generation, periodic perf prints)."
                 );
                 return Ok(());

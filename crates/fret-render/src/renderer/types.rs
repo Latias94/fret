@@ -112,8 +112,20 @@ pub struct RenderPerfSnapshot {
     pub prepare_text_us: u64,
 
     pub draw_calls: u64,
+    pub quad_draw_calls: u64,
+    pub viewport_draw_calls: u64,
+    pub image_draw_calls: u64,
+    pub text_draw_calls: u64,
+    pub path_draw_calls: u64,
+    pub mask_draw_calls: u64,
+    pub fullscreen_draw_calls: u64,
+    pub clip_mask_draw_calls: u64,
+
     pub pipeline_switches: u64,
     pub bind_group_switches: u64,
+    pub uniform_bind_group_switches: u64,
+    pub texture_bind_group_switches: u64,
+    pub scissor_sets: u64,
 
     pub uniform_bytes: u64,
     pub instance_bytes: u64,
@@ -132,8 +144,20 @@ pub(super) struct RenderPerfStats {
     pub(super) prepare_text: Duration,
 
     pub(super) draw_calls: u64,
+    pub(super) quad_draw_calls: u64,
+    pub(super) viewport_draw_calls: u64,
+    pub(super) image_draw_calls: u64,
+    pub(super) text_draw_calls: u64,
+    pub(super) path_draw_calls: u64,
+    pub(super) mask_draw_calls: u64,
+    pub(super) fullscreen_draw_calls: u64,
+    pub(super) clip_mask_draw_calls: u64,
+
     pub(super) pipeline_switches: u64,
     pub(super) bind_group_switches: u64,
+    pub(super) uniform_bind_group_switches: u64,
+    pub(super) texture_bind_group_switches: u64,
+    pub(super) scissor_sets: u64,
 
     pub(super) uniform_bytes: u64,
     pub(super) instance_bytes: u64,

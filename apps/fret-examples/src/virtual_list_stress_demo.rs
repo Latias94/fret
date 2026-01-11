@@ -18,6 +18,19 @@ use std::time::{Duration, Instant};
 
 const LIST_LEN: usize = 100_000;
 
+fn try_println(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let _ = out.write_fmt(args);
+    let _ = out.write_all(b"\n");
+}
+
+macro_rules! try_println {
+    ($($tt:tt)*) => {
+        try_println(format_args!($($tt)*))
+    };
+}
+
 fn parse_env_u64(key: &str) -> Option<u64> {
     std::env::var_os(key).and_then(|v| v.to_string_lossy().parse::<u64>().ok())
 }
@@ -98,15 +111,26 @@ impl WinitAppDriver for VirtualListStressDriver {
         if should_report {
             if let Some(snap) = renderer.take_perf_snapshot() {
                 if snap.frames != 0 {
-                    println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} pipelines={} binds={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    try_println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
                         snap.frames,
                         snap.encode_scene_us as f64 / 1000.0,
                         snap.prepare_svg_us as f64 / 1000.0,
                         snap.prepare_text_us as f64 / 1000.0,
                         snap.draw_calls,
+                        snap.quad_draw_calls,
+                        snap.viewport_draw_calls,
+                        snap.image_draw_calls,
+                        snap.text_draw_calls,
+                        snap.path_draw_calls,
+                        snap.mask_draw_calls,
+                        snap.fullscreen_draw_calls,
+                        snap.clip_mask_draw_calls,
                         snap.pipeline_switches,
                         snap.bind_group_switches,
+                        snap.uniform_bind_group_switches,
+                        snap.texture_bind_group_switches,
+                        snap.scissor_sets,
                         snap.uniform_bytes / 1024,
                         snap.instance_bytes / 1024,
                         snap.vertex_bytes / 1024,
