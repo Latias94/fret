@@ -32,6 +32,8 @@
     "color.viewport.gizmo.y": "#2ECC71FF",
     "color.viewport.gizmo.z": "#3380FFFF",
     "color.viewport.gizmo.hover": "#FFC44AFF",
+    "color.viewport.view_gizmo.face": "#3A424D59",
+    "color.viewport.view_gizmo.edge": "#D7DEE9E6",
     "color.viewport.gizmo.handle.background": "#1E2229FF",
     "color.viewport.gizmo.handle.border": "#D7DEE9FF",
     "color.viewport.rotate_gizmo": "#FFC44AFF",

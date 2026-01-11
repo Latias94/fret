@@ -107,6 +107,24 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
         "color.viewport.gizmo.hover".to_string(),
         colors.viewport_rotate_gizmo,
     );
+    out.insert(
+        "color.viewport.view_gizmo.face".to_string(),
+        Color {
+            r: 0.22,
+            g: 0.22,
+            b: 0.24,
+            a: 0.35,
+        },
+    );
+    out.insert(
+        "color.viewport.view_gizmo.edge".to_string(),
+        Color {
+            r: 0.95,
+            g: 0.95,
+            b: 0.98,
+            a: 0.90,
+        },
+    );
 
     // shadcn/new-york core semantic palette (canonical names).
     out.insert("background".to_string(), colors.surface_background);
