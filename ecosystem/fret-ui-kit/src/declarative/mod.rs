@@ -12,6 +12,8 @@ pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
 pub mod overlay_motion;
+#[cfg(feature = "recipes")]
+pub mod pixelate;
 pub mod prelude;
 pub mod presence;
 pub mod scheduling;
