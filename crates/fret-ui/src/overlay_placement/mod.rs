@@ -8,7 +8,7 @@ pub use solver::{
 };
 pub use types::{
     Align, AnchoredPanelLayout, AnchoredPanelOptions, ArrowLayout, ArrowOptions, CollisionOptions,
-    LayoutDirection, Offset, Side, StickyMode,
+    LayoutDirection, Offset, ShiftOptions, Side, StickyMode,
 };
 pub use util::{inset_rect, intersect_rect};
 
