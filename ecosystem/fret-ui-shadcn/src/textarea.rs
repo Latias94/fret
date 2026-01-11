@@ -41,7 +41,7 @@ impl Textarea {
         Self {
             model,
             a11y_label: None,
-            min_height: Px(80.0),
+            min_height: Px(64.0),
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
