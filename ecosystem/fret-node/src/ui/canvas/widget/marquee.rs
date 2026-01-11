@@ -72,34 +72,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
         let selected_edges =
             if snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable {
                 let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
-                canvas
-                    .graph
-                    .read_ref(cx.app, |graph| {
-                        graph
-                            .edges
-                            .iter()
-                            .filter_map(|(edge_id, edge)| {
-                                if !edge.selectable.unwrap_or(true) {
-                                    return None;
-                                }
-                                let from_node = graph.ports.get(&edge.from).map(|p| p.node)?;
-                                let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
-                                match snapshot.interaction.box_select_edges {
-                                    crate::io::NodeGraphBoxSelectEdges::None => None,
-                                    crate::io::NodeGraphBoxSelectEdges::Connected => {
-                                        (nodes.contains(&from_node) || nodes.contains(&to_node))
-                                            .then_some(*edge_id)
-                                    }
-                                    crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
-                                        (nodes.contains(&from_node) && nodes.contains(&to_node))
-                                            .then_some(*edge_id)
-                                    }
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .ok()
-                    .unwrap_or_default()
+                canvas.box_select_edges_for_nodes(cx.app, &snapshot.interaction, &nodes)
             } else {
                 Vec::new()
             };
@@ -158,36 +131,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                         && snapshot.interaction.edges_selectable
                     {
                         let nodes: BTreeSet<GraphNodeId> = selected.iter().copied().collect();
-                        canvas
-                            .graph
-                            .read_ref(cx.app, |graph| {
-                                graph
-                                    .edges
-                                    .iter()
-                                    .filter_map(|(edge_id, edge)| {
-                                        if !edge.selectable.unwrap_or(true) {
-                                            return None;
-                                        }
-                                        let from_node =
-                                            graph.ports.get(&edge.from).map(|p| p.node)?;
-                                        let to_node = graph.ports.get(&edge.to).map(|p| p.node)?;
-                                        match snapshot.interaction.box_select_edges {
-                                            crate::io::NodeGraphBoxSelectEdges::None => None,
-                                            crate::io::NodeGraphBoxSelectEdges::Connected => (nodes
-                                                .contains(&from_node)
-                                                || nodes.contains(&to_node))
-                                            .then_some(*edge_id),
-                                            crate::io::NodeGraphBoxSelectEdges::BothEndpoints => {
-                                                (nodes.contains(&from_node)
-                                                    && nodes.contains(&to_node))
-                                                .then_some(*edge_id)
-                                            }
-                                        }
-                                    })
-                                    .collect::<Vec<_>>()
-                            })
-                            .ok()
-                            .unwrap_or_default()
+                        canvas.box_select_edges_for_nodes(cx.app, &snapshot.interaction, &nodes)
                     } else {
                         Vec::new()
                     };

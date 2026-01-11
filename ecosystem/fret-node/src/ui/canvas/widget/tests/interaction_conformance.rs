@@ -397,6 +397,73 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
 }
 
 #[test]
+fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
+    use crate::runtime::store::NodeGraphStore;
+
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, from, _to) = make_test_graph_edge_reconnect();
+    let a = graph_value
+        .ports
+        .get(&from)
+        .map(|p| p.node)
+        .expect("from port exists");
+
+    let mut store_view = NodeGraphViewState::default();
+    store_view.interaction.elements_selectable = true;
+    store_view.interaction.edges_selectable = true;
+    store_view.interaction.selection_on_drag = true;
+    store_view.interaction.pane_click_distance = 0.0;
+    store_view.interaction.box_select_edges = crate::io::NodeGraphBoxSelectEdges::Connected;
+
+    let store = host
+        .models
+        .insert(NodeGraphStore::new(graph_value, store_view));
+    let graph = host.models.insert(Graph::default());
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let start = Point::new(Px(-10.0), Px(-10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        start,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let end = Point::new(Px(250.0), Px(120.0));
+    assert!(marquee::handle_marquee_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        end,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
+
+    let selected_nodes = store
+        .read_ref(&host, |s| s.view_state().selected_nodes.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_nodes, vec![a]);
+
+    let selected_edges = store
+        .read_ref(&host, |s| s.view_state().selected_edges.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_edges, vec![edge]);
+}
+
+#[test]
 fn marquee_does_not_select_edges_when_edge_selectable_is_false() {
     let mut host = TestUiHostImpl::default();
     let (mut graph_value, edge, from, _to) = make_test_graph_edge_reconnect();
