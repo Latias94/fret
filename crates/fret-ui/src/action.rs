@@ -51,6 +51,8 @@ pub struct PointerDownCx {
     pub position: Point,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+    pub click_count: u8,
     pub pointer_type: PointerType,
 }
 
@@ -77,6 +79,8 @@ pub struct PointerUpCx {
     pub position: Point,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+    pub click_count: u8,
     pub pointer_type: PointerType,
 }
 
