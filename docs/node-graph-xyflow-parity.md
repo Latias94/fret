@@ -105,9 +105,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `updateNodeInternals(...)` in `repo-ref/xyflow/packages/react/src/store/index.ts`
   - fret-node: `NodeGraphInternalsStore`, `MeasuredGeometryStore`, `CanvasGeometry`, `CanvasSpatialIndex`
 
-- [ ] **Canonical lookup maps (nodeLookup/edgeLookup/connectionLookup)**
+- [~] **Canonical lookup maps (nodeLookup/edgeLookup/connectionLookup)**
   - XyFlow: store `nodeLookup`, `edgeLookup`, `connectionLookup` (React runtime)
-  - fret-node: not implemented as a first-class public runtime surface (current access is via models and derived stores)
+  - fret-node:
+    - runtime lookups cache: `ecosystem/fret-node/src/runtime/lookups.rs` (`NodeGraphLookups`)
+    - store access: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::lookups`)
 
 ## 0.2 Change pipeline (callbacks + diffs + apply)
 

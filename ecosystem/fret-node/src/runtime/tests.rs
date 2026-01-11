@@ -7,6 +7,7 @@ use crate::runtime::callbacks::{
 };
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
+use crate::runtime::lookups::{ConnectionSide, NodeGraphLookups};
 use crate::runtime::store::NodeGraphStore;
 
 fn make_graph() -> (
@@ -257,6 +258,57 @@ fn connection_changes_from_transaction_maps_edge_ops() {
     assert!(matches!(changes[0], ConnectionChange::Connected(_)));
     assert!(matches!(changes[1], ConnectionChange::Reconnected { .. }));
     assert!(matches!(changes[2], ConnectionChange::Disconnected(_)));
+}
+
+#[test]
+fn lookups_rebuild_populates_connection_lookup() {
+    let (g, a, b, out_port, in_port, eid) = make_graph();
+
+    let mut lookups = NodeGraphLookups::default();
+    lookups.rebuild_from(&g);
+
+    assert!(lookups.node_lookup.contains_key(&a));
+    assert!(lookups.node_lookup.contains_key(&b));
+    assert_eq!(lookups.node_lookup.get(&a).unwrap().ports, vec![out_port]);
+    assert_eq!(lookups.node_lookup.get(&b).unwrap().ports, vec![in_port]);
+
+    assert_eq!(lookups.edge_lookup.get(&eid).unwrap().from, out_port);
+    assert_eq!(lookups.edge_lookup.get(&eid).unwrap().to, in_port);
+
+    let a_out = lookups
+        .connections_for_port(a, ConnectionSide::Source, out_port)
+        .expect("connections");
+    assert_eq!(a_out.get(&eid).unwrap().target_node, b);
+
+    let b_all = lookups.connections_for_node(b).expect("connections");
+    assert!(b_all.contains_key(&eid));
+}
+
+#[test]
+fn store_lookups_update_after_dispatch_transaction() {
+    let (mut g, _a, _b, out_port, in_port, eid) = make_graph();
+    g.edges.clear();
+
+    let mut store = NodeGraphStore::new(g, NodeGraphViewState::default());
+    assert!(store.lookups().edge_lookup.is_empty());
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddEdge {
+            id: eid,
+            edge: Edge {
+                kind: EdgeKind::Data,
+                from: out_port,
+                to: in_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        }],
+    };
+
+    store.dispatch_transaction(&tx).expect("dispatch");
+    assert!(store.lookups().edge_lookup.contains_key(&eid));
 }
 
 #[test]

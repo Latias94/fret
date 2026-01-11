@@ -14,6 +14,7 @@ use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
 use crate::runtime::events::{
     NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
 };
+use crate::runtime::lookups::NodeGraphLookups;
 
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
@@ -40,6 +41,7 @@ pub struct NodeGraphStore {
     view_state: NodeGraphViewState,
     history: GraphHistory,
     profile: Option<Box<dyn GraphProfile>>,
+    lookups: NodeGraphLookups,
 
     next_subscription: u64,
     event_subscriptions: Vec<(
@@ -63,6 +65,8 @@ impl std::fmt::Debug for NodeGraphStore {
             .field("graph_id", &self.graph.graph_id)
             .field("node_count", &self.graph.nodes.len())
             .field("edge_count", &self.graph.edges.len())
+            .field("lookup_node_count", &self.lookups.node_lookup.len())
+            .field("lookup_edge_count", &self.lookups.edge_lookup.len())
             .field("undo_len", &self.history.undo_len())
             .field("redo_len", &self.history.redo_len())
             .field("has_profile", &self.profile.is_some())
@@ -79,11 +83,14 @@ impl NodeGraphStore {
     /// Creates a store without a profile pipeline (raw ops apply + undo/redo).
     pub fn new(graph: Graph, mut view_state: NodeGraphViewState) -> Self {
         view_state.sanitize_for_graph(&graph);
+        let mut lookups = NodeGraphLookups::default();
+        lookups.rebuild_from(&graph);
         Self {
             graph,
             view_state,
             history: GraphHistory::default(),
             profile: None,
+            lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
@@ -97,11 +104,14 @@ impl NodeGraphStore {
         profile: Box<dyn GraphProfile>,
     ) -> Self {
         view_state.sanitize_for_graph(&graph);
+        let mut lookups = NodeGraphLookups::default();
+        lookups.rebuild_from(&graph);
         Self {
             graph,
             view_state,
             history: GraphHistory::default(),
             profile: Some(profile),
+            lookups,
             next_subscription: 1,
             event_subscriptions: Vec::new(),
             selector_subscriptions: Vec::new(),
@@ -195,6 +205,10 @@ impl NodeGraphStore {
         &self.graph
     }
 
+    pub fn lookups(&self) -> &NodeGraphLookups {
+        &self.lookups
+    }
+
     /// Replaces the entire graph document.
     ///
     /// This is a controlled-mode helper: callers that own graph state can swap the document
@@ -205,6 +219,7 @@ impl NodeGraphStore {
     pub fn replace_graph(&mut self, graph: Graph) {
         self.graph = graph;
         self.view_state.sanitize_for_graph(&self.graph);
+        self.lookups.rebuild_from(&self.graph);
         self.notify_selectors();
     }
 
@@ -393,6 +408,7 @@ impl NodeGraphStore {
         let mut scratch = self.graph.clone();
         let committed = self.apply_to_graph(&mut scratch, tx)?;
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
@@ -414,6 +430,7 @@ impl NodeGraphStore {
         let mut scratch = self.graph.clone();
         let committed = apply_transaction_with_profile(&mut scratch, profile, tx)?;
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.history.record(committed.clone());
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
@@ -454,6 +471,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -485,6 +503,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -514,6 +533,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
@@ -545,6 +565,7 @@ impl NodeGraphStore {
         let committed = committed.unwrap_or_else(GraphTransaction::new);
         let changes = NodeGraphChanges::from_transaction(&committed);
         self.graph = scratch;
+        self.lookups.rebuild_from(&self.graph);
         self.emit(NodeGraphStoreEvent::GraphCommitted {
             committed: &committed,
             changes: &changes,
