@@ -8,8 +8,8 @@ use fret_core::{
 };
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId,
-    Transform3d, ViewportRect,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoSizePolicy, GizmoTarget3d,
+    GizmoTargetId, Transform3d, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -609,6 +609,8 @@ impl Gizmo3dDemoModel {
         out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
         out.push_str("  L: local/world   P: pivot active/center\n");
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
+        out.push_str("  V: toggle size policy (pixels/bounds)\n");
+        out.push_str("  ; / ': bounds fraction -/+ (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
@@ -624,6 +626,10 @@ impl Gizmo3dDemoModel {
             self.gizmo.config.size_px,
             self.gizmo.config.line_thickness_px,
             self.gizmo.config.pick_radius_px
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_policy={:?}\n",
+            self.gizmo.config.size_policy
         ));
 
         if self.op_mask_enabled {
@@ -1926,6 +1932,64 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.set_op_mask_preset(preset);
                     } else {
                         m.apply_op_mask();
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyV,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::ConstantPixels => GizmoSizePolicy::SelectionBounds {
+                            fraction_of_max_extent: 1.2,
+                        },
+                        GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
+                    };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Semicolon,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    if let GizmoSizePolicy::SelectionBounds {
+                        ref mut fraction_of_max_extent,
+                    } = m.gizmo.config.size_policy
+                    {
+                        *fraction_of_max_extent = (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Quote,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    if let GizmoSizePolicy::SelectionBounds {
+                        ref mut fraction_of_max_extent,
+                    } = m.gizmo.config.size_policy
+                    {
+                        *fraction_of_max_extent = (*fraction_of_max_extent + step).clamp(0.05, 5.0);
                     }
                 });
                 app.request_redraw(window);
