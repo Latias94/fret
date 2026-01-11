@@ -10,6 +10,7 @@ use crate::rules::EdgeEndpoint;
 use super::super::super::state::{EdgeDrag, WireDragKind};
 use super::super::{NodeGraphCanvas, edge_drag, left_click, marquee, pointer_up};
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
+use fret_ui::retained_bridge::Widget as _;
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
     let mut graph = Graph::new(GraphId::new());
@@ -330,7 +331,6 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
-
     canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
@@ -357,4 +357,43 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
     let edges_len = graph.read_ref(&host, |g| g.edges.len()).unwrap_or(0);
     assert_eq!(edges_len, 0);
     assert_eq!(canvas.history.undo_len(), 1);
+}
+
+#[test]
+fn window_focus_lost_cancels_wire_drag() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+        kind: WireDragKind::Reconnect {
+            edge,
+            endpoint: EdgeEndpoint::From,
+            fixed: to,
+        },
+        pos: Point::new(Px(10.0), Px(10.0)),
+    });
+    assert!(canvas.interaction.wire_drag.is_some());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    canvas.event(&mut cx, &fret_core::Event::WindowFocusChanged(false));
+    assert!(canvas.interaction.wire_drag.is_none());
+
+    // Graph should remain unchanged (disconnect on drop empty is a separate opt-in behavior).
+    let edge_still_exists = canvas
+        .graph
+        .read_ref(cx.app, |g| g.edges.contains_key(&edge))
+        .unwrap_or(false);
+    assert!(edge_still_exists);
+
+    // Cancel should not change graph history.
+    assert_eq!(canvas.history.undo_len(), 0);
 }

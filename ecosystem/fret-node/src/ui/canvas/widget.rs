@@ -5786,6 +5786,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.invalidate_self(Invalidation::Paint);
                 }
             }
+            Event::WindowFocusChanged(false) => {
+                if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
+                    return;
+                }
+
+                cancel::handle_escape_cancel(self, cx);
+                return;
+            }
             Event::Timer { token } => {
                 if self
                     .interaction

@@ -490,7 +490,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - anchor click selects the edge; dragging the anchor beyond threshold enters reconnect (prevents “click starts reconnect” surprises)
     - gating: `NodeGraphInteractionState.edges_reconnectable`
   - TODO: parity knobs:
-    - cancel behavior / escape / outside press
+    - cancel behavior:
+      - [x] Escape / focus loss cancels active reconnect/connect drags: `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - [ ] outside press / pointer-capture loss (platform event parity TBD)
     - reconnect on drop on empty canvas: `NodeGraphInteractionState.reconnect_on_drop_empty`
 
 ## 6.4 Edge split / reroute node
