@@ -9,8 +9,9 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
-    GizmoTarget3d, GizmoTargetId, Grid3d, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
-    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
+    GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, Transform3d, ViewGizmo,
+    ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate,
+    ViewGizmoVisualPreset, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -853,6 +854,8 @@ struct Gizmo3dDemoModel {
     pixels_per_point: f32,
     gizmo: Gizmo,
     view_gizmo: ViewGizmo,
+    gizmo_visual_preset_index: usize,
+    view_gizmo_visual_preset_index: usize,
     theme_preset_index: usize,
     op_mask_enabled: bool,
     op_mask_preset_index: usize,
@@ -914,6 +917,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  O: toggle depth mode (depth test / on top)\n");
         out.push_str("  D: toggle Universal dolly handle (coarse Universal only)\n");
         out.push_str("  Y: cycle theme (Fret/Godot/HardHacker)\n");
+        out.push_str("  G: cycle gizmo visuals preset (Shift: view gizmo)\n");
         out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
@@ -946,6 +950,17 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Theme preset: {}\n",
             DEMO_THEME_PRESETS[self.theme_preset_index % DEMO_THEME_PRESETS.len()].0
+        ));
+        out.push_str(&format!(
+            "Gizmo visuals: {}\n",
+            GizmoVisualPreset::ALL[self.gizmo_visual_preset_index % GizmoVisualPreset::ALL.len()]
+                .name()
+        ));
+        out.push_str(&format!(
+            "View gizmo visuals: {}\n",
+            ViewGizmoVisualPreset::ALL
+                [self.view_gizmo_visual_preset_index % ViewGizmoVisualPreset::ALL.len()]
+            .name()
         ));
 
         if self.op_mask_enabled {
@@ -1018,6 +1033,12 @@ impl Default for Gizmo3dDemoModel {
         let mut view_gizmo_cfg = ViewGizmoConfig::default();
         view_gizmo_cfg.depth_range = gizmo_cfg.depth_range;
         view_gizmo_cfg.anchor = ViewGizmoAnchor::TopRight;
+        let gizmo_visual_preset_index = 0;
+        let view_gizmo_visual_preset_index = 0;
+        GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_config(&mut gizmo_cfg);
+        ViewGizmoVisualPreset::ALL[view_gizmo_visual_preset_index]
+            .apply_to_config(&mut view_gizmo_cfg);
+
         let view_gizmo = ViewGizmo::new(view_gizmo_cfg);
         Self {
             viewport_target: RenderTargetId::default(),
@@ -1025,6 +1046,8 @@ impl Default for Gizmo3dDemoModel {
             pixels_per_point: 1.0,
             gizmo: Gizmo::new(gizmo_cfg),
             view_gizmo,
+            gizmo_visual_preset_index,
+            view_gizmo_visual_preset_index,
             theme_preset_index: 0,
             op_mask_enabled: false,
             op_mask_preset_index: 0,
@@ -2287,6 +2310,31 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 let _ = state.demo.update(app, |m, _cx| {
                     m.theme_preset_index = next_index;
                     apply_viewport_gizmo_theme(&theme, m);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyG,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+
+                    if modifiers.shift {
+                        m.view_gizmo_visual_preset_index = (m.view_gizmo_visual_preset_index + 1)
+                            % ViewGizmoVisualPreset::ALL.len();
+                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
+                            .apply_to_config(&mut m.view_gizmo.config);
+                    } else {
+                        m.gizmo_visual_preset_index =
+                            (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
+                        GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
+                            .apply_to_config(&mut m.gizmo.config);
+                    }
                 });
                 app.request_redraw(window);
             }

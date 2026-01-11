@@ -9,6 +9,7 @@
 mod gizmo;
 mod grid;
 mod math;
+mod style;
 mod view_gizmo;
 
 pub use gizmo::{
@@ -22,6 +23,7 @@ pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,
 };
+pub use style::{GizmoVisualPreset, ViewGizmoVisualPreset};
 pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
