@@ -210,6 +210,7 @@ impl ChartMultiAxisDemoDriver {
                 },
             ],
             axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: delinea::ids::SeriesId::new(1),

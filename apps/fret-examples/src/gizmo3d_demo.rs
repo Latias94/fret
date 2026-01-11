@@ -26,10 +26,12 @@ use fret_render::viewport_overlay::{
 use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
+use fret_ui::{Theme, ThemeConfig};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
 use std::collections::HashMap;
 use std::fmt::Write as _;
+use std::fs;
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt as _;
@@ -842,6 +844,7 @@ struct Gizmo3dDemoModel {
     viewport_px: (u32, u32),
     gizmo: Gizmo,
     view_gizmo: ViewGizmo,
+    theme_preset_index: usize,
     op_mask_enabled: bool,
     op_mask_preset_index: usize,
     show_help: bool,
@@ -900,6 +903,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
         out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
         out.push_str("  O: toggle depth mode (depth test / on top)\n");
+        out.push_str("  Y: cycle theme (Fret/Godot/HardHacker)\n");
         out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
@@ -924,6 +928,10 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Gizmo: depth_mode={:?}\n",
             self.gizmo.config.depth_mode
+        ));
+        out.push_str(&format!(
+            "Theme preset: {}\n",
+            DEMO_THEME_PRESETS[self.theme_preset_index % DEMO_THEME_PRESETS.len()].0
         ));
 
         if self.op_mask_enabled {
@@ -1002,6 +1010,7 @@ impl Default for Gizmo3dDemoModel {
             viewport_px: (960, 540),
             gizmo: Gizmo::new(gizmo_cfg),
             view_gizmo,
+            theme_preset_index: 0,
             op_mask_enabled: false,
             op_mask_preset_index: 0,
             show_help: true,
@@ -1027,6 +1036,24 @@ impl Default for Gizmo3dDemoModel {
             hud: GizmoHudState::default(),
         }
     }
+}
+
+const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
+    ("Fret Default", "themes/fret-default-dark.json"),
+    ("Godot Default", "themes/godot-default-dark.json"),
+    ("HardHacker", "themes/hardhacker-dark.json"),
+];
+
+fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
+    model.gizmo.config.x_color = theme.color_required("color.viewport.gizmo.x");
+    model.gizmo.config.y_color = theme.color_required("color.viewport.gizmo.y");
+    model.gizmo.config.z_color = theme.color_required("color.viewport.gizmo.z");
+    model.gizmo.config.hover_color = theme.color_required("color.viewport.gizmo.hover");
+
+    model.view_gizmo.config.x_color = model.gizmo.config.x_color;
+    model.view_gizmo.config.y_color = model.gizmo.config.y_color;
+    model.view_gizmo.config.z_color = model.gizmo.config.z_color;
+    model.view_gizmo.config.hover_color = model.gizmo.config.hover_color;
 }
 
 #[derive(Default)]
@@ -1129,6 +1156,10 @@ impl Gizmo3dDemoDriver {
         });
 
         let demo = app.models_mut().insert(Gizmo3dDemoModel::default());
+        let theme = Theme::global(&*app).clone();
+        let _ = demo.update(app, |m, _cx| {
+            apply_viewport_gizmo_theme(&theme, m);
+        });
 
         app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
             svc.per_window.insert(window, demo.clone());
@@ -2189,6 +2220,41 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         DepthMode::Test => DepthMode::Always,
                         DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
                     };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyY,
+                repeat: false,
+                ..
+            } => {
+                let mut next_index: Option<usize> = None;
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    let idx = (m.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
+                    next_index = Some(idx);
+                });
+
+                let Some(next_index) = next_index else {
+                    return;
+                };
+                let (_name, path) = DEMO_THEME_PRESETS[next_index];
+
+                let Some(bytes) = fs::read(path).ok() else {
+                    return;
+                };
+                let Ok(cfg) = ThemeConfig::from_slice(&bytes) else {
+                    return;
+                };
+
+                Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+
+                let theme = Theme::global(&*app).clone();
+                let _ = state.demo.update(app, |m, _cx| {
+                    m.theme_preset_index = next_index;
+                    apply_viewport_gizmo_theme(&theme, m);
                 });
                 app.request_redraw(window);
             }
