@@ -6384,10 +6384,32 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                 } else if snapshot.interaction.pan_on_scroll {
+                    let mode = snapshot.interaction.pan_on_scroll_mode;
                     let speed = snapshot.interaction.pan_on_scroll_speed.max(0.0);
+                    let dy_for_shift = delta.y.0;
+
+                    let mut dx = delta.x.0;
+                    let mut dy = delta.y.0;
+                    match mode {
+                        crate::io::NodeGraphPanOnScrollMode::Free => {}
+                        crate::io::NodeGraphPanOnScrollMode::Horizontal => {
+                            dy = 0.0;
+                        }
+                        crate::io::NodeGraphPanOnScrollMode::Vertical => {
+                            dx = 0.0;
+                        }
+                    }
+
+                    if cx.input_ctx.platform != fret_runtime::Platform::Macos
+                        && modifiers.shift
+                        && !matches!(mode, crate::io::NodeGraphPanOnScrollMode::Vertical)
+                    {
+                        dx = dy_for_shift;
+                        dy = 0.0;
+                    }
                     self.update_view_state(cx.app, |s| {
-                        s.pan.x += delta.x.0 * speed;
-                        s.pan.y += delta.y.0 * speed;
+                        s.pan.x += dx * speed;
+                        s.pan.y += dy * speed;
                     });
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
@@ -7945,6 +7967,94 @@ mod tests {
         );
         assert!(!canvas.interaction.space_pan_held);
         assert_eq!(canvas.history.undo_len(), 0);
+    }
+
+    #[test]
+    fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.pan_on_scroll = true;
+            s.interaction.pan_on_scroll_speed = 1.0;
+            s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Horizontal;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let before = canvas.sync_view_state(cx.app).pan;
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(0.0), Px(0.0)),
+                delta: Point::new(Px(0.0), Px(120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let after = canvas.sync_view_state(cx.app).pan;
+        assert_eq!(before, after);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(0.0), Px(0.0)),
+                delta: Point::new(Px(80.0), Px(0.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let after2 = canvas.sync_view_state(cx.app).pan;
+        assert!((after2.x - after.x - 80.0).abs() <= 1.0e-3);
+        assert!((after2.y - after.y).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.pan_on_scroll = true;
+            s.interaction.pan_on_scroll_speed = 1.0;
+            s.interaction.pan_on_scroll_mode = crate::io::NodeGraphPanOnScrollMode::Free;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+        cx.input_ctx.platform = fret_runtime::Platform::Windows;
+
+        let before = canvas.sync_view_state(cx.app).pan;
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Wheel {
+                position: Point::new(Px(0.0), Px(0.0)),
+                delta: Point::new(Px(0.0), Px(120.0)),
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Modifiers::default()
+                },
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let after = canvas.sync_view_state(cx.app).pan;
+        assert!((after.x - before.x - 120.0).abs() <= 1.0e-3);
+        assert!((after.y - before.y).abs() <= 1.0e-3);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{

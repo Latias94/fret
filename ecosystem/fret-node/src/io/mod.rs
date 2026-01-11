@@ -371,6 +371,15 @@ fn default_pan_on_drag_buttons() -> NodeGraphPanOnDragButtons {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphPanOnScrollMode {
+    #[default]
+    Free,
+    Horizontal,
+    Vertical,
+}
+
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
@@ -452,6 +461,10 @@ pub struct NodeGraphInteractionState {
     /// Wheel panning speed multiplier.
     #[serde(default = "default_pan_on_scroll_speed")]
     pub pan_on_scroll_speed: f32,
+
+    /// Limits the direction of panning when `pan_on_scroll` is enabled (XyFlow `panOnScrollMode`).
+    #[serde(default)]
+    pub pan_on_scroll_mode: NodeGraphPanOnScrollMode,
 
     /// Optional inertial panning when finishing a pan gesture.
     #[serde(default)]
@@ -543,6 +556,7 @@ impl Default for NodeGraphInteractionState {
             selection_on_drag: false,
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
+            pan_on_scroll_mode: NodeGraphPanOnScrollMode::default(),
             pan_inertia: NodeGraphPanInertiaTuning::default(),
             zoom_on_scroll: default_zoom_on_scroll(),
             zoom_on_scroll_speed: default_zoom_on_scroll_speed(),
