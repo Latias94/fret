@@ -199,12 +199,18 @@ single “at a glance” view of:
   - explicit policies per series kind (line vs scatter vs bar),
   - a benchmark/conformance harness that locks frame-time and visual invariants.
 
-**S9 — Append/update semantics (`appendData`)** (`[ ]`)
+**S9 — Append/update semantics (`appendData`)** (`[~]`)
 
 - ECharts reference: `appendData` and incremental updates on `DataStore`
 - ADR(s): likely an ADR 0140 follow-up (dataset store contract expansion) once we commit to a stable surface
-- Missing vs ECharts:
-  - a durable contract for incremental ingestion that preserves raw index identity and supports progressive rendering.
+- ADR(s): `docs/adr/0140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
+- Evidence:
+  - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
+  - `ecosystem/delinea/src/engine/stages/data_view.rs` (revision-gated invalidation; rebuild under budget)
+- Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
+- Missing vs ECharts (high value):
+  - explicit “append vs replace” mutation taxonomy at the dataset API boundary (so stages can do incremental extension safely),
+  - append-aware incremental rebuild for index caches when the selection is `All` (avoid rescanning the full dataset).
 
 ### Active axis selection and routing
 
@@ -384,7 +390,7 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
     `crates/fret-ui/src/tree/paint.rs` (clears stale paint cache entries when caching is disabled for a node).
 - `[x]` No per-frame allocations in core stages (target; enforce via tests/benchmarks over time).
 - `[~]` Series-specific LOD / downsampling strategies (scatter vs line vs bar) (needs a conformance harness).
-- `[ ]` Append/update semantics (ECharts `appendData`) (deferred; likely needs dataset storage contract work).
+- `[~]` Append/update semantics (ECharts `appendData`) (append-only APIs exist; incremental cache extension still pending).
 
 ### Styling & theming
 
