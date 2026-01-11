@@ -227,6 +227,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - [x] `panOnDrag` button set: `NodeGraphInteractionState.pan_on_drag`
       - [x] `selectionOnDrag` (selection box without Shift): `NodeGraphInteractionState.selection_on_drag`
       - [~] touch / trackpad gesture parity still TBD, but inertial pan is available as an opt-in tuning (`pan_inertia.enabled`).
+    - right click pan semantics:
+      - when `pan_on_drag.right = true`, right-button drag pans the canvas and suppresses context menu.
+      - a context menu opens only on a "right click" (no drag beyond click distance), on pointer-up.
     - Implementation detail: `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event positions are in the widget's local (canvas) coordinates and change as pan changes.
       Panning deltas must be computed in a stable coordinate space (screen/global) to avoid feedback jitter.
       See `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (`pan_last_screen_pos` sampling).

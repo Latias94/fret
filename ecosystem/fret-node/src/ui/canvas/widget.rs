@@ -6146,6 +6146,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if *button == MouseButton::Right {
                     cancel::cancel_active_gestures(self, cx);
+                    if snapshot.interaction.pan_on_drag.right {
+                        self.interaction.pending_right_click =
+                            Some(super::state::PendingRightClick {
+                                start_pos: *position,
+                            });
+                        cx.capture_pointer(cx.node);
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
                 }
 
                 if sticky_wire::handle_sticky_wire_pointer_down(
@@ -6210,6 +6220,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let should_end = match self.interaction.panning_button {
                         Some(fret_core::MouseButton::Middle) => !buttons.middle,
                         Some(fret_core::MouseButton::Left) => !buttons.left,
+                        Some(fret_core::MouseButton::Right) => !buttons.right,
                         _ => false,
                     };
                     if should_end {
@@ -6227,6 +6238,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             1,
                             *modifiers,
                             snapshot.zoom,
+                        );
+                        return;
+                    }
+                }
+
+                if snapshot.interaction.pan_on_drag.right
+                    && buttons.right
+                    && self.interaction.panning_button.is_none()
+                    && let Some(pending) = self.interaction.pending_right_click
+                {
+                    let click_distance = snapshot.interaction.node_click_distance.max(0.0);
+                    let threshold = click_distance / zoom;
+                    let dx = position.x.0 - pending.start_pos.x.0;
+                    let dy = position.y.0 - pending.start_pos.y.0;
+                    if click_distance == 0.0 || (dx * dx + dy * dy) > threshold * threshold {
+                        self.interaction.pending_right_click = None;
+                        let _ = pan_zoom::begin_panning(
+                            self,
+                            cx,
+                            &snapshot,
+                            *position,
+                            fret_core::MouseButton::Right,
                         );
                         return;
                     }
@@ -6346,6 +6379,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 click_count,
                 ..
             }) => {
+                if *button == MouseButton::Right
+                    && snapshot.interaction.pan_on_drag.right
+                    && let Some(pending) = self.interaction.pending_right_click.take()
+                {
+                    let click_distance = snapshot.interaction.node_click_distance.max(0.0);
+                    let threshold = click_distance / zoom;
+                    let dx = position.x.0 - pending.start_pos.x.0;
+                    let dy = position.y.0 - pending.start_pos.y.0;
+                    let is_click =
+                        click_distance == 0.0 || (dx * dx + dy * dy) <= threshold * threshold;
+
+                    self.interaction.last_modifiers = *modifiers;
+                    cx.release_pointer_capture();
+                    if is_click {
+                        right_click::handle_right_click_pointer_down(
+                            self, cx, &snapshot, *position, zoom,
+                        );
+                    }
+                    return;
+                }
                 if pointer_up::handle_pointer_up(
                     self,
                     cx,

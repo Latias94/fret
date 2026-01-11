@@ -549,3 +549,148 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
     assert!(canvas.interaction.wire_drag.is_none());
     assert!(canvas.interaction.context_menu.is_some());
 }
+
+#[test]
+fn right_pan_defers_context_menu_until_pointer_up() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.pan_on_drag.right = true;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let pos = Point::new(Px(400.0), Px(300.0));
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(canvas.interaction.context_menu.is_none());
+    assert!(canvas.interaction.pending_right_click.is_some());
+
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(canvas.interaction.context_menu.is_some());
+}
+
+#[test]
+fn right_pan_drag_does_not_open_context_menu() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.pan_on_drag.right = true;
+        s.interaction.pan_on_scroll = false;
+        s.interaction.node_click_distance = 2.0;
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    let mut snapshot = canvas.sync_view_state(cx.app);
+    let start_screen = Point::new(Px(100.0), Px(100.0));
+    let start_local = start_screen;
+
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: start_local,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    // Exceed click distance so we start panning on the next move.
+    let first_screen = Point::new(Px(110.0), Px(100.0));
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: first_screen,
+            buttons: MouseButtons {
+                right: true,
+                ..MouseButtons::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(canvas.interaction.panning);
+
+    // Now pan should apply on subsequent moves; provide local positions matching stable screen
+    // motion under render_transform.
+    let screen_positions = [
+        Point::new(Px(110.0), Px(100.0)),
+        Point::new(Px(160.0), Px(100.0)),
+    ];
+    for screen in screen_positions {
+        let zoom = snapshot.zoom;
+        let pan = snapshot.pan;
+        let local = Point::new(
+            Px((screen.x.0 - bounds.origin.x.0) / zoom - pan.x),
+            Px((screen.y.0 - bounds.origin.y.0) / zoom - pan.y),
+        );
+        canvas.event(
+            &mut cx,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: local,
+                buttons: MouseButtons {
+                    right: true,
+                    ..MouseButtons::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        snapshot = canvas.sync_view_state(cx.app);
+    }
+
+    assert!(snapshot.pan.x.abs() > 0.1);
+
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(0.0), Px(0.0)),
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(canvas.interaction.context_menu.is_none());
+    assert_eq!(canvas.history.undo_len(), 0);
+}

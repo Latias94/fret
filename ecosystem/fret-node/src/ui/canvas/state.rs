@@ -31,6 +31,7 @@ pub(crate) struct InteractionState {
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) space_pan_held: bool,
+    pub(crate) pending_right_click: Option<PendingRightClick>,
     pub(crate) panning: bool,
     pub(crate) panning_button: Option<MouseButton>,
     /// Last pointer sample in screen space (stable while pan/zoom changes).
@@ -84,6 +85,11 @@ pub(crate) struct InteractionState {
     pub(crate) sticky_wire_ignore_next_up: bool,
 
     pub(crate) recent_kinds: Vec<NodeKindKey>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PendingRightClick {
+    pub(crate) start_pos: Point,
 }
 
 #[derive(Debug, Clone, Copy)]

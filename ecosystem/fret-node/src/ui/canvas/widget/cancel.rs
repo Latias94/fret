@@ -58,6 +58,9 @@ fn cancel_active_gestures_inner<H: UiHost>(
     if canvas.interaction.suspended_wire_drag.take().is_some() {
         canceled = true;
     }
+    if canvas.interaction.pending_right_click.take().is_some() {
+        canceled = true;
+    }
     if canvas.interaction.sticky_wire || canvas.interaction.sticky_wire_ignore_next_up {
         canvas.interaction.sticky_wire = false;
         canvas.interaction.sticky_wire_ignore_next_up = false;
