@@ -150,6 +150,10 @@ pub struct ViewGizmoConfig {
     pub drag_threshold_px: f32,
     /// Orbit sensitivity expressed in radians per pixel.
     pub orbit_sensitivity_radians_per_px: f32,
+    /// Radius of the center "projection toggle" button in pixels.
+    ///
+    /// Clicking this toggles perspective/orthographic in the host (ImGuizmo-style behavior).
+    pub center_button_radius_px: f32,
     /// Depth range convention used by the camera projection.
     pub depth_range: DepthRange,
     /// Unprojected depth used to place the gizmo in front of the camera (`[0, 1]`).
@@ -172,6 +176,7 @@ impl Default for ViewGizmoConfig {
             snap_feature_threshold: 0.78,
             drag_threshold_px: 3.0,
             orbit_sensitivity_radians_per_px: 0.008,
+            center_button_radius_px: 12.0,
             depth_range: DepthRange::ZeroToOne,
             z01: 0.08,
             face_color: Color {
@@ -226,11 +231,13 @@ pub struct ViewGizmoInput {
 pub enum ViewGizmoUpdate {
     HoverChanged {
         hovered: Option<ViewGizmoSnap>,
+        center_button_hovered: bool,
     },
     OrbitDelta {
         delta_yaw_radians: f32,
         delta_pitch_radians: f32,
     },
+    ToggleProjection,
     SnapView {
         snap: ViewGizmoSnap,
         view_dir: Vec3,
@@ -238,15 +245,22 @@ pub enum ViewGizmoUpdate {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ViewGizmoDragAction {
+    ToggleProjection,
+    Snap(ViewGizmoSnap),
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct ViewGizmoState {
     pub hovered: Option<ViewGizmoSnap>,
+    pub hovered_center_button: bool,
     pub drag_active: bool,
     pub drag_orbiting: bool,
     pub drag_start_cursor_px: Vec2,
     pub drag_last_cursor_px: Vec2,
     pub drag_total_delta_px: Vec2,
-    pub drag_start_snap: Option<ViewGizmoSnap>,
+    drag_action: Option<ViewGizmoDragAction>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -270,17 +284,33 @@ impl ViewGizmo {
         input: ViewGizmoInput,
     ) -> Option<ViewGizmoUpdate> {
         let threshold_px = self.config.drag_threshold_px.max(0.0);
+        let center_px = self.anchor_center_px(viewport, self.config.size_px.max(1.0));
+        let center_radius_px = self.config.center_button_radius_px;
+        let center_button_hovered = center_radius_px > 0.0
+            && input.hovered
+            && (input.cursor_px - center_px).length() <= center_radius_px;
 
         if input.drag_started && input.dragging && input.hovered {
-            if let Some(snap) = self.pick_snap(view_projection, viewport, input.cursor_px) {
+            let action = if center_button_hovered {
+                Some(ViewGizmoDragAction::ToggleProjection)
+            } else {
+                self.pick_snap(view_projection, viewport, input.cursor_px)
+                    .map(ViewGizmoDragAction::Snap)
+            };
+
+            if let Some(action) = action {
                 self.state.drag_active = true;
                 self.state.drag_orbiting = false;
                 self.state.drag_start_cursor_px = input.cursor_px;
                 self.state.drag_last_cursor_px = input.cursor_px;
                 self.state.drag_total_delta_px = Vec2::ZERO;
-                self.state.drag_start_snap = Some(snap);
+                self.state.drag_action = Some(action);
                 self.state.hovered = None;
-                return Some(ViewGizmoUpdate::HoverChanged { hovered: None });
+                self.state.hovered_center_button = false;
+                return Some(ViewGizmoUpdate::HoverChanged {
+                    hovered: None,
+                    center_button_hovered: false,
+                });
             }
         }
 
@@ -308,31 +338,44 @@ impl ViewGizmo {
 
         if drag_ended {
             let click = self.state.drag_total_delta_px.length() < threshold_px;
-            let snap = self.state.drag_start_snap;
+            let action = self.state.drag_action;
             self.state.drag_active = false;
             self.state.drag_orbiting = false;
-            self.state.drag_start_snap = None;
+            self.state.drag_action = None;
 
             if click {
-                if let Some(snap) = snap {
-                    return Some(ViewGizmoUpdate::SnapView {
-                        snap,
-                        view_dir: snap.view_dir_vec3(),
-                        up: snap.up_vec3(),
-                    });
+                match action {
+                    Some(ViewGizmoDragAction::ToggleProjection) => {
+                        return Some(ViewGizmoUpdate::ToggleProjection);
+                    }
+                    Some(ViewGizmoDragAction::Snap(snap)) => {
+                        return Some(ViewGizmoUpdate::SnapView {
+                            snap,
+                            view_dir: snap.view_dir_vec3(),
+                            up: snap.up_vec3(),
+                        });
+                    }
+                    None => {}
                 }
             }
         }
 
         let prev_hover = self.state.hovered;
-        let hovered = if input.hovered {
+        let prev_center = self.state.hovered_center_button;
+        let hovered = if input.hovered && !center_button_hovered {
             self.pick_snap(view_projection, viewport, input.cursor_px)
         } else {
             None
         };
         self.state.hovered = hovered;
+        self.state.hovered_center_button = center_button_hovered;
 
-        (prev_hover != hovered).then_some(ViewGizmoUpdate::HoverChanged { hovered })
+        (prev_hover != hovered || prev_center != center_button_hovered).then_some(
+            ViewGizmoUpdate::HoverChanged {
+                hovered,
+                center_button_hovered,
+            },
+        )
     }
 
     pub fn draw(&self, view_projection: Mat4, viewport: ViewportRect) -> GizmoDrawList3d {
@@ -356,9 +399,23 @@ impl ViewGizmo {
         let face_color = self.config.face_color;
         out.triangles.extend(cube_faces(corners, face_color));
 
-        if let Some(face) = self.state.hovered.and_then(|s| s.face()) {
-            out.triangles
-                .extend(hover_face(corners, face, self.config.hover_color));
+        if let Some(snap) = self.state.hovered {
+            for face in faces_for_snap(snap) {
+                out.triangles
+                    .extend(hover_face(corners, face, self.config.hover_color));
+            }
+        }
+
+        if self.config.center_button_radius_px > 0.0 {
+            let center_button_color = if self.state.hovered_center_button {
+                self.config.hover_color
+            } else {
+                self.config.edge_color
+            };
+            out.lines.extend(cube_edges(
+                cube_corners(center, half * 0.28),
+                center_button_color,
+            ));
         }
 
         for l in &mut out.lines {
@@ -584,6 +641,49 @@ fn hover_face(corners: [Vec3; 8], face: ViewGizmoFace, color: Color) -> Vec<Tria
     ]
 }
 
+fn faces_for_snap(snap: ViewGizmoSnap) -> Vec<ViewGizmoFace> {
+    let local = [-snap.view_dir[0], -snap.view_dir[1], -snap.view_dir[2]];
+    let mut out = Vec::with_capacity(3);
+
+    let face_for = |axis: usize, sign: i8| -> Option<ViewGizmoFace> {
+        if sign == 0 {
+            return None;
+        }
+        match axis {
+            0 => Some(if sign > 0 {
+                ViewGizmoFace::PosX
+            } else {
+                ViewGizmoFace::NegX
+            }),
+            1 => Some(if sign > 0 {
+                ViewGizmoFace::PosY
+            } else {
+                ViewGizmoFace::NegY
+            }),
+            2 => Some(if sign > 0 {
+                ViewGizmoFace::PosZ
+            } else {
+                ViewGizmoFace::NegZ
+            }),
+            _ => None,
+        }
+    };
+
+    for axis in 0..3 {
+        if let Some(face) = face_for(axis, local[axis]) {
+            out.push(face);
+        }
+    }
+
+    if out.is_empty() {
+        if let Some(face) = snap.face() {
+            out.push(face);
+        }
+    }
+
+    out
+}
+
 fn ray_aabb_intersect(origin: Vec3, dir: Vec3, aabb: Aabb3) -> Option<f32> {
     let mut tmin = 0.0;
     let mut tmax = f32::INFINITY;
@@ -704,6 +804,7 @@ mod tests {
     fn view_gizmo_hover_picks_front_face_for_axis_cameras() {
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let mut gizmo = centered_gizmo(vp);
+        gizmo.config.center_button_radius_px = 0.0;
 
         let eyes = [
             Vec3::new(5.0, 0.0, 0.0),
@@ -744,6 +845,7 @@ mod tests {
     fn view_gizmo_click_emits_snap_view() {
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let mut gizmo = centered_gizmo(vp);
+        gizmo.config.center_button_radius_px = 0.0;
 
         let eye = Vec3::new(0.0, 0.0, 5.0);
         let view_proj = test_view_projection((800.0, 600.0), eye);
@@ -774,6 +876,74 @@ mod tests {
             }
             _ => panic!("expected SnapView"),
         };
+    }
+
+    #[test]
+    fn view_gizmo_click_center_emits_toggle_projection() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let mut gizmo = centered_gizmo(vp);
+        gizmo.config.center_button_radius_px = 32.0;
+
+        let eye = Vec3::new(0.0, 0.0, 5.0);
+        let view_proj = test_view_projection((800.0, 600.0), eye);
+        let cursor = Vec2::new(400.0, 300.0);
+
+        let input_down = ViewGizmoInput {
+            cursor_px: cursor,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down);
+
+        let input_up = ViewGizmoInput {
+            cursor_px: cursor,
+            hovered: true,
+            drag_started: false,
+            dragging: false,
+        };
+        let update = gizmo.update(view_proj, vp, input_up).unwrap();
+        assert!(matches!(update, ViewGizmoUpdate::ToggleProjection));
+    }
+
+    #[test]
+    fn view_gizmo_drag_emits_orbit_delta() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let mut gizmo = centered_gizmo(vp);
+        gizmo.config.center_button_radius_px = 0.0;
+        gizmo.config.drag_threshold_px = 0.0;
+        gizmo.config.orbit_sensitivity_radians_per_px = 0.01;
+
+        let eye = Vec3::new(0.0, 0.0, 5.0);
+        let view_proj = test_view_projection((800.0, 600.0), eye);
+        let cursor = Vec2::new(400.0, 300.0);
+
+        let input_down = ViewGizmoInput {
+            cursor_px: cursor,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down);
+
+        let moved_cursor = cursor + Vec2::new(10.0, -5.0);
+        let input_move = ViewGizmoInput {
+            cursor_px: moved_cursor,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+        };
+        let update = gizmo.update(view_proj, vp, input_move).unwrap();
+        match update {
+            ViewGizmoUpdate::OrbitDelta {
+                delta_yaw_radians,
+                delta_pitch_radians,
+            } => {
+                assert!((delta_yaw_radians - (-0.1)).abs() < 1e-6);
+                assert!((delta_pitch_radians - 0.05).abs() < 1e-6);
+            }
+            _ => panic!("expected OrbitDelta"),
+        }
     }
 
     #[test]
