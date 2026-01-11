@@ -1,0 +1,239 @@
+//! Viewport surface helpers (Tier A embedding).
+//!
+//! This module provides a reusable declarative wrapper that:
+//! - composites an app-owned `RenderTargetId` into the UI tree (ADR 0007),
+//! - forwards pointer + wheel input as `Effect::ViewportInput` (ADR 0025 / ADR 0121),
+//! - keeps mapping semantics consistent with `ViewportMapping` (contain/cover/stretch).
+
+use std::sync::Arc;
+
+use fret_core::{
+    MouseButton, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind,
+    ViewportMapping,
+};
+use fret_runtime::{Effect, Model};
+use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
+use fret_ui::element::{AnyElement, Length, PointerRegionProps};
+use fret_ui::{ElementContext, UiHost};
+
+use super::controllable_state::use_controllable_model;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ViewportSurfacePanelProps {
+    pub target: RenderTargetId,
+    pub target_px_size: (u32, u32),
+    pub fit: ViewportFit,
+    pub opacity: f32,
+    /// When enabled, forwards pointer + wheel events as `Effect::ViewportInput`.
+    pub forward_input: bool,
+}
+
+impl Default for ViewportSurfacePanelProps {
+    fn default() -> Self {
+        Self {
+            target: RenderTargetId::default(),
+            target_px_size: (1, 1),
+            fit: ViewportFit::Stretch,
+            opacity: 1.0,
+            forward_input: true,
+        }
+    }
+}
+
+fn mapping_for(host_bounds: fret_core::Rect, props: ViewportSurfacePanelProps) -> ViewportMapping {
+    ViewportMapping {
+        content_rect: host_bounds,
+        target_px_size: props.target_px_size,
+        fit: props.fit,
+    }
+}
+
+fn push_viewport_input(
+    host: &mut dyn fret_ui::action::UiPointerActionHost,
+    window: fret_core::AppWindowId,
+    props: ViewportSurfacePanelProps,
+    position: fret_core::Point,
+    kind: ViewportInputKind,
+    clamped: bool,
+) -> bool {
+    let mapping = mapping_for(host.bounds(), props);
+    let (uv, target_px) = if clamped {
+        (
+            mapping.window_point_to_uv_clamped(position),
+            mapping.window_point_to_target_px_clamped(position),
+        )
+    } else {
+        let Some(uv) = mapping.window_point_to_uv(position) else {
+            return false;
+        };
+        let Some(target_px) = mapping.window_point_to_target_px(position) else {
+            return false;
+        };
+        (uv, target_px)
+    };
+
+    host.push_effect(Effect::ViewportInput(ViewportInputEvent {
+        window,
+        target: props.target,
+        uv,
+        target_px,
+        kind,
+    }));
+    true
+}
+
+#[track_caller]
+pub fn viewport_surface_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: ViewportSurfacePanelProps,
+) -> AnyElement {
+    let capture_button: Model<Option<MouseButton>> =
+        use_controllable_model(cx, None::<Model<Option<MouseButton>>>, || None).model();
+
+    let props_c = props;
+    let capture_button_c = capture_button.clone();
+    let on_down: OnPointerDown = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              down: fret_ui::action::PointerDownCx| {
+            if !props_c.forward_input {
+                return false;
+            }
+
+            let ok = push_viewport_input(
+                host,
+                action_cx.window,
+                props_c,
+                down.position,
+                ViewportInputKind::PointerDown {
+                    button: down.button,
+                    modifiers: down.modifiers,
+                    click_count: down.click_count,
+                },
+                false,
+            );
+            if !ok {
+                return false;
+            }
+
+            host.capture_pointer();
+            let _ = host
+                .models_mut()
+                .update(&capture_button_c, |b| *b = Some(down.button));
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
+    let props_c = props;
+    let capture_button_c = capture_button.clone();
+    let on_move: OnPointerMove = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              mv: fret_ui::action::PointerMoveCx| {
+            if !props_c.forward_input {
+                return false;
+            }
+
+            let captured = host
+                .models_mut()
+                .read(&capture_button_c, |b| *b)
+                .ok()
+                .flatten()
+                .is_some();
+
+            push_viewport_input(
+                host,
+                action_cx.window,
+                props_c,
+                mv.position,
+                ViewportInputKind::PointerMove {
+                    buttons: mv.buttons,
+                    modifiers: mv.modifiers,
+                },
+                captured,
+            )
+        },
+    );
+
+    let props_c = props;
+    let capture_button_c = capture_button.clone();
+    let on_up: OnPointerUp = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              up: fret_ui::action::PointerUpCx| {
+            if !props_c.forward_input {
+                return false;
+            }
+
+            let captured_button = host
+                .models_mut()
+                .read(&capture_button_c, |b| *b)
+                .ok()
+                .flatten();
+
+            let clamped = captured_button.is_some();
+            let ok = push_viewport_input(
+                host,
+                action_cx.window,
+                props_c,
+                up.position,
+                ViewportInputKind::PointerUp {
+                    button: up.button,
+                    modifiers: up.modifiers,
+                    click_count: up.click_count,
+                },
+                clamped,
+            );
+
+            if clamped {
+                host.release_pointer_capture();
+            }
+            let _ = host.models_mut().update(&capture_button_c, |b| *b = None);
+            if clamped {
+                host.request_redraw(action_cx.window);
+            }
+            ok
+        },
+    );
+
+    let props_c = props;
+    let on_wheel: OnWheel = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              wheel: fret_ui::action::WheelCx| {
+            if !props_c.forward_input {
+                return false;
+            }
+
+            push_viewport_input(
+                host,
+                action_cx.window,
+                props_c,
+                wheel.position,
+                ViewportInputKind::Wheel {
+                    delta: wheel.delta,
+                    modifiers: wheel.modifiers,
+                },
+                false,
+            )
+        },
+    );
+
+    let mut region = PointerRegionProps::default();
+    region.layout.size.width = Length::Fill;
+    region.layout.size.height = Length::Fill;
+
+    cx.pointer_region(region, |cx| {
+        cx.pointer_region_on_pointer_down(on_down);
+        cx.pointer_region_on_pointer_move(on_move);
+        cx.pointer_region_on_pointer_up(on_up);
+        cx.pointer_region_on_wheel(on_wheel);
+
+        let mut props2 = fret_ui::element::ViewportSurfaceProps::new(props.target);
+        props2.target_px_size = props.target_px_size;
+        props2.fit = props.fit;
+        props2.opacity = props.opacity;
+        vec![cx.viewport_surface_props(props2)]
+    })
+}

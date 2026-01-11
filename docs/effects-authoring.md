@@ -152,6 +152,9 @@ If your "component" wants to do substantial rendering work (custom shaders, vide
 - Present it in the UI via `SceneOp::ViewportSurface` (or `cx.viewport_surface(...)` in declarative trees).
 - Keep `wgpu::Device/Queue` ownership centralized in the runner (ADR 0038).
 
+If you also need to forward pointer + wheel input into the viewport (e.g. engine panels), use
+`fret-ui-kit`'s `viewport_surface_panel` helper: `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`.
+
 This keeps the UI contracts deterministic and portable, while still enabling advanced GPU workloads.
 
 ## Debugging and profiling
