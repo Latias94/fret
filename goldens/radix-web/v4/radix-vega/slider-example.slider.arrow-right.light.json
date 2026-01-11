@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -88,7 +94,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -103,7 +110,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -119,7 +127,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -157,6 +166,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },
@@ -179,7 +189,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -190,7 +202,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -204,7 +218,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -219,7 +234,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -235,7 +251,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -273,6 +290,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-label": "Minimum",
                                             "aria-valuenow": "25"
@@ -313,6 +331,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-label": "Maximum",
                                             "aria-valuenow": "50"
@@ -336,7 +355,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -347,7 +368,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -361,7 +384,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -376,7 +400,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -392,7 +417,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -431,6 +457,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "10"
                                           },
@@ -471,6 +498,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "20"
                                           },
@@ -511,6 +539,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "70"
                                           },
@@ -533,7 +562,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -544,7 +575,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -571,7 +604,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "vertical",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -587,7 +621,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "vertical"
+                                            "data-orientation": "vertical",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -604,7 +639,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "vertical"
+                                                "data-orientation": "vertical",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -644,6 +680,7 @@
                                                 "aria-orientation": "vertical",
                                                 "data-orientation": "vertical",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "50"
                                               },
@@ -666,7 +703,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "vertical",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -682,7 +720,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "vertical"
+                                            "data-orientation": "vertical",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -699,7 +738,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "vertical"
+                                                "data-orientation": "vertical",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -739,6 +779,7 @@
                                                 "aria-orientation": "vertical",
                                                 "data-orientation": "vertical",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "25"
                                               },
@@ -763,7 +804,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -774,7 +817,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -789,6 +834,40 @@
                                   "attrs": {},
                                   "children": [
                                     {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Temperature"
+                                        }
+                                      ],
+                                      "text": "Temperature0.3, 0.7"
+                                    },
+                                    {
                                       "tag": "span",
                                       "path": [
                                         2,
@@ -801,7 +880,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "horizontal",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -817,7 +897,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -834,7 +915,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "horizontal"
+                                                "data-orientation": "horizontal",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -874,6 +956,7 @@
                                                 "aria-orientation": "horizontal",
                                                 "data-orientation": "horizontal",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-label": "Minimum",
                                                 "aria-valuenow": "0.3"
@@ -916,6 +999,7 @@
                                                 "aria-orientation": "horizontal",
                                                 "data-orientation": "horizontal",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-label": "Maximum",
                                                 "aria-valuenow": "0.7"
@@ -943,7 +1027,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -954,7 +1040,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -969,7 +1057,8 @@
                                   "attrs": {
                                     "data-orientation": "horizontal",
                                     "aria-disabled": "true",
-                                    "data-disabled": ""
+                                    "data-disabled": "",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -985,7 +1074,8 @@
                                       ],
                                       "attrs": {
                                         "data-disabled": "",
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -1002,7 +1092,8 @@
                                           ],
                                           "attrs": {
                                             "data-orientation": "horizontal",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -1040,6 +1131,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "data-disabled": "",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },
@@ -1247,6 +1339,7 @@
             "aria-orientation": "horizontal",
             "data-orientation": "horizontal",
             "tabindex": "0",
+            "data-slot": "slider-thumb",
             "data-radix-collection-item": "",
             "aria-valuenow": "52"
           }
@@ -1278,7 +1371,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1288,7 +1383,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1299,7 +1396,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1313,7 +1412,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -1328,7 +1428,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -1344,7 +1445,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -1382,6 +1484,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "52"
                                           },
@@ -1404,7 +1507,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1415,7 +1520,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1429,7 +1536,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -1444,7 +1552,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -1460,7 +1569,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -1498,6 +1608,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-label": "Minimum",
                                             "aria-valuenow": "25"
@@ -1538,6 +1649,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-label": "Maximum",
                                             "aria-valuenow": "50"
@@ -1561,7 +1673,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1572,7 +1686,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -1586,7 +1702,8 @@
                                   ],
                                   "attrs": {
                                     "data-orientation": "horizontal",
-                                    "aria-disabled": "false"
+                                    "aria-disabled": "false",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -1601,7 +1718,8 @@
                                         0
                                       ],
                                       "attrs": {
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -1617,7 +1735,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -1656,6 +1775,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "10"
                                           },
@@ -1696,6 +1816,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "20"
                                           },
@@ -1736,6 +1857,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "tabindex": "0",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "70"
                                           },
@@ -1758,7 +1880,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1769,7 +1893,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1796,7 +1922,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "vertical",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -1812,7 +1939,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "vertical"
+                                            "data-orientation": "vertical",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -1829,7 +1957,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "vertical"
+                                                "data-orientation": "vertical",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -1869,6 +1998,7 @@
                                                 "aria-orientation": "vertical",
                                                 "data-orientation": "vertical",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "50"
                                               },
@@ -1891,7 +2021,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "vertical",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -1907,7 +2038,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "vertical"
+                                            "data-orientation": "vertical",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -1924,7 +2056,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "vertical"
+                                                "data-orientation": "vertical",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -1964,6 +2097,7 @@
                                                 "aria-orientation": "vertical",
                                                 "data-orientation": "vertical",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-valuenow": "25"
                                               },
@@ -1988,7 +2122,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1999,7 +2135,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2014,6 +2152,40 @@
                                   "attrs": {},
                                   "children": [
                                     {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "label",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "label"
+                                          },
+                                          "children": [],
+                                          "text": "Temperature"
+                                        }
+                                      ],
+                                      "text": "Temperature0.3, 0.7"
+                                    },
+                                    {
                                       "tag": "span",
                                       "path": [
                                         2,
@@ -2026,7 +2198,8 @@
                                       ],
                                       "attrs": {
                                         "data-orientation": "horizontal",
-                                        "aria-disabled": "false"
+                                        "aria-disabled": "false",
+                                        "data-slot": "slider"
                                       },
                                       "children": [
                                         {
@@ -2042,7 +2215,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "slider-track"
                                           },
                                           "children": [
                                             {
@@ -2059,7 +2233,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-orientation": "horizontal"
+                                                "data-orientation": "horizontal",
+                                                "data-slot": "slider-range"
                                               },
                                               "children": []
                                             }
@@ -2099,6 +2274,7 @@
                                                 "aria-orientation": "horizontal",
                                                 "data-orientation": "horizontal",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-label": "Minimum",
                                                 "aria-valuenow": "0.3"
@@ -2141,6 +2317,7 @@
                                                 "aria-orientation": "horizontal",
                                                 "data-orientation": "horizontal",
                                                 "tabindex": "0",
+                                                "data-slot": "slider-thumb",
                                                 "data-radix-collection-item": "",
                                                 "aria-label": "Maximum",
                                                 "aria-valuenow": "0.7"
@@ -2168,7 +2345,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2179,7 +2358,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "span",
@@ -2194,7 +2375,8 @@
                                   "attrs": {
                                     "data-orientation": "horizontal",
                                     "aria-disabled": "true",
-                                    "data-disabled": ""
+                                    "data-disabled": "",
+                                    "data-slot": "slider"
                                   },
                                   "children": [
                                     {
@@ -2210,7 +2392,8 @@
                                       ],
                                       "attrs": {
                                         "data-disabled": "",
-                                        "data-orientation": "horizontal"
+                                        "data-orientation": "horizontal",
+                                        "data-slot": "slider-track"
                                       },
                                       "children": [
                                         {
@@ -2227,7 +2410,8 @@
                                           ],
                                           "attrs": {
                                             "data-orientation": "horizontal",
-                                            "data-disabled": ""
+                                            "data-disabled": "",
+                                            "data-slot": "slider-range"
                                           },
                                           "children": []
                                         }
@@ -2265,6 +2449,7 @@
                                             "aria-orientation": "horizontal",
                                             "data-orientation": "horizontal",
                                             "data-disabled": "",
+                                            "data-slot": "slider-thumb",
                                             "data-radix-collection-item": "",
                                             "aria-valuenow": "50"
                                           },

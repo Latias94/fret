@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "form",
@@ -100,6 +106,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dialog-trigger",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_f_",
@@ -125,7 +132,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -136,7 +145,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -149,6 +160,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_i_",
@@ -171,7 +183,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -182,7 +196,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -195,6 +211,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_l_",
@@ -217,7 +234,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -228,7 +247,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -241,6 +262,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_o_",
@@ -263,7 +285,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -274,7 +298,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -287,6 +313,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_r_",
@@ -397,7 +424,9 @@
             0,
             1
           ],
-          "attrs": {}
+          "attrs": {
+            "data-slot": "input"
+          }
         },
         "dom": {
           "tag": "body",
@@ -449,7 +478,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -459,7 +490,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -470,7 +503,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "form",
@@ -496,6 +531,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dialog-trigger",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "true",
                                         "aria-controls": "radix-_r_f_",
@@ -521,7 +557,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -532,7 +570,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -545,6 +585,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_i_",
@@ -567,7 +608,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -578,7 +621,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -591,6 +636,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_l_",
@@ -613,7 +659,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -624,7 +672,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -637,6 +687,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_o_",
@@ -659,7 +710,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -670,7 +723,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -683,6 +738,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_r_",
@@ -737,6 +793,7 @@
               ],
               "attrs": {
                 "data-state": "open",
+                "data-slot": "dialog-overlay",
                 "aria-hidden": "true"
               },
               "children": []
@@ -751,6 +808,7 @@
                 "aria-describedby": "radix-_r_h_",
                 "aria-labelledby": "radix-_r_g_",
                 "data-state": "open",
+                "data-slot": "dialog-content",
                 "tabindex": "-1"
               },
               "children": [
@@ -758,9 +816,50 @@
                   "tag": "div",
                   "path": [
                     28,
+                    0
+                  ],
+                  "attrs": {
+                    "data-slot": "dialog-header"
+                  },
+                  "children": [
+                    {
+                      "tag": "h2",
+                      "path": [
+                        28,
+                        0,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "dialog-title"
+                      },
+                      "children": [],
+                      "text": "Edit profile"
+                    },
+                    {
+                      "tag": "p",
+                      "path": [
+                        28,
+                        0,
+                        1
+                      ],
+                      "attrs": {
+                        "data-slot": "dialog-description"
+                      },
+                      "children": [],
+                      "text": "Make changes to your profile here. Click save when you're done. Your profile will be updated immediately."
+                    }
+                  ],
+                  "text": "Edit profileMake changes to your profile here. Click save when you're done. Your profile will be updated immediately."
+                },
+                {
+                  "tag": "div",
+                  "path": [
+                    28,
                     1
                   ],
-                  "attrs": {},
+                  "attrs": {
+                    "data-slot": "field-group"
+                  },
                   "children": [
                     {
                       "tag": "div",
@@ -771,9 +870,24 @@
                       ],
                       "attrs": {
                         "role": "group",
+                        "data-slot": "field",
                         "data-orientation": "vertical"
                       },
                       "children": [
+                        {
+                          "tag": "label",
+                          "path": [
+                            28,
+                            1,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "field-label"
+                          },
+                          "children": [],
+                          "text": "Name"
+                        },
                         {
                           "tag": "input",
                           "path": [
@@ -782,7 +896,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "input"
+                          },
                           "children": []
                         }
                       ],
@@ -797,9 +913,24 @@
                       ],
                       "attrs": {
                         "role": "group",
+                        "data-slot": "field",
                         "data-orientation": "vertical"
                       },
                       "children": [
+                        {
+                          "tag": "label",
+                          "path": [
+                            28,
+                            1,
+                            1,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "field-label"
+                          },
+                          "children": [],
+                          "text": "Username"
+                        },
                         {
                           "tag": "input",
                           "path": [
@@ -808,7 +939,9 @@
                             1,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "input"
+                          },
                           "children": []
                         }
                       ],
@@ -823,7 +956,9 @@
                     28,
                     2
                   ],
-                  "attrs": {},
+                  "attrs": {
+                    "data-slot": "dialog-footer"
+                  },
                   "children": [
                     {
                       "tag": "button",
@@ -832,7 +967,9 @@
                         2,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "dialog-close"
+                      },
                       "children": [],
                       "text": "Cancel"
                     },
@@ -843,7 +980,9 @@
                         2,
                         1
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "button"
+                      },
                       "children": [],
                       "text": "Save changes"
                     }
@@ -856,7 +995,9 @@
                     28,
                     3
                   ],
-                  "attrs": {},
+                  "attrs": {
+                    "data-slot": "dialog-close"
+                  },
                   "children": [],
                   "text": "Close"
                 }
@@ -953,6 +1094,7 @@
             0
           ],
           "attrs": {
+            "data-slot": "dialog-trigger",
             "aria-haspopup": "dialog",
             "aria-expanded": "false",
             "aria-controls": "radix-_r_f_",
@@ -987,7 +1129,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -997,7 +1141,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1008,7 +1154,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "form",
@@ -1034,6 +1182,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dialog-trigger",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_f_",
@@ -1059,7 +1208,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1070,7 +1221,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1083,6 +1236,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_i_",
@@ -1105,7 +1259,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1116,7 +1272,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1129,6 +1287,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_l_",
@@ -1151,7 +1310,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1162,7 +1323,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1175,6 +1338,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_o_",
@@ -1197,7 +1361,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1208,7 +1374,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1221,6 +1389,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_r_",

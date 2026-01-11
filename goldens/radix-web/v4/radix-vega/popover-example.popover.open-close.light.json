@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -87,6 +93,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_8_",
@@ -109,7 +116,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -120,7 +129,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -133,6 +144,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_9_",
@@ -155,7 +167,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -166,7 +180,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -192,6 +208,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_a_",
@@ -212,6 +229,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_b_",
@@ -232,6 +250,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_c_",
@@ -257,7 +276,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -268,7 +289,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -281,6 +304,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_d_",
@@ -395,6 +419,7 @@
             "data-align": "start",
             "data-state": "open",
             "role": "dialog",
+            "data-slot": "popover-content",
             "tabindex": "-1"
           },
           "text": "DimensionsSet the dimensions for the layer."
@@ -436,7 +461,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -446,7 +473,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -457,7 +486,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -470,6 +501,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "true",
                                     "aria-controls": "radix-_r_8_",
@@ -492,7 +524,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -503,7 +537,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -516,6 +552,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_9_",
@@ -538,7 +575,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -549,7 +588,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -575,6 +616,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_a_",
@@ -595,6 +637,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_b_",
@@ -615,6 +658,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_c_",
@@ -640,7 +684,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -651,7 +697,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -664,6 +712,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_d_",
@@ -719,9 +768,53 @@
                     "data-align": "start",
                     "data-state": "open",
                     "role": "dialog",
+                    "data-slot": "popover-content",
                     "tabindex": "-1"
                   },
-                  "children": [],
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        43,
+                        0,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "popover-header"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            43,
+                            0,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "popover-title"
+                          },
+                          "children": [],
+                          "text": "Dimensions"
+                        },
+                        {
+                          "tag": "p",
+                          "path": [
+                            43,
+                            0,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "popover-description"
+                          },
+                          "children": [],
+                          "text": "Set the dimensions for the layer."
+                        }
+                      ],
+                      "text": "DimensionsSet the dimensions for the layer."
+                    }
+                  ],
                   "text": "DimensionsSet the dimensions for the layer."
                 }
               ],
@@ -838,6 +931,7 @@
             0
           ],
           "attrs": {
+            "data-slot": "button",
             "aria-haspopup": "dialog",
             "aria-expanded": "false",
             "aria-controls": "radix-_r_8_",
@@ -872,7 +966,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -882,7 +978,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -893,7 +991,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -906,6 +1006,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_8_",
@@ -928,7 +1029,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -939,7 +1042,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -952,6 +1057,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_9_",
@@ -974,7 +1080,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -985,7 +1093,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1011,6 +1121,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_a_",
@@ -1031,6 +1142,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_b_",
@@ -1051,6 +1163,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "aria-haspopup": "dialog",
                                         "aria-expanded": "false",
                                         "aria-controls": "radix-_r_c_",
@@ -1076,7 +1189,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1087,7 +1202,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1100,6 +1217,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_d_",

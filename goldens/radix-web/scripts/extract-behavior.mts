@@ -671,7 +671,9 @@ const scenarios: Scenario[] = [
     item: "slider-example",
     async run(ctx) {
       await pushStep(ctx, { kind: "load", url: ctx.url })
-      await clickFirst(ctx.page, '[role="slider"], input[type="range"]')
+      const slider = await ctx.page.$('[role="slider"], input[type="range"]')
+      if (!slider) throw new Error("expected role=slider")
+      await slider.focus()
       await sleep(50)
       await pressChord(ctx.page, ["ArrowRight", "ArrowRight"])
       await sleep(50)

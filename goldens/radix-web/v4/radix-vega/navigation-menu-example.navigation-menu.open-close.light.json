@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -88,7 +94,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -117,7 +124,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -133,7 +141,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -153,6 +163,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -195,7 +206,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -215,6 +228,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -257,7 +271,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -274,6 +290,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -305,7 +322,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -316,7 +335,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -330,7 +351,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -359,7 +381,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -375,7 +398,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -392,6 +417,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -413,7 +439,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -433,6 +461,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -475,7 +504,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -495,6 +526,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -537,7 +569,9 @@
                                                 0,
                                                 3
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -557,6 +591,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -698,6 +733,7 @@
             "data-state": "open",
             "aria-expanded": "true",
             "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+            "data-slot": "navigation-menu-trigger",
             "data-radix-collection-item": ""
           },
           "text": "Getting started"
@@ -729,7 +765,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -739,7 +777,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -750,7 +790,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -764,7 +806,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -793,7 +836,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -809,7 +853,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -829,6 +875,7 @@
                                                     "data-state": "open",
                                                     "aria-expanded": "true",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -910,7 +957,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -930,6 +979,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -972,7 +1022,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -989,6 +1041,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -1030,7 +1083,8 @@
                                           ],
                                           "attrs": {
                                             "data-state": "open",
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-viewport"
                                           },
                                           "children": [
                                             {
@@ -1048,7 +1102,8 @@
                                               ],
                                               "attrs": {
                                                 "aria-labelledby": "radix-_r_e_-trigger-radix-_r_f_",
-                                                "data-orientation": "horizontal"
+                                                "data-orientation": "horizontal",
+                                                "data-slot": "navigation-menu-content"
                                               },
                                               "children": [
                                                 {
@@ -1101,6 +1156,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": ""
                                                           },
                                                           "children": [],
@@ -1143,6 +1199,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": ""
                                                           },
                                                           "children": [],
@@ -1185,6 +1242,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": ""
                                                           },
                                                           "children": [],
@@ -1222,7 +1280,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1233,7 +1293,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -1247,7 +1309,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -1276,7 +1339,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -1292,7 +1356,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -1309,6 +1375,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -1330,7 +1397,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -1350,6 +1419,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -1392,7 +1462,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -1412,6 +1484,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -1454,7 +1527,9 @@
                                                 0,
                                                 3
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -1474,6 +1549,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -1629,6 +1705,7 @@
             "data-state": "closed",
             "aria-expanded": "false",
             "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+            "data-slot": "navigation-menu-trigger",
             "data-radix-collection-item": ""
           },
           "text": "Getting started"
@@ -1660,7 +1737,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1670,7 +1749,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1681,7 +1762,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -1695,7 +1778,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -1724,7 +1808,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -1740,7 +1825,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -1760,6 +1847,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -1802,7 +1890,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -1822,6 +1912,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -1864,7 +1955,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -1881,6 +1974,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -1922,7 +2016,8 @@
                                           ],
                                           "attrs": {
                                             "data-state": "closed",
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-viewport"
                                           },
                                           "children": [
                                             {
@@ -1940,7 +2035,8 @@
                                               ],
                                               "attrs": {
                                                 "aria-labelledby": "radix-_r_e_-trigger-radix-_r_f_",
-                                                "data-orientation": "horizontal"
+                                                "data-orientation": "horizontal",
+                                                "data-slot": "navigation-menu-content"
                                               },
                                               "children": [
                                                 {
@@ -1993,6 +2089,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": "",
                                                             "tabindex": "-1"
                                                           },
@@ -2036,6 +2133,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": "",
                                                             "tabindex": "-1"
                                                           },
@@ -2079,6 +2177,7 @@
                                                             0
                                                           ],
                                                           "attrs": {
+                                                            "data-slot": "navigation-menu-link",
                                                             "data-radix-collection-item": "",
                                                             "tabindex": "-1"
                                                           },
@@ -2117,7 +2216,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2128,7 +2229,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "nav",
@@ -2142,7 +2245,8 @@
                                   ],
                                   "attrs": {
                                     "aria-label": "Main",
-                                    "data-orientation": "horizontal"
+                                    "data-orientation": "horizontal",
+                                    "data-slot": "navigation-menu"
                                   },
                                   "children": [
                                     {
@@ -2171,7 +2275,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "navigation-menu-list"
                                           },
                                           "children": [
                                             {
@@ -2187,7 +2292,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "a",
@@ -2204,6 +2311,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "navigation-menu-link",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [],
@@ -2225,7 +2333,9 @@
                                                 0,
                                                 1
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -2245,6 +2355,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -2287,7 +2398,9 @@
                                                 0,
                                                 2
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -2307,6 +2420,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [
@@ -2349,7 +2463,9 @@
                                                 0,
                                                 3
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "navigation-menu-item"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "button",
@@ -2369,6 +2485,7 @@
                                                     "data-state": "closed",
                                                     "aria-expanded": "false",
                                                     "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-slot": "navigation-menu-trigger",
                                                     "data-radix-collection-item": ""
                                                   },
                                                   "children": [

@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -86,7 +92,9 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "card"
+                                  },
                                   "children": [
                                     {
                                       "tag": "div",
@@ -99,7 +107,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-header"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -114,7 +124,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "tabs"
                                           },
                                           "children": [
                                             {
@@ -133,6 +144,7 @@
                                               "attrs": {
                                                 "role": "tablist",
                                                 "aria-orientation": "horizontal",
+                                                "data-slot": "tabs-list",
                                                 "tabindex": "0",
                                                 "data-orientation": "horizontal"
                                               },
@@ -156,6 +168,7 @@
                                                     "aria-selected": "true",
                                                     "aria-controls": "radix-_r_r_-content-explorer",
                                                     "data-state": "active",
+                                                    "data-slot": "tabs-trigger",
                                                     "tabindex": "-1",
                                                     "data-orientation": "horizontal",
                                                     "data-radix-collection-item": ""
@@ -182,6 +195,7 @@
                                                     "aria-selected": "false",
                                                     "aria-controls": "radix-_r_r_-content-settings",
                                                     "data-state": "inactive",
+                                                    "data-slot": "tabs-trigger",
                                                     "tabindex": "-1",
                                                     "data-orientation": "horizontal",
                                                     "data-radix-collection-item": ""
@@ -209,7 +223,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-content"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -239,7 +255,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -257,6 +274,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_u_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -279,7 +297,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -300,7 +319,8 @@
                                                 1
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -318,6 +338,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_11_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -340,7 +361,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -361,7 +383,8 @@
                                                 2
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -379,6 +402,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_14_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -401,7 +425,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -422,7 +447,8 @@
                                                 3
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -440,6 +466,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_17_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -462,7 +489,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -483,7 +511,8 @@
                                                 4
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -501,6 +530,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_1a_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -523,7 +553,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -543,7 +574,9 @@
                                                 0,
                                                 5
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "app.tsx"
                                             },
@@ -560,7 +593,9 @@
                                                 0,
                                                 6
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "layout.tsx"
                                             },
@@ -577,7 +612,9 @@
                                                 0,
                                                 7
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "globals.css"
                                             },
@@ -594,7 +631,9 @@
                                                 0,
                                                 8
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "package.json"
                                             },
@@ -611,7 +650,9 @@
                                                 0,
                                                 9
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "tsconfig.json"
                                             },
@@ -628,7 +669,9 @@
                                                 0,
                                                 10
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "README.md"
                                             },
@@ -645,7 +688,9 @@
                                                 0,
                                                 11
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": ".gitignore"
                                             }
@@ -672,7 +717,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -683,7 +730,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -695,8 +744,64 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "card"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "card-header"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "card-title"
+                                          },
+                                          "children": [],
+                                          "text": "Radius"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "card-description"
+                                          },
+                                          "children": [],
+                                          "text": "Set the corner radius of the element."
+                                        }
+                                      ],
+                                      "text": "RadiusSet the corner radius of the element."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -708,7 +813,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-content"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -723,7 +830,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "collapsible"
                                           },
                                           "children": [
                                             {
@@ -739,7 +847,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "field-group"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "div",
@@ -757,9 +867,31 @@
                                                   ],
                                                   "attrs": {
                                                     "role": "group",
+                                                    "data-slot": "field",
                                                     "data-orientation": "vertical"
                                                   },
                                                   "children": [
+                                                    {
+                                                      "tag": "label",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "data-slot": "field-label"
+                                                      },
+                                                      "children": [],
+                                                      "text": "Radius X"
+                                                    },
                                                     {
                                                       "tag": "input",
                                                       "path": [
@@ -775,7 +907,9 @@
                                                         0,
                                                         1
                                                       ],
-                                                      "attrs": {},
+                                                      "attrs": {
+                                                        "data-slot": "input"
+                                                      },
                                                       "children": []
                                                     }
                                                   ],
@@ -797,9 +931,31 @@
                                                   ],
                                                   "attrs": {
                                                     "role": "group",
+                                                    "data-slot": "field",
                                                     "data-orientation": "vertical"
                                                   },
                                                   "children": [
+                                                    {
+                                                      "tag": "label",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "data-slot": "field-label"
+                                                      },
+                                                      "children": [],
+                                                      "text": "Radius Y"
+                                                    },
                                                     {
                                                       "tag": "input",
                                                       "path": [
@@ -815,7 +971,9 @@
                                                         1,
                                                         1
                                                       ],
-                                                      "attrs": {},
+                                                      "attrs": {
+                                                        "data-slot": "input"
+                                                      },
                                                       "children": []
                                                     }
                                                   ],
@@ -836,7 +994,8 @@
                                                     2
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -857,6 +1016,7 @@
                                                 1
                                               ],
                                               "attrs": {
+                                                "data-slot": "collapsible-trigger",
                                                 "aria-controls": "radix-_r_1k_",
                                                 "aria-expanded": "false",
                                                 "data-state": "closed"
@@ -1042,6 +1202,7 @@
             "aria-selected": "true",
             "aria-controls": "radix-_r_r_-content-explorer",
             "data-state": "active",
+            "data-slot": "tabs-trigger",
             "tabindex": "0",
             "data-orientation": "horizontal",
             "data-radix-collection-item": ""
@@ -1075,7 +1236,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1085,7 +1248,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1096,7 +1261,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1108,7 +1275,9 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "card"
+                                  },
                                   "children": [
                                     {
                                       "tag": "div",
@@ -1121,7 +1290,9 @@
                                         0,
                                         0
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-header"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -1136,7 +1307,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-orientation": "horizontal"
+                                            "data-orientation": "horizontal",
+                                            "data-slot": "tabs"
                                           },
                                           "children": [
                                             {
@@ -1155,6 +1327,7 @@
                                               "attrs": {
                                                 "role": "tablist",
                                                 "aria-orientation": "horizontal",
+                                                "data-slot": "tabs-list",
                                                 "tabindex": "0",
                                                 "data-orientation": "horizontal"
                                               },
@@ -1178,6 +1351,7 @@
                                                     "aria-selected": "true",
                                                     "aria-controls": "radix-_r_r_-content-explorer",
                                                     "data-state": "active",
+                                                    "data-slot": "tabs-trigger",
                                                     "tabindex": "0",
                                                     "data-orientation": "horizontal",
                                                     "data-radix-collection-item": ""
@@ -1204,6 +1378,7 @@
                                                     "aria-selected": "false",
                                                     "aria-controls": "radix-_r_r_-content-settings",
                                                     "data-state": "inactive",
+                                                    "data-slot": "tabs-trigger",
                                                     "tabindex": "-1",
                                                     "data-orientation": "horizontal",
                                                     "data-radix-collection-item": ""
@@ -1231,7 +1406,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-content"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -1261,7 +1438,8 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -1279,6 +1457,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_u_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -1301,7 +1480,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1322,7 +1502,8 @@
                                                 1
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -1340,6 +1521,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_11_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -1362,7 +1544,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1383,7 +1566,8 @@
                                                 2
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -1401,6 +1585,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_14_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -1423,7 +1608,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1444,7 +1630,8 @@
                                                 3
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -1462,6 +1649,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_17_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -1484,7 +1672,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1505,7 +1694,8 @@
                                                 4
                                               ],
                                               "attrs": {
-                                                "data-state": "closed"
+                                                "data-state": "closed",
+                                                "data-slot": "collapsible"
                                               },
                                               "children": [
                                                 {
@@ -1523,6 +1713,7 @@
                                                     0
                                                   ],
                                                   "attrs": {
+                                                    "data-slot": "collapsible-trigger",
                                                     "aria-controls": "radix-_r_1a_",
                                                     "aria-expanded": "false",
                                                     "data-state": "closed"
@@ -1545,7 +1736,8 @@
                                                     1
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1565,7 +1757,9 @@
                                                 0,
                                                 5
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "app.tsx"
                                             },
@@ -1582,7 +1776,9 @@
                                                 0,
                                                 6
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "layout.tsx"
                                             },
@@ -1599,7 +1795,9 @@
                                                 0,
                                                 7
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "globals.css"
                                             },
@@ -1616,7 +1814,9 @@
                                                 0,
                                                 8
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "package.json"
                                             },
@@ -1633,7 +1833,9 @@
                                                 0,
                                                 9
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "tsconfig.json"
                                             },
@@ -1650,7 +1852,9 @@
                                                 0,
                                                 10
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": "README.md"
                                             },
@@ -1667,7 +1871,9 @@
                                                 0,
                                                 11
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "button"
+                                              },
                                               "children": [],
                                               "text": ".gitignore"
                                             }
@@ -1694,7 +1900,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1705,7 +1913,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1717,8 +1927,64 @@
                                     1,
                                     0
                                   ],
-                                  "attrs": {},
+                                  "attrs": {
+                                    "data-slot": "card"
+                                  },
                                   "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "card-header"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "card-title"
+                                          },
+                                          "children": [],
+                                          "text": "Radius"
+                                        },
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "card-description"
+                                          },
+                                          "children": [],
+                                          "text": "Set the corner radius of the element."
+                                        }
+                                      ],
+                                      "text": "RadiusSet the corner radius of the element."
+                                    },
                                     {
                                       "tag": "div",
                                       "path": [
@@ -1730,7 +1996,9 @@
                                         0,
                                         1
                                       ],
-                                      "attrs": {},
+                                      "attrs": {
+                                        "data-slot": "card-content"
+                                      },
                                       "children": [
                                         {
                                           "tag": "div",
@@ -1745,7 +2013,8 @@
                                             0
                                           ],
                                           "attrs": {
-                                            "data-state": "closed"
+                                            "data-state": "closed",
+                                            "data-slot": "collapsible"
                                           },
                                           "children": [
                                             {
@@ -1761,7 +2030,9 @@
                                                 0,
                                                 0
                                               ],
-                                              "attrs": {},
+                                              "attrs": {
+                                                "data-slot": "field-group"
+                                              },
                                               "children": [
                                                 {
                                                   "tag": "div",
@@ -1779,9 +2050,31 @@
                                                   ],
                                                   "attrs": {
                                                     "role": "group",
+                                                    "data-slot": "field",
                                                     "data-orientation": "vertical"
                                                   },
                                                   "children": [
+                                                    {
+                                                      "tag": "label",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "data-slot": "field-label"
+                                                      },
+                                                      "children": [],
+                                                      "text": "Radius X"
+                                                    },
                                                     {
                                                       "tag": "input",
                                                       "path": [
@@ -1797,7 +2090,9 @@
                                                         0,
                                                         1
                                                       ],
-                                                      "attrs": {},
+                                                      "attrs": {
+                                                        "data-slot": "input"
+                                                      },
                                                       "children": []
                                                     }
                                                   ],
@@ -1819,9 +2114,31 @@
                                                   ],
                                                   "attrs": {
                                                     "role": "group",
+                                                    "data-slot": "field",
                                                     "data-orientation": "vertical"
                                                   },
                                                   "children": [
+                                                    {
+                                                      "tag": "label",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "data-slot": "field-label"
+                                                      },
+                                                      "children": [],
+                                                      "text": "Radius Y"
+                                                    },
                                                     {
                                                       "tag": "input",
                                                       "path": [
@@ -1837,7 +2154,9 @@
                                                         1,
                                                         1
                                                       ],
-                                                      "attrs": {},
+                                                      "attrs": {
+                                                        "data-slot": "input"
+                                                      },
                                                       "children": []
                                                     }
                                                   ],
@@ -1858,7 +2177,8 @@
                                                     2
                                                   ],
                                                   "attrs": {
-                                                    "data-state": "closed"
+                                                    "data-state": "closed",
+                                                    "data-slot": "collapsible-content"
                                                   },
                                                   "children": []
                                                 }
@@ -1879,6 +2199,7 @@
                                                 1
                                               ],
                                               "attrs": {
+                                                "data-slot": "collapsible-trigger",
                                                 "aria-controls": "radix-_r_1k_",
                                                 "aria-expanded": "false",
                                                 "data-state": "closed"

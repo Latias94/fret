@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -100,6 +106,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -117,6 +124,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -134,6 +142,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -151,6 +160,7 @@
                                         3
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -173,7 +183,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -184,7 +196,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -197,6 +211,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -315,7 +330,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -325,7 +342,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -336,7 +355,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -362,6 +383,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "open"
                                       },
                                       "children": [],
@@ -379,6 +401,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -396,6 +419,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -413,6 +437,7 @@
                                         3
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -435,7 +460,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -446,7 +473,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -459,6 +488,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -512,7 +542,8 @@
                   "attrs": {
                     "data-side": "top",
                     "data-align": "center",
-                    "data-state": "open"
+                    "data-state": "open",
+                    "data-slot": "hover-card-content"
                   },
                   "children": [],
                   "text": "Hover CardThis hover card appears on the top side of the trigger."
@@ -618,7 +649,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -628,7 +661,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -639,7 +674,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -665,6 +702,7 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -682,6 +720,7 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -699,6 +738,7 @@
                                         2
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -716,6 +756,7 @@
                                         3
                                       ],
                                       "attrs": {
+                                        "data-slot": "button",
                                         "data-state": "closed"
                                       },
                                       "children": [],
@@ -738,7 +779,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -749,7 +792,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -762,6 +807,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "button",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_3_",
@@ -815,7 +861,8 @@
                   "attrs": {
                     "data-side": "top",
                     "data-align": "center",
-                    "data-state": "closed"
+                    "data-state": "closed",
+                    "data-slot": "hover-card-content"
                   },
                   "children": [],
                   "text": "Hover CardThis hover card appears on the top side of the trigger."

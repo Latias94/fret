@@ -53,7 +53,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -63,7 +65,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -74,7 +78,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -87,6 +93,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -108,7 +115,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -119,7 +128,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -132,6 +143,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -153,7 +165,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -164,7 +178,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -177,6 +193,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -198,7 +215,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -209,7 +228,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -222,6 +243,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -243,7 +265,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -254,7 +278,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -267,6 +293,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -288,7 +315,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -299,7 +328,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -312,6 +343,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -333,7 +365,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -344,7 +378,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -357,6 +393,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -378,7 +415,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -389,7 +428,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -402,6 +443,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -423,7 +465,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -434,7 +478,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -447,6 +493,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -468,7 +515,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -479,7 +528,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -492,6 +543,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -513,7 +565,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -524,7 +578,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -550,12 +606,50 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": [],
-                                      "text": "CNshadcnshadcn@example.com"
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "shadcnshadcn@example.com"
                                     },
                                     {
                                       "tag": "button",
@@ -569,21 +663,58 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": [],
-                                      "text": "LR"
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     }
                                   ],
-                                  "text": "CNshadcnshadcn@example.comLR"
+                                  "text": "shadcnshadcn@example.com"
                                 }
                               ],
-                              "text": "CNshadcnshadcn@example.comLR"
+                              "text": "shadcnshadcn@example.com"
                             }
                           ],
-                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                          "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
                           "tag": "div",
@@ -593,7 +724,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -604,7 +737,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -617,6 +752,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_1l_",
@@ -756,12 +892,12 @@
             },
             {
               "role": "button",
-              "name": "CN shadcn shadcn@example.com",
+              "name": "Shadcn shadcn shadcn@example.com",
               "haspopup": "menu"
             },
             {
               "role": "button",
-              "name": "LR",
+              "name": "shadcn",
               "haspopup": "menu"
             },
             {
@@ -800,6 +936,7 @@
             "aria-orientation": "vertical",
             "data-state": "open",
             "aria-labelledby": "radix-_r_s_",
+            "data-slot": "dropdown-menu-content",
             "tabindex": "-1",
             "data-orientation": "vertical"
           },
@@ -855,7 +992,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -865,7 +1004,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -876,7 +1017,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -889,6 +1032,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "true",
                                     "data-state": "open",
@@ -911,7 +1055,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -922,7 +1068,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -935,6 +1083,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -956,7 +1105,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -967,7 +1118,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -980,6 +1133,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1001,7 +1155,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1012,7 +1168,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1025,6 +1183,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1046,7 +1205,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1057,7 +1218,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1070,6 +1233,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1091,7 +1255,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1102,7 +1268,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1115,6 +1283,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1136,7 +1305,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1147,7 +1318,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1160,6 +1333,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1181,7 +1355,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1192,7 +1368,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1205,6 +1383,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1226,7 +1405,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1237,7 +1418,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1250,6 +1433,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1271,7 +1455,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1282,7 +1468,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1295,6 +1483,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1316,7 +1505,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1327,7 +1518,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -1353,12 +1546,50 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": [],
-                                      "text": "CNshadcnshadcn@example.com"
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
+                                      "text": "shadcnshadcn@example.com"
                                     },
                                     {
                                       "tag": "button",
@@ -1372,21 +1603,58 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": [],
-                                      "text": "LR"
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     }
                                   ],
-                                  "text": "CNshadcnshadcn@example.comLR"
+                                  "text": "shadcnshadcn@example.com"
                                 }
                               ],
-                              "text": "CNshadcnshadcn@example.comLR"
+                              "text": "shadcnshadcn@example.com"
                             }
                           ],
-                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                          "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
                           "tag": "div",
@@ -1396,7 +1664,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1407,7 +1677,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1420,6 +1692,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_1l_",
@@ -1487,6 +1760,7 @@
                     "aria-orientation": "vertical",
                     "data-state": "open",
                     "aria-labelledby": "radix-_r_s_",
+                    "data-slot": "dropdown-menu-content",
                     "tabindex": "-1",
                     "data-orientation": "vertical"
                   },
@@ -1499,9 +1773,24 @@
                         0
                       ],
                       "attrs": {
-                        "role": "group"
+                        "role": "group",
+                        "data-slot": "dropdown-menu-group"
                       },
                       "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "dropdown-menu-label"
+                          },
+                          "children": [],
+                          "text": "My Account"
+                        },
                         {
                           "tag": "div",
                           "path": [
@@ -1512,6 +1801,7 @@
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1529,6 +1819,7 @@
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1546,6 +1837,7 @@
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1565,7 +1857,8 @@
                       ],
                       "attrs": {
                         "role": "separator",
-                        "aria-orientation": "horizontal"
+                        "aria-orientation": "horizontal",
+                        "data-slot": "dropdown-menu-separator"
                       },
                       "children": []
                     },
@@ -1577,7 +1870,8 @@
                         2
                       ],
                       "attrs": {
-                        "role": "group"
+                        "role": "group",
+                        "data-slot": "dropdown-menu-group"
                       },
                       "children": [
                         {
@@ -1590,6 +1884,7 @@
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1607,6 +1902,7 @@
                           ],
                           "attrs": {
                             "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1626,6 +1922,7 @@
                             "role": "menuitem",
                             "aria-disabled": "true",
                             "data-disabled": "",
+                            "data-slot": "dropdown-menu-item",
                             "tabindex": "-1",
                             "data-orientation": "vertical",
                             "data-radix-collection-item": ""
@@ -1717,6 +2014,7 @@
             0
           ],
           "attrs": {
+            "data-slot": "dropdown-menu-trigger",
             "aria-haspopup": "menu",
             "aria-expanded": "false",
             "data-state": "closed"
@@ -1750,7 +2048,9 @@
                         3,
                         0
                       ],
-                      "attrs": {},
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
                       "children": [
                         {
                           "tag": "div",
@@ -1760,7 +2060,9 @@
                             0,
                             0
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1771,7 +2073,9 @@
                                 0,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1784,6 +2088,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1805,7 +2110,9 @@
                             0,
                             1
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1816,7 +2123,9 @@
                                 1,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1829,6 +2138,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1850,7 +2160,9 @@
                             0,
                             2
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1861,7 +2173,9 @@
                                 2,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1874,6 +2188,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1895,7 +2210,9 @@
                             0,
                             3
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1906,7 +2223,9 @@
                                 3,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1919,6 +2238,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1940,7 +2260,9 @@
                             0,
                             4
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1951,7 +2273,9 @@
                                 4,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -1964,6 +2288,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -1985,7 +2310,9 @@
                             0,
                             5
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -1996,7 +2323,9 @@
                                 5,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2009,6 +2338,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -2030,7 +2360,9 @@
                             0,
                             6
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2041,7 +2373,9 @@
                                 6,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2054,6 +2388,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -2075,7 +2410,9 @@
                             0,
                             7
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2086,7 +2423,9 @@
                                 7,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2099,6 +2438,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -2120,7 +2460,9 @@
                             0,
                             8
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2131,7 +2473,9 @@
                                 8,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2144,6 +2488,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -2165,7 +2510,9 @@
                             0,
                             9
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2176,7 +2523,9 @@
                                 9,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2189,6 +2538,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
                                     "aria-haspopup": "menu",
                                     "aria-expanded": "false",
                                     "data-state": "closed"
@@ -2210,7 +2560,9 @@
                             0,
                             10
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2221,7 +2573,9 @@
                                 10,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "div",
@@ -2247,11 +2601,49 @@
                                         0
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": [],
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ],
                                       "text": "shadcnshadcn@example.com"
                                     },
                                     {
@@ -2266,11 +2658,49 @@
                                         1
                                       ],
                                       "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
                                         "aria-haspopup": "menu",
                                         "aria-expanded": "false",
                                         "data-state": "closed"
                                       },
-                                      "children": []
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "img",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-image"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
                                     }
                                   ],
                                   "text": "shadcnshadcn@example.com"
@@ -2289,7 +2719,9 @@
                             0,
                             11
                           ],
-                          "attrs": {},
+                          "attrs": {
+                            "data-slot": "example"
+                          },
                           "children": [
                             {
                               "tag": "div",
@@ -2300,7 +2732,9 @@
                                 11,
                                 1
                               ],
-                              "attrs": {},
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
                               "children": [
                                 {
                                   "tag": "button",
@@ -2313,6 +2747,7 @@
                                     0
                                   ],
                                   "attrs": {
+                                    "data-slot": "dialog-trigger",
                                     "aria-haspopup": "dialog",
                                     "aria-expanded": "false",
                                     "aria-controls": "radix-_r_1l_",
