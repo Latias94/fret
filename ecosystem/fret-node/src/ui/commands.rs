@@ -168,7 +168,12 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["insert", "node", "create", "add"])
             .with_scope(widget)
-            .with_when(when_node_graph_editing()),
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::KeyN,
+                Modifiers::default(),
+            )]),
     );
 
     registry.register(

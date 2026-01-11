@@ -409,6 +409,12 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_pan_on_scroll")]
     pub pan_on_scroll: bool,
 
+    /// Enables panning the canvas by holding Space and dragging with the left mouse button.
+    ///
+    /// This matches XyFlow's default "space-to-pan" editor affordance.
+    #[serde(default = "default_space_to_pan")]
+    pub space_to_pan: bool,
+
     /// Wheel panning speed multiplier.
     #[serde(default = "default_pan_on_scroll_speed")]
     pub pan_on_scroll_speed: f32,
@@ -499,6 +505,7 @@ impl Default for NodeGraphInteractionState {
             snaplines: default_snaplines(),
             snaplines_threshold: default_snaplines_threshold(),
             pan_on_scroll: default_pan_on_scroll(),
+            space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
             pan_inertia: NodeGraphPanInertiaTuning::default(),
             zoom_on_scroll: default_zoom_on_scroll(),
@@ -533,6 +540,10 @@ fn default_edges_reconnectable() -> bool {
 }
 
 fn default_pan_on_scroll() -> bool {
+    true
+}
+
+fn default_space_to_pan() -> bool {
     true
 }
 

@@ -4953,7 +4953,22 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         match command.as_str() {
             CMD_NODE_GRAPH_OPEN_INSERT_NODE => {
-                let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                let at = self
+                    .interaction
+                    .last_canvas_pos
+                    .or_else(|| {
+                        let bounds = self.interaction.last_bounds?;
+                        let cx0 = bounds.origin.x.0 + 0.5 * bounds.size.width.0;
+                        let cy0 = bounds.origin.y.0 + 0.5 * bounds.size.height.0;
+                        let center = Point::new(Px(cx0), Px(cy0));
+                        Some(Self::screen_to_canvas(
+                            bounds,
+                            center,
+                            snapshot.pan,
+                            snapshot.zoom,
+                        ))
+                    })
+                    .unwrap_or_default();
                 self.open_insert_node_picker(cx.app, at);
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
@@ -5792,6 +5807,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 cancel::handle_escape_cancel(self, cx);
+                self.interaction.space_pan_held = false;
                 return;
             }
             Event::PointerCancel(_) => {
@@ -6023,29 +6039,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 {
                     if self.interaction.searcher.is_some()
                         || self.interaction.context_menu.is_some()
+                        || !snapshot.interaction.space_to_pan
                     {
                         return;
                     }
 
-                    if self.interaction.last_pos.is_none() {
-                        let cx0 = cx.bounds.origin.x.0 + 0.5 * cx.bounds.size.width.0;
-                        let cy0 = cx.bounds.origin.y.0 + 0.5 * cx.bounds.size.height.0;
-                        let center = Point::new(Px(cx0), Px(cy0));
-                        self.interaction.last_pos = Some(center);
-                        self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
-                            cx.bounds,
-                            center,
-                            snapshot.pan,
-                            zoom,
-                        ));
+                    if !self.interaction.space_pan_held {
+                        self.interaction.space_pan_held = true;
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
                     }
-
-                    let cmd = if snapshot.selected_edges.len() == 1 {
-                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE
-                    } else {
-                        CMD_NODE_GRAPH_OPEN_INSERT_NODE
-                    };
-                    cx.dispatch_command(CommandId::from(cmd));
                     cx.stop_propagation();
                     return;
                 }
@@ -6090,6 +6093,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION));
                 cx.stop_propagation();
+                return;
+            }
+            Event::KeyUp { key, .. } => {
+                if *key != fret_core::KeyCode::Space {
+                    return;
+                }
+                if !self.interaction.space_pan_held {
+                    return;
+                }
+                self.interaction.space_pan_held = false;
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
                 return;
             }
             Event::Pointer(fret_core::PointerEvent::Down {
@@ -6139,6 +6154,33 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if *button == MouseButton::Left
+                    && snapshot.interaction.space_to_pan
+                    && self.interaction.space_pan_held
+                    && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
+                {
+                    self.interaction.hover_edge = None;
+                    self.interaction.pending_group_drag = None;
+                    self.interaction.group_drag = None;
+                    self.interaction.pending_group_resize = None;
+                    self.interaction.group_resize = None;
+                    self.interaction.pending_node_drag = None;
+                    self.interaction.node_drag = None;
+                    self.interaction.pending_node_resize = None;
+                    self.interaction.node_resize = None;
+                    self.interaction.wire_drag = None;
+                    self.interaction.edge_drag = None;
+                    self.interaction.panning = true;
+                    self.interaction.panning_button = Some(MouseButton::Left);
+                    self.interaction.pan_last_screen_pos = None;
+                    self.interaction.pan_last_sample_at = Some(Instant::now());
+                    self.interaction.pan_velocity = CanvasPoint::default();
+                    cx.capture_pointer(cx.node);
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
                 if *button == MouseButton::Middle {
                     self.interaction.hover_edge = None;
                     self.interaction.pending_group_drag = None;
@@ -6152,6 +6194,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.interaction.wire_drag = None;
                     self.interaction.edge_drag = None;
                     self.interaction.panning = true;
+                    self.interaction.panning_button = Some(MouseButton::Middle);
                     self.interaction.pan_last_screen_pos = None;
                     self.interaction.pan_last_sample_at = Some(Instant::now());
                     self.interaction.pan_velocity = CanvasPoint::default();
@@ -6187,19 +6230,30 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 // releasing outside of the window / losing capture). Infer the release from the
                 // current button state and synthesize an "up" so we can finish the interaction
                 // through the canonical pointer-up code path (commit, cancel, inertia, etc.).
-                if self.interaction.panning && !buttons.middle {
-                    let snapshot = self.sync_view_state(cx.app);
-                    let _ = pointer_up::handle_pointer_up(
-                        self,
-                        cx,
-                        &snapshot,
-                        *position,
-                        fret_core::MouseButton::Middle,
-                        1,
-                        *modifiers,
-                        snapshot.zoom,
-                    );
-                    return;
+                if self.interaction.panning {
+                    let should_end = match self.interaction.panning_button {
+                        Some(fret_core::MouseButton::Middle) => !buttons.middle,
+                        Some(fret_core::MouseButton::Left) => !buttons.left,
+                        _ => false,
+                    };
+                    if should_end {
+                        let snapshot = self.sync_view_state(cx.app);
+                        let button = self
+                            .interaction
+                            .panning_button
+                            .unwrap_or(fret_core::MouseButton::Middle);
+                        let _ = pointer_up::handle_pointer_up(
+                            self,
+                            cx,
+                            &snapshot,
+                            *position,
+                            button,
+                            1,
+                            *modifiers,
+                            snapshot.zoom,
+                        );
+                        return;
+                    }
                 }
 
                 let has_left_interaction = self.interaction.pending_marquee.is_some()
@@ -7709,7 +7763,10 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextBlobId};
+    use fret_core::{
+        AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
+        Size, TextBlobId,
+    };
     use fret_runtime::CommandId;
     use fret_runtime::ui_host::{
         CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
@@ -7813,6 +7870,105 @@ mod tests {
         let expected_pan_x = screen_positions.last().unwrap().x.0 - screen_positions[0].x.0;
         assert!((snapshot.pan.x - expected_pan_x).abs() <= 1.0e-3);
         assert!((snapshot.pan.y - 0.0).abs() <= 1.0e-3);
+    }
+
+    #[test]
+    fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
+        let mut host = TestUiHostImpl::default();
+        let (graph_value, _a, _b) = make_test_graph_two_nodes();
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+        let mut canvas = NodeGraphCanvas::new(graph, view);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let mut snapshot = canvas.sync_view_state(cx.app);
+        assert!(snapshot.interaction.space_to_pan);
+        assert_eq!(snapshot.zoom, 1.0);
+        assert_eq!(snapshot.pan, CanvasPoint::default());
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(canvas.interaction.space_pan_held);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(100.0), Px(100.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert!(canvas.interaction.panning);
+        assert_eq!(canvas.interaction.panning_button, Some(MouseButton::Left));
+        assert!(canvas.interaction.pending_marquee.is_none());
+        assert!(canvas.interaction.marquee.is_none());
+
+        let screen_positions = [
+            Point::new(Px(100.0), Px(100.0)),
+            Point::new(Px(140.0), Px(100.0)),
+            Point::new(Px(190.0), Px(100.0)),
+        ];
+        for screen in screen_positions {
+            let zoom = snapshot.zoom;
+            let pan = snapshot.pan;
+            let local = Point::new(
+                Px((screen.x.0 - bounds.origin.x.0) / zoom - pan.x),
+                Px((screen.y.0 - bounds.origin.y.0) / zoom - pan.y),
+            );
+            canvas.event(
+                &mut cx,
+                &Event::Pointer(PointerEvent::Move {
+                    position: local,
+                    buttons: MouseButtons {
+                        left: true,
+                        ..MouseButtons::default()
+                    },
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+            snapshot = canvas.sync_view_state(cx.app);
+        }
+
+        let expected_pan_x = screen_positions.last().unwrap().x.0 - screen_positions[0].x.0;
+        assert!((snapshot.pan.x - expected_pan_x).abs() <= 1.0e-3);
+        assert!((snapshot.pan.y - 0.0).abs() <= 1.0e-3);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Up {
+                position: *screen_positions.last().unwrap(),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert!(!canvas.interaction.panning);
+
+        canvas.event(
+            &mut cx,
+            &Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert!(!canvas.interaction.space_pan_held);
+        assert_eq!(canvas.history.undo_len(), 0);
     }
     use crate::rules::EdgeEndpoint;
     use crate::ui::commands::{

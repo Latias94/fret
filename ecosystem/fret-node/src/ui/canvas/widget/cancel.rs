@@ -50,6 +50,7 @@ fn cancel_active_gestures_inner<H: UiHost>(
     }
     if canvas.interaction.panning {
         canvas.interaction.panning = false;
+        canvas.interaction.panning_button = None;
         canvas.interaction.pan_last_screen_pos = None;
         canvas.interaction.pan_last_sample_at = None;
         canceled = true;

@@ -34,8 +34,9 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
-    if button == MouseButton::Middle && canvas.interaction.panning {
+    if canvas.interaction.panning && canvas.interaction.panning_button == Some(button) {
         canvas.interaction.panning = false;
+        canvas.interaction.panning_button = None;
         canvas.interaction.pan_last_screen_pos = None;
         canvas.interaction.pan_last_sample_at = None;
         canvas.stop_auto_pan_timer(cx.app);

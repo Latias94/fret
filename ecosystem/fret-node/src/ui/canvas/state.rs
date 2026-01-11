@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use fret_core::{ClipboardToken, Modifiers, Point, Rect};
+use fret_core::{ClipboardToken, Modifiers, MouseButton, Point, Rect};
 use fret_runtime::TimerToken;
 
 use crate::core::{CanvasPoint, EdgeId, GroupId, NodeId as GraphNodeId, NodeKindKey, PortId};
@@ -30,7 +30,9 @@ pub(crate) struct InteractionState {
     pub(crate) last_bounds: Option<Rect>,
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
+    pub(crate) space_pan_held: bool,
     pub(crate) panning: bool,
+    pub(crate) panning_button: Option<MouseButton>,
     /// Last pointer sample in screen space (stable while pan/zoom changes).
     ///
     /// Needed because `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event
