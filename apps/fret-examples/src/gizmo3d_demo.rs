@@ -2501,86 +2501,113 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 Vec2::new(m.viewport_px.0 as f32, m.viewport_px.1 as f32),
             );
 
-            let view_gizmo_drag = matches!(
-                event.kind,
+            let (view_gizmo_drag_started, view_gizmo_dragging) = match event.kind {
                 ViewportInputKind::PointerDown {
                     button: fret_core::MouseButton::Left,
                     ..
-                }
-            );
+                } => (true, true),
+                ViewportInputKind::PointerMove { buttons, .. } => (false, buttons.left),
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                } => (false, false),
+                _ => (false, false),
+            };
             let view_gizmo_input = ViewGizmoInput {
                 cursor_px,
                 hovered,
-                drag_started: view_gizmo_drag,
-                dragging: view_gizmo_drag,
+                drag_started: view_gizmo_drag_started,
+                dragging: view_gizmo_dragging,
             };
             let view_gizmo_update =
                 m.view_gizmo
                     .update(view_projection, viewport, view_gizmo_input);
 
-            if let Some(ViewGizmoUpdate::SnapView {
-                face: _,
-                view_dir,
-                up: _,
-            }) = view_gizmo_update
-            {
-                // Avoid snapping while other interactions are in progress.
-                if !m.is_busy() {
-                    let pivot = if m.selection.is_empty() {
-                        m.camera.target
-                    } else {
-                        let selected: Vec<GizmoTarget3d> = m
-                            .targets
-                            .iter()
-                            .copied()
-                            .filter(|t| m.selection.contains(&t.id))
-                            .collect();
-                        targets_world_aabb(&selected)
-                            .map(|(min, max)| (min + max) * 0.5)
-                            .unwrap_or(m.camera.target)
-                    };
+            let clear_other_interactions = |m: &mut Gizmo3dDemoModel| {
+                m.gizmo.state.hovered = None;
+                m.pending_selection = None;
+                m.marquee = None;
+                m.marquee_preview.clear();
+                m.selection_before_select = None;
+                m.active_before_select = None;
+                m.input = GizmoInput {
+                    cursor_px,
+                    hovered: false,
+                    drag_started: false,
+                    dragging: false,
+                    snap,
+                    cancel: false,
+                };
+            };
 
-                    let desired_eye_dir = (-view_dir).normalize_or_zero();
-                    if desired_eye_dir.length_squared() > 0.0 {
-                        let (yaw_radians, pitch_radians) =
-                            if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
-                                (m.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
-                            } else {
-                                (
-                                    desired_eye_dir.z.atan2(desired_eye_dir.x),
-                                    desired_eye_dir.y.asin(),
-                                )
-                            };
+            // If the left press starts on the view gizmo, consume the interaction so it doesn't
+            // become a selection click or a transform gizmo drag.
+            if view_gizmo_drag_started && m.view_gizmo.state.drag_active && !m.is_busy() {
+                clear_other_interactions(m);
+                return rec_to_record;
+            }
 
-                        m.camera.frame_anim = Some(FrameAnim {
-                            target: pivot,
-                            distance: m.camera.distance,
-                            yaw_radians,
-                            pitch_radians: pitch_radians.clamp(-1.55, 1.55),
-                            target_velocity: Vec3::ZERO,
-                            distance_velocity: 0.0,
-                            yaw_velocity: 0.0,
-                            pitch_velocity: 0.0,
-                            smooth_time_s: 0.12,
-                        });
+            if !m.is_busy() {
+                match view_gizmo_update {
+                    Some(ViewGizmoUpdate::OrbitDelta {
+                        delta_yaw_radians,
+                        delta_pitch_radians,
+                    }) => {
+                        clear_other_interactions(m);
+                        m.camera.frame_anim = None;
+                        m.camera.yaw_radians += delta_yaw_radians;
+                        m.camera.pitch_radians =
+                            (m.camera.pitch_radians + delta_pitch_radians).clamp(-1.55, 1.55);
+                        return rec_to_record;
                     }
+                    Some(ViewGizmoUpdate::SnapView {
+                        snap: _,
+                        view_dir,
+                        up: _,
+                    }) => {
+                        clear_other_interactions(m);
+                        let pivot = if m.selection.is_empty() {
+                            m.camera.target
+                        } else {
+                            let selected: Vec<GizmoTarget3d> = m
+                                .targets
+                                .iter()
+                                .copied()
+                                .filter(|t| m.selection.contains(&t.id))
+                                .collect();
+                            targets_world_aabb(&selected)
+                                .map(|(min, max)| (min + max) * 0.5)
+                                .unwrap_or(m.camera.target)
+                        };
 
-                    m.gizmo.state.hovered = None;
-                    m.pending_selection = None;
-                    m.marquee = None;
-                    m.marquee_preview.clear();
-                    m.selection_before_select = None;
-                    m.active_before_select = None;
+                        let desired_eye_dir = (-view_dir).normalize_or_zero();
+                        if desired_eye_dir.length_squared() > 0.0 {
+                            let (yaw_radians, pitch_radians) =
+                                if desired_eye_dir.dot(Vec3::Y).abs() > 0.98 {
+                                    (m.camera.yaw_radians, desired_eye_dir.y.signum() * 1.55)
+                                } else {
+                                    (
+                                        desired_eye_dir.z.atan2(desired_eye_dir.x),
+                                        desired_eye_dir.y.asin(),
+                                    )
+                                };
 
-                    m.input = GizmoInput {
-                        cursor_px,
-                        hovered: false,
-                        drag_started: false,
-                        dragging: false,
-                        snap,
-                        cancel: false,
-                    };
-                    return rec_to_record;
+                            m.camera.frame_anim = Some(FrameAnim {
+                                target: pivot,
+                                distance: m.camera.distance,
+                                yaw_radians,
+                                pitch_radians: pitch_radians.clamp(-1.55, 1.55),
+                                target_velocity: Vec3::ZERO,
+                                distance_velocity: 0.0,
+                                yaw_velocity: 0.0,
+                                pitch_velocity: 0.0,
+                                smooth_time_s: 0.12,
+                            });
+                        }
+
+                        return rec_to_record;
+                    }
+                    _ => {}
                 }
             }
 
