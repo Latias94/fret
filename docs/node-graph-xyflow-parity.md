@@ -123,21 +123,38 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
     - for full-fidelity controlled updates, consumers can also apply `GraphCommitted.committed` via `ops::apply_transaction`.
 
-- [~] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
+- [x] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
   - fret-node:
     - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCallbacks`, `install_callbacks`)
     - connection change extraction: `ecosystem/fret-node/src/runtime/callbacks.rs` (`connection_changes_from_transaction`)
+    - UI glue (canvas surface): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_callbacks`)
+    - demo usage: `apps/fret-examples/src/node_graph_domain_demo.rs` (`DomainDemoCallbacks`)
   - Notes:
-    - not yet wired as first-class UI APIs; intended for B-layer shells and middleware.
+    - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
+    - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
 
-- [ ] **Controlled/uncontrolled patterns**
+- [~] **Controlled/uncontrolled patterns**
   - XyFlow: controlled nodes/edges vs internal store
   - fret-node:
-    - runtime pieces: `ecosystem/fret-node/src/runtime/callbacks.rs` + `ecosystem/fret-node/src/runtime/apply.rs`
-    - UI glue (canvas callbacks surface): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_callbacks`)
+    - store-driven (recommended default):
+      - `NodeGraphCanvas::with_store`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - optional callbacks: `NodeGraphCanvas::with_callbacks`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - controlled mode building blocks (keep your own `Graph`/`NodeGraphViewState` as source of truth):
+      - callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
+      - conformance test: `ecosystem/fret-node/src/runtime/tests.rs` (`controlled_graph_can_apply_store_changes_via_callbacks`)
   - Notes:
     - view-state remains separate (`NodeGraphViewState`); callbacks receive `ViewChange` for viewport/selection.
+    - the exact "ReactFlow-like" contract is: `GraphTransaction` (undo unit) + `NodeGraphChanges` (diff) + `ViewChange` (viewport/selection).
+
+### Callback wiring quick sketch (fret-node)
+
+- Store-driven UI (recommended default):
+  - create a `NodeGraphStore` in your app model and pass it to `NodeGraphCanvas::with_store`
+  - optionally attach `NodeGraphCanvas::with_callbacks` for analytics, editor shells, and middleware
+  - reference: `apps/fret-examples/src/node_graph_domain_demo.rs`
+- Headless / tooling:
+  - attach `runtime::callbacks::install_callbacks(store, callbacks)` and react to `NodeGraphCallbacks`
 
 ## 0.3 View registry (NodeTypes / EdgeTypes) and interaction policies
 
