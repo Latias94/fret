@@ -2,10 +2,16 @@ use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
+    TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
-use fret_ui::element::{AnyElement, ContainerProps, Overflow, SemanticsProps, TextProps};
+use fret_ui::element::{
+    AnchoredProps, AnyElement, ContainerProps, LayoutStyle, Overflow, SemanticsProps, SizeStyle,
+    TextProps,
+};
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -14,7 +20,6 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
-use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
@@ -303,8 +308,8 @@ impl Popover {
                 let hide_when_detached = self.hide_when_detached;
                 let direction = direction_prim::use_direction_in_scope(cx, None);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                    let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
-                    let Some(anchor) = anchor else {
+                    let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
+                    if anchor_fallback.is_none() {
                         if modal {
                             return vec![
                                 radix_popover::popover_modal_barrier_with_dismiss_handler(
@@ -317,13 +322,12 @@ impl Popover {
                             ];
                         }
                         return Vec::new();
-                    };
-                    let anchor_raw = anchor;
+                    }
 
                     let inner_id = std::cell::Cell::new(None);
                     let inner_id_for_scope = inner_id.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                        let inner = content(cx, anchor_raw);
+                        let inner = content(cx, anchor_fallback.unwrap_or_default());
                         inner_id_for_scope.set(Some(inner.id));
                         vec![inner]
                     });
@@ -355,63 +359,65 @@ impl Popover {
                             .with_align_offset(align_offset)
                             .with_arrow(arrow_options, arrow_protrusion)
                             .with_hide_when_detached(hide_when_detached);
-                    let reference_hidden = placement.reference_hidden(outer, anchor);
+                    let reference_hidden = anchor_fallback
+                        .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
 
-                    let layout =
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
-
-                    let placed = layout.rect;
-                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                    let origin = popper::popper_content_transform_origin(
-                        &layout,
-                        anchor,
-                        arrow.then_some(arrow_size),
-                    );
+                    let w = content_size.width.0.max(0.0);
+                    let h = content_size.height.0.max(0.0);
+                    let origin = match side {
+                        Side::Top => Point::new(Px(w * 0.5), Px(h)),
+                        Side::Bottom => Point::new(Px(w * 0.5), Px(0.0)),
+                        Side::Left => Point::new(Px(w), Px(h * 0.5)),
+                        Side::Right => Point::new(Px(0.0), Px(h * 0.5)),
+                    };
                     let opacity = if reference_hidden { 0.0 } else { opacity };
                     let transform = overlay_motion::shadcn_popper_presence_transform(
-                        layout.side,
-                        origin,
-                        opacity,
-                        scale,
-                        opening,
+                        side, origin, opacity, scale, opening,
                     );
 
                     let bg = theme.color_required("popover.background");
                     let border = theme.color_required("border");
 
-                    let wrapper_layout =
-                        popper_content::popper_wrapper_layout(placed, wrapper_insets);
+                    let layout_for_arrow = anchor_fallback.map(|anchor| {
+                        let mut layout = popper::popper_content_layout_sized(
+                            outer,
+                            anchor,
+                            content_size,
+                            placement,
+                        );
+                        layout.rect = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.rect.size);
+                        layout
+                    });
 
                     let wrapper = cx.container(
                         ContainerProps {
-                            layout: wrapper_layout,
+                            layout: LayoutStyle {
+                                overflow: Overflow::Visible,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
                         move |cx| {
-                            let panel = popper_content::popper_panel_at(
-                                cx,
-                                placed,
-                                wrapper_insets,
-                                Overflow::Visible,
-                                move |_cx| vec![content],
-                            );
-                            let arrow_el = popper_arrow::diamond_arrow_element(
-                                cx,
-                                &layout,
-                                wrapper_insets,
-                                arrow_size,
-                                DiamondArrowStyle {
-                                    bg,
-                                    border: Some(border),
-                                    border_width: Px(1.0),
-                                },
-                            );
+                            let arrow_el = layout_for_arrow.as_ref().and_then(|layout| {
+                                popper_arrow::diamond_arrow_element(
+                                    cx,
+                                    layout,
+                                    Edges::all(Px(0.0)),
+                                    arrow_size,
+                                    DiamondArrowStyle {
+                                        bg,
+                                        border: Some(border),
+                                        border_width: Px(1.0),
+                                    },
+                                )
+                            });
 
+                            let mut out: Vec<AnyElement> = Vec::new();
                             if let Some(arrow_el) = arrow_el {
-                                vec![arrow_el, panel]
-                            } else {
-                                vec![panel]
+                                out.push(arrow_el);
                             }
+                            out.push(content);
+                            out
                         },
                     );
 
@@ -424,15 +430,48 @@ impl Popover {
                     );
 
                     if modal {
+                        let anchored = cx.anchored_props(
+                            AnchoredProps {
+                                layout: LayoutStyle {
+                                    overflow: Overflow::Visible,
+                                    size: SizeStyle::default(),
+                                    ..Default::default()
+                                },
+                                outer_margin: Edges::all(window_margin),
+                                anchor: anchor_fallback.unwrap_or_default(),
+                                side,
+                                align,
+                                side_offset,
+                                options: placement.options(),
+                                layout_out: None,
+                            },
+                            move |_cx| vec![overlay_content],
+                        );
                         radix_popover::popover_modal_layer_children_with_dismiss_handler(
                             cx,
                             open_for_barrier.clone(),
                             on_dismiss_request_for_children.clone(),
                             Vec::new(),
-                            overlay_content,
+                            anchored,
                         )
                     } else {
-                        vec![overlay_content]
+                        vec![cx.anchored_props(
+                            AnchoredProps {
+                                layout: LayoutStyle {
+                                    overflow: Overflow::Visible,
+                                    size: SizeStyle::default(),
+                                    ..Default::default()
+                                },
+                                outer_margin: Edges::all(window_margin),
+                                anchor: anchor_fallback.unwrap_or_default(),
+                                side,
+                                align,
+                                side_offset,
+                                options: placement.options(),
+                                layout_out: None,
+                            },
+                            move |_cx| vec![overlay_content],
+                        )]
                     }
                 });
 

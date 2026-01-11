@@ -1,16 +1,14 @@
 [package]
-name = "fret-viewport-wgpu"
+name = "fret-renderdoc"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation.workspace = true
-publish = false
 
 [dependencies]
-glam.workspace = true
-wgpu.workspace = true
-
+anyhow.workspace = true
+renderdog-automation.workspace = true
+serde.workspace = true
+serde_json.workspace = true

@@ -36,6 +36,8 @@ pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
 pub mod drag_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod effects_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
@@ -54,10 +56,6 @@ pub mod inf_lines_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod markdown_demo;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod node_graph_demo;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod node_graph_domain_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;

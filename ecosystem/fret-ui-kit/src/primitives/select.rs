@@ -532,6 +532,58 @@ pub fn select_content_placement_popper(
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectPopperVars {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub trigger_width: Px,
+    pub trigger_height: Px,
+}
+
+pub fn select_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    popper::popper_desired_width(outer, anchor, min_width)
+}
+
+/// Compute Radix-like "select popper vars" (`--radix-select-*`) for recipes.
+///
+/// Upstream Radix wires these through from `@radix-ui/react-popper`:
+/// - `--radix-select-content-available-width`
+/// - `--radix-select-content-available-height`
+/// - `--radix-select-trigger-width`
+/// - `--radix-select-trigger-height`
+///
+/// In Fret, we compute the same concepts as a structured return value so recipes can size and
+/// constrain the listbox without relying on CSS variables.
+pub fn select_popper_vars(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> SelectPopperVars {
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
+    SelectPopperVars {
+        available_width: metrics.available_width,
+        available_height: metrics.available_height,
+        trigger_width: metrics.anchor_width,
+        trigger_height: metrics.anchor_height,
+    }
+}
+
+/// Compute a Radix-like default max height for select popper content.
+///
+/// Upstream Radix sets `max-height: var(--radix-select-content-available-height)` for shadcn
+/// recipes. In Fret, we compute the same concept using `popper_available_metrics(...)` so recipes
+/// can size the listbox without relying on CSS variables.
+pub fn select_popper_available_height(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> Px {
+    select_popper_vars(outer, anchor, min_width, placement).available_height
+}
+
 /// Radix-like select typeahead clear timeout (in milliseconds).
 ///
 /// Upstream Radix resets the typeahead search 1 second after it was last updated.
@@ -1552,6 +1604,52 @@ mod tests {
         assert!(select_open_key_suppresses_activate(KeyCode::Space));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowDown));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowUp));
+    }
+
+    #[test]
+    fn select_popper_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(70.0)),
+            Size::new(Px(30.0), Px(10.0)),
+        );
+
+        // Preferred bottom won't fit for a tall list; the solver should flip to top, and the
+        // available height should match the top space.
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+
+        let vars = select_popper_vars(outer, anchor, Px(0.0), placement);
+        assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
+    }
+
+    #[test]
+    fn select_popper_desired_width_respects_min_width_and_outer_bounds() {
+        let outer = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(100.0)));
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(10.0)),
+            Size::new(Px(24.0), Px(10.0)),
+        );
+
+        assert_eq!(
+            select_popper_desired_width(outer, anchor, Px(0.0)),
+            Px(24.0)
+        );
+        assert_eq!(
+            select_popper_desired_width(outer, anchor, Px(40.0)),
+            Px(40.0)
+        );
+        assert_eq!(
+            select_popper_desired_width(outer, anchor, Px(100.0)),
+            Px(80.0)
+        );
     }
 
     #[test]

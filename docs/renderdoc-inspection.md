@@ -1,0 +1,54 @@
+# RenderDoc Inspection (Scriptable)
+
+This repo uses RenderDoc for GPU debugging, but the default GUI workflow does not scale well when we need
+to repeatedly validate pass state against our rendering contracts (viewport/scissor, clip stack, mask
+viewport mapping, effect boundaries).
+
+To make this repeatable, we provide:
+
+- `apps/fret-renderdoc`: a small CLI that runs `qrenderdoc --python`
+- `tools/renderdoc/fret_dump_pass_state_json.py`: a RenderDoc Python script that dumps pass state to JSON
+
+## Prerequisites
+
+- RenderDoc installed.
+- A capture file (`.rdc`) to inspect.
+
+RenderDoc discovery:
+
+- Preferred: set `RENDERDOG_RENDERDOC_DIR` to the RenderDoc install root (contains `qrenderdoc`).
+- Or pass `--renderdoc-dir` to `fret-renderdoc`.
+
+## Quick start
+
+```bash
+cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "fret clip mask pass"
+```
+
+The command prints the path to `fret_dump_pass_state_json.response.json`.
+
+## What to look for (examples)
+
+### Clip mask generation (`fret clip mask pass`)
+
+Validate:
+
+- `raster_state.scissors[0]` is the mask target sub-rect being rendered.
+- `buffer_dump.named_buffers` contains `clip_mask_params.dst_size` matching the mask target size.
+- `buffer_dump.selected_uniform_entry.entry.mask_viewport_origin/size` matches the effect viewport rect.
+
+The exported PNG is a single-channel mask (`R8Unorm`), so it may look "red" in the file viewer. This is
+expected.
+
+### Pixelate scale passes (`fret downsample-nearest pass` / `fret upscale-nearest pass`)
+
+Validate:
+
+- `buffer_dump.named_buffers[scale_params].scale` matches the effect pixelation scale.
+- `buffer_dump.named_buffers[scale_params].src_origin/dst_origin` match the intended mapping:
+  - Downsample into effect-local target: `src_origin = effect_rect.xy`, `dst_origin = (0, 0)`.
+  - Upscale back into full-size target: `src_origin = (0, 0)`, `dst_origin = effect_rect.xy`.
+- `raster_state.scissors[0]` matches the expected effect region (for scissored passes).
+
+If the output looks "anchored to the window origin", this usually indicates a missing origin adjustment in
+the fullscreen shader when scissoring is used.

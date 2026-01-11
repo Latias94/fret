@@ -8,6 +8,8 @@ contracts early to avoid large rewrites later.
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
+- GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
+- Debugging playbook: `docs/debugging-playbook.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`

@@ -78,6 +78,19 @@ All UI blending uses premultiplied alpha (consistent with ADR 0002).
 Viewport targets should be treated as opaque by default; if alpha is meaningful, the render target registry must
 explicitly mark it as premultiplied vs opaque.
 
+### 7) Authoring ergonomics: make premultiplied alpha hard to misuse
+
+Premultiplied alpha is easy to misuse at call sites (straight RGBA values produce “too bright” translucent fills).
+
+To reduce recurring bugs in demos and component ecosystems, producers should adopt a stable authoring pattern:
+
+- Provide a helper constructor that takes straight RGBA and returns premultiplied linear RGBA, e.g.
+  `Color::from_rgba_premul(r, g, b, a)` (name is illustrative).
+- In debug builds, validate that colors emitted into `SceneOp` are plausibly premultiplied:
+  - if `a < 1` and any of `r/g/b > a + eps`, emit a diagnostic (warn or deny depending on policy).
+
+This does not change renderer semantics; it improves correctness and reduces “mysterious compositing” bugs.
+
 ## Consequences
 
 - UI overlays blend correctly over engine viewports without “double sRGB” mistakes.

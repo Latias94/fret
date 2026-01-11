@@ -91,11 +91,61 @@ pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) 
     )
 }
 
+/// Estimate a scrollable menu panel viewport height for `row_count` rows.
+///
+/// This is primarily used by submenu wrappers to approximate the `desired` size passed into the
+/// placement solver: Radix Menu uses the content's measured height but clamps it by the available
+/// space (and any theme cap) so flip decisions remain stable while the internal list scrolls.
+pub fn estimated_panel_height_for_row_count(
+    row_height: Px,
+    row_count: usize,
+    max_height: Px,
+) -> Px {
+    let rows = row_count.max(1) as f32;
+    let min_h = row_height.0.max(0.0);
+    let max_h = max_height.0.max(min_h);
+    Px((row_height.0 * rows).clamp(min_h, max_h))
+}
+
+/// Return an estimated desired size for a scrollable menu/submenu list.
+pub fn estimated_desired_size_for_row_count(
+    desired_width: Px,
+    row_height: Px,
+    row_count: usize,
+    max_height: Px,
+) -> Size {
+    Size::new(
+        Px(desired_width.0.max(0.0)),
+        estimated_panel_height_for_row_count(row_height, row_count, max_height),
+    )
+}
+
 pub fn clear_focus_target_in_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     models: &MenuSubmenuModels,
 ) {
     clear_focus_target(cx, &models.focus_target);
+}
+
+/// Synchronize submenu geometry from the currently-registered trigger element anchor.
+///
+/// When a submenu is already open, its trigger can continue to move due to layout/scroll. Updating
+/// geometry ahead of rendering keeps pointer-grace intent and safe-corridor heuristics stable.
+pub fn sync_open_geometry_from_trigger_if_present<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    models: &MenuSubmenuModels,
+    outer: Rect,
+    desired: Size,
+) {
+    let trigger = cx
+        .app
+        .models_mut()
+        .read(&models.trigger, |v| *v)
+        .ok()
+        .flatten();
+    if let Some(trigger) = trigger {
+        set_geometry_from_element_anchor_if_present(cx, trigger, models, outer, desired);
+    }
 }
 
 pub fn with_open_submenu<H: UiHost, R>(
@@ -113,6 +163,29 @@ pub fn with_open_submenu<H: UiHost, R>(
         .flatten()?;
 
     clear_focus_target_in_models(cx, models);
+
+    let geometry = resolve_open_geometry(cx, models, outer, desired)?;
+    Some(f(cx, open_value, geometry))
+}
+
+/// Like [`with_open_submenu`], but eagerly syncs submenu geometry from the current trigger anchor
+/// before resolving the geometry model.
+pub fn with_open_submenu_synced<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    models: &MenuSubmenuModels,
+    outer: Rect,
+    desired: Size,
+    f: impl FnOnce(&mut ElementContext<'_, H>, Arc<str>, MenuSubmenuGeometry) -> R,
+) -> Option<R> {
+    let open_value = cx
+        .app
+        .models_mut()
+        .read(&models.open_value, |v| v.clone())
+        .ok()
+        .flatten()?;
+
+    clear_focus_target_in_models(cx, models);
+    sync_open_geometry_from_trigger_if_present(cx, models, outer, desired);
 
     let geometry = resolve_open_geometry(cx, models, outer, desired)?;
     Some(f(cx, open_value, geometry))

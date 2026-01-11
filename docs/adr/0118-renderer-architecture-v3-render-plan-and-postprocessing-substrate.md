@@ -1,6 +1,6 @@
 # ADR 0118: Renderer Architecture v3 - Render Plan and Post-Processing Substrate
 
-Status: Proposed
+Status: Accepted (initial implementation landed)
 
 ## Context
 
@@ -84,6 +84,8 @@ Suggested pass categories (illustrative, not normative API names):
 - `FullscreenPass`: a triangle/quad pass that samples one or more input textures and writes to an output target.
 - `CompositePass`: a specialized fullscreen pass used to composite intermediate results back into the main target
   with a known blend mode (premul alpha).
+- `MaskPass` (optional): generate an intermediate clip mask (e.g. rounded soft clip coverage) for use by effect passes
+  (ADR 0135).
 - `Copy/ResolvePass` (optional): explicit resolves for MSAA or copies for read-after-write safety when required.
 
 #### Upgrade path: make `RenderPlan` DAG-ready without committing to a DAG today
@@ -97,6 +99,11 @@ To make that possible, each pass in the plan should be representable as:
 - explicit **read/write intent** (read-only vs write-only vs read-write, where supported),
 - explicit **lifetime scope** (when an intermediate can be released back to the pool),
 - explicit **cache key** (optional) for reusing intermediate results across segments when safe.
+
+Note:
+
+- Renderer-owned clip masks (ADR 0135) are treated as first-class plan resources with explicit lifetimes and budget
+  accounting (ADR 0120). The plan must be able to express dependencies between mask generation and effect/composite passes.
 
 If/when we add an internal DAG:
 

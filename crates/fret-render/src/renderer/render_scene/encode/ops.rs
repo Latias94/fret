@@ -1,6 +1,6 @@
 use super::clip;
 use super::draw;
-use super::state::EncodeState;
+use super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
 
 pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &SceneOp) {
@@ -39,6 +39,35 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         }
         SceneOp::PopClip => {
             clip::pop_clip(state);
+        }
+
+        SceneOp::PushEffect {
+            bounds,
+            mode,
+            chain,
+            quality,
+        } => {
+            state.flush_quad_batch();
+
+            let scissor = effect_scissor(state, bounds);
+            let uniform_index = state.push_effect_uniform_snapshot(scissor);
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::Push {
+                    scissor,
+                    uniform_index,
+                    mode,
+                    chain,
+                    quality,
+                },
+            });
+        }
+        SceneOp::PopEffect => {
+            state.flush_quad_batch();
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::Pop,
+            });
         }
 
         SceneOp::Quad {
@@ -122,4 +151,32 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             draw::encode_viewport_surface(renderer, state, rect, target, opacity);
         }
     }
+}
+
+fn effect_scissor(state: &EncodeState<'_>, bounds: Rect) -> ScissorRect {
+    let (x, y, w, h) = rect_to_pixels(bounds, state.scale_factor);
+    let bounds_scissor = if w <= 0.0 || h <= 0.0 {
+        Some(ScissorRect {
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+        })
+    } else {
+        let t_px = state.current_transform_px();
+        let quad = transform_quad_points_px(t_px, x, y, w, h);
+        let (min_x, min_y, max_x, max_y) = bounds_of_quad_points(&quad);
+        scissor_from_bounds_px(min_x, min_y, max_x, max_y, state.viewport_size)
+    };
+
+    let Some(bounds_scissor) = bounds_scissor else {
+        return ScissorRect {
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+        };
+    };
+
+    intersect_scissor(state.current_scissor, bounds_scissor)
 }

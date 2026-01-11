@@ -16,6 +16,7 @@
 
 use std::sync::Arc;
 
+use fret_core::{Px, Rect};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
@@ -26,6 +27,7 @@ use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
+use crate::primitives::popper;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
 use crate::primitives::trigger_a11y;
 
@@ -71,6 +73,44 @@ impl PopoverOptions {
     pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
         self.initial_focus = Some(element);
         self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PopoverPopperVars {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub trigger_width: Px,
+    pub trigger_height: Px,
+}
+
+pub fn popover_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    popper::popper_desired_width(outer, anchor, min_width)
+}
+
+/// Compute Radix-like "popover popper vars" (`--radix-popover-*`) for recipes.
+///
+/// Upstream Radix re-namespaces these from `@radix-ui/react-popper`:
+/// - `--radix-popover-content-available-width`
+/// - `--radix-popover-content-available-height`
+/// - `--radix-popover-trigger-width`
+/// - `--radix-popover-trigger-height`
+///
+/// In Fret, we compute the same concepts as a structured return value so recipes can constrain
+/// their content without relying on CSS variables.
+pub fn popover_popper_vars(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> PopoverPopperVars {
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
+    PopoverPopperVars {
+        available_width: metrics.available_width,
+        available_height: metrics.available_height,
+        trigger_width: metrics.anchor_width,
+        trigger_height: metrics.anchor_height,
     }
 }
 
@@ -550,6 +590,27 @@ mod tests {
             assert_eq!(a11y.expanded, Some(true));
             assert_eq!(a11y.controls_element, Some(dialog_id.0));
         });
+    }
+
+    #[test]
+    fn popover_popper_vars_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(70.0)),
+            Size::new(Px(30.0), Px(10.0)),
+        );
+
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            popper::Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+        let vars = popover_popper_vars(outer, anchor, Px(0.0), placement);
+        assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
     }
 
     #[test]

@@ -17,7 +17,11 @@ mod util;
 
 mod buffers;
 mod config;
+mod frame_targets;
+mod fullscreen;
+mod intermediate_pool;
 mod pipelines;
+mod render_plan;
 mod render_scene;
 mod resources;
 mod services;
@@ -26,8 +30,12 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use fullscreen::*;
+use intermediate_pool::*;
 use path::*;
+use render_plan::*;
 use types::*;
+pub use types::{IntermediatePerfSnapshot, SvgPerfSnapshot};
 use util::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -92,6 +100,45 @@ pub struct Renderer {
 
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipeline: Option<wgpu::RenderPipeline>,
+    composite_mask_pipeline: Option<wgpu::RenderPipeline>,
+    composite_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    clip_mask_pipeline: Option<wgpu::RenderPipeline>,
+    clip_mask_param_buffer: wgpu::Buffer,
+    clip_mask_param_bind_group: wgpu::BindGroup,
+    clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
+
+    blit_pipeline_format: Option<wgpu::TextureFormat>,
+    blit_pipeline: Option<wgpu::RenderPipeline>,
+    blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    blit_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    blur_pipeline_format: Option<wgpu::TextureFormat>,
+    blur_h_pipeline: Option<wgpu::RenderPipeline>,
+    blur_v_pipeline: Option<wgpu::RenderPipeline>,
+    blur_h_masked_pipeline: Option<wgpu::RenderPipeline>,
+    blur_v_masked_pipeline: Option<wgpu::RenderPipeline>,
+    blur_h_mask_pipeline: Option<wgpu::RenderPipeline>,
+    blur_v_mask_pipeline: Option<wgpu::RenderPipeline>,
+
+    scale_pipeline_format: Option<wgpu::TextureFormat>,
+    downsample_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_masked_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_mask_pipeline: Option<wgpu::RenderPipeline>,
+    scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    scale_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    scale_param_buffer: wgpu::Buffer,
+    scale_param_stride: u64,
+    scale_param_capacity: usize,
+
+    color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
+    color_adjust_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_mask_pipeline: Option<wgpu::RenderPipeline>,
+    color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_adjust_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    color_adjust_param_buffer: wgpu::Buffer,
 
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
@@ -125,6 +172,14 @@ pub struct Renderer {
     svg_perf: SvgPerfStats,
 
     path_msaa_samples: u32,
+    debug_offscreen_blit_enabled: bool,
+    debug_pixelate_scale: u32,
+    debug_blur_radius: u32,
+    debug_blur_scissor: Option<ScissorRect>,
+    intermediate_budget_bytes: u64,
+    intermediate_perf_enabled: bool,
+    intermediate_perf: IntermediatePerfStats,
+    intermediate_pool: IntermediatePool,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,

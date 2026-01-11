@@ -1,48 +1,6 @@
+use super::super::frame_targets::{FrameTargets, downsampled_size};
 use super::super::*;
 use fret_core::time::Instant;
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-fn debug_render_path_enabled() -> bool {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED
-        .get_or_init(|| std::env::var_os("FRET_DEBUG_RENDER_PATH").is_some_and(|v| !v.is_empty()))
-}
-
-fn debug_render_path_should_log() -> bool {
-    static COUNT: AtomicUsize = AtomicUsize::new(0);
-    COUNT.fetch_add(1, Ordering::Relaxed) < 32
-}
-
-fn debug_render_path_log_adapter(renderer: &Renderer) {
-    static LOGGED: OnceLock<()> = OnceLock::new();
-    if !debug_render_path_enabled() {
-        return;
-    }
-    LOGGED.get_or_init(|| {
-        let info = renderer.adapter.get_info();
-        eprintln!(
-            "render_scene: adapter name={:?} backend={:?} device_type={:?} vendor={:#x} device={:#x}",
-            info.name, info.backend, info.device_type, info.vendor, info.device
-        );
-    });
-}
-
-fn path_intermediate_format(format: wgpu::TextureFormat) -> wgpu::TextureFormat {
-    match format {
-        // Prefer a linear intermediate to avoid relying on MSAA resolves into sRGB swapchain formats.
-        // Composite into the final output format to apply any required color space conversions.
-        //
-        // Additionally, prefer RGBA8 for BGRA swapchains: we've observed cases where MSAA resolves
-        // into BGRA8 intermediates produce no visible output on some Vulkan drivers, while RGBA8
-        // works reliably.
-        wgpu::TextureFormat::Bgra8UnormSrgb | wgpu::TextureFormat::Bgra8Unorm => {
-            wgpu::TextureFormat::Rgba8Unorm
-        }
-        wgpu::TextureFormat::Rgba8UnormSrgb => wgpu::TextureFormat::Rgba8Unorm,
-        other => other,
-    }
-}
 
 impl Renderer {
     pub fn render_scene(
@@ -71,47 +29,19 @@ impl Renderer {
         self.ensure_text_color_pipeline(device, format);
         self.ensure_mask_pipeline(device, format);
         self.ensure_path_pipeline(device, format);
-        debug_render_path_log_adapter(self);
-        let _backend = self.adapter.get_info().backend;
-        let output_is_srgb = format.is_srgb();
-        let intermediate_format = path_intermediate_format(format);
-        let mut path_samples = if output_is_srgb {
-            // The MSAA path implementation renders into an offscreen texture and then composites
-            // into the main pass. When the final render target is not sRGB, the fragment shader
-            // performs manual linear->sRGB encoding. Applying that transform twice (offscreen +
-            // composite) would be incorrect, so we currently disable MSAA for non-sRGB outputs.
-            //
-            // Additionally, some backends/drivers are fragile when resolving MSAA into sRGB
-            // textures. Prefer a linear intermediate for compatibility.
-            self.effective_path_msaa_samples(intermediate_format)
-        } else {
-            1
-        };
-        if let Some(requested) = std::env::var_os("FRET_FORCE_PATH_MSAA_SAMPLES")
-            .and_then(|v| v.to_string_lossy().trim().parse::<u32>().ok())
-        {
-            // Debug override to quickly validate whether rendering issues are MSAA-related.
-            // Any non-zero value is clamped to a power-of-two, with `1` disabling the MSAA path
-            // intermediate/composite path entirely.
-            let requested = requested.max(1).min(16);
-            let pow2_floor = 1u32 << (31 - requested.leading_zeros());
-            path_samples = pow2_floor.max(1);
-        }
-        if debug_render_path_enabled() && debug_render_path_should_log() {
-            eprintln!(
-                "render_scene: format={:?} output_is_srgb={} path_msaa_samples={} intermediate_format={:?}",
-                format, output_is_srgb, path_samples, intermediate_format
-            );
-        }
+        let path_samples = self.effective_path_msaa_samples(format);
         if path_samples > 1 {
             self.ensure_composite_pipeline(device, format);
-            self.ensure_path_msaa_pipeline(device, intermediate_format, path_samples);
-            self.ensure_path_intermediate(device, viewport_size, intermediate_format, path_samples);
+            self.ensure_path_msaa_pipeline(device, format, path_samples);
+            self.ensure_path_intermediate(device, viewport_size, format, path_samples);
         }
 
         self.text_system.flush_uploads(queue);
         if self.svg_perf_enabled {
             self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
+        }
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.frames = self.intermediate_perf.frames.saturating_add(1);
         }
         self.bump_svg_raster_epoch();
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
@@ -140,7 +70,7 @@ impl Renderer {
                 scene,
                 scale_factor,
                 viewport_size,
-                output_is_srgb,
+                format.is_srgb(),
                 &mut encoding,
             );
 
@@ -149,34 +79,120 @@ impl Renderer {
             self.scene_encoding_cache_key = Some(key);
             encoding
         };
-        if debug_render_path_enabled() && debug_render_path_should_log() {
-            let mut paths = 0usize;
-            let mut quads = 0usize;
-            let mut viewports = 0usize;
-            let mut images = 0usize;
-            let mut texts = 0usize;
-            let mut masks = 0usize;
-            for d in &encoding.ordered_draws {
-                match d {
-                    OrderedDraw::Path(_) => paths += 1,
-                    OrderedDraw::Quad(_) => quads += 1,
-                    OrderedDraw::Viewport(_) => viewports += 1,
-                    OrderedDraw::Image(_) => images += 1,
-                    OrderedDraw::Text(_) => texts += 1,
-                    OrderedDraw::Mask(_) => masks += 1,
+
+        let postprocess = if self.debug_pixelate_scale > 0 {
+            DebugPostprocess::Pixelate {
+                scale: self.debug_pixelate_scale,
+            }
+        } else if self.debug_blur_radius > 0 {
+            let radius = self.debug_blur_radius.max(1);
+            let budget = self.intermediate_budget_bytes;
+            let full = estimate_texture_bytes(viewport_size, format, 1);
+            let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
+            let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
+
+            let required_half = full.saturating_add(half.saturating_mul(2));
+            let required_quarter = full.saturating_add(quarter.saturating_mul(2));
+
+            let default_downsample_scale = if radius > 4 { 4 } else { 2 };
+            let mut downsample_scale = default_downsample_scale;
+            if downsample_scale == 2 && required_half > budget {
+                downsample_scale = 4;
+                if self.intermediate_perf_enabled {
+                    self.intermediate_perf.blur_degraded_to_quarter = self
+                        .intermediate_perf
+                        .blur_degraded_to_quarter
+                        .saturating_add(1);
                 }
             }
-            eprintln!(
-                "render_scene: ordered_draws total={} paths={} quads={} viewports={} images={} texts={} masks={}",
-                encoding.ordered_draws.len(),
-                paths,
-                quads,
-                viewports,
-                images,
-                texts,
-                masks
-            );
+
+            if downsample_scale == 4 && required_quarter > budget {
+                if self.intermediate_perf_enabled {
+                    self.intermediate_perf.blur_disabled_due_to_budget = self
+                        .intermediate_perf
+                        .blur_disabled_due_to_budget
+                        .saturating_add(1);
+                }
+                DebugPostprocess::None
+            } else {
+                DebugPostprocess::Blur {
+                    radius,
+                    downsample_scale,
+                    scissor: self.debug_blur_scissor,
+                }
+            }
+        } else if self.debug_offscreen_blit_enabled {
+            DebugPostprocess::OffscreenBlit
+        } else {
+            DebugPostprocess::None
+        };
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            format,
+            clear.0,
+            path_samples,
+            postprocess,
+            self.intermediate_budget_bytes,
+        );
+
+        let needs_scale = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ScaleNearest(_)));
+        let needs_blur = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Blur(_)));
+        let needs_clip_mask = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ClipMask(_)));
+        let needs_blit = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
+        let needs_composite = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::CompositePremul(_)));
+        let needs_color_adjust = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::ColorAdjust(_)));
+
+        if needs_blit || needs_blur {
+            self.ensure_blit_pipeline(device, format);
         }
+        if needs_scale {
+            self.ensure_scale_nearest_pipelines(device, format);
+        }
+        if needs_blur {
+            self.ensure_blur_pipelines(device, format);
+        }
+        if needs_clip_mask {
+            self.ensure_clip_mask_pipeline(device);
+        }
+        if needs_composite && path_samples <= 1 {
+            self.ensure_composite_pipeline(device, format);
+        }
+        if needs_color_adjust {
+            self.ensure_color_adjust_pipeline(device, format);
+        }
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_release_targets = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
+                .count() as u64;
+        }
+
+        let scale_pass_count = plan
+            .passes
+            .iter()
+            .filter(|p| matches!(p, RenderPlanPass::ScaleNearest(_)))
+            .count();
+        self.ensure_scale_param_capacity(device, scale_pass_count);
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -209,19 +225,18 @@ impl Renderer {
 
         let instance_buffer_index = self.instance_buffer_index;
         self.instance_buffer_index = (self.instance_buffer_index + 1) % self.instance_buffers.len();
-        let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
+        let instance_buffer = &self.instance_buffers[instance_buffer_index];
         if !instances.is_empty() {
-            queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
+            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(instances));
         }
 
         let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
         self.viewport_vertex_buffer_index =
             (self.viewport_vertex_buffer_index + 1) % self.viewport_vertex_buffers.len();
-        let viewport_vertex_buffer =
-            self.viewport_vertex_buffers[viewport_vertex_buffer_index].clone();
+        let viewport_vertex_buffer = &self.viewport_vertex_buffers[viewport_vertex_buffer_index];
         if !viewport_vertices.is_empty() {
             queue.write_buffer(
-                &viewport_vertex_buffer,
+                viewport_vertex_buffer,
                 0,
                 bytemuck::cast_slice(viewport_vertices),
             );
@@ -230,185 +245,57 @@ impl Renderer {
         let text_vertex_buffer_index = self.text_vertex_buffer_index;
         self.text_vertex_buffer_index =
             (self.text_vertex_buffer_index + 1) % self.text_vertex_buffers.len();
-        let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
+        let text_vertex_buffer = &self.text_vertex_buffers[text_vertex_buffer_index];
         if !text_vertices.is_empty() {
-            queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
+            queue.write_buffer(text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
         }
 
         let path_vertex_buffer_index = self.path_vertex_buffer_index;
         self.path_vertex_buffer_index =
             (self.path_vertex_buffer_index + 1) % self.path_vertex_buffers.len();
-        let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
+        let path_vertex_buffer = &self.path_vertex_buffers[path_vertex_buffer_index];
         if !path_vertices.is_empty() {
-            queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
+            queue.write_buffer(path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("fret renderer encoder"),
         });
 
-        {
-            #[derive(Clone, Copy)]
-            struct PathRun {
-                start: usize,
-                end: usize,
-                union: ScissorRect,
-                uniform_index: u32,
-                composite_vertex_base: u32,
-            }
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
+        let mut frame_targets = FrameTargets::default();
+        let scale_param_size = std::mem::size_of::<ScaleParamsUniform>() as u64;
+        let mut scale_param_cursor: u32 = 0;
 
-            let mut path_runs: Vec<PathRun> = Vec::new();
-            if path_samples > 1 {
-                let mut idx = 0usize;
-                while idx < encoding.ordered_draws.len() {
-                    let OrderedDraw::Path(first) = &encoding.ordered_draws[idx] else {
-                        idx += 1;
+        // Some passes draw textured quads (not fullscreen triangles). Upload the vertex payload
+        // once per frame and reference it via slices, since multiple `queue.write_buffer()` calls
+        // against the same buffer region in a single submission would make all passes observe the
+        // final write.
+        let mut quad_vertices: Vec<ViewportVertex> = Vec::new();
+        let mut quad_vertex_bases: Vec<Option<u32>> = vec![None; plan.passes.len()];
+        for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
+            match planned_pass {
+                RenderPlanPass::PathMsaaBatch(path_pass) => {
+                    let union = path_pass.union_scissor;
+                    if union.w == 0 || union.h == 0 {
                         continue;
-                    };
-
-                    let mut union = first.scissor;
-                    let uniform_index = first.uniform_index;
-                    let mut end = idx + 1;
-                    while end < encoding.ordered_draws.len() {
-                        match &encoding.ordered_draws[end] {
-                            OrderedDraw::Path(d) if d.uniform_index == uniform_index => {
-                                union = union_scissor(union, d.scissor);
-                                end += 1;
-                            }
-                            _ => break,
-                        }
                     }
 
-                    path_runs.push(PathRun {
-                        start: idx,
-                        end,
-                        union,
-                        uniform_index,
-                        composite_vertex_base: 0,
-                    });
-                    idx = end;
-                }
-            }
-
-            // Pre-render all path batches into offscreen textures so we can run a single main pass.
-            // This avoids relying on `LoadOp::Load` across multiple surface render passes, which
-            // some Vulkan swapchain paths have been observed to handle unreliably.
-            if path_samples > 1 && !path_runs.is_empty() {
-                let intermediate_info = self
-                    .path_intermediate
-                    .as_ref()
-                    .map(|i| (i.format, i.sample_count, i.msaa_view.is_some()));
-
-                if let Some((intermediate_format, sample_count, has_msaa_view)) = intermediate_info
-                    && sample_count > 1
-                    && has_msaa_view
-                    && self.path_msaa_pipeline.is_some()
-                {
-                    for run_index in 0..path_runs.len() {
-                        self.ensure_path_composite_target(
-                            device,
-                            run_index,
-                            viewport_size,
-                            intermediate_format,
-                        );
-                    }
-
-                    let path_msaa_pipeline = self
-                        .path_msaa_pipeline
-                        .as_ref()
-                        .expect("path msaa pipeline must exist when enabled");
-                    let intermediate = self
-                        .path_intermediate
-                        .as_ref()
-                        .expect("path intermediate must exist when enabled");
-                    let msaa_view = intermediate
-                        .msaa_view
-                        .as_ref()
-                        .expect("msaa_view must exist when sample_count > 1");
-
-                    for (run_index, run) in path_runs.iter().enumerate() {
-                        let target = &self.path_composite_targets[run_index];
-                        let mut path_pass =
-                            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: Some("fret path batch pass"),
-                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: msaa_view,
-                                    depth_slice: None,
-                                    resolve_target: Some(&target.view),
-                                    ops: wgpu::Operations {
-                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                                        store: wgpu::StoreOp::Store,
-                                    },
-                                })],
-                                depth_stencil_attachment: None,
-                                timestamp_writes: None,
-                                occlusion_query_set: None,
-                                multiview_mask: None,
-                            });
-
-                        path_pass.set_pipeline(path_msaa_pipeline);
-                        path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-
-                        let mut active_uniform_offset: Option<u32> = None;
-                        for j in run.start..run.end {
-                            let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
-                                unreachable!();
-                            };
-                            if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                                continue;
-                            }
-
-                            path_pass.set_scissor_rect(
-                                draw.scissor.x,
-                                draw.scissor.y,
-                                draw.scissor.w,
-                                draw.scissor.h,
-                            );
-
-                            let uniform_offset =
-                                (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                            if active_uniform_offset != Some(uniform_offset) {
-                                path_pass.set_bind_group(
-                                    0,
-                                    &self.uniform_bind_group,
-                                    &[uniform_offset],
-                                );
-                                active_uniform_offset = Some(uniform_offset);
-                            }
-
-                            path_pass.draw(
-                                draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                0..1,
-                            );
-                        }
-                    }
-                } else {
-                    path_runs.clear();
-                }
-            }
-
-            if path_samples > 1 && !path_runs.is_empty() {
-                let mut composite_vertices: Vec<ViewportVertex> =
-                    Vec::with_capacity(path_runs.len().saturating_mul(6));
-                let vw = viewport_size.0.max(1) as f32;
-                let vh = viewport_size.1.max(1) as f32;
-
-                for run in &mut path_runs {
-                    run.composite_vertex_base =
-                        composite_vertices.len().min(u32::MAX as usize) as u32;
-
-                    let union = run.union;
                     let x0 = union.x as f32;
                     let y0 = union.y as f32;
                     let x1 = (union.x + union.w) as f32;
                     let y1 = (union.y + union.h) as f32;
 
+                    let vw = viewport_size.0.max(1) as f32;
+                    let vh = viewport_size.1.max(1) as f32;
                     let u0 = x0 / vw;
                     let v0 = y0 / vh;
                     let u1 = x1 / vw;
                     let v1 = y1 / vh;
 
-                    let vertices: [ViewportVertex; 6] = [
+                    let base = quad_vertices.len().min(u32::MAX as usize) as u32;
+                    quad_vertex_bases[pass_index] = Some(base);
+                    quad_vertices.extend_from_slice(&[
                         ViewportVertex {
                             pos_px: [x0, y0],
                             uv: [u0, v0],
@@ -445,345 +332,1487 @@ impl Renderer {
                             opacity: 1.0,
                             _pad: [0.0; 3],
                         },
-                    ];
-                    composite_vertices.extend_from_slice(&vertices);
+                    ]);
                 }
+                RenderPlanPass::CompositePremul(pass) => {
+                    let x0 = 0.0;
+                    let y0 = 0.0;
+                    let x1 = pass.dst_size.0 as f32;
+                    let y1 = pass.dst_size.1 as f32;
 
-                self.ensure_path_composite_vertex_buffer(device, composite_vertices.len());
-                queue.write_buffer(
-                    &self.path_composite_vertices,
-                    0,
-                    bytemuck::cast_slice(&composite_vertices),
-                );
-            }
-
-            enum ActivePipeline {
-                None,
-                Quad,
-                Viewport,
-                TextMask,
-                TextColor,
-                Mask,
-                Composite,
-                Path,
-            }
-
-            let quad_pipeline = self
-                .quad_pipeline
-                .as_ref()
-                .expect("quad pipeline must exist");
-            let viewport_pipeline = self
-                .viewport_pipeline
-                .as_ref()
-                .expect("viewport pipeline must exist");
-            let text_pipeline = self
-                .text_pipeline
-                .as_ref()
-                .expect("text pipeline must exist");
-            let text_color_pipeline = self
-                .text_color_pipeline
-                .as_ref()
-                .expect("text color pipeline must exist");
-            let mask_pipeline = self
-                .mask_pipeline
-                .as_ref()
-                .expect("mask pipeline must exist");
-            let composite_pipeline = self.composite_pipeline.as_ref();
-            let path_pipeline = self
-                .path_pipeline
-                .as_ref()
-                .expect("path pipeline must exist");
-
-            let mut active_pipeline = ActivePipeline::None;
-
-            fn begin_main_pass<'a>(
-                encoder: &'a mut wgpu::CommandEncoder,
-                target_view: &'a wgpu::TextureView,
-                load: wgpu::LoadOp<wgpu::Color>,
-            ) -> wgpu::RenderPass<'a> {
-                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("fret renderer pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: target_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load,
-                            store: wgpu::StoreOp::Store,
+                    let base = quad_vertices.len().min(u32::MAX as usize) as u32;
+                    quad_vertex_bases[pass_index] = Some(base);
+                    quad_vertices.extend_from_slice(&[
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
                         },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                })
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [1.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [0.0, 0.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [1.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [0.0, 1.0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                    ]);
+                }
+                _ => {}
             }
+        }
+        if !quad_vertices.is_empty() {
+            self.ensure_path_composite_vertex_buffer(device, quad_vertices.len());
+            queue.write_buffer(
+                &self.path_composite_vertices,
+                0,
+                bytemuck::cast_slice(&quad_vertices),
+            );
+        }
 
-            let mut pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Clear(clear.0));
-            let mut active_uniform_offset: Option<u32> = None;
+        let quad_vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
 
-            let mut i = 0usize;
-            let mut path_run_cursor = 0usize;
-            while i < encoding.ordered_draws.len() {
-                let item = &encoding.ordered_draws[i];
+        for (pass_index, planned_pass) in plan.passes.iter().enumerate() {
+            match planned_pass {
+                RenderPlanPass::SceneDrawRange(scene_pass) => {
+                    debug_assert_eq!(scene_pass.segment.0, 0);
+                    let load = scene_pass.load;
+                    let pass_target_view_owned = match scene_pass.target {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "SceneDrawRange cannot target mask targets");
+                            None
+                        }
+                    };
+                    let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
-                if path_samples > 1
-                    && let Some(run) = path_runs.get(path_run_cursor)
-                    && run.start == i
-                {
-                    let union = run.union;
-                    if union.w > 0 && union.h > 0 {
-                        let target = &self.path_composite_targets[path_run_cursor];
-
-                        let composite_pipeline =
-                            composite_pipeline.expect("composite pipeline must exist");
-                        pass.set_pipeline(composite_pipeline);
-                        let uniform_offset =
-                            (u64::from(run.uniform_index) * self.uniform_stride) as u32;
-                        pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                        pass.set_bind_group(1, &target.bind_group, &[]);
-                        let vertex_size = std::mem::size_of::<ViewportVertex>() as u64;
-                        let base = u64::from(run.composite_vertex_base) * vertex_size;
-                        let len = 6 * vertex_size;
-                        pass.set_vertex_buffer(
-                            0,
-                            self.path_composite_vertices.slice(base..base + len),
-                        );
-                        pass.set_scissor_rect(union.x, union.y, union.w, union.h);
-                        pass.draw(0..6, 0..1);
-                        active_pipeline = ActivePipeline::Composite;
-                    }
-
-                    i = run.end;
-                    path_run_cursor += 1;
-                    continue;
-                }
-
-                match item {
-                    OrderedDraw::Quad(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
+                    {
+                        enum ActivePipeline {
+                            None,
+                            Quad,
+                            Viewport,
+                            TextMask,
+                            TextColor,
+                            Mask,
+                            Path,
                         }
 
-                        if !matches!(active_pipeline, ActivePipeline::Quad) {
-                            pass.set_pipeline(quad_pipeline);
-                            pass.set_vertex_buffer(0, instance_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Quad;
+                        let quad_pipeline = self
+                            .quad_pipeline
+                            .as_ref()
+                            .expect("quad pipeline must exist");
+                        let viewport_pipeline = self
+                            .viewport_pipeline
+                            .as_ref()
+                            .expect("viewport pipeline must exist");
+                        let text_pipeline = self
+                            .text_pipeline
+                            .as_ref()
+                            .expect("text pipeline must exist");
+                        let text_color_pipeline = self
+                            .text_color_pipeline
+                            .as_ref()
+                            .expect("text color pipeline must exist");
+                        let mask_pipeline = self
+                            .mask_pipeline
+                            .as_ref()
+                            .expect("mask pipeline must exist");
+                        let path_pipeline = self
+                            .path_pipeline
+                            .as_ref()
+                            .expect("path pipeline must exist");
+
+                        let mut active_pipeline = ActivePipeline::None;
+
+                        fn begin_main_pass<'a>(
+                            encoder: &'a mut wgpu::CommandEncoder,
+                            target_view: &'a wgpu::TextureView,
+                            load: wgpu::LoadOp<wgpu::Color>,
+                        ) -> wgpu::RenderPass<'a> {
+                            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: Some("fret renderer pass"),
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                    view: target_view,
+                                    depth_slice: None,
+                                    resolve_target: None,
+                                    ops: wgpu::Operations {
+                                        load,
+                                        store: wgpu::StoreOp::Store,
+                                    },
+                                })],
+                                depth_stencil_attachment: None,
+                                timestamp_writes: None,
+                                occlusion_query_set: None,
+                                multiview_mask: None,
+                            })
                         }
 
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            0..6,
-                            draw.first_instance..(draw.first_instance + draw.instance_count),
-                        );
-                    }
-                    OrderedDraw::Viewport(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
+                        let mut pass = begin_main_pass(&mut encoder, pass_target_view, load);
+                        let mut active_uniform_offset: Option<u32> = None;
 
-                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
-                            pass.set_pipeline(viewport_pipeline);
-                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Viewport;
-                        }
+                        let mut i = scene_pass.draw_range.start;
+                        while i < scene_pass.draw_range.end {
+                            let item = &encoding.ordered_draws[i];
 
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.viewport_bind_groups.get(&draw.target)
-                        else {
-                            // Missing bind group should only happen if the target vanished
-                            // between encoding and rendering.
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Image(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
+                            match item {
+                                OrderedDraw::Quad(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
 
-                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
-                            pass.set_pipeline(viewport_pipeline);
-                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Viewport;
-                        }
+                                    if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                        pass.set_pipeline(quad_pipeline);
+                                        pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Quad;
+                                    }
 
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Mask(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Mask) {
-                            pass.set_pipeline(mask_pipeline);
-                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Mask;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Text(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        match draw.kind {
-                            TextDrawKind::Mask => {
-                                if !matches!(active_pipeline, ActivePipeline::TextMask) {
-                                    pass.set_pipeline(text_pipeline);
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                                    pass.set_bind_group(
-                                        1,
-                                        self.text_system.mask_atlas_bind_group(),
-                                        &[],
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
                                     );
-                                    active_pipeline = ActivePipeline::TextMask;
+                                    pass.draw(
+                                        0..6,
+                                        draw.first_instance
+                                            ..(draw.first_instance + draw.instance_count),
+                                    );
+                                }
+                                OrderedDraw::Viewport(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                                        pass.set_pipeline(viewport_pipeline);
+                                        pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Viewport;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.viewport_bind_groups.get(&draw.target)
+                                    else {
+                                        // Missing bind group should only happen if the target vanished
+                                        // between encoding and rendering.
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Image(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                                        pass.set_pipeline(viewport_pipeline);
+                                        pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Viewport;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.image_bind_groups.get(&draw.image)
+                                    else {
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Mask(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Mask) {
+                                        pass.set_pipeline(mask_pipeline);
+                                        pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Mask;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.image_bind_groups.get(&draw.image)
+                                    else {
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Text(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    match draw.kind {
+                                        TextDrawKind::Mask => {
+                                            if !matches!(active_pipeline, ActivePipeline::TextMask)
+                                            {
+                                                pass.set_pipeline(text_pipeline);
+                                                pass.set_vertex_buffer(
+                                                    0,
+                                                    text_vertex_buffer.slice(..),
+                                                );
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system.mask_atlas_bind_group(),
+                                                    &[],
+                                                );
+                                                active_pipeline = ActivePipeline::TextMask;
+                                            }
+                                        }
+                                        TextDrawKind::Color => {
+                                            if !matches!(active_pipeline, ActivePipeline::TextColor)
+                                            {
+                                                pass.set_pipeline(text_color_pipeline);
+                                                pass.set_vertex_buffer(
+                                                    0,
+                                                    text_vertex_buffer.slice(..),
+                                                );
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system.color_atlas_bind_group(),
+                                                    &[],
+                                                );
+                                                active_pipeline = ActivePipeline::TextColor;
+                                            }
+                                        }
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Path(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Path) {
+                                        pass.set_pipeline(path_pipeline);
+                                        pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Path;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
                                 }
                             }
-                            TextDrawKind::Color => {
-                                if !matches!(active_pipeline, ActivePipeline::TextColor) {
-                                    pass.set_pipeline(text_color_pipeline);
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                                    pass.set_bind_group(
-                                        1,
-                                        self.text_system.color_atlas_bind_group(),
-                                        &[],
-                                    );
-                                    active_pipeline = ActivePipeline::TextColor;
-                                }
+
+                            i += 1;
+                        }
+                    }
+                }
+                RenderPlanPass::PathMsaaBatch(path_pass) => {
+                    debug_assert_eq!(path_pass.segment.0, 0);
+                    let pass_target_view_owned = match path_pass.target {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            viewport_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "PathMsaaBatch cannot target mask targets");
+                            None
+                        }
+                    };
+                    let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
+
+                    let start = path_pass.draw_range.start;
+                    let end = path_pass.draw_range.end;
+                    if start >= end {
+                        continue;
+                    }
+
+                    let Some(intermediate) = &self.path_intermediate else {
+                        continue;
+                    };
+                    let Some(path_msaa_pipeline) = self.path_msaa_pipeline.as_ref() else {
+                        continue;
+                    };
+                    let Some(composite_pipeline) = self.composite_pipeline.as_ref() else {
+                        continue;
+                    };
+
+                    {
+                        let mut path_pass_rp =
+                            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: Some("fret path intermediate pass"),
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                    view: intermediate
+                                        .msaa_view
+                                        .as_ref()
+                                        .unwrap_or(&intermediate.resolved_view),
+                                    depth_slice: None,
+                                    resolve_target: if intermediate.sample_count > 1 {
+                                        Some(&intermediate.resolved_view)
+                                    } else {
+                                        None
+                                    },
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                        store: if intermediate.sample_count > 1 {
+                                            wgpu::StoreOp::Discard
+                                        } else {
+                                            wgpu::StoreOp::Store
+                                        },
+                                    },
+                                })],
+                                depth_stencil_attachment: None,
+                                timestamp_writes: None,
+                                occlusion_query_set: None,
+                                multiview_mask: None,
+                            });
+
+                        path_pass_rp.set_pipeline(path_msaa_pipeline);
+                        path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+
+                        let mut active_uniform_offset: Option<u32> = None;
+                        for j in start..end {
+                            let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
+                                unreachable!("PathMsaaBatch pass must reference only Path draws");
+                            };
+                            if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                continue;
+                            }
+                            path_pass_rp.set_scissor_rect(
+                                draw.scissor.x,
+                                draw.scissor.y,
+                                draw.scissor.w,
+                                draw.scissor.h,
+                            );
+                            let uniform_offset =
+                                (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            if active_uniform_offset != Some(uniform_offset) {
+                                path_pass_rp.set_bind_group(
+                                    0,
+                                    &self.uniform_bind_group,
+                                    &[uniform_offset],
+                                );
+                                active_uniform_offset = Some(uniform_offset);
+                            }
+                            path_pass_rp.draw(
+                                draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                0..1,
+                            );
+                        }
+                    }
+
+                    let union = path_pass.union_scissor;
+                    if union.w == 0 || union.h == 0 {
+                        continue;
+                    }
+                    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+                        continue;
+                    };
+
+                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret renderer pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: pass_target_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+
+                    pass.set_pipeline(composite_pipeline);
+                    let uniform_offset =
+                        (u64::from(path_pass.batch_uniform_index) * self.uniform_stride) as u32;
+                    pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    pass.set_bind_group(1, &intermediate.bind_group, &[]);
+                    let base = u64::from(base) * quad_vertex_size;
+                    let len = 6 * quad_vertex_size;
+                    pass.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
+                    pass.set_scissor_rect(union.x, union.y, union.w, union.h);
+                    pass.draw(0..6, 0..1);
+                }
+                RenderPlanPass::ScaleNearest(pass) => {
+                    let scale = pass.scale.max(1);
+                    let scale_param_offset =
+                        u64::from(scale_param_cursor) * self.scale_param_stride;
+                    let scale_param_offset_u32 = scale_param_offset as u32;
+                    scale_param_cursor = scale_param_cursor.saturating_add(1);
+                    let params = ScaleParamsUniform {
+                        scale,
+                        _pad0: 0,
+                        src_origin: [pass.src_origin.0, pass.src_origin.1],
+                        dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
+                        _pad1: 0,
+                        _pad2: 0,
+                    };
+                    queue.write_buffer(
+                        &self.scale_param_buffer,
+                        scale_param_offset,
+                        bytemuck::bytes_of(&params),
+                    );
+                    let scale_param_size_nz =
+                        std::num::NonZeroU64::new(scale_param_size).expect("scale params size");
+                    let scale_param_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &self.scale_param_buffer,
+                        offset: 0,
+                        size: Some(scale_param_size_nz),
+                    });
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ScaleNearest src cannot be Output/mask targets");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ScaleNearest dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based scale-nearest expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask pass needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let mask_layout = self
+                            .scale_mask_bind_group_layout
+                            .as_ref()
+                            .expect("scale mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret scale-nearest mask bind group"),
+                            layout: mask_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: scale_param_binding,
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let pipeline = self
+                            .upscale_mask_pipeline
+                            .as_ref()
+                            .expect("upscale mask pipeline must exist");
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret upscale-nearest mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
                             }
                         }
-
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
+                        let pipeline = self
+                            .upscale_masked_pipeline
+                            .as_ref()
+                            .expect("upscale masked pipeline must exist");
                         let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Path(draw) => {
-                        if path_samples > 1 {
-                            i += 1;
-                            continue;
-                        }
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
 
-                        if !matches!(active_pipeline, ActivePipeline::Path) {
-                            pass.set_pipeline(path_pipeline);
-                            pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Path;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
+                        let layout = self
+                            .scale_bind_group_layout
+                            .as_ref()
+                            .expect("scale bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret scale-nearest bind group",
+                            layout,
+                            &src_view,
+                            scale_param_binding,
                         );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret upscale-nearest masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let layout = self
+                            .scale_bind_group_layout
+                            .as_ref()
+                            .expect("scale bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret scale-nearest bind group",
+                            layout,
+                            &src_view,
+                            scale_param_binding,
+                        );
+                        let (pipeline, label) = match pass.mode {
+                            ScaleMode::Downsample => (
+                                self.downsample_pipeline
+                                    .as_ref()
+                                    .expect("downsample pipeline must exist"),
+                                "fret downsample-nearest pass",
+                            ),
+                            ScaleMode::Upscale => (
+                                self.upscale_pipeline
+                                    .as_ref()
+                                    .expect("upscale pipeline must exist"),
+                                "fret upscale-nearest pass",
+                            ),
+                        };
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            label,
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            &[scale_param_offset_u32],
+                            pass.dst_scissor,
                         );
                     }
                 }
+                RenderPlanPass::Blur(pass) => {
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(false, "Blur src cannot be Output/mask targets");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
 
-                i += 1;
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "Blur dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based blur expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask blur needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let layout = self
+                            .blit_mask_bind_group_layout
+                            .as_ref()
+                            .expect("blit mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret blur mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let (pipeline, label) = match pass.axis {
+                            BlurAxis::Horizontal => (
+                                self.blur_h_mask_pipeline
+                                    .as_ref()
+                                    .expect("blur-h mask pipeline must exist"),
+                                "fret blur-h mask pass",
+                            ),
+                            BlurAxis::Vertical => (
+                                self.blur_v_mask_pipeline
+                                    .as_ref()
+                                    .expect("blur-v mask pipeline must exist"),
+                                "fret blur-v mask pass",
+                            ),
+                        };
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some(label),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .blit_bind_group_layout
+                            .as_ref()
+                            .expect("blit bind group layout must exist");
+                        let bind_group = create_texture_bind_group(
+                            device,
+                            "fret blur bind group",
+                            layout,
+                            &src_view,
+                        );
+                        let (pipeline, label) = match pass.axis {
+                            BlurAxis::Horizontal => (
+                                self.blur_h_masked_pipeline
+                                    .as_ref()
+                                    .expect("blur-h masked pipeline must exist"),
+                                "fret blur-h masked pass",
+                            ),
+                            BlurAxis::Vertical => (
+                                self.blur_v_masked_pipeline
+                                    .as_ref()
+                                    .expect("blur-v masked pipeline must exist"),
+                                "fret blur-v masked pass",
+                            ),
+                        };
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some(label),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let layout = self
+                            .blit_bind_group_layout
+                            .as_ref()
+                            .expect("blit bind group layout must exist");
+                        let bind_group = create_texture_bind_group(
+                            device,
+                            "fret blur bind group",
+                            layout,
+                            &src_view,
+                        );
+                        let blur_pipeline = match pass.axis {
+                            BlurAxis::Horizontal => self
+                                .blur_h_pipeline
+                                .as_ref()
+                                .expect("blur-h pipeline must exist"),
+                            BlurAxis::Vertical => self
+                                .blur_v_pipeline
+                                .as_ref()
+                                .expect("blur-v pipeline must exist"),
+                        };
+                        let label = match pass.axis {
+                            BlurAxis::Horizontal => "fret blur-h pass",
+                            BlurAxis::Vertical => "fret blur-v pass",
+                        };
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            label,
+                            blur_pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            &[],
+                            pass.dst_scissor,
+                        );
+                    }
+                }
+                RenderPlanPass::FullscreenBlit(pass) => {
+                    let blit_pipeline = self
+                        .blit_pipeline
+                        .as_ref()
+                        .expect("blit pipeline must exist");
+
+                    let layout = self
+                        .blit_bind_group_layout
+                        .as_ref()
+                        .expect("blit bind group layout must exist");
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(
+                                false,
+                                "FullscreenBlit src cannot be Output/mask targets"
+                            );
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+                    let blit_bind_group = create_texture_bind_group(
+                        device,
+                        "fret blit bind group",
+                        layout,
+                        &src_view,
+                    );
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "FullscreenBlit dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    run_fullscreen_triangle_pass(
+                        &mut encoder,
+                        "fret blit pass",
+                        blit_pipeline,
+                        dst_view,
+                        pass.load,
+                        &blit_bind_group,
+                        &[],
+                        pass.dst_scissor,
+                    );
+                }
+                RenderPlanPass::ColorAdjust(pass) => {
+                    queue.write_buffer(
+                        &self.color_adjust_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&[
+                            pass.saturation,
+                            pass.brightness,
+                            pass.contrast,
+                            0.0,
+                        ]),
+                    );
+
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ColorAdjust src cannot be Output/mask targets");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "ColorAdjust dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based color-adjust expects full-size destination"
+                        );
+
+                        let mask_uniform_index = pass
+                            .mask_uniform_index
+                            .expect("mask color-adjust needs uniform index");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let layout = self
+                            .color_adjust_mask_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret color-adjust mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.color_adjust_param_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        let pipeline = self
+                            .color_adjust_mask_pipeline
+                            .as_ref()
+                            .expect("color-adjust mask pipeline must exist");
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-adjust mask pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let layout = self
+                            .color_adjust_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-adjust bind group",
+                            layout,
+                            &src_view,
+                            self.color_adjust_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .color_adjust_masked_pipeline
+                            .as_ref()
+                            .expect("color-adjust masked pipeline must exist");
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+
+                        let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("fret color-adjust masked pass"),
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: dst_view,
+                                depth_slice: None,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: pass.load,
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            timestamp_writes: None,
+                            occlusion_query_set: None,
+                            multiview_mask: None,
+                        });
+                        rp.set_pipeline(pipeline);
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        rp.set_bind_group(1, &bind_group, &[]);
+                        if let Some(scissor) = pass.dst_scissor {
+                            if scissor.w != 0 && scissor.h != 0 {
+                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            }
+                        }
+                        rp.draw(0..3, 0..1);
+                    } else {
+                        let layout = self
+                            .color_adjust_bind_group_layout
+                            .as_ref()
+                            .expect("color-adjust bind group layout must exist");
+                        let bind_group = create_texture_uniform_bind_group(
+                            device,
+                            "fret color-adjust bind group",
+                            layout,
+                            &src_view,
+                            self.color_adjust_param_buffer.as_entire_binding(),
+                        );
+                        let pipeline = self
+                            .color_adjust_pipeline
+                            .as_ref()
+                            .expect("color-adjust pipeline must exist");
+                        run_fullscreen_triangle_pass(
+                            &mut encoder,
+                            "fret color-adjust pass",
+                            pipeline,
+                            dst_view,
+                            pass.load,
+                            &bind_group,
+                            &[],
+                            pass.dst_scissor,
+                        );
+                    }
+                }
+                RenderPlanPass::CompositePremul(pass) => {
+                    let src_view = match pass.src {
+                        PlanTarget::Output
+                        | PlanTarget::Mask0
+                        | PlanTarget::Mask1
+                        | PlanTarget::Mask2 => {
+                            debug_assert!(
+                                false,
+                                "CompositePremul src cannot be Output/mask targets"
+                            );
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            pass.dst,
+                            pass.dst_size,
+                            format,
+                            usage,
+                            self.intermediate_budget_bytes,
+                        )),
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                            debug_assert!(false, "CompositePremul dst cannot be mask targets");
+                            None
+                        }
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    let (composite_pipeline, bind_group) = if let Some(mask) = pass.mask {
+                        debug_assert!(matches!(
+                            mask.target,
+                            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                        ));
+                        debug_assert_eq!(
+                            pass.dst_size, viewport_size,
+                            "mask-based composite expects full-size destination"
+                        );
+
+                        let mask_view = frame_targets.require_target(mask.target, mask.size);
+                        let layout = self
+                            .composite_mask_bind_group_layout
+                            .as_ref()
+                            .expect("composite mask bind group layout must exist");
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret composite premul mask bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::Sampler(
+                                        &self.viewport_sampler,
+                                    ),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                                },
+                            ],
+                        });
+
+                        (
+                            self.composite_mask_pipeline
+                                .as_ref()
+                                .expect("composite premul mask pipeline must exist"),
+                            bind_group,
+                        )
+                    } else {
+                        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret composite premul bind group"),
+                            layout: &self.viewport_bind_group_layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::Sampler(
+                                        &self.viewport_sampler,
+                                    ),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                            ],
+                        });
+                        (
+                            self.composite_pipeline
+                                .as_ref()
+                                .expect("composite premul pipeline must exist"),
+                            bind_group,
+                        )
+                    };
+                    let Some(base) = quad_vertex_bases.get(pass_index).and_then(|v| *v) else {
+                        continue;
+                    };
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret composite premul pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: dst_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: pass.load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(composite_pipeline);
+                    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+                        let uniform_offset =
+                            (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    } else {
+                        rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
+                    }
+                    rp.set_bind_group(1, &bind_group, &[]);
+                    let base = u64::from(base) * quad_vertex_size;
+                    let len = 6 * quad_vertex_size;
+                    rp.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
+                    if let Some(scissor) = pass.dst_scissor {
+                        if scissor.w != 0 && scissor.h != 0 {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        }
+                    }
+                    rp.draw(0..6, 0..1);
+                }
+                RenderPlanPass::ClipMask(pass) => {
+                    debug_assert!(matches!(
+                        pass.dst,
+                        PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+                    ));
+                    queue.write_buffer(
+                        &self.clip_mask_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&[
+                            pass.dst_size.0 as f32,
+                            pass.dst_size.1 as f32,
+                            0.0,
+                            0.0,
+                        ]),
+                    );
+                    let dst_view = frame_targets.ensure_target(
+                        &mut self.intermediate_pool,
+                        device,
+                        pass.dst,
+                        pass.dst_size,
+                        wgpu::TextureFormat::R8Unorm,
+                        usage,
+                        self.intermediate_budget_bytes,
+                    );
+
+                    let pipeline = self
+                        .clip_mask_pipeline
+                        .as_ref()
+                        .expect("clip mask pipeline must exist");
+                    let uniform_offset =
+                        (u64::from(pass.uniform_index) * self.uniform_stride) as u32;
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret clip mask pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &dst_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(pipeline);
+                    rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    rp.set_bind_group(1, &self.clip_mask_param_bind_group, &[]);
+                    if let Some(scissor) = pass.dst_scissor {
+                        if scissor.w != 0 && scissor.h != 0 {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        }
+                    }
+                    rp.draw(0..3, 0..1);
+                }
+                RenderPlanPass::ReleaseTarget(target) => {
+                    frame_targets.release_target(
+                        &mut self.intermediate_pool,
+                        *target,
+                        self.intermediate_budget_bytes,
+                    );
+                }
             }
         }
 
         let cmd = encoder.finish();
+
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
+            self.intermediate_perf.last_frame_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
+        }
+        frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
 
         // Keep the most recent encoding for potential reuse on the next frame.
         if cache_hit {
@@ -794,35 +1823,4 @@ impl Renderer {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::path_intermediate_format;
-
-    #[test]
-    fn path_intermediate_format_drops_srgb_suffix() {
-        assert_eq!(
-            path_intermediate_format(wgpu::TextureFormat::Bgra8UnormSrgb),
-            wgpu::TextureFormat::Rgba8Unorm
-        );
-        assert_eq!(
-            path_intermediate_format(wgpu::TextureFormat::Bgra8Unorm),
-            wgpu::TextureFormat::Rgba8Unorm
-        );
-        assert_eq!(
-            path_intermediate_format(wgpu::TextureFormat::Rgba8UnormSrgb),
-            wgpu::TextureFormat::Rgba8Unorm
-        );
-    }
-
-    #[test]
-    fn path_intermediate_format_preserves_non_srgb() {
-        assert_eq!(
-            path_intermediate_format(wgpu::TextureFormat::Bgra8Unorm),
-            wgpu::TextureFormat::Rgba8Unorm
-        );
-        assert_eq!(
-            path_intermediate_format(wgpu::TextureFormat::Rgba16Float),
-            wgpu::TextureFormat::Rgba16Float
-        );
-    }
-}
+// FrameTargets moved to `renderer/frame_targets.rs`.

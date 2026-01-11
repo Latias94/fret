@@ -161,6 +161,23 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 },
             };
         let mut renderer = Renderer::new(&context.adapter, &context.device);
+
+        if let Some(raw) = std::env::var_os("FRET_WGPU_BACKEND")
+            && !raw.is_empty()
+        {
+            tracing::info!(requested = ?raw, "wgpu backend requested");
+        }
+        let info = context.adapter.get_info();
+        tracing::info!(
+            backend = ?info.backend,
+            name = info.name,
+            driver = info.driver,
+            driver_info = info.driver_info,
+            vendor = info.vendor,
+            device = info.device,
+            "wgpu adapter selected"
+        );
+
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
@@ -557,12 +574,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
 
                 {
-                    self.init_renderdoc_if_needed();
-                    let capturing = self
-                        .renderdoc
-                        .as_mut()
-                        .is_some_and(|r| r.begin_capture_if_requested());
-
                     let (Some(context), Some(renderer)) =
                         (self.context.as_ref(), self.renderer.as_mut())
                     else {
@@ -571,6 +582,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
+
+                    let capturing = self
+                        .renderdoc
+                        .as_mut()
+                        .is_some_and(|r| r.begin_capture_if_requested());
 
                     // Apply any pending window-side state (IME/cursor) once per frame, similar to
                     // Dear ImGui's backend `prepare_frame` pattern.
@@ -940,19 +956,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let drag_poll = self.app.drag().is_some_and(|d| d.cross_window_hover);
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
-
-        // `Effect::RequestAnimationFrame(window)` is a one-shot "please give me another frame"
-        // request. On some platforms (notably Windows), calling `Window::request_redraw()` from
-        // inside a `RedrawRequested` handler may not reliably schedule another `RedrawRequested`
-        // without an additional wake-up.
-        //
-        // To make RAF semantics robust and input-independent, we also request redraw here, right
-        // before the event loop goes idle.
-        for &window in &self.raf_windows {
-            if let Some(state) = self.windows.get(window) {
-                state.window.request_redraw();
-            }
-        }
 
         let wants_raf = !self.raf_windows.is_empty();
         self.raf_windows.clear();

@@ -7,7 +7,9 @@
 //! These helpers keep wrappers from duplicating the per-item wiring.
 
 use fret_core::Rect;
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, ScrollAxis, ScrollProps, SizeStyle,
+};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -95,6 +97,45 @@ pub fn submenu_panel_for_value_at<H: UiHost>(
 ) -> AnyElement {
     with_submenu_value_scope(cx, &open_value, |cx| {
         submenu_panel_at(cx, placed, build_container, f)
+    })
+}
+
+fn submenu_scroll_y_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let scroll_layout = LayoutStyle {
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        },
+        overflow: Overflow::Clip,
+        ..Default::default()
+    };
+    cx.scroll(
+        ScrollProps {
+            layout: scroll_layout,
+            axis: ScrollAxis::Y,
+            ..Default::default()
+        },
+        f,
+    )
+}
+
+/// Render a submenu panel that wraps its content in a scroll container (Y axis).
+///
+/// This matches the Radix Menu pattern of sizing the panel viewport to the available height and
+/// scrolling the internal list when content exceeds that viewport.
+pub fn submenu_panel_scroll_y_for_value_at<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open_value: Arc<str>,
+    placed: Rect,
+    build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    submenu_panel_for_value_at(cx, open_value, placed, build_container, move |cx| {
+        vec![submenu_scroll_y_fill(cx, f)]
     })
 }
 

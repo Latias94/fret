@@ -839,6 +839,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
 
+    renderdoc: Option<RenderDocCapture>,
     context: Option<WgpuContext>,
     renderer: Option<Renderer>,
     no_services: NoUiServices,
@@ -1160,6 +1161,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             driver,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
+            renderdoc: None,
             context: None,
             renderer: None,
             no_services: NoUiServices,
@@ -1646,6 +1648,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // redraw can be dropped and the window may appear blank until another event arrives.
         if let Some(state) = self.windows.get(id) {
             state.window.request_redraw();
+            // `request_redraw()` alone may not wake the event loop on some platforms; schedule a
+            // one-shot RAF so the initial frame presents without requiring any user input.
+            self.raf_windows.insert(id);
         }
         Ok(id)
     }
@@ -1985,6 +1990,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::Redraw(window) => {
                         if let Some(state) = self.windows.get(window) {
                             state.window.request_redraw();
+                            // Some platforms may not wake the event loop for `request_redraw()`
+                            // alone; scheduling a one-shot RAF ensures the first frame presents
+                            // without requiring any input events.
+                            self.raf_windows.insert(window);
                         }
                     }
                     Effect::ImeAllow { window, enabled } => {

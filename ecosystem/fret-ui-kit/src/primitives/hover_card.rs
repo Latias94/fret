@@ -7,12 +7,14 @@
 //! and hover overlay request wiring. Visual styling, motion, and arrow rendering belong in higher
 //! layers (e.g. shadcn recipes).
 
+use fret_core::{Px, Rect};
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::primitives::popper;
 use crate::{OverlayController, OverlayRequest};
 
 /// Stable per-overlay root naming convention for hover cards.
@@ -114,11 +116,50 @@ pub fn hover_card_hovered(
     trigger_hovered || overlay_hovered || keyboard_focused
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HoverCardPopperVars {
+    pub available_width: Px,
+    pub available_height: Px,
+    pub trigger_width: Px,
+    pub trigger_height: Px,
+}
+
+pub fn hover_card_popper_desired_width(outer: Rect, anchor: Rect, min_width: Px) -> Px {
+    popper::popper_desired_width(outer, anchor, min_width)
+}
+
+/// Compute Radix-like "hover card popper vars" (`--radix-hover-card-*`) for recipes.
+///
+/// Upstream Radix re-namespaces these from `@radix-ui/react-popper`:
+/// - `--radix-hover-card-content-available-width`
+/// - `--radix-hover-card-content-available-height`
+/// - `--radix-hover-card-trigger-width`
+/// - `--radix-hover-card-trigger-height`
+///
+/// In Fret, we compute the same concepts as a structured return value so recipes can constrain
+/// their content without relying on CSS variables.
+pub fn hover_card_popper_vars(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    placement: popper::PopperContentPlacement,
+) -> HoverCardPopperVars {
+    let metrics =
+        popper::popper_available_metrics_for_placement(outer, anchor, min_width, placement);
+    HoverCardPopperVars {
+        available_width: metrics.available_width,
+        available_height: metrics.available_height,
+        trigger_width: metrics.anchor_width,
+        trigger_height: metrics.anchor_height,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_core::{Point, Size};
 
     #[test]
     fn hover_card_root_open_model_uses_controlled_model() {
@@ -158,5 +199,26 @@ mod tests {
         assert!(hover_card_hovered(true, false, false));
         assert!(hover_card_hovered(false, true, false));
         assert!(hover_card_hovered(false, false, true));
+    }
+
+    #[test]
+    fn hover_card_popper_vars_available_height_tracks_flipped_side_space() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(70.0)),
+            Size::new(Px(30.0), Px(10.0)),
+        );
+
+        let placement = popper::PopperContentPlacement::new(
+            popper::LayoutDirection::Ltr,
+            popper::Side::Bottom,
+            popper::Align::Start,
+            Px(0.0),
+        );
+        let vars = hover_card_popper_vars(outer, anchor, Px(0.0), placement);
+        assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
     }
 }

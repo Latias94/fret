@@ -150,6 +150,47 @@ fn render_and_readback(
 }
 
 #[test]
+fn gpu_offscreen_identity_blit_matches_direct() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+
+    let size = (64u32, 64u32);
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(4.0), Px(6.0)), Size::new(Px(56.0), Px(52.0))),
+        background: Color {
+            r: 0.2,
+            g: 0.4,
+            b: 0.8,
+            a: 0.75,
+        },
+        border: Edges::all(Px(1.0)),
+        border_color: Color {
+            r: 1.0,
+            g: 0.5,
+            b: 0.0,
+            a: 1.0,
+        },
+        corner_radii: Corners::all(Px(8.0)),
+    });
+
+    let direct = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    renderer.set_debug_offscreen_blit_enabled(true);
+    let offscreen = render_and_readback(&ctx, &mut renderer, &scene, size);
+    renderer.set_debug_offscreen_blit_enabled(false);
+
+    assert_eq!(direct, offscreen, "offscreen blit output must match direct");
+}
+
+#[test]
 fn gpu_affine_clip_conformance() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
