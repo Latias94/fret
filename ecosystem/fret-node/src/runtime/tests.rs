@@ -365,6 +365,149 @@ fn controlled_graph_can_apply_store_changes_via_callbacks() {
 }
 
 #[test]
+fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use crate::core::{GroupId, PortCapacity, PortDirection, PortKind};
+    use crate::ops::EdgeEndpoints;
+    use crate::runtime::callbacks::SelectionChange;
+
+    #[derive(Clone)]
+    struct Recorder {
+        log: Rc<RefCell<Vec<&'static str>>>,
+    }
+
+    impl NodeGraphCallbacks for Recorder {
+        fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {
+            self.log.borrow_mut().push("viewport");
+        }
+
+        fn on_selection_change(&mut self, _sel: SelectionChange) {
+            self.log.borrow_mut().push("selection");
+        }
+
+        fn on_connect(&mut self, _conn: crate::runtime::callbacks::EdgeConnection) {
+            self.log.borrow_mut().push("connect");
+        }
+
+        fn on_disconnect(&mut self, _conn: crate::runtime::callbacks::EdgeConnection) {
+            self.log.borrow_mut().push("disconnect");
+        }
+
+        fn on_reconnect(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {
+            self.log.borrow_mut().push("reconnect");
+        }
+    }
+
+    let (mut g0, a, _b, out_port, in_port, eid) = make_graph();
+
+    let in2 = crate::core::PortId::new();
+    let c = NodeId::new();
+    g0.nodes.insert(
+        c,
+        Node {
+            kind: NodeKindKey::new("demo.c"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 200.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            size: None,
+            collapsed: false,
+            ports: vec![in2],
+            data: serde_json::Value::Null,
+        },
+    );
+    g0.ports.insert(
+        in2,
+        Port {
+            node: c,
+            key: crate::core::PortKey::new("in2"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
+            ty: None,
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+    let _token = install_callbacks(&mut store, recorder);
+
+    store.set_viewport(CanvasPoint { x: 10.0, y: 20.0 }, 1.25);
+    store.set_selection(vec![a], vec![eid], vec![GroupId::new()]);
+
+    let e2 = EdgeId::new();
+    let tx_add = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddEdge {
+            id: e2,
+            edge: Edge {
+                kind: EdgeKind::Data,
+                from: out_port,
+                to: in_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        }],
+    };
+    let _ = store.dispatch_transaction(&tx_add).expect("dispatch add");
+
+    let tx_reconnect = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetEdgeEndpoints {
+            id: e2,
+            from: EdgeEndpoints {
+                from: out_port,
+                to: in_port,
+            },
+            to: EdgeEndpoints {
+                from: out_port,
+                to: in2,
+            },
+        }],
+    };
+    let _ = store
+        .dispatch_transaction(&tx_reconnect)
+        .expect("dispatch reconnect");
+
+    let tx_remove = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::RemoveEdge {
+            id: e2,
+            edge: Edge {
+                kind: EdgeKind::Data,
+                from: out_port,
+                to: in2,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        }],
+    };
+    let _ = store
+        .dispatch_transaction(&tx_remove)
+        .expect("dispatch remove");
+
+    let got = log.borrow().clone();
+    assert!(got.contains(&"viewport"));
+    assert!(got.contains(&"selection"));
+    assert!(got.contains(&"connect"));
+    assert!(got.contains(&"reconnect"));
+    assert!(got.contains(&"disconnect"));
+}
+
+#[test]
 fn store_dispatch_changes_records_history_and_supports_undo() {
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
     let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());

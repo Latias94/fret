@@ -227,6 +227,17 @@ impl NodeGraphCanvas {
         }
         for change in connection_changes_from_transaction(committed) {
             callbacks.on_connection_change(change);
+            match change {
+                crate::runtime::callbacks::ConnectionChange::Connected(conn) => {
+                    callbacks.on_connect(conn)
+                }
+                crate::runtime::callbacks::ConnectionChange::Disconnected(conn) => {
+                    callbacks.on_disconnect(conn)
+                }
+                crate::runtime::callbacks::ConnectionChange::Reconnected { edge, from, to } => {
+                    callbacks.on_reconnect(edge, from, to)
+                }
+            }
         }
     }
 
@@ -238,6 +249,20 @@ impl NodeGraphCanvas {
             return;
         }
         callbacks.on_view_change(changes);
+        for change in changes {
+            match change {
+                ViewChange::Viewport { pan, zoom } => callbacks.on_viewport_change(*pan, *zoom),
+                ViewChange::Selection {
+                    nodes,
+                    edges,
+                    groups,
+                } => callbacks.on_selection_change(crate::runtime::callbacks::SelectionChange {
+                    nodes: nodes.clone(),
+                    edges: edges.clone(),
+                    groups: groups.clone(),
+                }),
+            }
+        }
     }
 
     fn toast_from_diagnostics(diags: &[Diagnostic]) -> Option<(DiagnosticSeverity, Arc<str>)> {

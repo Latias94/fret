@@ -132,6 +132,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - demo usage: `apps/fret-examples/src/node_graph_domain_demo.rs` (`DomainDemoCallbacks`)
   - Notes:
     - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
+    - Convenience hooks are provided alongside the raw streams:
+      - connections: `on_connect` / `on_disconnect` / `on_reconnect` (derived from committed ops)
+      - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
     - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
 
 - [~] **Controlled/uncontrolled patterns**

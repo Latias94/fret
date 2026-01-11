@@ -10,7 +10,7 @@
 //! This module provides an object-safe callback trait and an adapter that can be installed into
 //! a store subscription.
 
-use crate::core::{EdgeId, EdgeKind, PortId};
+use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId};
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
@@ -35,6 +35,13 @@ pub enum ConnectionChange {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectionChange {
+    pub nodes: Vec<NodeId>,
+    pub edges: Vec<EdgeId>,
+    pub groups: Vec<GroupId>,
+}
+
 /// Object-safe callback trait for B-layer consumers.
 ///
 /// Ordering guarantees (per store event):
@@ -44,8 +51,10 @@ pub enum ConnectionChange {
 ///   2) `on_nodes_change` (if non-empty)
 ///   3) `on_edges_change` (if non-empty)
 ///   4) `on_connection_change` for each derived `ConnectionChange`
+///   5) `on_connect`/`on_disconnect`/`on_reconnect` for each derived `ConnectionChange`
 /// - For `ViewChanged`:
 ///   1) `on_view_change`
+///   2) `on_viewport_change` / `on_selection_change` for each derived `ViewChange`
 pub trait NodeGraphCallbacks: 'static {
     fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {}
 
@@ -54,7 +63,14 @@ pub trait NodeGraphCallbacks: 'static {
 
     fn on_connection_change(&mut self, _change: ConnectionChange) {}
 
+    fn on_connect(&mut self, _conn: EdgeConnection) {}
+    fn on_disconnect(&mut self, _conn: EdgeConnection) {}
+    fn on_reconnect(&mut self, _edge: EdgeId, _from: EdgeEndpoints, _to: EdgeEndpoints) {}
+
     fn on_view_change(&mut self, _changes: &[ViewChange]) {}
+
+    fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
+    fn on_selection_change(&mut self, _sel: SelectionChange) {}
 }
 
 /// Installs callbacks into a store via a subscription.
@@ -75,10 +91,31 @@ pub fn install_callbacks(
 
             for change in connection_changes_from_transaction(committed) {
                 callbacks.on_connection_change(change);
+                match change {
+                    ConnectionChange::Connected(conn) => callbacks.on_connect(conn),
+                    ConnectionChange::Disconnected(conn) => callbacks.on_disconnect(conn),
+                    ConnectionChange::Reconnected { edge, from, to } => {
+                        callbacks.on_reconnect(edge, from, to)
+                    }
+                }
             }
         }
         NodeGraphStoreEvent::ViewChanged { changes, .. } => {
             callbacks.on_view_change(changes);
+            for change in changes.iter() {
+                match change {
+                    ViewChange::Viewport { pan, zoom } => callbacks.on_viewport_change(*pan, *zoom),
+                    ViewChange::Selection {
+                        nodes,
+                        edges,
+                        groups,
+                    } => callbacks.on_selection_change(SelectionChange {
+                        nodes: nodes.clone(),
+                        edges: edges.clone(),
+                        groups: groups.clone(),
+                    }),
+                }
+            }
         }
     })
 }
