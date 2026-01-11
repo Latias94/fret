@@ -6334,7 +6334,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     && self.interaction.panning_button.is_none()
                     && let Some(pending) = self.interaction.pending_right_click
                 {
-                    let click_distance = snapshot.interaction.node_click_distance.max(0.0);
+                    let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
                     let threshold = click_distance / zoom;
                     let dx = position.x.0 - pending.start_pos.x.0;
                     let dy = position.y.0 - pending.start_pos.y.0;
@@ -6469,7 +6469,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     && snapshot.interaction.pan_on_drag.right
                     && let Some(pending) = self.interaction.pending_right_click.take()
                 {
-                    let click_distance = snapshot.interaction.node_click_distance.max(0.0);
+                    let click_distance = snapshot.interaction.pane_click_distance.max(0.0);
                     let threshold = click_distance / zoom;
                     let dx = position.x.0 - pending.start_pos.x.0;
                     let dy = position.y.0 - pending.start_pos.y.0;

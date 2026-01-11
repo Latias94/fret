@@ -204,7 +204,7 @@ fn marquee_toggle_mode_toggles_nodes_in_rect() {
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
         s.interaction.elements_selectable = true;
-        s.interaction.node_drag_threshold = 0.0;
+        s.interaction.pane_click_distance = 0.0;
     });
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
@@ -608,7 +608,7 @@ fn right_pan_drag_does_not_open_context_menu() {
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_drag.right = true;
         s.interaction.pan_on_scroll = false;
-        s.interaction.node_click_distance = 2.0;
+        s.interaction.pane_click_distance = 2.0;
     });
 
     let mut canvas = NodeGraphCanvas::new(graph, view);

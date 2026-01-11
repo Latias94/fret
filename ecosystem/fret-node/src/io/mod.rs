@@ -452,6 +452,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub selection_on_drag: bool,
 
+    /// Background click distance threshold in screen pixels (XyFlow `paneClickDistance`).
+    ///
+    /// This controls when a background drag transitions from a "click" into an interaction
+    /// (marquee selection / panning / context menu suppression).
+    #[serde(default = "default_pane_click_distance")]
+    pub pane_click_distance: f32,
+
     /// Enables panning the canvas by holding Space and dragging with the left mouse button.
     ///
     /// This matches XyFlow's default "space-to-pan" editor affordance.
@@ -566,6 +573,7 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
+            pane_click_distance: default_pane_click_distance(),
             space_to_pan: default_space_to_pan(),
             pan_on_scroll_speed: default_pan_on_scroll_speed(),
             pan_on_scroll_mode: NodeGraphPanOnScrollMode::default(),
@@ -610,6 +618,10 @@ fn default_pan_on_scroll() -> bool {
 
 fn default_space_to_pan() -> bool {
     true
+}
+
+fn default_pane_click_distance() -> f32 {
+    1.0
 }
 
 fn default_pan_on_scroll_speed() -> f32 {

@@ -113,7 +113,11 @@ pub(super) fn handle_marquee_move<H: UiHost>(
 
     if canvas.interaction.node_drag.is_none() {
         if let Some(pending) = canvas.interaction.pending_marquee.clone() {
-            let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
+            let threshold_screen = if modifiers.shift {
+                0.0
+            } else {
+                snapshot.interaction.pane_click_distance.max(0.0)
+            };
             let threshold_graph = threshold_screen / zoom;
             let dx = position.x.0 - pending.start_pos.x.0;
             let dy = position.y.0 - pending.start_pos.y.0;

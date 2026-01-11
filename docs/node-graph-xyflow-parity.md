@@ -359,7 +359,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - fret-node: canvas-native marquee selection is implemented
   - TODO: parity knobs:
     - selectionOnDrag vs pan-on-drag conflict resolution
-    - clickDistance (pane click threshold)
+    - [x] paneClickDistance (pane click threshold): `NodeGraphInteractionState.pane_click_distance`
 
 ## 3.3 Multi-selection and selection transform
 
