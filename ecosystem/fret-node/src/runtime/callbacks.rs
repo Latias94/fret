@@ -193,6 +193,11 @@ pub trait NodeGraphCallbacks: 'static {
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
     fn on_selection_change(&mut self, _sel: SelectionChange) {}
 
+    /// ReactFlow-style alias for viewport updates (`onMove`).
+    ///
+    /// This hook is derived from view-state changes (headless-safe), just like `on_viewport_change`.
+    fn on_move(&mut self, _pan: CanvasPoint, _zoom: f32) {}
+
     /// UI-driven hook: viewport pan/zoom gesture start (ReactFlow `onMoveStart`).
     fn on_move_start(&mut self, _ev: ViewportMoveStart) {}
     /// UI-driven hook: viewport pan/zoom gesture end (ReactFlow `onMoveEnd`).
@@ -202,6 +207,8 @@ pub trait NodeGraphCallbacks: 'static {
     fn on_node_drag_start(&mut self, _ev: NodeDragStart) {}
     /// UI-driven hook: node drag gesture end (ReactFlow `onNodeDragStop`).
     fn on_node_drag_end(&mut self, _ev: NodeDragEnd) {}
+    /// UI-driven hook: node drag gesture move (ReactFlow `onNodeDrag`).
+    fn on_node_drag(&mut self, _primary: NodeId, _nodes: &[NodeId]) {}
 
     /// UI-driven hook: called when a connection gesture starts (after drag threshold / click-to-connect).
     fn on_connect_start(&mut self, _ev: ConnectStart) {}
@@ -286,7 +293,10 @@ pub fn install_callbacks(
             callbacks.on_view_change(changes);
             for change in changes.iter() {
                 match change {
-                    ViewChange::Viewport { pan, zoom } => callbacks.on_viewport_change(*pan, *zoom),
+                    ViewChange::Viewport { pan, zoom } => {
+                        callbacks.on_viewport_change(*pan, *zoom);
+                        callbacks.on_move(*pan, *zoom);
+                    }
                     ViewChange::Selection {
                         nodes,
                         edges,

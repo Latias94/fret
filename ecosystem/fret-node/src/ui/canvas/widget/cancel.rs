@@ -25,8 +25,7 @@ fn cancel_active_gestures_inner<H: UiHost>(
         canceled = true;
     }
     if let Some(drag) = canvas.interaction.node_drag.take() {
-        let nodes: Vec<crate::core::NodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
-        canvas.emit_node_drag_end(drag.primary, &nodes, NodeDragEndOutcome::Canceled);
+        canvas.emit_node_drag_end(drag.primary, &drag.node_ids, NodeDragEndOutcome::Canceled);
         canceled = true;
     }
     if canvas.interaction.pending_node_drag.take().is_some() {

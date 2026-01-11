@@ -386,6 +386,13 @@ impl NodeGraphCanvas {
         });
     }
 
+    pub(super) fn emit_node_drag(&mut self, primary: GraphNodeId, nodes: &[GraphNodeId]) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        callbacks.on_node_drag(primary, nodes);
+    }
+
     fn emit_view_callbacks(&mut self, changes: &[ViewChange]) {
         let Some(callbacks) = self.callbacks.as_mut() else {
             return;
@@ -396,7 +403,10 @@ impl NodeGraphCanvas {
         callbacks.on_view_change(changes);
         for change in changes {
             match change {
-                ViewChange::Viewport { pan, zoom } => callbacks.on_viewport_change(*pan, *zoom),
+                ViewChange::Viewport { pan, zoom } => {
+                    callbacks.on_viewport_change(*pan, *zoom);
+                    callbacks.on_move(*pan, *zoom);
+                }
                 ViewChange::Selection {
                     nodes,
                     edges,
@@ -9924,6 +9934,7 @@ mod tests {
 
         canvas.interaction.node_drag = Some(NodeDrag {
             primary: a,
+            node_ids: vec![a, b],
             nodes: vec![
                 (a, CanvasPoint { x: 0.0, y: 0.0 }),
                 (b, CanvasPoint { x: 10.0, y: 0.0 }),

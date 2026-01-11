@@ -139,7 +139,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - edge update: `on_edge_update` / `on_edge_update_start` / `on_edge_update_end` (ReactFlow `onEdgeUpdate*` aliases)
       - delete: `on_nodes_delete` / `on_edges_delete` / `on_delete` (derived from committed ops)
       - viewport lifecycle: `on_move_start` / `on_move_end` (UI-driven; panning today)
+      - viewport move: `on_move` (derived from viewport changes)
       - node drag lifecycle: `on_node_drag_start` / `on_node_drag_end` (UI-driven)
+      - node drag move: `on_node_drag` (UI-driven)
       - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
     - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
 

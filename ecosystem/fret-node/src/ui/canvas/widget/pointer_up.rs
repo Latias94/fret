@@ -196,7 +196,6 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     }
 
     if let Some(drag) = canvas.interaction.node_drag.take() {
-        let drag_nodes: Vec<crate::core::NodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
             .graph
@@ -308,7 +307,7 @@ pub(super) fn handle_pointer_up<H: UiHost>(
             }
         };
 
-        canvas.emit_node_drag_end(drag.primary, &drag_nodes, drag_outcome);
+        canvas.emit_node_drag_end(drag.primary, &drag.node_ids, drag_outcome);
         canvas.interaction.pending_node_drag = None;
         canvas.interaction.snap_guides = None;
         cx.release_pointer_capture();

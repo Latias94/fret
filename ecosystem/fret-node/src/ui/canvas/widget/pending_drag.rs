@@ -86,6 +86,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
     let drag_nodes: Vec<GraphNodeId> = start_nodes.iter().map(|(id, _)| *id).collect();
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: pending.primary,
+        node_ids: drag_nodes.clone(),
         nodes: start_nodes,
         grab_offset: pending.grab_offset,
         start_pos: pending.start_pos,

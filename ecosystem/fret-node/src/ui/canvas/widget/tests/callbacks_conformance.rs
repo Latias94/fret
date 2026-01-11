@@ -81,6 +81,12 @@ impl NodeGraphCallbacks for Recorder {
             .borrow_mut()
             .push(format!("node_drag_end:{:?}:{:?}", ev.primary, ev.outcome));
     }
+
+    fn on_node_drag(&mut self, primary: crate::core::NodeId, nodes: &[crate::core::NodeId]) {
+        self.log
+            .borrow_mut()
+            .push(format!("node_drag:{:?}:{}", primary, nodes.len()));
+    }
 }
 
 fn make_bounds() -> Rect {
@@ -529,6 +535,7 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
 
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: a,
+        node_ids: vec![a],
         nodes: vec![(a, start_pos)],
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(100.0), Px(100.0)),
@@ -554,4 +561,44 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
         got.iter()
             .any(|s| s.contains("node_drag_end") && s.contains("Committed"))
     );
+}
+
+#[test]
+fn node_drag_move_emits_on_node_drag() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _a_in, _a_out, _b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(260.0);
+    let start_pos = graph_value.nodes.get(&a).unwrap().pos;
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder { log: log.clone() };
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone()).with_callbacks(recorder);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: a,
+        node_ids: vec![a],
+        nodes: vec![(a, start_pos)],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    let bounds = make_bounds();
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    assert!(super::super::node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(10.0), Px(10.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let got = log.borrow().clone();
+    assert!(got.iter().any(|s| s.starts_with("node_drag:")));
 }

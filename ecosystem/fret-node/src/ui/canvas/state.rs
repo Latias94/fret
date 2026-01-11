@@ -224,6 +224,7 @@ pub(crate) struct PendingNodeDrag {
 #[derive(Debug, Clone)]
 pub(crate) struct NodeDrag {
     pub(crate) primary: GraphNodeId,
+    pub(crate) node_ids: Vec<GraphNodeId>,
     pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
     pub(crate) grab_offset: Point,
     pub(crate) start_pos: Point,

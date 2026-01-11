@@ -383,6 +383,10 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
             self.log.borrow_mut().push("viewport");
         }
 
+        fn on_move(&mut self, _pan: CanvasPoint, _zoom: f32) {
+            self.log.borrow_mut().push("move");
+        }
+
         fn on_selection_change(&mut self, _sel: SelectionChange) {
             self.log.borrow_mut().push("selection");
         }
@@ -505,6 +509,7 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
 
     let got = log.borrow().clone();
     assert!(got.contains(&"viewport"));
+    assert!(got.contains(&"move"));
     assert!(got.contains(&"selection"));
     assert!(got.contains(&"connect"));
     assert!(got.contains(&"reconnect"));

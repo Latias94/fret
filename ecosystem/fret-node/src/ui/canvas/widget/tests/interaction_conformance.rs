@@ -1978,6 +1978,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
 
     canvas.interaction.node_drag = Some(super::super::super::state::NodeDrag {
         primary: a,
+        node_ids: vec![a],
         nodes: vec![(a, CanvasPoint { x: 0.0, y: 0.0 })],
         grab_offset: Point::new(Px(0.0), Px(0.0)),
         start_pos: Point::new(Px(0.0), Px(0.0)),
