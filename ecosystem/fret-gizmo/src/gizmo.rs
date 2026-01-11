@@ -23,7 +23,10 @@ pub enum GizmoOrientation {
 pub enum GizmoPivotMode {
     /// The gizmo is positioned at the active target's pivot.
     Active,
-    /// The gizmo is positioned at the selection center (average translation of targets).
+    /// The gizmo is positioned at the selection center.
+    ///
+    /// When `GizmoTarget3d::local_bounds` are available, this uses the selection world AABB center
+    /// (editor convention). Otherwise it falls back to the average of target translations.
     Center,
 }
 
@@ -136,6 +139,63 @@ pub struct GizmoDrawList3d {
     pub triangles: Vec<Triangle3d>,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum GizmoSizePolicy {
+    /// Keep the gizmo a constant size in screen pixels (Unity/Godot/Unreal-style default).
+    #[default]
+    ConstantPixels,
+    /// Compute size from `size_px` (constant-pixels baseline), but clamp the resulting world size
+    /// to a range derived from the selection bounds.
+    ///
+    /// This preserves the "constant screen size" feel in normal cases, while preventing extreme
+    /// world sizes when the selection is very large/small or the camera is very near/far.
+    PixelsClampedBySelectionBounds {
+        /// Minimum allowed gizmo length as `selection_max_extent * min_fraction_of_max_extent`.
+        min_fraction_of_max_extent: f32,
+        /// Maximum allowed gizmo length as `selection_max_extent * max_fraction_of_max_extent`.
+        max_fraction_of_max_extent: f32,
+    },
+    /// Size the gizmo as a fraction of the selection's world-space bounds.
+    ///
+    /// This produces a gizmo that "tracks" the selection scale and camera distance (it is not
+    /// constant-size on screen), and is most useful as an editor option or for in-world tools.
+    SelectionBounds {
+        /// Multiplier applied to the selection bounds' maximum extent.
+        fraction_of_max_extent: f32,
+    },
+}
+
+/// Picking priority policy for multi-mode gizmos (Universal / operation masks).
+///
+/// This controls how hits from different sub-gizmos are resolved when their projections overlap.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GizmoPickPolicy {
+    /// Maximum score treated as a "plane interior" hit for translate planes (handle ids 4/5/6).
+    ///
+    /// Note: this is expressed in the `PickHit.score` domain, not pixels.
+    pub translate_plane_inside_score_max: f32,
+    /// Maximum score treated as an "explicit solid" hit for scale handles (axis end boxes).
+    ///
+    /// Scale end boxes produce `score == 0.0` when the cursor is inside their projected quad.
+    pub scale_solid_inside_score_max: f32,
+    /// Maximum score treated as "inside" for bounds handles (corners/faces).
+    pub bounds_inside_score_max: f32,
+    /// Multiplier applied to `pick_radius_px` when detecting "translate axis tip intent" in
+    /// Universal tools (bias translate near the arrow tip over rotate rings).
+    pub translate_axis_tip_radius_scale: f32,
+}
+
+impl Default for GizmoPickPolicy {
+    fn default() -> Self {
+        Self {
+            translate_plane_inside_score_max: 0.25,
+            scale_solid_inside_score_max: 1e-6,
+            bounds_inside_score_max: 0.25,
+            translate_axis_tip_radius_scale: 0.90,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoConfig {
     pub mode: GizmoMode,
@@ -149,7 +209,18 @@ pub struct GizmoConfig {
     pub pivot_mode: GizmoPivotMode,
     pub depth_mode: DepthMode,
     pub depth_range: DepthRange,
+    /// Determines how the gizmo's world-space size is derived.
+    pub size_policy: GizmoSizePolicy,
     pub size_px: f32,
+    /// Optional clamp for the world-space gizmo size derived from `size_px`.
+    ///
+    /// When set, the pixel-to-world mapping used by `size_px`-derived geometry (axis length,
+    /// ring radii, etc) is clamped to the provided `[min, max]` range in world units. This is a
+    /// stylistic control to avoid extreme world-space gizmo sizes at very near/far camera
+    /// distances while preserving the default "constant screen size" behavior when unset.
+    pub size_world_clamp: Option<(f32, f32)>,
+    /// Picking priority policy used to resolve hit overlaps in multi-mode configurations.
+    pub pick_policy: GizmoPickPolicy,
     pub pick_radius_px: f32,
     pub line_thickness_px: f32,
     pub drag_start_threshold_px: f32,
@@ -238,7 +309,10 @@ impl Default for GizmoConfig {
             pivot_mode: GizmoPivotMode::Active,
             depth_mode: DepthMode::Test,
             depth_range: DepthRange::default(),
+            size_policy: GizmoSizePolicy::ConstantPixels,
             size_px: 96.0,
+            size_world_clamp: None,
+            pick_policy: GizmoPickPolicy::default(),
             pick_radius_px: 10.0,
             line_thickness_px: 6.0,
             drag_start_threshold_px: 3.0,
@@ -507,6 +581,15 @@ struct PickHit {
     score: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum MixedPickBand {
+    TranslateCenter = 0,
+    TranslatePlaneInside = 1,
+    ScaleSolidInside = 2,
+    TranslateAxisTipIntent = 3,
+    Default = 4,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GizmoState {
     pub hovered: Option<HandleId>,
@@ -520,6 +603,7 @@ pub struct GizmoState {
     drag_axis_dir: Vec3,
     drag_origin: Vec3,
     drag_origin_z01: f32,
+    drag_size_length_world: f32,
     drag_plane_normal: Vec3,
     drag_prev_hit_world: Vec3,
     drag_total_axis_raw: f32,
@@ -594,6 +678,7 @@ impl Default for GizmoState {
             drag_axis_dir: Vec3::X,
             drag_origin: Vec3::ZERO,
             drag_origin_z01: 0.0,
+            drag_size_length_world: 1.0,
             drag_plane_normal: Vec3::Z,
             drag_prev_hit_world: Vec3::ZERO,
             drag_total_axis_raw: 0.0,
@@ -750,6 +835,182 @@ impl Gizmo {
         1.0
     }
 
+    fn pivot_origin(
+        active_transform: Transform3d,
+        targets: &[GizmoTarget3d],
+        mode: GizmoPivotMode,
+    ) -> Vec3 {
+        match mode {
+            GizmoPivotMode::Active => active_transform.translation,
+            GizmoPivotMode::Center => {
+                // Editor convention: "center" means the selection bounds center, not the average
+                // of entity origins (which can drift for uneven distributions).
+                if let Some(bounds) = Self::selection_world_aabb(targets) {
+                    (bounds.min + bounds.max) * 0.5
+                } else {
+                    let sum = targets
+                        .iter()
+                        .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
+                    sum / (targets.len().max(1) as f32)
+                }
+            }
+        }
+    }
+
+    fn selection_world_aabb(targets: &[GizmoTarget3d]) -> Option<Aabb3> {
+        let mut min_v = Vec3::splat(f32::INFINITY);
+        let mut max_v = Vec3::splat(f32::NEG_INFINITY);
+
+        for t in targets {
+            if let Some(aabb) = t.local_bounds {
+                let aabb = aabb.normalized();
+                let m = t.transform.to_mat4();
+                for c in aabb.corners() {
+                    let world = m.transform_point3(c);
+                    if !world.is_finite() {
+                        continue;
+                    }
+                    min_v = min_v.min(world);
+                    max_v = max_v.max(world);
+                }
+            } else {
+                let world = t.transform.translation;
+                if !world.is_finite() {
+                    continue;
+                }
+                min_v = min_v.min(world);
+                max_v = max_v.max(world);
+            }
+        }
+
+        if !min_v.is_finite() || !max_v.is_finite() {
+            return None;
+        }
+
+        Some(
+            Aabb3 {
+                min: min_v,
+                max: max_v,
+            }
+            .normalized(),
+        )
+    }
+
+    fn clamp_size_length_world(&self, length_world: f32) -> f32 {
+        let length_world = if length_world.is_finite() {
+            length_world.max(0.0)
+        } else {
+            0.0
+        };
+        let Some((a, b)) = self.config.size_world_clamp else {
+            return length_world;
+        };
+        if !a.is_finite() || !b.is_finite() {
+            return length_world;
+        }
+        let (min_world, max_world) = if a <= b { (a, b) } else { (b, a) };
+        length_world.clamp(min_world.max(0.0), max_world.max(0.0))
+    }
+
+    fn size_length_world(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        targets: &[GizmoTarget3d],
+    ) -> Option<f32> {
+        let length_world = match self.config.size_policy {
+            GizmoSizePolicy::ConstantPixels => axis_length_world(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                self.config.size_px,
+            )?,
+            GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                min_fraction_of_max_extent,
+                max_fraction_of_max_extent,
+            } => {
+                let base = axis_length_world(
+                    view_projection,
+                    viewport,
+                    origin,
+                    self.config.depth_range,
+                    self.config.size_px,
+                )?;
+                match Self::selection_world_aabb(targets) {
+                    None => base,
+                    Some(bounds) => {
+                        let extent = (bounds.max - bounds.min).abs();
+                        let max_extent = extent.max_element().max(1e-6);
+
+                        let min_frac = if min_fraction_of_max_extent.is_finite() {
+                            min_fraction_of_max_extent.clamp(0.0, 1000.0)
+                        } else {
+                            0.0
+                        };
+                        let max_frac = if max_fraction_of_max_extent.is_finite() {
+                            max_fraction_of_max_extent.clamp(0.0, 1000.0)
+                        } else {
+                            0.0
+                        };
+                        let (min_frac, max_frac) = if min_frac <= max_frac {
+                            (min_frac, max_frac)
+                        } else {
+                            (max_frac, min_frac)
+                        };
+
+                        let min_world = max_extent * min_frac;
+                        let max_world = max_extent * max_frac;
+                        if max_world <= 1e-6 {
+                            base
+                        } else {
+                            base.clamp(min_world.max(0.0), max_world.max(min_world))
+                        }
+                    }
+                }
+            }
+            GizmoSizePolicy::SelectionBounds {
+                fraction_of_max_extent,
+            } => {
+                let fraction = if fraction_of_max_extent.is_finite() {
+                    fraction_of_max_extent.clamp(0.01, 100.0)
+                } else {
+                    1.0
+                };
+
+                let bounds = Self::selection_world_aabb(targets);
+                let len = bounds.map(|b| {
+                    let extent = (b.max - b.min).abs();
+                    extent.max_element().max(1e-6) * fraction
+                });
+                match len {
+                    Some(v) if v.is_finite() && v > 1e-6 => v,
+                    _ => axis_length_world(
+                        view_projection,
+                        viewport,
+                        origin,
+                        self.config.depth_range,
+                        self.config.size_px,
+                    )?,
+                }
+            }
+        };
+
+        Some(self.clamp_size_length_world(length_world))
+    }
+
+    fn size_length_world_or_one(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        targets: &[GizmoTarget3d],
+    ) -> f32 {
+        self.size_length_world(view_projection, viewport, origin, targets)
+            .unwrap_or(1.0)
+    }
+
     fn axis_is_masked(&self, axis_index: usize) -> bool {
         self.config
             .axis_mask
@@ -782,19 +1043,12 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> [Vec3; 3] {
         if !self.config.allow_axis_flip {
             return axes;
         }
-        let Some(length_world) = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        ) else {
-            return axes;
-        };
+        let length_world = size_length_world.max(0.0);
 
         let mut out = axes;
         for i in 0..3 {
@@ -944,15 +1198,7 @@ impl Gizmo {
             .map(|t| t.transform)
             .unwrap_or_else(|| targets[0].transform);
 
-        let origin = match self.config.pivot_mode {
-            GizmoPivotMode::Active => active_transform.translation,
-            GizmoPivotMode::Center => {
-                let sum = targets
-                    .iter()
-                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
-                sum / (targets.len().max(1) as f32)
-            }
-        };
+        let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
         let Some(cursor_ray) = ray_from_screen(
             view_projection,
             viewport,
@@ -962,8 +1208,17 @@ impl Gizmo {
             return None;
         };
 
+        let size_length_world =
+            self.size_length_world_or_one(view_projection, viewport, origin, targets);
+
         let axes_raw = self.axis_dirs(&active_transform);
-        let axes = self.flip_axes_for_view(view_projection, viewport, origin, axes_raw);
+        let axes = self.flip_axes_for_view(
+            view_projection,
+            viewport,
+            origin,
+            axes_raw,
+            size_length_world,
+        );
         let mut hovered: Option<HandleId> = None;
         let mut hovered_kind: Option<GizmoMode> = None;
         if self.state.active.is_none() && input.hovered {
@@ -975,6 +1230,7 @@ impl Gizmo {
                     input.cursor_px,
                     axes,
                     axes_raw,
+                    size_length_world,
                     targets,
                 )
             } else {
@@ -986,13 +1242,21 @@ impl Gizmo {
                             origin,
                             input.cursor_px,
                             axes,
+                            size_length_world,
                             true,
                             true,
                             true,
                         )
                         .map(|h| (h, GizmoMode::Translate)),
                     GizmoMode::Rotate => self
-                        .pick_rotate_axis(view_projection, viewport, origin, input.cursor_px, axes)
+                        .pick_rotate_axis(
+                            view_projection,
+                            viewport,
+                            origin,
+                            input.cursor_px,
+                            axes,
+                            size_length_world,
+                        )
                         .map(|h| (h, GizmoMode::Rotate)),
                     GizmoMode::Scale => self
                         .pick_scale_or_bounds_handle(
@@ -1002,6 +1266,7 @@ impl Gizmo {
                             input.cursor_px,
                             axes,
                             axes_raw,
+                            size_length_world,
                             targets,
                         )
                         .map(|h| (h, GizmoMode::Scale)),
@@ -1011,6 +1276,7 @@ impl Gizmo {
                         origin,
                         input.cursor_px,
                         axes,
+                        size_length_world,
                     ),
                 }
             };
@@ -1047,6 +1313,7 @@ impl Gizmo {
                                 origin,
                                 h,
                                 axes,
+                                size_length_world,
                             ),
                             Some(GizmoMode::Scale) => {
                                 if let Some(bounds_handle) = Self::bounds_handle_from_id(h) {
@@ -1064,6 +1331,7 @@ impl Gizmo {
                                         cursor_ray,
                                         origin,
                                         origin_z01,
+                                        size_length_world,
                                         bounds_handle,
                                         h,
                                         axes_raw,
@@ -1078,6 +1346,7 @@ impl Gizmo {
                                         origin,
                                         h,
                                         axes,
+                                        size_length_world,
                                     )
                                 }
                             }
@@ -1104,6 +1373,7 @@ impl Gizmo {
                                 origin,
                                 h,
                                 axes,
+                                size_length_world,
                             ),
                             GizmoMode::Scale => {
                                 if self.config.show_bounds {
@@ -1122,6 +1392,7 @@ impl Gizmo {
                                             cursor_ray,
                                             origin,
                                             origin_z01,
+                                            size_length_world,
                                             bounds_handle,
                                             h,
                                             axes_raw,
@@ -1136,6 +1407,7 @@ impl Gizmo {
                                             origin,
                                             h,
                                             axes,
+                                            size_length_world,
                                         )
                                     }
                                 } else {
@@ -1148,6 +1420,7 @@ impl Gizmo {
                                         origin,
                                         h,
                                         axes,
+                                        size_length_world,
                                     )
                                 }
                             }
@@ -1171,6 +1444,7 @@ impl Gizmo {
                                     origin,
                                     h,
                                     axes,
+                                    size_length_world,
                                 ),
                                 Some(GizmoMode::Scale) => self.begin_scale_drag(
                                     view_projection,
@@ -1181,6 +1455,7 @@ impl Gizmo {
                                     origin,
                                     h,
                                     axes,
+                                    size_length_world,
                                 ),
                                 _ => None,
                             },
@@ -1608,15 +1883,8 @@ impl Gizmo {
                 }
             }
             GizmoMode::Scale => {
-                let length_world = axis_length_world(
-                    view_projection,
-                    viewport,
-                    self.state.drag_origin,
-                    self.config.depth_range,
-                    self.config.size_px,
-                )
-                .unwrap_or(1.0)
-                .max(1e-6);
+                let _ = (view_projection, viewport);
+                let length_world = self.state.drag_size_length_world.max(1e-6);
 
                 let total_vec = |total_factor: f32| -> Vec3 {
                     if self.state.drag_scale_is_uniform {
@@ -2042,17 +2310,17 @@ impl Gizmo {
             .map(|t| t.transform)
             .unwrap_or_else(|| targets[0].transform);
 
-        let origin = match self.config.pivot_mode {
-            GizmoPivotMode::Active => active_transform.translation,
-            GizmoPivotMode::Center => {
-                let sum = targets
-                    .iter()
-                    .fold(Vec3::ZERO, |acc, t| acc + t.transform.translation);
-                sum / (targets.len().max(1) as f32)
-            }
-        };
+        let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
+        let size_length_world =
+            self.size_length_world_or_one(view_projection, viewport, origin, targets);
         let axes_raw = self.axis_dirs(&active_transform);
-        let axes = self.flip_axes_for_view(view_projection, viewport, origin, axes_raw);
+        let axes = self.flip_axes_for_view(
+            view_projection,
+            viewport,
+            origin,
+            axes_raw,
+            size_length_world,
+        );
 
         if self.config.operation_mask.is_some() {
             let ops = self.effective_ops();
@@ -2079,6 +2347,7 @@ impl Gizmo {
                     viewport,
                     origin,
                     bounds_axes,
+                    size_length_world,
                     targets,
                 );
             }
@@ -2086,8 +2355,13 @@ impl Gizmo {
             // When scale axes are present, skip the translate axis *lines* to reduce overlap.
             // The translate arrow tips remain as the explicit "grab" affordance.
             if translate_axes && !scale_axes {
-                out.lines
-                    .extend(self.draw_translate_axes(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_translate_axes(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    size_length_world,
+                ));
             }
             if translate_planes {
                 out.lines.extend(self.draw_translate_planes(
@@ -2095,16 +2369,26 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                 ));
             }
             if translate_screen {
-                out.lines
-                    .extend(self.draw_translate_screen(view_projection, viewport, origin));
+                out.lines.extend(self.draw_translate_screen(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                ));
             }
 
             if rotate_any {
-                out.lines
-                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_rotate_rings(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    size_length_world,
+                ));
             }
 
             if scale_axes || scale_planes || scale_uniform {
@@ -2113,14 +2397,21 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     scale_axes,
                     scale_uniform,
                     scale_planes,
                 ));
             }
 
-            let rotate_feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+            let rotate_feedback =
+                self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
+            let translate_feedback =
+                self.draw_translate_feedback(view_projection, viewport, origin, size_length_world);
+            let scale_feedback = self.draw_scale_feedback(view_projection, viewport, origin);
             out.lines.extend(rotate_feedback.lines);
+            out.lines.extend(translate_feedback.lines);
+            out.lines.extend(scale_feedback.lines);
 
             if translate_axes || translate_planes || translate_screen {
                 out.triangles.extend(self.draw_translate_solids(
@@ -2128,6 +2419,7 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     translate_axes,
                     translate_planes,
                     translate_screen,
@@ -2139,6 +2431,7 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     scale_axes,
                     scale_uniform,
                     scale_planes,
@@ -2152,21 +2445,39 @@ impl Gizmo {
         match self.config.mode {
             GizmoMode::Translate => {
                 let mut out = GizmoDrawList3d::default();
-                out.lines
-                    .extend(self.draw_translate_axes(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_translate_axes(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    size_length_world,
+                ));
                 out.lines.extend(self.draw_translate_planes(
                     view_projection,
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                 ));
-                out.lines
-                    .extend(self.draw_translate_screen(view_projection, viewport, origin));
+                out.lines.extend(self.draw_translate_screen(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                ));
+                let feedback = self.draw_translate_feedback(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                );
+                out.lines.extend(feedback.lines);
                 out.triangles.extend(self.draw_translate_solids(
                     view_projection,
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     true,
                     true,
                     true,
@@ -2175,9 +2486,15 @@ impl Gizmo {
             }
             GizmoMode::Rotate => {
                 let mut out = GizmoDrawList3d::default();
-                out.lines
-                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
-                let feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                out.lines.extend(self.draw_rotate_rings(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    size_length_world,
+                ));
+                let feedback =
+                    self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
                 out.lines.extend(feedback.lines);
                 out.triangles.extend(feedback.triangles);
                 out
@@ -2196,6 +2513,7 @@ impl Gizmo {
                         viewport,
                         origin,
                         bounds_axes,
+                        size_length_world,
                         targets,
                     );
                 }
@@ -2204,15 +2522,19 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     true,
                     true,
                     true,
                 ));
+                let feedback = self.draw_scale_feedback(view_projection, viewport, origin);
+                out.lines.extend(feedback.lines);
                 out.triangles.extend(self.draw_scale_solids(
                     view_projection,
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     true,
                     true,
                     true,
@@ -2227,6 +2549,7 @@ impl Gizmo {
                         viewport,
                         origin,
                         axes,
+                        size_length_world,
                     ));
                 }
                 out.lines.extend(self.draw_translate_planes(
@@ -2234,29 +2557,51 @@ impl Gizmo {
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                 ));
-                out.lines
-                    .extend(self.draw_translate_screen(view_projection, viewport, origin));
-                out.lines
-                    .extend(self.draw_rotate_rings(view_projection, viewport, origin, axes));
+                out.lines.extend(self.draw_translate_screen(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                ));
+                out.lines.extend(self.draw_rotate_rings(
+                    view_projection,
+                    viewport,
+                    origin,
+                    axes,
+                    size_length_world,
+                ));
                 if self.config.universal_includes_scale {
                     out.lines.extend(self.draw_scale_handles(
                         view_projection,
                         viewport,
                         origin,
                         axes,
+                        size_length_world,
                         true,
                         false,
                         false,
                     ));
                 }
-                let rotate_feedback = self.draw_rotate_feedback(view_projection, viewport, origin);
+                let rotate_feedback =
+                    self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
+                let translate_feedback = self.draw_translate_feedback(
+                    view_projection,
+                    viewport,
+                    origin,
+                    size_length_world,
+                );
+                let scale_feedback = self.draw_scale_feedback(view_projection, viewport, origin);
                 out.lines.extend(rotate_feedback.lines);
+                out.lines.extend(translate_feedback.lines);
+                out.lines.extend(scale_feedback.lines);
                 out.triangles.extend(self.draw_translate_solids(
                     view_projection,
                     viewport,
                     origin,
                     axes,
+                    size_length_world,
                     true,
                     true,
                     true,
@@ -2267,6 +2612,7 @@ impl Gizmo {
                         viewport,
                         origin,
                         axes,
+                        size_length_world,
                         true,
                         false,
                         false,
@@ -2285,6 +2631,7 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         basis: [Vec3; 3],
+        size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) {
         if targets.is_empty() {
@@ -2294,8 +2641,14 @@ impl Gizmo {
             return;
         }
 
-        let (min_local, max_local) =
-            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let (min_local, max_local) = self.bounds_min_max_local(
+            view_projection,
+            viewport,
+            origin,
+            basis,
+            size_length_world,
+            targets,
+        );
         let center_local = (min_local + max_local) * 0.5;
 
         let to_world = |local: Vec3| -> Vec3 {
@@ -2505,6 +2858,7 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         basis: [Vec3; 3],
+        size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) -> (Vec3, Vec3) {
         let mut min_v = Vec3::splat(f32::INFINITY);
@@ -2532,16 +2886,8 @@ impl Gizmo {
             }
         }
 
-        let min_extent = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0)
-        .max(1e-6)
-            * 0.25;
+        let _ = (view_projection, viewport);
+        let min_extent = size_length_world.max(1e-6) * 0.25;
 
         if !min_v.is_finite() || !max_v.is_finite() {
             let half = Vec3::splat(min_extent.max(1e-6) * 0.5);
@@ -2675,6 +3021,7 @@ impl Gizmo {
         origin: Vec3,
         active: HandleId,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Option<GizmoUpdate> {
         if active == Self::ROTATE_ARCBALL_HANDLE {
             return self.begin_arcball_drag(
@@ -2683,6 +3030,7 @@ impl Gizmo {
                 input,
                 targets,
                 origin,
+                size_length_world,
                 active,
             );
         }
@@ -2755,6 +3103,7 @@ impl Gizmo {
         input: GizmoInput,
         targets: &[GizmoTarget3d],
         origin: Vec3,
+        size_length_world: f32,
         active: HandleId,
     ) -> Option<GizmoUpdate> {
         let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
@@ -2768,8 +3117,25 @@ impl Gizmo {
 
         let center_px =
             project_point(view_projection, viewport, origin, self.config.depth_range)?.screen;
-        let radius_px = (self.config.size_px * self.config.arcball_radius_scale)
-            .max(self.config.pick_radius_px.max(6.0));
+        let radius_px = match self.config.size_policy {
+            GizmoSizePolicy::ConstantPixels => {
+                self.config.size_px * self.config.arcball_radius_scale
+            }
+            GizmoSizePolicy::PixelsClampedBySelectionBounds { .. }
+            | GizmoSizePolicy::SelectionBounds { .. } => {
+                let r_world = (size_length_world * self.config.arcball_radius_scale).max(1e-6);
+                axis_segment_len_px(
+                    view_projection,
+                    viewport,
+                    origin,
+                    self.config.depth_range,
+                    u,
+                    r_world,
+                )
+                .unwrap_or(0.0)
+            }
+        }
+        .max(self.config.pick_radius_px.max(6.0));
 
         self.state.active = Some(active);
         self.state.drag_mode = GizmoMode::Rotate;
@@ -2847,6 +3213,7 @@ impl Gizmo {
         origin: Vec3,
         active: HandleId,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Option<GizmoUpdate> {
         let origin_z01 = origin_z01(view_projection, viewport, origin, self.config.depth_range)?;
 
@@ -2912,6 +3279,7 @@ impl Gizmo {
         self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
+        self.state.drag_size_length_world = size_length_world;
         self.state.drag_plane_normal = plane_normal;
         self.state.drag_axis_dir = scale_dir;
         self.state.drag_scale_axis = axis;
@@ -2958,6 +3326,7 @@ impl Gizmo {
         cursor_ray: Ray3d,
         origin: Vec3,
         origin_z01: f32,
+        size_length_world: f32,
         handle: BoundsHandle,
         active: HandleId,
         axes_raw: [Vec3; 3],
@@ -2971,8 +3340,14 @@ impl Gizmo {
             return None;
         }
 
-        let (min_local, max_local) =
-            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let (min_local, max_local) = self.bounds_min_max_local(
+            view_projection,
+            viewport,
+            origin,
+            basis,
+            size_length_world,
+            targets,
+        );
         let center_local = (min_local + max_local) * 0.5;
         let extent = (max_local - min_local).max(Vec3::splat(1e-6));
 
@@ -3037,6 +3412,7 @@ impl Gizmo {
         self.state.drag_start_cursor_px = input.cursor_px;
         self.state.drag_origin = origin;
         self.state.drag_origin_z01 = origin_z01;
+        self.state.drag_size_length_world = size_length_world;
         self.state.drag_plane_normal = plane_normal.normalize_or_zero();
         self.state.drag_prev_hit_world = start_hit_world;
 
@@ -3077,16 +3453,10 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Vec<Line3d> {
         let mut out = Vec::new();
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
         let head_len = length_world * 0.18;
         let shaft_len = (length_world - head_len).max(length_world * 0.2);
@@ -3130,15 +3500,9 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         let off = length_world * 0.15;
         let size = length_world * 0.25;
@@ -3208,15 +3572,9 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         origin: Vec3,
+        size_length_world: f32,
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         let Some(view_dir) =
             view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
@@ -3251,18 +3609,12 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
         include_axes: bool,
         include_planes: bool,
         include_screen: bool,
     ) -> Vec<Triangle3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         let head_len = length_world * 0.18;
         let head_radius = length_world * 0.07;
@@ -3422,6 +3774,7 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Vec<Line3d> {
         let (include_axis, include_view, include_arcball) =
             if let Some(mask) = self.config.operation_mask {
@@ -3438,14 +3791,7 @@ impl Gizmo {
                 )
             };
 
-        let radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let radius_world = size_length_world;
 
         let segments: usize = 64;
         let mut out = Vec::with_capacity(segments * 3);
@@ -3525,15 +3871,7 @@ impl Gizmo {
                 let axis_dir = (-view_dir).normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let r = axis_length_world(
-                        view_projection,
-                        viewport,
-                        origin,
-                        self.config.depth_range,
-                        self.config.size_px * self.config.arcball_radius_scale,
-                    )
-                    .unwrap_or(radius_world * self.config.arcball_radius_scale)
-                    .max(1e-6);
+                    let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
 
                     let handle = Self::ROTATE_ARCBALL_HANDLE;
                     let base = Color {
@@ -3567,6 +3905,7 @@ impl Gizmo {
         view_projection: Mat4,
         viewport: ViewportRect,
         origin: Vec3,
+        size_length_world: f32,
     ) -> GizmoDrawList3d {
         if self.state.drag_mode != GizmoMode::Rotate {
             return GizmoDrawList3d::default();
@@ -3585,15 +3924,7 @@ impl Gizmo {
                 return GizmoDrawList3d::default();
             }
 
-            let radius_world = axis_length_world(
-                view_projection,
-                viewport,
-                origin,
-                self.config.depth_range,
-                self.config.size_px * self.config.arcball_radius_scale,
-            )
-            .unwrap_or(1.0)
-            .max(1e-6);
+            let radius_world = (size_length_world * self.config.arcball_radius_scale).max(1e-6);
 
             let outline = mix_alpha(self.config.hover_color, 0.65);
             let fill = mix_alpha(self.config.hover_color, 0.10);
@@ -3616,15 +3947,7 @@ impl Gizmo {
             return GizmoDrawList3d::default();
         }
 
-        let base_radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0)
-        .max(1e-6);
+        let base_radius_world = size_length_world.max(1e-6);
         let radius_world = if active == Self::ROTATE_VIEW_HANDLE {
             (base_radius_world * self.config.view_axis_ring_radius_scale).max(1e-6)
         } else {
@@ -3771,24 +4094,294 @@ impl Gizmo {
         out
     }
 
+    fn tick_perp_dir(
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        depth: DepthRange,
+        dir: Vec3,
+    ) -> Vec3 {
+        let dir = dir.normalize_or_zero();
+        if dir.length_squared() == 0.0 {
+            return Vec3::X;
+        }
+        if let Some(view_dir) = view_dir_at_origin(view_projection, viewport, origin, depth) {
+            let perp = dir.cross(view_dir).normalize_or_zero();
+            if perp.length_squared() > 0.0 {
+                return perp;
+            }
+        }
+        plane_basis(dir).0.normalize_or_zero()
+    }
+
+    fn draw_translate_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        size_length_world: f32,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Translate {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.active.is_none() || !self.state.drag_has_started || !self.state.drag_snap {
+            return GizmoDrawList3d::default();
+        }
+        let Some(step) = self
+            .config
+            .translate_snap_step
+            .filter(|s| s.is_finite() && *s > 0.0)
+        else {
+            return GizmoDrawList3d::default();
+        };
+
+        let tick_len_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            10.0,
+        )
+        .unwrap_or(size_length_world.max(1e-6) * 0.06);
+        let half = (tick_len_world * 0.5).max(1e-6);
+
+        let minor = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.20,
+        };
+        let major = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.28,
+        };
+        let highlight = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.75,
+        };
+
+        let range = (size_length_world.max(1e-6) * 1.25).max(step * 2.0);
+        let count = ((range / step).ceil() as i32).clamp(1, 24);
+
+        let mut out = GizmoDrawList3d::default();
+
+        if self.state.drag_translate_is_plane {
+            let u = self.state.drag_translate_u.normalize_or_zero();
+            let v = self.state.drag_translate_v.normalize_or_zero();
+            if u.length_squared() == 0.0 || v.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+
+            for k in -count..=count {
+                let off = (k as f32) * step;
+                let is_major = k % 5 == 0;
+                let c = if is_major { major } else { minor };
+
+                let a = origin + v * off - u * range;
+                let b = origin + v * off + u * range;
+                self.push_line(&mut out.lines, a, b, c, DepthMode::Always);
+
+                let a = origin + u * off - v * range;
+                let b = origin + u * off + v * range;
+                self.push_line(&mut out.lines, a, b, c, DepthMode::Always);
+            }
+
+            let applied = self.state.drag_total_plane_applied;
+            let p = origin + u * applied.x + v * applied.y;
+            self.push_line(
+                &mut out.lines,
+                p - u * (half * 1.5),
+                p + u * (half * 1.5),
+                highlight,
+                DepthMode::Always,
+            );
+            self.push_line(
+                &mut out.lines,
+                p - v * (half * 1.5),
+                p + v * (half * 1.5),
+                highlight,
+                DepthMode::Always,
+            );
+        } else {
+            let axis_dir = self.state.drag_axis_dir.normalize_or_zero();
+            if axis_dir.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+            let tick_dir = Self::tick_perp_dir(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                axis_dir,
+            );
+            if tick_dir.length_squared() == 0.0 {
+                return GizmoDrawList3d::default();
+            }
+
+            for k in -count..=count {
+                let off = (k as f32) * step;
+                let pos = origin + axis_dir * off;
+                let is_major = k % 5 == 0;
+                let len = if is_major { half * 1.65 } else { half };
+                let c = if is_major { major } else { minor };
+                self.push_line(
+                    &mut out.lines,
+                    pos - tick_dir * len,
+                    pos + tick_dir * len,
+                    c,
+                    DepthMode::Always,
+                );
+            }
+
+            let p = origin + axis_dir * self.state.drag_total_axis_applied;
+            self.push_line(
+                &mut out.lines,
+                p - tick_dir * (half * 2.2),
+                p + tick_dir * (half * 2.2),
+                highlight,
+                DepthMode::Always,
+            );
+        }
+
+        out
+    }
+
+    fn draw_scale_feedback(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> GizmoDrawList3d {
+        if self.state.drag_mode != GizmoMode::Scale {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.active.is_none() || !self.state.drag_has_started || !self.state.drag_snap {
+            return GizmoDrawList3d::default();
+        }
+        if self.state.drag_scale_is_bounds {
+            return GizmoDrawList3d::default();
+        }
+
+        let Some(step) = self
+            .config
+            .scale_snap_step
+            .filter(|s| s.is_finite() && *s > 0.0)
+        else {
+            return GizmoDrawList3d::default();
+        };
+
+        let length_world = self.state.drag_size_length_world.max(1e-6);
+        let tick_len_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            10.0,
+        )
+        .unwrap_or(length_world * 0.06);
+        let half = (tick_len_world * 0.5).max(1e-6);
+
+        let minor = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.18,
+        };
+        let major = Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.26,
+        };
+        let highlight = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.75,
+        };
+
+        let mut out = GizmoDrawList3d::default();
+
+        let mut draw_ticks = |dir: Vec3, current_factor: f32| {
+            let dir = dir.normalize_or_zero();
+            if dir.length_squared() == 0.0 {
+                return;
+            }
+
+            let tick_dir = Self::tick_perp_dir(
+                view_projection,
+                viewport,
+                origin,
+                self.config.depth_range,
+                dir,
+            );
+            if tick_dir.length_squared() == 0.0 {
+                return;
+            }
+
+            let k_cur = ((current_factor - 1.0) / step).round() as i32;
+            let radius = (k_cur.abs() + 6).clamp(6, 24);
+
+            for k in -radius..=radius {
+                let factor = 1.0 + (k as f32) * step;
+                if !factor.is_finite() || factor <= 0.01 {
+                    continue;
+                }
+                let pos = origin + dir * (length_world * factor);
+                let is_major = k % 5 == 0;
+                let len = if is_major { half * 1.65 } else { half };
+                let c = if is_major { major } else { minor };
+                self.push_line(
+                    &mut out.lines,
+                    pos - tick_dir * len,
+                    pos + tick_dir * len,
+                    c,
+                    DepthMode::Always,
+                );
+            }
+
+            let pos = origin + dir * (length_world * current_factor.max(0.01));
+            self.push_line(
+                &mut out.lines,
+                pos - tick_dir * (half * 2.2),
+                pos + tick_dir * (half * 2.2),
+                highlight,
+                DepthMode::Always,
+            );
+        };
+
+        if self.state.drag_scale_plane_axes.is_some() {
+            let u = self.state.drag_scale_plane_u;
+            let v = self.state.drag_scale_plane_v;
+            let factors = self.state.drag_total_scale_plane_applied;
+            draw_ticks(u, factors.x);
+            draw_ticks(v, factors.y);
+        } else {
+            draw_ticks(
+                self.state.drag_axis_dir,
+                self.state.drag_total_scale_applied,
+            );
+        }
+
+        out
+    }
+
     fn draw_scale_handles(
         &self,
         view_projection: Mat4,
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
         include_axes: bool,
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Line3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             .map(plane_basis)
@@ -3935,18 +4528,12 @@ impl Gizmo {
         viewport: ViewportRect,
         origin: Vec3,
         axes: [Vec3; 3],
+        size_length_world: f32,
         include_axes: bool,
         include_uniform: bool,
         include_planes: bool,
     ) -> Vec<Triangle3d> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         let (u, v) = view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
             .map(plane_basis)
@@ -4108,18 +4695,12 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
+        size_length_world: f32,
         include_axes: bool,
         include_planes: bool,
         include_screen: bool,
     ) -> Option<PickHit> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
 
         // Picking priority ladder (editor UX):
@@ -4296,18 +4877,12 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
+        size_length_world: f32,
         include_axes: bool,
         include_uniform: bool,
         include_planes: bool,
     ) -> Option<PickHit> {
-        let length_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )
-        .unwrap_or(1.0);
+        let length_world = size_length_world;
 
         // Picking priority ladder (editor UX):
         // 1) Uniform scale at origin (within radius, always win)
@@ -4440,6 +5015,161 @@ impl Gizmo {
         best
     }
 
+    fn mixed_translate_axis_tip_intent(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        hit: PickHit,
+    ) -> bool {
+        if !matches!(hit.handle.0, 1 | 2 | 3) {
+            return false;
+        }
+        let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
+        if axis_dir.length_squared() == 0.0 {
+            return false;
+        }
+
+        let axis_tip_len = size_length_world * self.translate_axis_tip_scale();
+        let tip_world = origin + axis_dir * axis_tip_len;
+        let Some(tip) = project_point(
+            view_projection,
+            viewport,
+            tip_world,
+            self.config.depth_range,
+        ) else {
+            return false;
+        };
+        let d = (cursor - tip.screen).length();
+        if !d.is_finite() {
+            return false;
+        }
+        let r = self.config.pick_radius_px.max(6.0)
+            * self.config.pick_policy.translate_axis_tip_radius_scale;
+        d <= r
+    }
+
+    fn mixed_pick_band(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        rotate_present: bool,
+        allow_translate_axis_tip_intent: bool,
+        hit: PickHit,
+        kind: GizmoMode,
+    ) -> MixedPickBand {
+        match kind {
+            GizmoMode::Translate => {
+                if hit.handle == TranslateHandle::Screen.id() {
+                    return MixedPickBand::TranslateCenter;
+                }
+                if matches!(hit.handle.0, 4 | 5 | 6)
+                    && hit.score <= self.config.pick_policy.translate_plane_inside_score_max
+                {
+                    return MixedPickBand::TranslatePlaneInside;
+                }
+                if rotate_present
+                    && allow_translate_axis_tip_intent
+                    && self.mixed_translate_axis_tip_intent(
+                        view_projection,
+                        viewport,
+                        origin,
+                        cursor,
+                        axes,
+                        size_length_world,
+                        hit,
+                    )
+                {
+                    return MixedPickBand::TranslateAxisTipIntent;
+                }
+                MixedPickBand::Default
+            }
+            GizmoMode::Scale => {
+                if hit.score <= self.config.pick_policy.scale_solid_inside_score_max {
+                    return MixedPickBand::ScaleSolidInside;
+                }
+                if Self::bounds_handle_from_id(hit.handle).is_some()
+                    && hit.score <= self.config.pick_policy.bounds_inside_score_max
+                {
+                    return MixedPickBand::ScaleSolidInside;
+                }
+                MixedPickBand::Default
+            }
+            GizmoMode::Rotate | GizmoMode::Universal => MixedPickBand::Default,
+        }
+    }
+
+    fn pick_best_mixed_handle(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+        cursor: Vec2,
+        axes: [Vec3; 3],
+        size_length_world: f32,
+        allow_translate_axis_tip_intent: bool,
+        rotate: Option<(PickHit, GizmoMode)>,
+        scale: Option<(PickHit, GizmoMode)>,
+        translate: Option<(PickHit, GizmoMode)>,
+    ) -> Option<(PickHit, GizmoMode)> {
+        let rotate_present = rotate.is_some();
+
+        let mut best: Option<(PickHit, GizmoMode, MixedPickBand, f32, u8)> = None;
+        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
+            let Some((hit, kind)) = candidate else {
+                return;
+            };
+            if !hit.score.is_finite() {
+                return;
+            }
+
+            let band = self.mixed_pick_band(
+                view_projection,
+                viewport,
+                origin,
+                cursor,
+                axes,
+                size_length_world,
+                rotate_present,
+                allow_translate_axis_tip_intent,
+                hit,
+                kind,
+            );
+            let kind_priority: u8 = match kind {
+                GizmoMode::Rotate => 0,
+                GizmoMode::Scale => 1,
+                GizmoMode::Translate => 2,
+                GizmoMode::Universal => 3,
+            };
+
+            match best {
+                Some((_best_hit, _best_kind, best_band, best_score, best_kind_pri)) => {
+                    if band < best_band
+                        || (band == best_band && (hit.score < best_score))
+                        || (band == best_band
+                            && hit.score == best_score
+                            && kind_priority < best_kind_pri)
+                    {
+                        best = Some((hit, kind, band, hit.score, kind_priority));
+                    }
+                }
+                None => best = Some((hit, kind, band, hit.score, kind_priority)),
+            }
+        };
+
+        consider(rotate);
+        consider(scale);
+        consider(translate);
+        best.map(|(hit, kind, _, _, _)| (hit, kind))
+    }
+
     fn pick_universal_handle(
         &self,
         view_projection: Mat4,
@@ -4447,6 +5177,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Option<(PickHit, GizmoMode)> {
         let translate = self
             .pick_translate_handle(
@@ -4455,13 +5186,21 @@ impl Gizmo {
                 origin,
                 cursor,
                 axes,
+                size_length_world,
                 true,
                 true,
                 true,
             )
             .map(|h| (h, GizmoMode::Translate));
         let rotate = self
-            .pick_rotate_axis(view_projection, viewport, origin, cursor, axes)
+            .pick_rotate_axis(
+                view_projection,
+                viewport,
+                origin,
+                cursor,
+                axes,
+                size_length_world,
+            )
             .map(|h| (h, GizmoMode::Rotate));
         let scale = self
             .config
@@ -4473,6 +5212,7 @@ impl Gizmo {
                     origin,
                     cursor,
                     axes,
+                    size_length_world,
                     true,
                     false,
                     false,
@@ -4481,83 +5221,18 @@ impl Gizmo {
             .flatten()
             .map(|h| (h, GizmoMode::Scale));
 
-        // Universal priority ladder:
-        // - Translate center / plane interior should not be stolen by other handles.
-        // - Scale end boxes (explicit solids) should not be stolen by rotate rings in screen space.
-        // - Otherwise prefer "more structural" handles first when scores tie: rotate > scale > translate.
-        if let Some((hit, kind)) = translate {
-            if hit.handle.0 == 10 || (matches!(hit.handle.0, 4 | 5 | 6) && hit.score <= 0.25) {
-                return Some((hit, kind));
-            }
-        }
-        if let Some((hit, kind)) = scale {
-            if hit.score <= 1e-6 {
-                return Some((hit, kind));
-            }
-        }
-
-        // Translate axis "arrow tip" intent: when the cursor is close to the translate axis end,
-        // prefer translation over rotate rings (common editor expectation for a universal tool).
-        if let Some((hit, kind)) = translate {
-            if kind == GizmoMode::Translate && matches!(hit.handle.0, 1 | 2 | 3) {
-                let length_world = axis_length_world(
-                    view_projection,
-                    viewport,
-                    origin,
-                    self.config.depth_range,
-                    self.config.size_px,
-                )
-                .unwrap_or(1.0);
-                let axis_tip_len = length_world * self.translate_axis_tip_scale();
-                let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let tip_world = origin + axis_dir * axis_tip_len;
-                    if let Some(tip) = project_point(
-                        view_projection,
-                        viewport,
-                        tip_world,
-                        self.config.depth_range,
-                    ) {
-                        let d = (cursor - tip.screen).length();
-                        if d.is_finite() && d <= self.config.pick_radius_px.max(6.0) * 0.90 {
-                            return Some((hit, kind));
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut best: Option<(PickHit, GizmoMode, f32, u8)> = None;
-        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
-            let Some((hit, kind)) = candidate else {
-                return;
-            };
-            if !hit.score.is_finite() {
-                return;
-            }
-            let priority: u8 = match kind {
-                GizmoMode::Rotate => 0,
-                GizmoMode::Scale => 1,
-                GizmoMode::Translate => 2,
-                GizmoMode::Universal => 3,
-            };
-            let score_cmp = hit.score;
-            match best {
-                Some((_best_hit, _best_kind, best_score_cmp, best_priority)) => {
-                    if score_cmp < best_score_cmp
-                        || (score_cmp == best_score_cmp && priority < best_priority)
-                    {
-                        best = Some((hit, kind, score_cmp, priority));
-                    }
-                }
-                None => best = Some((hit, kind, score_cmp, priority)),
-            }
-        };
-
-        consider(rotate);
-        consider(scale);
-        consider(translate);
-        best.map(|(hit, kind, _, _)| (hit, kind))
+        self.pick_best_mixed_handle(
+            view_projection,
+            viewport,
+            origin,
+            cursor,
+            axes,
+            size_length_world,
+            true,
+            rotate,
+            scale,
+            translate,
+        )
     }
 
     fn pick_operation_mask_handle(
@@ -4568,6 +5243,7 @@ impl Gizmo {
         cursor: Vec2,
         axes_flipped: [Vec3; 3],
         axes_raw: [Vec3; 3],
+        size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) -> Option<(PickHit, GizmoMode)> {
         let ops = self.effective_ops();
@@ -4581,6 +5257,7 @@ impl Gizmo {
                     origin,
                     cursor,
                     axes_flipped,
+                    size_length_world,
                     ops.contains(GizmoOps::translate_axis()),
                     ops.contains(GizmoOps::translate_plane()),
                     ops.contains(GizmoOps::translate_view()),
@@ -4591,7 +5268,16 @@ impl Gizmo {
 
         let rotate_enabled = ops.intersects(GizmoOps::rotate_all());
         let rotate = rotate_enabled
-            .then(|| self.pick_rotate_axis(view_projection, viewport, origin, cursor, axes_flipped))
+            .then(|| {
+                self.pick_rotate_axis(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor,
+                    axes_flipped,
+                    size_length_world,
+                )
+            })
             .flatten()
             .map(|h| (h, GizmoMode::Rotate));
 
@@ -4611,6 +5297,7 @@ impl Gizmo {
                             origin,
                             cursor,
                             axes_flipped,
+                            size_length_world,
                             ops.contains(GizmoOps::scale_axis()),
                             ops.contains(GizmoOps::scale_uniform()),
                             ops.contains(GizmoOps::scale_plane()),
@@ -4633,6 +5320,7 @@ impl Gizmo {
                             origin,
                             cursor,
                             axes_raw,
+                            size_length_world,
                             targets,
                         )
                     })
@@ -4643,7 +5331,7 @@ impl Gizmo {
                 // handle, it should win over other scaling candidates that may overlap in
                 // projection (axis end boxes, plane edges, etc).
                 if let Some((hit, _)) = bounds {
-                    if hit.score <= 0.25 {
+                    if hit.score <= self.config.pick_policy.bounds_inside_score_max {
                         return Some((hit, GizmoMode::Scale));
                     }
                 }
@@ -4674,91 +5362,18 @@ impl Gizmo {
             })
             .flatten();
 
-        // Combined priority ladder (editor UX):
-        // - Translate center / plane interior should not be stolen by other handles.
-        // - Scale explicit solids (axis end boxes, bounds handles) should not be stolen by rotate rings.
-        // - Otherwise prefer "more structural" handles first when scores tie: rotate > scale > translate.
-        if let Some((hit, kind)) = translate {
-            if hit.handle.0 == 10 || (matches!(hit.handle.0, 4 | 5 | 6) && hit.score <= 0.25) {
-                return Some((hit, kind));
-            }
-        }
-        if let Some((hit, kind)) = scale {
-            if hit.score <= 1e-6
-                || (Self::bounds_handle_from_id(hit.handle).is_some() && hit.score <= 0.25)
-            {
-                return Some((hit, kind));
-            }
-        }
-
-        // Translate axis "arrow tip" intent: when the cursor is close to the translate axis end,
-        // prefer translation over rotate rings (common editor expectation for a universal tool).
-        if rotate_enabled {
-            if let Some((hit, kind)) = translate {
-                if kind == GizmoMode::Translate
-                    && ops.contains(GizmoOps::translate_axis())
-                    && matches!(hit.handle.0, 1 | 2 | 3)
-                {
-                    let length_world = axis_length_world(
-                        view_projection,
-                        viewport,
-                        origin,
-                        self.config.depth_range,
-                        self.config.size_px,
-                    )
-                    .unwrap_or(1.0);
-                    let axis_tip_len = length_world * self.translate_axis_tip_scale();
-                    let axis_dir =
-                        axes_flipped[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
-                    if axis_dir.length_squared() > 0.0 {
-                        let tip_world = origin + axis_dir * axis_tip_len;
-                        if let Some(tip) = project_point(
-                            view_projection,
-                            viewport,
-                            tip_world,
-                            self.config.depth_range,
-                        ) {
-                            let d = (cursor - tip.screen).length();
-                            if d.is_finite() && d <= self.config.pick_radius_px.max(6.0) * 0.90 {
-                                return Some((hit, kind));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut best: Option<(PickHit, GizmoMode, f32, u8)> = None;
-        let mut consider = |candidate: Option<(PickHit, GizmoMode)>| {
-            let Some((hit, kind)) = candidate else {
-                return;
-            };
-            if !hit.score.is_finite() {
-                return;
-            }
-            let priority: u8 = match kind {
-                GizmoMode::Rotate => 0,
-                GizmoMode::Scale => 1,
-                GizmoMode::Translate => 2,
-                GizmoMode::Universal => 3,
-            };
-            let score_cmp = hit.score;
-            match best {
-                Some((_best_hit, _best_kind, best_score_cmp, best_priority)) => {
-                    if score_cmp < best_score_cmp
-                        || (score_cmp == best_score_cmp && priority < best_priority)
-                    {
-                        best = Some((hit, kind, score_cmp, priority));
-                    }
-                }
-                None => best = Some((hit, kind, score_cmp, priority)),
-            }
-        };
-
-        consider(rotate);
-        consider(scale);
-        consider(translate);
-        best.map(|(hit, kind, _, _)| (hit, kind))
+        self.pick_best_mixed_handle(
+            view_projection,
+            viewport,
+            origin,
+            cursor,
+            axes_flipped,
+            size_length_world,
+            ops.contains(GizmoOps::translate_axis()),
+            rotate,
+            scale,
+            translate,
+        )
     }
 
     fn pick_scale_or_bounds_handle(
@@ -4769,6 +5384,7 @@ impl Gizmo {
         cursor: Vec2,
         axes_flipped: [Vec3; 3],
         axes_raw: [Vec3; 3],
+        size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) -> Option<PickHit> {
         let scale = self
@@ -4778,6 +5394,7 @@ impl Gizmo {
                 origin,
                 cursor,
                 axes_flipped,
+                size_length_world,
                 true,
                 true,
                 true,
@@ -4800,6 +5417,7 @@ impl Gizmo {
                     origin,
                     cursor,
                     axes_raw,
+                    size_length_world,
                     targets,
                 )
             })
@@ -4809,7 +5427,7 @@ impl Gizmo {
         // Bounds handles are explicit solid affordances. If the cursor is inside a bounds handle,
         // it should win over axis end-box scaling that may overlap in projection.
         if let Some((hit, _)) = bounds {
-            if hit.score <= 0.25 {
+            if hit.score <= self.config.pick_policy.bounds_inside_score_max {
                 return Some(hit);
             }
         }
@@ -4845,6 +5463,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes_raw: [Vec3; 3],
+        size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) -> Option<PickHit> {
         if targets.is_empty() {
@@ -4859,8 +5478,14 @@ impl Gizmo {
             return None;
         }
 
-        let (min_local, max_local) =
-            self.bounds_min_max_local(view_projection, viewport, origin, basis, targets);
+        let (min_local, max_local) = self.bounds_min_max_local(
+            view_projection,
+            viewport,
+            origin,
+            basis,
+            size_length_world,
+            targets,
+        );
         let center_local = (min_local + max_local) * 0.5;
 
         let Some(view_dir) =
@@ -4974,6 +5599,7 @@ impl Gizmo {
         origin: Vec3,
         cursor: Vec2,
         axes: [Vec3; 3],
+        size_length_world: f32,
     ) -> Option<PickHit> {
         let (include_axis, include_view, include_arcball) =
             if let Some(mask) = self.config.operation_mask {
@@ -4990,13 +5616,7 @@ impl Gizmo {
                 )
             };
 
-        let radius_world = axis_length_world(
-            view_projection,
-            viewport,
-            origin,
-            self.config.depth_range,
-            self.config.size_px,
-        )?;
+        let radius_world = size_length_world.max(0.0);
 
         let segments: usize = 64;
         let mut best_axis: Option<PickHit> = None;
@@ -5136,8 +5756,35 @@ impl Gizmo {
 
         if include_arcball {
             let center = project_point(view_projection, viewport, origin, self.config.depth_range)?;
-            let r = (self.config.size_px * self.config.arcball_radius_scale)
-                .max(self.config.pick_radius_px.max(6.0));
+            let r = match self.config.size_policy {
+                GizmoSizePolicy::ConstantPixels => {
+                    self.config.size_px * self.config.arcball_radius_scale
+                }
+                GizmoSizePolicy::PixelsClampedBySelectionBounds { .. }
+                | GizmoSizePolicy::SelectionBounds { .. } => {
+                    let r_world = (radius_world * self.config.arcball_radius_scale).max(1e-6);
+                    // The arcball circle is camera-facing, so any in-plane direction yields a
+                    // stable projected radius.
+                    let (u, _) = view_dir_at_origin(
+                        view_projection,
+                        viewport,
+                        origin,
+                        self.config.depth_range,
+                    )
+                    .map(plane_basis)
+                    .unwrap_or((Vec3::X, Vec3::Y));
+                    axis_segment_len_px(
+                        view_projection,
+                        viewport,
+                        origin,
+                        self.config.depth_range,
+                        u,
+                        r_world,
+                    )
+                    .unwrap_or(0.0)
+                }
+            }
+            .max(self.config.pick_radius_px.max(6.0));
             let d = (cursor - center.screen).length();
             if d.is_finite() && d <= r {
                 return Some(PickHit {
@@ -5547,6 +6194,22 @@ mod tests {
         proj * view
     }
 
+    fn test_size_length_world_no_targets(
+        gizmo: &Gizmo,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        origin: Vec3,
+    ) -> f32 {
+        axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap_or(1.0)
+    }
+
     fn test_view_projection_ortho(viewport_px: (f32, f32), eye: Vec3) -> Mat4 {
         let aspect = viewport_px.0.max(1.0) / viewport_px.1.max(1.0);
         let target = Vec3::ZERO;
@@ -5579,10 +6242,21 @@ mod tests {
         let view_proj = test_view_projection((800.0, 600.0));
         let origin = Vec3::ZERO;
         let axes = gizmo.axis_dirs(&Transform3d::default());
+        let size_length_world = test_size_length_world_no_targets(&gizmo, view_proj, vp, origin);
 
         let p0 = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
         let hit = gizmo
-            .pick_translate_handle(view_proj, vp, origin, p0.screen, axes, true, true, true)
+            .pick_translate_handle(
+                view_proj,
+                vp,
+                origin,
+                p0.screen,
+                axes,
+                size_length_world,
+                true,
+                true,
+                true,
+            )
             .unwrap();
         assert_eq!(hit.handle, TranslateHandle::Screen.id());
     }
@@ -5673,6 +6347,65 @@ mod tests {
 
         assert_eq!(gizmo.state.hovered, Some(ScaleHandle::Uniform.id()));
         assert_eq!(gizmo.state.hovered_kind, Some(GizmoMode::Scale));
+    }
+
+    #[test]
+    fn operation_mask_translate_axis_tip_wins_over_rotate_rings() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Universal;
+        config.operation_mask = Some(GizmoOps::translate_axis() | GizmoOps::rotate_all());
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+
+        let gizmo = Gizmo::new(config);
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+        let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+                .is_some(),
+            "expected rotate rings to be pickable near the translate tip in this projection"
+        );
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let (hit, kind) = gizmo
+            .pick_operation_mask_handle(
+                view_proj,
+                vp,
+                origin,
+                tip.screen,
+                axes,
+                axes,
+                length_world,
+                &targets,
+            )
+            .unwrap();
+        assert_eq!(kind, GizmoMode::Translate);
+        assert_eq!(hit.handle, HandleId(1));
     }
 
     #[test]
@@ -6154,6 +6887,168 @@ mod tests {
     }
 
     #[test]
+    fn rotate_axis_drag_returns_to_zero_near_near_plane() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 0.06));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        // Use the Z ring: with this camera setup (looking down -Z), the X ring includes segments
+        // that can cross the near plane (because that ring swings toward the camera in +Z), which
+        // makes picking brittle. The Z ring lies in the XY plane at a stable depth.
+        let axis_dir = axes[2].normalize_or_zero();
+        let (u, v) = plane_basis(axis_dir);
+        let p_start_world = origin + u * radius_world;
+        let p_move_world = origin + (u * 0.98 + v * 0.2).normalize_or_zero() * radius_world;
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(moved_total.is_finite());
+        assert!(moved_total.abs() > 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Rotation { total_radians, .. } => total_radians,
+            _ => panic!("expected rotation"),
+        };
+        assert!(back_total.abs() < 1e-3, "total={back_total}");
+    }
+
+    #[test]
+    fn scale_axis_drag_returns_to_one_near_near_plane() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 0.06));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        assert!(axis_dir.length_squared() > 0.0);
+        let p_start_world = origin + axis_dir * length_world;
+        let p_move_world = origin + axis_dir * (length_world * 1.35);
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        }];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!(moved_total.x > 1.0 + 1e-6);
+
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &targets)
+            .unwrap();
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 1e-3,
+            "total={back_total:?}"
+        );
+    }
+
+    #[test]
     fn behind_camera_is_not_pickable() {
         let gizmo = base_gizmo(GizmoMode::Translate);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -6161,6 +7056,7 @@ mod tests {
         let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 1.0));
         let origin = Vec3::new(0.0, 0.0, 2.0);
         let axes = gizmo.axis_dirs(&Transform3d::default());
+        let size_length_world = test_size_length_world_no_targets(&gizmo, view_proj, vp, origin);
 
         assert!(
             project_point(view_proj, vp, origin, gizmo.config.depth_range).is_none(),
@@ -6170,9 +7066,43 @@ mod tests {
         let cursor = Vec2::new(400.0, 300.0);
         assert!(
             gizmo
-                .pick_translate_handle(view_proj, vp, origin, cursor, axes, true, true, true)
+                .pick_translate_handle(
+                    view_proj,
+                    vp,
+                    origin,
+                    cursor,
+                    axes,
+                    size_length_world,
+                    true,
+                    true,
+                    true,
+                )
                 .is_none(),
             "behind-camera gizmo should not be pickable"
+        );
+    }
+
+    #[test]
+    fn rotate_and_scale_are_not_pickable_when_origin_is_behind_camera() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 1.0));
+        let origin = Vec3::new(0.0, 0.0, 2.0);
+
+        let rotate = base_gizmo(GizmoMode::Rotate);
+        let scale = base_gizmo(GizmoMode::Scale);
+        let axes = rotate.axis_dirs(&Transform3d::default());
+        let cursor = Vec2::new(400.0, 300.0);
+
+        assert!(
+            rotate
+                .pick_rotate_axis(view_proj, vp, origin, cursor, axes, 1.0)
+                .is_none()
+        );
+        assert!(
+            scale
+                .pick_scale_handle(view_proj, vp, origin, cursor, axes, 1.0, true, true, true)
+                .is_none()
         );
     }
 
@@ -6211,8 +7141,17 @@ mod tests {
         .unwrap();
         let cursor = pa.screen.lerp(pb.screen, 0.65);
 
-        let hit =
-            gizmo.pick_translate_handle(view_proj, vp, origin, cursor, axes, true, true, true);
+        let hit = gizmo.pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            cursor,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+        );
         assert!(
             hit.is_none() || hit.unwrap().handle != TranslateHandle::AxisX.id(),
             "masked X axis should not be pickable"
@@ -6258,20 +7197,50 @@ mod tests {
         let c_xz = (p_xz[0] + p_xz[1] + p_xz[2] + p_xz[3]) * 0.25;
         let c_yz = (p_yz[0] + p_yz[1] + p_yz[2] + p_yz[3]) * 0.25;
 
-        let h_xy = gizmo.pick_translate_handle(view_proj, vp, origin, c_xy, axes, true, true, true);
+        let h_xy = gizmo.pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            c_xy,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+        );
         assert!(
             h_xy.is_none() || h_xy.unwrap().handle != TranslateHandle::PlaneXY.id(),
             "XY plane should be hidden when X is masked"
         );
 
-        let h_xz = gizmo.pick_translate_handle(view_proj, vp, origin, c_xz, axes, true, true, true);
+        let h_xz = gizmo.pick_translate_handle(
+            view_proj,
+            vp,
+            origin,
+            c_xz,
+            axes,
+            length_world,
+            true,
+            true,
+            true,
+        );
         assert!(
             h_xz.is_none() || h_xz.unwrap().handle != TranslateHandle::PlaneXZ.id(),
             "XZ plane should be hidden when X is masked"
         );
 
         let h_yz = gizmo
-            .pick_translate_handle(view_proj, vp, origin, c_yz, axes, true, true, true)
+            .pick_translate_handle(
+                view_proj,
+                vp,
+                origin,
+                c_yz,
+                axes,
+                length_world,
+                true,
+                true,
+                true,
+            )
             .unwrap();
         assert_eq!(h_yz.handle, TranslateHandle::PlaneYZ.id());
     }
@@ -6351,8 +7320,26 @@ mod tests {
         }
 
         let cursor = cursor.expect("expected a point where both plane-inside and axis hit");
+        let size_length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap_or(1.0);
         let hit = gizmo
-            .pick_translate_handle(view_proj, vp, origin, cursor, axes, true, true, true)
+            .pick_translate_handle(
+                view_proj,
+                vp,
+                origin,
+                cursor,
+                axes,
+                size_length_world,
+                true,
+                true,
+                true,
+            )
             .unwrap();
         assert_eq!(hit.handle, TranslateHandle::PlaneXY.id());
     }
@@ -6372,7 +7359,6 @@ mod tests {
         let view_proj = test_view_projection((800.0, 600.0));
         let origin = Vec3::ZERO;
         let axes = gizmo.axis_dirs(&Transform3d::default());
-        let flipped = gizmo.flip_axes_for_view(view_proj, vp, origin, axes);
 
         let length_world = axis_length_world(
             view_proj,
@@ -6382,6 +7368,7 @@ mod tests {
             gizmo.config.size_px,
         )
         .unwrap();
+        let flipped = gizmo.flip_axes_for_view(view_proj, vp, origin, axes, length_world);
 
         let plus = axis_segment_len_px(
             view_proj,
@@ -6475,12 +7462,30 @@ mod tests {
         assert!(edge_d.is_finite() && edge_d > 0.1);
         assert!(edge_d < no_fade.config.pick_radius_px);
 
-        let hit_no_fade =
-            no_fade.pick_scale_handle(view_proj, vp, origin, cursor, axes, true, false, false);
+        let hit_no_fade = no_fade.pick_scale_handle(
+            view_proj,
+            vp,
+            origin,
+            cursor,
+            axes,
+            length_world,
+            true,
+            false,
+            false,
+        );
         assert_eq!(hit_no_fade.unwrap().handle, ScaleHandle::AxisZ.id());
 
-        let hit_fade =
-            fade.pick_scale_handle(view_proj, vp, origin, cursor, axes, true, false, false);
+        let hit_fade = fade.pick_scale_handle(
+            view_proj,
+            vp,
+            origin,
+            cursor,
+            axes,
+            length_world,
+            true,
+            false,
+            false,
+        );
         assert!(
             hit_fade.is_none(),
             "faded axis should be harder to edge-pick"
@@ -6700,7 +7705,7 @@ mod tests {
         .screen;
         assert!(
             gizmo
-                .pick_rotate_axis(view_proj, vp, origin, px, axes)
+                .pick_rotate_axis(view_proj, vp, origin, px, axes, radius_world)
                 .is_none(),
             "edge-on ring should not be pickable when faded"
         );
@@ -6717,7 +7722,7 @@ mod tests {
         .unwrap()
         .screen;
         let hit = gizmo
-            .pick_rotate_axis(view_proj, vp, origin, pz, axes)
+            .pick_rotate_axis(view_proj, vp, origin, pz, axes, radius_world)
             .unwrap();
         assert_eq!(hit.handle, HandleId(3));
     }
@@ -6790,7 +7795,7 @@ mod tests {
         .screen;
 
         let axis_hit = axis_only
-            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes, radius_world)
             .unwrap();
         assert_eq!(axis_hit.handle, axis_handle);
         assert!(
@@ -6801,12 +7806,12 @@ mod tests {
         );
 
         let view_hit = view_only
-            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes, radius_world)
             .unwrap();
         assert_eq!(view_hit.handle, Gizmo::ROTATE_VIEW_HANDLE);
 
         let hit = gizmo
-            .pick_rotate_axis(view_proj, vp, origin, cursor, axes)
+            .pick_rotate_axis(view_proj, vp, origin, cursor, axes, radius_world)
             .unwrap();
         assert_eq!(hit.handle, axis_handle);
     }
@@ -6995,6 +8000,141 @@ mod tests {
     }
 
     #[test]
+    fn scale_axis_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let axis_dir = axes[0].normalize_or_zero();
+        assert!(axis_dir.length_squared() > 0.0);
+        let p_start_world = origin + axis_dir * length_world;
+        let p_move_world = origin + axis_dir * (length_world * 1.35);
+
+        let p_start =
+            project_point(view_proj, vp, p_start_world, gizmo.config.depth_range).unwrap();
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(2.0, 0.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(1.0, 2.0, 3.0),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!((moved_total.y - 1.0).abs() < 1e-5);
+        assert!((moved_total.z - 1.0).abs() < 1e-5);
+        assert!(moved_total.x > 1.0 + 1e-6);
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(2.0 * moved_total.x, 0.0, 0.0);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(1.0 * moved_total.x, 2.0, 3.0);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
+        );
+
+        // Host may feed back intermediate transforms; returning the cursor should still restore
+        // the original transforms.
+        let moved_targets = moved.updated_targets.clone();
+        let input_back = GizmoInput {
+            cursor_px: p_start.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 5e-3,
+            "total={back_total:?}"
+        );
+
+        for t in &back.updated_targets {
+            let start = targets.iter().find(|s| s.id == t.id).unwrap();
+            assert!(
+                t.transform
+                    .translation
+                    .distance(start.transform.translation)
+                    < 5e-3,
+                "id={:?} translation={:?} start={:?}",
+                t.id,
+                t.transform.translation,
+                start.transform.translation
+            );
+            assert!(
+                t.transform.scale.distance(start.transform.scale) < 5e-3,
+                "id={:?} scale={:?} start={:?}",
+                t.id,
+                t.transform.scale,
+                start.transform.scale
+            );
+        }
+    }
+
+    #[test]
     fn scale_plane_drag_returns_to_one_when_cursor_returns() {
         let mut gizmo = base_gizmo(GizmoMode::Scale);
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -7091,6 +8231,138 @@ mod tests {
     }
 
     #[test]
+    fn scale_plane_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        let off = length_world * 0.15;
+        let size = length_world * 0.25;
+        let quad_world = translate_plane_quad_world(origin, axes[0], axes[1], off, size);
+        let quad_screen =
+            project_quad(view_proj, vp, quad_world, gizmo.config.depth_range).unwrap();
+        let cursor_start =
+            (quad_screen[0] + quad_screen[1] + quad_screen[2] + quad_screen[3]) * 0.25;
+        let cursor_moved = cursor_start + Vec2::new(30.0, -20.0);
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 2.0, 0.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(1.5, 2.5, 3.5),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: cursor_moved,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!(moved_total.y.is_finite());
+        assert!((moved_total.z - 1.0).abs() < 1e-5);
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(1.0 * moved_total.x, 2.0 * moved_total.y, 0.0);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(1.5 * moved_total.x, 2.5 * moved_total.y, 3.5);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
+        );
+
+        let moved_targets = moved.updated_targets.clone();
+        let input_back = GizmoInput {
+            cursor_px: cursor_start,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let back = gizmo
+            .update(view_proj, vp, input_back, targets[0].id, &moved_targets)
+            .unwrap();
+
+        let back_total = match back.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(
+            (back_total - Vec3::ONE).length() < 5e-3,
+            "total={back_total:?}"
+        );
+
+        for t in &back.updated_targets {
+            let start = targets.iter().find(|s| s.id == t.id).unwrap();
+            assert!(
+                t.transform
+                    .translation
+                    .distance(start.transform.translation)
+                    < 5e-3,
+                "id={:?} translation={:?} start={:?}",
+                t.id,
+                t.transform.translation,
+                start.transform.translation
+            );
+            assert!(
+                t.transform.scale.distance(start.transform.scale) < 5e-3,
+                "id={:?} scale={:?} start={:?}",
+                t.id,
+                t.transform.scale,
+                start.transform.scale
+            );
+        }
+    }
+
+    #[test]
     fn bounds_face_scale_returns_to_one_when_cursor_returns() {
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
         let view_proj = test_view_projection((800.0, 600.0));
@@ -7137,8 +8409,9 @@ mod tests {
             axes_raw[1].normalize_or_zero(),
             axes_raw[2].normalize_or_zero(),
         ];
+        let size_length_world = gizmo.size_length_world_or_one(view_proj, vp, origin, &targets);
         let (min_local, max_local) =
-            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, size_length_world, &targets);
         let center_local = (min_local + max_local) * 0.5;
 
         // Drag the +X face handle.
@@ -7267,8 +8540,9 @@ mod tests {
 
         let origin = Vec3::ZERO;
         let basis = [Vec3::X, Vec3::Y, Vec3::Z];
+        let size_length_world = gizmo.size_length_world_or_one(view_proj, vp, origin, &targets);
         let (min_local, max_local) =
-            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, size_length_world, &targets);
         let center_local = (min_local + max_local) * 0.5;
         let start_extent_x = (max_local.x - min_local.x).abs().max(1e-6);
 
@@ -7379,6 +8653,7 @@ mod tests {
                 cursor,
                 axes_flipped,
                 axes_raw,
+                length_world,
                 &targets,
             )
             .unwrap();
@@ -7404,8 +8679,9 @@ mod tests {
             local_bounds: Some(aabb),
         }];
 
+        let size_length_world = gizmo.size_length_world_or_one(view_proj, vp, origin, &targets);
         let (min_local, max_local) =
-            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, &targets);
+            gizmo.bounds_min_max_local(view_proj, vp, origin, basis, size_length_world, &targets);
 
         assert!((min_local.x + 2.0).abs() < 1e-3, "min_local={min_local:?}");
         assert!((min_local.y + 1.0).abs() < 1e-3, "min_local={min_local:?}");
@@ -7503,6 +8779,95 @@ mod tests {
     }
 
     #[test]
+    fn scale_uniform_scales_multiple_targets_about_pivot() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+
+        let origin = Vec3::ZERO;
+        let p0 = project_point(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+
+        let radius_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let view_dir = view_dir_at_origin(view_proj, vp, origin, gizmo.config.depth_range).unwrap();
+        let (u, v) = plane_basis(view_dir);
+        let dir = (u + v).normalize_or_zero();
+        assert!(dir.length_squared() > 0.0);
+        let p_move_world = origin + dir * (radius_world * 0.6);
+        let p_move = project_point(view_proj, vp, p_move_world, gizmo.config.depth_range).unwrap();
+
+        let targets = [
+            GizmoTarget3d {
+                id: GizmoTargetId(1),
+                transform: Transform3d::default(),
+                local_bounds: None,
+            },
+            GizmoTarget3d {
+                id: GizmoTargetId(2),
+                transform: Transform3d {
+                    translation: Vec3::new(1.0, 2.0, 3.0),
+                    rotation: Quat::IDENTITY,
+                    scale: Vec3::new(2.0, 3.0, 4.0),
+                },
+                local_bounds: None,
+            },
+        ];
+
+        let input_down = GizmoInput {
+            cursor_px: p0.screen,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        let input_move = GizmoInput {
+            cursor_px: p_move.screen,
+            hovered: true,
+            drag_started: false,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let moved = gizmo
+            .update(view_proj, vp, input_move, targets[0].id, &targets)
+            .unwrap();
+        let moved_total = match moved.result {
+            GizmoResult::Scale { total, .. } => total,
+            _ => panic!("expected scale"),
+        };
+        assert!(moved_total.x.is_finite());
+        assert!((moved_total.x - moved_total.y).abs() < 1e-5);
+        assert!((moved_total.x - moved_total.z).abs() < 1e-5);
+        assert!(moved_total.x > 1.0 + 1e-6);
+        let factor = moved_total.x;
+
+        let t2 = moved.updated_targets.iter().find(|t| t.id.0 == 2).unwrap();
+        let expected_translation = Vec3::new(1.0 * factor, 2.0 * factor, 3.0 * factor);
+        assert!(
+            t2.transform.translation.distance(expected_translation) < 1e-3,
+            "translation={:?} expected={:?}",
+            t2.transform.translation,
+            expected_translation
+        );
+        let expected_scale = Vec3::new(2.0 * factor, 3.0 * factor, 4.0 * factor);
+        assert!(
+            t2.transform.scale.distance(expected_scale) < 1e-3,
+            "scale={:?} expected={:?}",
+            t2.transform.scale,
+            expected_scale
+        );
+    }
+
+    #[test]
     fn universal_picks_scale_on_end_box() {
         let gizmo = base_gizmo(GizmoMode::Universal);
         assert!(gizmo.config.universal_includes_scale);
@@ -7525,7 +8890,7 @@ mod tests {
         let end = project_point(view_proj, vp, end_world, gizmo.config.depth_range).unwrap();
 
         let (hit, kind) = gizmo
-            .pick_universal_handle(view_proj, vp, origin, end.screen, axes)
+            .pick_universal_handle(view_proj, vp, origin, end.screen, axes, length_world)
             .unwrap();
         assert_eq!(kind, GizmoMode::Scale);
         assert_eq!(hit.handle, HandleId(1));
@@ -7555,16 +8920,232 @@ mod tests {
 
         assert!(
             gizmo
-                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes)
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
                 .is_some(),
             "expected rotate rings to be pickable near the translate tip in this projection"
         );
 
         let (hit, kind) = gizmo
-            .pick_universal_handle(view_proj, vp, origin, tip.screen, axes)
+            .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
             .unwrap();
         assert_eq!(kind, GizmoMode::Translate);
         assert_eq!(hit.handle, HandleId(1));
+    }
+
+    #[test]
+    fn universal_translate_tip_intent_works_in_orthographic() {
+        let mut gizmo = base_gizmo(GizmoMode::Universal);
+        assert!(gizmo.config.universal_includes_scale);
+        // In orthographic projection the translate arrow tip is further from the rotate ring in
+        // screen space than in perspective. Reduce the overall gizmo size so the default
+        // `pick_radius_px` can still cover the tip-intent window.
+        gizmo.config.size_px = 32.0;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection_ortho((800.0, 600.0), Vec3::new(3.0, 2.0, 4.0));
+        let origin = Vec3::ZERO;
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        let length_world = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+
+        // Use the translate arrow tip position; in this orthographic projection, ensure the rotate
+        // ring is still within pick radius so the overlap resolution logic is exercised.
+        let tip_world = origin + axes[0] * (length_world * Gizmo::UNIVERSAL_TRANSLATE_TIP_SCALE);
+        let tip = project_point(view_proj, vp, tip_world, gizmo.config.depth_range).unwrap();
+        assert!(
+            gizmo
+                .pick_rotate_axis(view_proj, vp, origin, tip.screen, axes, length_world)
+                .is_some(),
+            "expected rotate rings to be pickable near the translate tip in this orthographic projection"
+        );
+
+        let (hit, kind) = gizmo
+            .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
+            .unwrap();
+        assert_eq!(kind, GizmoMode::Translate);
+        assert_eq!(hit.handle, HandleId(1));
+    }
+
+    #[test]
+    fn universal_is_not_pickable_when_origin_is_behind_camera() {
+        let gizmo = base_gizmo(GizmoMode::Universal);
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+
+        let view_proj = test_view_projection_fov((800.0, 600.0), 60.0, Vec3::new(0.0, 0.0, 1.0));
+        let origin = Vec3::new(0.0, 0.0, 2.0);
+        let cursor = Vec2::new(400.0, 300.0);
+        let axes = gizmo.axis_dirs(&Transform3d::default());
+
+        assert!(
+            gizmo
+                .pick_universal_handle(view_proj, vp, origin, cursor, axes, 1.0)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn size_policy_pixels_clamped_by_selection_bounds_clamps_world_length() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.size_policy = GizmoSizePolicy::PixelsClampedBySelectionBounds {
+            min_fraction_of_max_extent: 0.2,
+            max_fraction_of_max_extent: 0.4,
+        };
+        let gizmo = Gizmo::new(config);
+
+        let huge = Aabb3 {
+            min: Vec3::splat(-50.0),
+            max: Vec3::splat(50.0),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(huge),
+        }];
+
+        let base = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let max_extent = (huge.max - huge.min).abs().max_element();
+        let min_world = max_extent * 0.2;
+        let max_world = max_extent * 0.4;
+        let expected = base.clamp(min_world, max_world);
+
+        let length_world = gizmo
+            .size_length_world(view_proj, vp, origin, &targets)
+            .unwrap();
+        assert!(
+            (length_world - expected).abs() < 1e-3,
+            "length_world={length_world} expected={expected}"
+        );
+    }
+
+    #[test]
+    fn size_policy_pixels_clamped_by_selection_bounds_can_clamp_down() {
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.size_policy = GizmoSizePolicy::PixelsClampedBySelectionBounds {
+            min_fraction_of_max_extent: 0.2,
+            max_fraction_of_max_extent: 0.4,
+        };
+        let gizmo = Gizmo::new(config);
+
+        let tiny = Aabb3 {
+            min: Vec3::splat(-0.05),
+            max: Vec3::splat(0.05),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(tiny),
+        }];
+
+        let base = axis_length_world(
+            view_proj,
+            vp,
+            origin,
+            gizmo.config.depth_range,
+            gizmo.config.size_px,
+        )
+        .unwrap();
+        let max_extent = (tiny.max - tiny.min).abs().max_element();
+        let min_world = max_extent * 0.2;
+        let max_world = max_extent * 0.4;
+        let expected = base.clamp(min_world, max_world);
+
+        let length_world = gizmo
+            .size_length_world(view_proj, vp, origin, &targets)
+            .unwrap();
+        assert!(
+            (length_world - expected).abs() < 1e-3,
+            "length_world={length_world} expected={expected}"
+        );
+    }
+
+    #[test]
+    fn pivot_center_uses_selection_bounds_center_when_bounds_present() {
+        let mut config = GizmoConfig::default();
+        config.mode = GizmoMode::Translate;
+        config.depth_range = DepthRange::ZeroToOne;
+        config.drag_start_threshold_px = 0.0;
+        config.allow_axis_flip = false;
+        config.axis_fade_px = (f32::NAN, f32::NAN);
+        config.plane_fade_px2 = (f32::NAN, f32::NAN);
+        config.pivot_mode = GizmoPivotMode::Center;
+        let mut gizmo = Gizmo::new(config);
+
+        let aabb = Aabb3 {
+            min: Vec3::new(-1.0, -1.0, -1.0),
+            max: Vec3::new(3.0, 1.0, 1.0),
+        };
+        let targets = [GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d {
+                translation: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            local_bounds: Some(aabb),
+        }];
+
+        // Center should come from bounds, not translation average.
+        let expected_origin = targets[0]
+            .transform
+            .to_mat4()
+            .transform_point3((aabb.min + aabb.max) * 0.5);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let center_px = project_point(view_proj, vp, expected_origin, gizmo.config.depth_range)
+            .unwrap()
+            .screen;
+
+        let input_down = GizmoInput {
+            cursor_px: center_px,
+            hovered: true,
+            drag_started: true,
+            dragging: true,
+            snap: false,
+            cancel: false,
+        };
+        let _ = gizmo.update(view_proj, vp, input_down, targets[0].id, &targets);
+
+        // If we used translation average instead, the center handle would not be hit here and the
+        // drag would not activate.
+        assert!(
+            gizmo.state.active.is_some(),
+            "expected gizmo to start using the center handle at bounds center"
+        );
     }
 
     // Note: we do not currently assert a deterministic rotate-vs-translate ambiguity case in

@@ -145,10 +145,10 @@ Fret's current contract:
 | --- | --- | --- | --- | --- |
 | World vs local orientation | Yes | Yes | **Aligned** | `GizmoOrientation::{World,Local}` and axis generation. `axis_dirs(...)`. |
 | Pivot at active selection | Implicit (matrix) | Yes | **Aligned** | `GizmoPivotMode::Active`. |
-| Pivot at selection center | External | Yes | **Aligned** | `GizmoPivotMode::Center`. |
+| Pivot at selection center | External | Yes | **Aligned** | `GizmoPivotMode::Center` uses the **selection world AABB center** when bounds are available via `GizmoTarget3d::local_bounds` (editor convention), otherwise it falls back to the average of target translations. See `pivot_origin(...)` and `selection_world_aabb(...)` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Multiple targets updated per drag | External | Yes | **Aligned** | `GizmoUpdate.updated_targets` returns all updated targets each frame. |
 | Rotation of multiple targets around pivot | External | Yes | **Aligned** | Rotation updates translate+rotate around pivot. `GizmoMode::Rotate` update path. |
-| Scale of multiple targets around pivot | External | Yes | **Partially aligned** | Supported, but the exact policy differs from transform-gizmo's per-mode semantics (no plane scale, no view-axis translate). Needs behavior audit tests. |
+| Scale of multiple targets around pivot | External | Yes | **Aligned (basic)** | Multi-target scale updates both translation (about pivot) and scale factors for axis/plane/uniform: `scale_axis_scales_multiple_targets_about_pivot`, `scale_plane_scales_multiple_targets_about_pivot`, `scale_uniform_scales_multiple_targets_about_pivot` in `ecosystem/fret-gizmo/src/gizmo.rs`. Remaining known gap: TRS-only (no shear) limits "true world-axis scale" for rotated targets. |
 
 ### D) Snapping and precision controls
 
@@ -158,7 +158,7 @@ Fret's current contract:
 | Translation snap step | Yes | Yes | **Aligned** | `translate_snap_step: Option<f32>`. |
 | Rotation snap step | Yes (degrees) | Yes (radians) | **Aligned** | `rotate_snap_step_radians: Option<f32>`; note unit differences vs ImGuizmo. |
 | Scale snap step | Yes | Yes | **Aligned** | `scale_snap_step: Option<f32>`. |
-| Snap visualization (rotation ticks) | No (varies) | Yes (visuals) | **Partially aligned** | Fret renders rotate tick marks when snapping is active. `draw_rotate_feedback`. Translation/scale snap visuals are not implemented. |
+| Snap visualization (rotation ticks) | No (varies) | Yes (visuals) | **Aligned (basic)** | Fret renders rotate tick marks plus translate/scale snap guides when snapping is active: `draw_rotate_feedback`, `draw_translate_feedback`, `draw_scale_feedback` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Bounds snap | Yes (`boundsSnap`) | No | **Aligned (basic)** | `GizmoConfig::bounds_snap_step` snaps bounds scaling to per-axis extent steps (ImGuizmo-style), gated by `GizmoInput.snap` (`ecosystem/fret-gizmo/src/gizmo.rs`). |
 
 ### E) Interaction lifecycle and "editor feel"
@@ -170,13 +170,12 @@ Fret's current contract:
 | Drag start threshold | Partial | Yes (subgizmo pick gating) | **Aligned** | `drag_start_threshold_px` arms drag and emits `Begin` after movement. |
 | Begin/Update/Commit phases | No (implicit) | Partial | **Aligned (Fret-specific)** | `GizmoPhase::{Begin,Update,Commit,Cancel}` enables undo boundaries cleanly. |
 | Cancel interaction (Escape) | External | External | **Aligned (Fret-specific)** | `GizmoInput.cancel` → `GizmoPhase::Cancel`, restore is host-owned. |
-| Picking priority heuristics (avoid mis-click) | Yes (tuned) | Yes (subgizmo ordering) | **Partially aligned** | Fret has a translate picking ladder (`pick_translate_handle`) and Universal bias (`pick_universal_handle`), but still lacks a unified, configurable priority policy across translate/rotate/scale. |
+| Picking priority heuristics (avoid mis-click) | Yes (tuned) | Yes (subgizmo ordering) | **Aligned (basic)** | Fret uses explicit per-mode ladders plus a unified mixed-mode policy (`GizmoPickPolicy` + `pick_best_mixed_handle`) to resolve overlaps deterministically. |
 
 #### Picking priority ladders (explicit per-mode audit)
 
 | Mode | Reference behavior (high level) | Fret status | Evidence / notes |
 | --- | --- | --- | --- |
-| Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Partially aligned** | Center handle early-out exists in `pick_translate_handle`; plane-vs-axis priority is still heuristic-based. |
 | Translate | Center/view-plane > plane interior > axis (avoid axis stealing near origin). | **Aligned (basic)** | Explicit early-outs exist for center handle and plane interior: `translate_center_handle_wins_near_origin`, `translate_plane_inside_wins_over_axis_when_both_hit` in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Rotate | Prefer the ring the user aims at; disambiguate view ring vs axis rings; avoid "wrong ring" when rings overlap in screen space. | **Aligned (basic)** | `pick_rotate_axis` has explicit view-ring vs axis-ring disambiguation (axis "strong hit" wins), backed by `rotate_view_ring_does_not_steal_axis_ring_when_both_hit`. Axis rings also fade out (and become unpickable) when edge-on: `rotate_ring_fade_hides_edge_on_axis_ring`. |
 | Scale | Prefer axis end boxes when cursor is on the shaft; prefer center uniform only when close to origin; avoid fighting Universal overlays. | **Aligned (basic)** | Plane scale (XY/XZ/YZ) is implemented in `Scale` mode, and bounds handles win when overlapping scale axis end boxes: `scale_prefers_bounds_face_handle_over_axis_end_box_when_overlapping`. |
@@ -197,7 +196,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | Perspective camera | Yes | Yes | **Aligned** | Primary path; demo uses perspective. |
 | Orthographic camera | Yes (`SetOrthographic`) | Yes (projection inference) | **Aligned (basic)** | Ortho projection is covered by invariants tests (translate axis drag stability) in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Left-handed vs right-handed | N/A (depends) | Yes (detects) | **Not implemented** | Fret assumes a `Mat4` VP and a depth convention (`DepthRange`), but does not explicitly model handedness. |
-| Behind-camera culling / stability | Yes | Yes | **Partially aligned** | `project_point` rejects behind-camera points (`clip.w <= 0`) to avoid unstable picking; basic regression tests exist. Remaining gaps: broader coverage for rotate/scale and near-plane clipping behavior. |
+| Behind-camera culling / stability | Yes | Yes | **Aligned (basic)** | `project_point` rejects behind-camera points (`clip.w <= 0`), and regression tests cover translate/rotate/scale (including Universal) behind-camera and near-plane scenarios in `ecosystem/fret-gizmo/src/gizmo.rs`. |
 | Numeric stability at large scales | Mixed | Better (f64) | **Partially aligned** | Fret uses `glam` f32 types; consider f64 internal math if large-world support becomes a requirement. |
 
 ### G) Rendering, styling, and customization

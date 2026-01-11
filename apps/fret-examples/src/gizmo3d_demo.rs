@@ -8,8 +8,8 @@ use fret_core::{
 };
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoTarget3d, GizmoTargetId,
-    Transform3d, ViewportRect,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoSizePolicy, GizmoTarget3d,
+    GizmoTargetId, Transform3d, ViewportRect,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
@@ -609,6 +609,9 @@ impl Gizmo3dDemoModel {
         out.push_str("  T/R/S/U: translate/rotate/scale/universal\n");
         out.push_str("  L: local/world   P: pivot active/center\n");
         out.push_str("  M: toggle op mask   [ / ]: prev/next preset\n");
+        out.push_str("  V: cycle size policy (pixels/clamped/bounds)\n");
+        out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
+        out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
         out.push_str("  Esc: cancel drag / selection\n");
         out.push_str("  Ctrl+A: select all (Shift: clear)\n");
@@ -617,6 +620,16 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Mode: {:?}   Orientation: {:?}   Pivot: {:?}\n",
             self.gizmo.config.mode, self.gizmo.config.orientation, self.gizmo.config.pivot_mode
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
+            self.gizmo.config.size_px,
+            self.gizmo.config.line_thickness_px,
+            self.gizmo.config.pick_radius_px
+        ));
+        out.push_str(&format!(
+            "Gizmo: size_policy={:?}\n",
+            self.gizmo.config.size_policy
         ));
 
         if self.op_mask_enabled {
@@ -1920,6 +1933,162 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     } else {
                         m.apply_op_mask();
                     }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyV,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::ConstantPixels => {
+                            GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                                min_fraction_of_max_extent: 0.0,
+                                max_fraction_of_max_extent: 1.50,
+                            }
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
+                            GizmoSizePolicy::SelectionBounds {
+                                fraction_of_max_extent: 1.2,
+                            }
+                        }
+                        GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
+                    };
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Semicolon,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            ref mut min_fraction_of_max_extent,
+                            max_fraction_of_max_extent,
+                        } => {
+                            *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
+                                .clamp(0.0, max_fraction_of_max_extent);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Quote,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 0.25 } else { 0.05 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    match m.gizmo.config.size_policy {
+                        GizmoSizePolicy::SelectionBounds {
+                            ref mut fraction_of_max_extent,
+                        } => {
+                            *fraction_of_max_extent =
+                                (*fraction_of_max_extent + step).clamp(0.05, 5.0);
+                        }
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            min_fraction_of_max_extent,
+                            ref mut max_fraction_of_max_extent,
+                        } => {
+                            *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
+                                .clamp(min_fraction_of_max_extent, 5.0);
+                        }
+                        GizmoSizePolicy::ConstantPixels => {}
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Minus,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px - step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Equal,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 16.0 } else { 4.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.size_px = (m.gizmo.config.size_px + step).clamp(24.0, 256.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Comma,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px - step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px - step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::Period,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let step = if modifiers.shift { 2.0 } else { 1.0 };
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+                    m.gizmo.config.line_thickness_px =
+                        (m.gizmo.config.line_thickness_px + step).clamp(1.0, 24.0);
+                    m.gizmo.config.pick_radius_px =
+                        (m.gizmo.config.pick_radius_px + step).clamp(4.0, 32.0);
+                    m.gizmo.config.bounds_handle_size_px =
+                        (m.gizmo.config.bounds_handle_size_px + step).clamp(6.0, 32.0);
                 });
                 app.request_redraw(window);
             }
