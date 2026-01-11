@@ -63,6 +63,14 @@ pub struct PointerMoveCx {
     pub pointer_type: PointerType,
 }
 
+/// Wheel payload for component-owned wheel handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WheelCx {
+    pub position: Point,
+    pub delta: Point,
+    pub modifiers: Modifiers,
+}
+
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
@@ -206,6 +214,8 @@ pub type OnPointerDown =
 pub type OnPointerMove =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
 
+pub type OnWheel = Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, WheelCx) -> bool + 'static>;
+
 pub type OnPointerUp =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
@@ -213,6 +223,7 @@ pub type OnPointerUp =
 pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
     pub on_pointer_move: Option<OnPointerMove>,
+    pub on_wheel: Option<OnWheel>,
     pub on_pointer_up: Option<OnPointerUp>,
 }
 

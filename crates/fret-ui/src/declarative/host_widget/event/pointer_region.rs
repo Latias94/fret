@@ -204,6 +204,54 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
+        Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta,
+            modifiers,
+            pointer_type: _,
+        }) => {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::PointerActionHooks::default,
+                |hooks| hooks.on_wheel.clone(),
+            );
+
+            let Some(h) = hook else {
+                return;
+            };
+
+            let wheel = action::WheelCx {
+                position: *position,
+                delta: *delta,
+                modifiers: *modifiers,
+            };
+
+            let mut host = PointerHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+                node: cx.node,
+                bounds: cx.bounds,
+                input_ctx: &cx.input_ctx,
+                requested_focus: &mut cx.requested_focus,
+                requested_capture: &mut cx.requested_capture,
+                requested_cursor: &mut cx.requested_cursor,
+            };
+            let handled = h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                wheel,
+            );
+
+            if handled {
+                cx.stop_propagation();
+            }
+        }
         Event::Pointer(fret_core::PointerEvent::Up {
             position,
             button,

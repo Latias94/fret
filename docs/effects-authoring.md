@@ -149,7 +149,7 @@ let _ = glass_panel(cx, props, |_| Vec::new());
 If your "component" wants to do substantial rendering work (custom shaders, video decoding, engine viewports):
 
 - Render into a texture registered as `RenderTargetId`.
-- Present it in the UI via `SceneOp::ViewportSurface`.
+- Present it in the UI via `SceneOp::ViewportSurface` (or `cx.viewport_surface(...)` in declarative trees).
 - Keep `wgpu::Device/Queue` ownership centralized in the runner (ADR 0038).
 
 This keeps the UI contracts deterministic and portable, while still enabling advanced GPU workloads.

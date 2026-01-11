@@ -4,6 +4,7 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::{
     CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality, ImageId, NodeId,
     Px, RenderTargetId, RichText, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap, UvRect,
+    ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -902,6 +903,8 @@ impl ImageProps {
 pub struct ViewportSurfaceProps {
     pub layout: LayoutStyle,
     pub target: RenderTargetId,
+    pub target_px_size: (u32, u32),
+    pub fit: ViewportFit,
     pub opacity: f32,
 }
 
@@ -910,6 +913,8 @@ impl ViewportSurfaceProps {
         Self {
             layout: LayoutStyle::default(),
             target,
+            target_px_size: (1, 1),
+            fit: ViewportFit::Stretch,
             opacity: 1.0,
         }
     }
