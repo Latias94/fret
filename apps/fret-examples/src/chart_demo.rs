@@ -112,7 +112,6 @@ impl ChartDemoDriver {
                 trigger_distance_px: 12.0,
                 throttle_px: 0.75,
             }),
-            visual_maps: vec![],
             series: vec![
                 SeriesSpec {
                     id: series_a_id,
