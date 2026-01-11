@@ -14,11 +14,14 @@ use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKin
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
 use fret_node::io::NodeGraphViewStateFileV1;
-use fret_node::ops::GraphOp;
+use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
     PortTemplate,
 };
+use fret_node::runtime::callbacks::NodeGraphCallbacks;
+use fret_node::runtime::changes::NodeGraphChanges;
+use fret_node::runtime::events::ViewChange;
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
 use fret_node::ui::style::NodeGraphStyle;
@@ -52,6 +55,52 @@ struct NodeGraphDemoModels {
 struct NodeGraphDemoViewStatePersistence {
     graph_id: GraphId,
     path: PathBuf,
+}
+
+#[derive(Default)]
+struct DomainDemoCallbacks {
+    commit_count: u64,
+}
+
+impl NodeGraphCallbacks for DomainDemoCallbacks {
+    fn on_graph_commit(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
+        self.commit_count += 1;
+        tracing::info!(
+            commit = self.commit_count,
+            label = committed.label.as_deref().unwrap_or(""),
+            ops = committed.ops.len(),
+            node_changes = changes.nodes.len(),
+            edge_changes = changes.edges.len(),
+            "node graph committed"
+        );
+    }
+
+    fn on_view_change(&mut self, changes: &[ViewChange]) {
+        for change in changes {
+            match change {
+                ViewChange::Viewport { pan, zoom } => {
+                    tracing::debug!(
+                        pan_x = pan.x,
+                        pan_y = pan.y,
+                        zoom = *zoom,
+                        "viewport changed"
+                    );
+                }
+                ViewChange::Selection {
+                    nodes,
+                    edges,
+                    groups,
+                } => {
+                    tracing::info!(
+                        nodes = nodes.len(),
+                        edges = edges.len(),
+                        groups = groups.len(),
+                        "selection changed"
+                    );
+                }
+            }
+        }
+    }
 }
 
 fn build_demo_graph(graph_id: GraphId) -> Graph {
@@ -716,6 +765,7 @@ impl NodeGraphDomainDemoDriver {
             .with_presenter(presenter)
             .with_style(style.clone())
             .with_edge_types(edge_types)
+            .with_callbacks(DomainDemoCallbacks::default())
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals.clone())
