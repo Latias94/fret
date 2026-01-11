@@ -6136,6 +6136,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.interaction.wire_drag = None;
                     self.interaction.edge_drag = None;
                     self.interaction.panning = true;
+                    self.interaction.pan_last_screen_pos = None;
                     self.interaction.pan_last_sample_at = Some(Instant::now());
                     self.interaction.pan_velocity = CanvasPoint::default();
                     cx.capture_pointer(cx.node);
@@ -6165,7 +6166,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 modifiers,
                 ..
             }) => {
-                let Some(last) = self.interaction.last_pos else {
+                if self.interaction.last_pos.is_none() {
                     self.interaction.last_pos = Some(*position);
                     self.interaction.last_modifiers = *modifiers;
                     self.interaction.last_canvas_pos = Some(CanvasPoint {
@@ -6173,8 +6174,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         y: position.y.0,
                     });
                     return;
-                };
-                let delta = Point::new(Px(position.x.0 - last.x.0), Px(position.y.0 - last.y.0));
+                }
                 self.interaction.last_pos = Some(*position);
                 self.interaction.last_modifiers = *modifiers;
                 self.interaction.last_canvas_pos = Some(CanvasPoint {
@@ -6184,7 +6184,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 cursor::update_cursors(self, cx, &snapshot, *position, zoom);
 
-                if pan_zoom::handle_panning_move(self, cx, delta) {
+                if pan_zoom::handle_panning_move(self, cx, &snapshot, *position) {
                     // keep going to sync auto-pan timer
                 } else if marquee::handle_marquee_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,

@@ -3,12 +3,13 @@ use std::time::Instant;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvas, ViewSnapshot};
 
 pub(super) fn handle_panning_move<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-    delta: Point,
+    snapshot: &ViewSnapshot,
+    position: Point,
 ) -> bool {
     if !canvas.interaction.panning {
         return false;
@@ -16,15 +17,30 @@ pub(super) fn handle_panning_move<H: UiHost>(
 
     canvas.stop_pan_inertia_timer(cx.app);
 
-    let zoom = canvas.cached_zoom;
-    let inv_zoom = if zoom.is_finite() && zoom > 0.0 {
-        1.0 / zoom
-    } else {
-        1.0
-    };
+    let zoom = snapshot.zoom;
+    if !zoom.is_finite() || zoom <= 0.0 {
+        return false;
+    }
+
+    // `position` is in the node's local coordinate space (canvas coords) because `NodeGraphCanvas`
+    // provides a `render_transform` for pan/zoom. Convert back to screen space so the delta is
+    // stable even while pan changes (otherwise panning feeds back into the next pointer sample).
+    let screen_pos = Point::new(
+        fret_core::Px(cx.bounds.origin.x.0 + (position.x.0 + snapshot.pan.x) * zoom),
+        fret_core::Px(cx.bounds.origin.y.0 + (position.y.0 + snapshot.pan.y) * zoom),
+    );
+
+    let last = canvas
+        .interaction
+        .pan_last_screen_pos
+        .get_or_insert(screen_pos);
+    let delta_screen = Point::new(screen_pos.x - last.x, screen_pos.y - last.y);
+    *last = screen_pos;
+
+    let inv_zoom = 1.0 / zoom;
     let delta_canvas = crate::core::CanvasPoint {
-        x: delta.x.0 * inv_zoom,
-        y: delta.y.0 * inv_zoom,
+        x: delta_screen.x.0 * inv_zoom,
+        y: delta_screen.y.0 * inv_zoom,
     };
 
     let now = Instant::now();

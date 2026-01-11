@@ -31,6 +31,11 @@ pub(crate) struct InteractionState {
     pub(crate) last_modifiers: Modifiers,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) panning: bool,
+    /// Last pointer sample in screen space (stable while pan/zoom changes).
+    ///
+    /// Needed because `NodeGraphCanvas` uses `render_transform` for pan/zoom, so pointer event
+    /// positions are in the node's local (canvas) coordinates and change when pan/zoom changes.
+    pub(crate) pan_last_screen_pos: Option<Point>,
     pub(crate) pan_last_sample_at: Option<Instant>,
     pub(crate) pan_velocity: CanvasPoint,
     pub(crate) pan_inertia: Option<PanInertiaState>,
