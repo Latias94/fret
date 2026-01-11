@@ -330,9 +330,6 @@ pub(super) fn handle_pointer_up<H: UiHost>(
             if is_click {
                 let node = pending.primary;
                 canvas.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_groups.clear();
-
                     match pending.select_action {
                         PendingNodeSelectAction::Toggle => {
                             if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node) {

@@ -254,7 +254,7 @@ fn shift_clicking_a_node_does_not_clear_selection() {
 }
 
 #[test]
-fn marquee_toggle_mode_toggles_nodes_in_rect() {
+fn marquee_replace_mode_replaces_selection_even_with_ctrl_pressed() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
@@ -309,7 +309,79 @@ fn marquee_toggle_mode_toggles_nodes_in_rect() {
         .read_ref(&host, |s| s.selected_nodes.clone())
         .unwrap_or_default();
     selected.sort();
-    assert_eq!(selected, vec![b]);
+    let mut expected = vec![a, b];
+    expected.sort();
+    assert_eq!(selected, expected);
+}
+
+#[test]
+fn multi_selection_active_does_not_clear_edge_selection_when_clicking_node() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let b = graph
+        .read_ref(&host, |g| g.ports.get(&to).map(|p| p.node))
+        .ok()
+        .flatten()
+        .expect("port exists");
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.elements_selectable = true;
+        s.interaction.edges_selectable = true;
+        s.selected_edges = vec![edge];
+        s.selected_nodes.clear();
+    });
+
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    // Click inside node B with multi-selection key held.
+    // (In `make_test_graph_edge_reconnect`, node B is at (320, 0) with size (220, 80).)
+    let pos = Point::new(Px(330.0), Px(10.0));
+    assert!(left_click::handle_left_click_pointer_down(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+        snapshot.zoom,
+    ));
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+        snapshot.zoom,
+    ));
+
+    let selected_edges = view
+        .read_ref(&host, |s| s.selected_edges.clone())
+        .unwrap_or_default();
+    assert_eq!(selected_edges, vec![edge]);
+
+    let mut selected_nodes = view
+        .read_ref(&host, |s| s.selected_nodes.clone())
+        .unwrap_or_default();
+    selected_nodes.sort();
+    assert_eq!(selected_nodes, vec![b]);
 }
 
 #[test]

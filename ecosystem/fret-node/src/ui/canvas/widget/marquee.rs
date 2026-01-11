@@ -1,11 +1,9 @@
-use std::collections::HashSet;
-
 use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
 use crate::core::NodeId as GraphNodeId;
 
-use super::super::state::{MarqueeDrag, MarqueeMode, PendingMarqueeDrag, ViewSnapshot};
+use super::super::state::{MarqueeDrag, PendingMarqueeDrag, ViewSnapshot};
 use super::NodeGraphCanvas;
 
 fn nodes_in_marquee(
@@ -27,24 +25,6 @@ fn nodes_in_marquee(
         .collect()
 }
 
-fn toggle_nodes(base: &[GraphNodeId], delta: &[GraphNodeId]) -> Vec<GraphNodeId> {
-    let mut set: HashSet<GraphNodeId> = base.iter().copied().collect();
-    for id in delta.iter().copied() {
-        if !set.insert(id) {
-            set.remove(&id);
-        }
-    }
-    set.into_iter().collect()
-}
-
-fn mode_from_modifiers(modifiers: Modifiers) -> MarqueeMode {
-    if modifiers.ctrl || modifiers.meta {
-        MarqueeMode::Toggle
-    } else {
-        MarqueeMode::Replace
-    }
-}
-
 pub(super) fn begin_background_marquee<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
@@ -53,11 +33,10 @@ pub(super) fn begin_background_marquee<H: UiHost>(
     modifiers: Modifiers,
     clear_selection_on_up: bool,
 ) {
-    let mode = mode_from_modifiers(modifiers);
+    let _ = snapshot;
+    let _ = modifiers;
     canvas.interaction.pending_marquee = Some(PendingMarqueeDrag {
         start_pos: pos,
-        base_nodes: snapshot.selected_nodes.clone(),
-        mode,
         clear_selection_on_up,
     });
     cx.capture_pointer(cx.node);
@@ -84,10 +63,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
             .ok()
             .unwrap_or_default();
 
-        let mut selected: Vec<GraphNodeId> = match marquee.mode {
-            MarqueeMode::Replace => selection,
-            MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
-        };
+        let mut selected: Vec<GraphNodeId> = selection;
         selected.sort();
         selected.dedup();
 
@@ -123,8 +99,6 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                     let marquee = MarqueeDrag {
                         start_pos: pending.start_pos,
                         pos: position,
-                        base_nodes: pending.base_nodes.clone(),
-                        mode: pending.mode,
                     };
                     canvas.interaction.marquee = Some(marquee.clone());
 
@@ -137,10 +111,7 @@ pub(super) fn handle_marquee_move<H: UiHost>(
                         .ok()
                         .unwrap_or_default();
 
-                    let mut selected: Vec<GraphNodeId> = match marquee.mode {
-                        MarqueeMode::Replace => selection,
-                        MarqueeMode::Toggle => toggle_nodes(&marquee.base_nodes, &selection),
-                    };
+                    let mut selected: Vec<GraphNodeId> = selection;
                     selected.sort();
                     selected.dedup();
 

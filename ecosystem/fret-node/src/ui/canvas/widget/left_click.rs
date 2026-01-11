@@ -152,10 +152,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
     };
 
     let selection_key_pressed = snapshot.interaction.selection_key.is_pressed(modifiers);
-    let multi_selection_pressed = snapshot
+    canvas.interaction.multi_selection_active = snapshot
         .interaction
         .multi_selection_key
         .is_pressed(modifiers);
+    let multi_selection_pressed = canvas.interaction.multi_selection_active;
 
     if snapshot.interaction.elements_selectable
         && selection_key_pressed
@@ -285,8 +286,6 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             if selectable {
                 let multi = multi_selection_pressed;
                 canvas.update_view_state(cx.app, |s| {
-                    s.selected_nodes.clear();
-                    s.selected_groups.clear();
                     if multi {
                         if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
                             s.selected_edges.remove(ix);
@@ -294,6 +293,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                             s.selected_edges.push(edge);
                         }
                     } else {
+                        s.selected_nodes.clear();
+                        s.selected_groups.clear();
                         s.selected_edges.clear();
                         s.selected_edges.push(edge);
                     }
@@ -459,8 +460,6 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 snapshot.interaction.elements_selectable && snapshot.interaction.edges_selectable;
             if selectable {
                 canvas.update_view_state(cx.app, |s| {
-                    s.selected_nodes.clear();
-                    s.selected_groups.clear();
                     if multi {
                         if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
                             s.selected_edges.remove(ix);
@@ -468,6 +467,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                             s.selected_edges.push(edge);
                         }
                     } else {
+                        s.selected_nodes.clear();
+                        s.selected_groups.clear();
                         s.selected_edges.clear();
                         s.selected_edges.push(edge);
                     }
@@ -502,8 +503,6 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
-                    s.selected_nodes.clear();
-                    s.selected_edges.clear();
                     if multi_selection_pressed {
                         if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
                             s.selected_groups.remove(ix);
@@ -511,6 +510,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                             s.selected_groups.push(group);
                         }
                     } else if !s.selected_groups.iter().any(|id| *id == group) {
+                        s.selected_nodes.clear();
+                        s.selected_edges.clear();
                         s.selected_groups.clear();
                         s.selected_groups.push(group);
                     }
@@ -548,8 +549,6 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
-                    s.selected_nodes.clear();
-                    s.selected_edges.clear();
                     if multi_selection_pressed {
                         if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
                             s.selected_groups.remove(ix);
@@ -557,6 +556,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                             s.selected_groups.push(group);
                         }
                     } else if !s.selected_groups.iter().any(|id| *id == group) {
+                        s.selected_nodes.clear();
+                        s.selected_edges.clear();
                         s.selected_groups.clear();
                         s.selected_groups.push(group);
                     }

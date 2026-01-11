@@ -37,9 +37,6 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
     if pending.select_action != PendingNodeSelectAction::None {
         let node = pending.primary;
         canvas.update_view_state(cx.app, |s| {
-            s.selected_edges.clear();
-            s.selected_groups.clear();
-
             let already_selected = s.selected_nodes.iter().any(|id| *id == node);
             if !already_selected {
                 s.selected_nodes.push(node);

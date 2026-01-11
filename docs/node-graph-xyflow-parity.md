@@ -365,13 +365,18 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - selection box starts when `selection_on_drag = true` or while holding `selection_key` (default: Shift)
       - holding `selection_key` while pressing on a node starts a selection session without clearing selection (mirrors Pane capture semantics)
     - [x] paneClickDistance (pane click threshold): `NodeGraphInteractionState.pane_click_distance`
+  - Notes:
+    - XyFlow clears the existing selection when the marquee becomes active (after the click-distance threshold).
+      fret-node matches this by using replace-mode selection for marquee interactions.
 
 ## 3.3 Multi-selection and selection transform
 
-- [~] **Shift-add / toggle selection**
-  - XyFlow: multiSelection key / store `multiSelectionActive`
+- [x] **Shift-add / toggle selection**
+  - XyFlow: multiSelection key / store `multiSelectionActive` (`useGlobalKeyHandler`)
   - fret-node:
-    - toggle selection is supported via `multi_selection_key` (default: Ctrl/Cmd)
+    - toggle selection via `multi_selection_key` (default: Ctrl/Cmd)
+    - canvas tracks `multiSelectionActive` as a transient interaction flag (`InteractionState.multi_selection_active`)
+    - when active, clicking a node/edge/group toggles only that element and does not clear other selected element kinds (XyFlow parity)
     - selection-key (marquee) is configured separately via `selection_key` (default: Shift)
 
 - [ ] **Box selection includes edges (optional)**

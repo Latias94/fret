@@ -5814,6 +5814,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 cancel::handle_escape_cancel(self, cx);
                 self.interaction.pan_activation_key_held = false;
+                self.interaction.multi_selection_active = false;
                 return;
             }
             Event::PointerCancel(_) => {
@@ -5941,6 +5942,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if cx.input_ctx.focus_is_text_input {
                     return;
                 }
+
+                self.interaction.multi_selection_active = snapshot
+                    .interaction
+                    .multi_selection_key
+                    .is_pressed(*modifiers);
 
                 if *key == fret_core::KeyCode::Escape {
                     if searcher::handle_searcher_escape(self, cx)
@@ -6125,6 +6131,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 self.stop_pan_inertia_timer(cx.app);
                 self.interaction.last_pos = Some(*position);
                 self.interaction.last_modifiers = *modifiers;
+                self.interaction.multi_selection_active = snapshot
+                    .interaction
+                    .multi_selection_key
+                    .is_pressed(*modifiers);
                 self.interaction.last_canvas_pos = Some(CanvasPoint {
                     x: position.x.0,
                     y: position.y.0,
@@ -6300,6 +6310,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 modifiers,
                 ..
             }) => {
+                self.interaction.last_modifiers = *modifiers;
+                self.interaction.multi_selection_active = snapshot
+                    .interaction
+                    .multi_selection_key
+                    .is_pressed(*modifiers);
+
                 // The runtime may occasionally miss a corresponding `PointerEvent::Up` (e.g. when
                 // releasing outside of the window / losing capture). Infer the release from the
                 // current button state and synthesize an "up" so we can finish the interaction
@@ -6467,6 +6483,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 click_count,
                 ..
             }) => {
+                self.interaction.last_modifiers = *modifiers;
+                self.interaction.multi_selection_active = snapshot
+                    .interaction
+                    .multi_selection_key
+                    .is_pressed(*modifiers);
+
                 if *button == MouseButton::Right
                     && snapshot.interaction.pan_on_drag.right
                     && let Some(pending) = self.interaction.pending_right_click.take()
@@ -6478,7 +6500,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let is_click =
                         click_distance == 0.0 || (dx * dx + dy * dy) <= threshold * threshold;
 
-                    self.interaction.last_modifiers = *modifiers;
                     cx.release_pointer_capture();
                     if is_click {
                         right_click::handle_right_click_pointer_down(
@@ -6507,6 +6528,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 ..
             }) => {
                 self.stop_pan_inertia_timer(cx.app);
+                self.interaction.last_modifiers = *modifiers;
+                self.interaction.multi_selection_active = snapshot
+                    .interaction
+                    .multi_selection_key
+                    .is_pressed(*modifiers);
                 if searcher::handle_searcher_wheel(self, cx, *delta, *modifiers, zoom) {
                     return;
                 }

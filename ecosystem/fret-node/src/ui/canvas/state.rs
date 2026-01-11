@@ -29,6 +29,8 @@ pub(crate) struct InteractionState {
     pub(crate) last_canvas_pos: Option<CanvasPoint>,
     pub(crate) last_bounds: Option<Rect>,
     pub(crate) last_modifiers: Modifiers,
+    /// Whether multi-selection mode is currently active (XyFlow `multiSelectionActive`).
+    pub(crate) multi_selection_active: bool,
     pub(crate) last_conversion: Option<LastConversionContext>,
     pub(crate) pan_activation_key_held: bool,
     pub(crate) pending_right_click: Option<PendingRightClick>,
@@ -317,17 +319,9 @@ impl NodeResizeHandle {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum MarqueeMode {
-    Replace,
-    Toggle,
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct PendingMarqueeDrag {
     pub(crate) start_pos: Point,
-    pub(crate) base_nodes: Vec<GraphNodeId>,
-    pub(crate) mode: MarqueeMode,
     pub(crate) clear_selection_on_up: bool,
 }
 
@@ -335,8 +329,6 @@ pub(crate) struct PendingMarqueeDrag {
 pub(crate) struct MarqueeDrag {
     pub(crate) start_pos: Point,
     pub(crate) pos: Point,
-    pub(crate) base_nodes: Vec<GraphNodeId>,
-    pub(crate) mode: MarqueeMode,
 }
 
 #[derive(Debug, Clone)]
