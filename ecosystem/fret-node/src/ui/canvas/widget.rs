@@ -3475,11 +3475,7 @@ impl NodeGraphCanvas {
                             };
 
                             let planned = workflow::plan_wire_drop_insert(
-                                presenter,
-                                graph,
-                                *from,
-                                mode,
-                                insert_ops,
+                                presenter, graph, *from, mode, insert_ops,
                             );
                             let toast = planned.toast.clone();
                             (
@@ -8296,6 +8292,7 @@ mod tests {
     };
 
     mod connect_conformance;
+    mod connection_mode_conformance;
     mod hit_testing_conformance;
     mod interaction_conformance;
     mod perf_cache;

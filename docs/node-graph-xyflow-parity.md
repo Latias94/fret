@@ -528,6 +528,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - `plan_connect_with_mode` mirrors XyFlow's strict/loose validity and allows same-node connections (disallow only `port == port`)
       - `plan_reconnect_edge_with_mode` mirrors the same constraints for edge reconnection
     - toggle command: `node_graph.toggle_connection_mode`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
 
 ## 5.2 Connection radius and hit-testing
 
