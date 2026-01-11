@@ -161,6 +161,16 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.size.lg.icon_button.size".to_string())
         .or_insert(40.0);
 
+    // new-york-v4 `Slider` defaults:
+    // - Track uses `h-1.5` (6px) via `data-[orientation=horizontal]:h-1.5`.
+    // - Thumb uses `size-4` (16px).
+    metrics
+        .entry("component.slider.track_height".to_string())
+        .or_insert(6.0);
+    metrics
+        .entry("component.slider.thumb_size".to_string())
+        .or_insert(16.0);
+
     // Tooltip defaults in the upstream registry:
     // - `sideOffset={4}`
     // - Arrow uses `h-2 w-2` (8px)

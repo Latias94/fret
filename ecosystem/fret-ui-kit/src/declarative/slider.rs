@@ -17,15 +17,14 @@ fn value_from_pointer_x(
     pointer_x: Px,
     min: f32,
     max: f32,
-    thumb_size: Px,
+    _thumb_size: Px,
 ) -> Option<f32> {
-    let thumb_size = thumb_size.0.max(0.0);
-    let track_w = (bounds.size.width.0 - thumb_size).max(0.0);
+    let track_w = bounds.size.width.0.max(0.0);
     if track_w <= 0.0 {
         return None;
     }
 
-    let left = bounds.origin.x.0 + thumb_size * 0.5;
+    let left = bounds.origin.x.0;
     let t = ((pointer_x.0 - left) / track_w).clamp(0.0, 1.0);
     Some(min + (max - min) * t)
 }
