@@ -9,7 +9,7 @@ use super::prelude_core::*;
 pub(super) struct ViewportHit {
     pub(super) panel: PanelKey,
     pub(super) viewport: ViewportPanel,
-    pub(super) content: Rect,
+    pub(super) mapping: ViewportMapping,
     pub(super) draw_rect: Rect,
 }
 
@@ -27,15 +27,10 @@ pub(super) fn viewport_input_from_hit(
     position: Point,
     kind: ViewportInputKind,
 ) -> Option<ViewportInputEvent> {
-    let mapping = ViewportMapping {
-        content_rect: hit.content,
-        target_px_size: hit.viewport.target_px_size,
-        fit: hit.viewport.fit,
-    };
     ViewportInputEvent::from_mapping_window_point(
         window,
         hit.viewport.target,
-        &mapping,
+        &hit.mapping,
         position,
         kind,
     )
@@ -47,15 +42,10 @@ pub(super) fn viewport_input_from_hit_clamped(
     position: Point,
     kind: ViewportInputKind,
 ) -> ViewportInputEvent {
-    let mapping = ViewportMapping {
-        content_rect: hit.content,
-        target_px_size: hit.viewport.target_px_size,
-        fit: hit.viewport.fit,
-    };
     ViewportInputEvent::from_mapping_window_point_clamped(
         window,
         hit.viewport.target,
-        &mapping,
+        &hit.mapping,
         position,
         kind,
     )
@@ -92,7 +82,7 @@ pub(super) fn hit_test_active_viewport_panel(
             return Some(ViewportHit {
                 panel: panel_key,
                 viewport,
-                content,
+                mapping,
                 draw_rect,
             });
         }
