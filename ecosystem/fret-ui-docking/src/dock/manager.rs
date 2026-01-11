@@ -122,6 +122,10 @@ impl DockManager {
         self.panels.get(key)
     }
 
+    /// Legacy API: returns the unclipped content rect for a viewport panel.
+    ///
+    /// Prefer `viewport_layout(...)` (or `viewport_mapping(...)` / `viewport_draw_rect(...)`) for
+    /// new code so callers share a single, stable mapping contract.
     pub fn viewport_content_rect(
         &self,
         window: fret_core::AppWindowId,
@@ -164,6 +168,10 @@ impl DockManager {
         self.viewport_layouts.retain(|(w, _), _| *w != window);
     }
 
+    /// Legacy API: records only a content rect and leaves mapping details unspecified.
+    ///
+    /// Prefer `set_viewport_layout(...)` so the cached entry includes `ViewportMapping` and the
+    /// resulting `draw_rect` for consistent hit testing / input forwarding.
     pub fn set_viewport_content_rect(
         &mut self,
         window: fret_core::AppWindowId,

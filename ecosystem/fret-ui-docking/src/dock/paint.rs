@@ -184,12 +184,17 @@ pub(super) fn paint_dock(
         let active_panel = tabs.get(*active);
         if let Some(panel) = active_panel.and_then(|p| dock.panel(p)) {
             if let Some(vp) = panel.viewport {
-                let mapping = ViewportMapping {
-                    content_rect: content,
-                    target_px_size: vp.target_px_size,
-                    fit: vp.fit,
-                };
-                let draw_rect = mapping.map().draw_rect;
+                let (mapping, draw_rect) = dock
+                    .viewport_layout(window, vp.target)
+                    .map(|layout| (layout.mapping, layout.draw_rect))
+                    .unwrap_or_else(|| {
+                        let mapping = ViewportMapping {
+                            content_rect: content,
+                            target_px_size: vp.target_px_size,
+                            fit: vp.fit,
+                        };
+                        (mapping, mapping.map().draw_rect)
+                    });
 
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
