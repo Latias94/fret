@@ -16,7 +16,7 @@ use fret_gizmo::{
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
     WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    record_viewport_overlay_3d,
+    WinitWindowContext, record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
@@ -30,6 +30,7 @@ use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;
@@ -479,6 +480,27 @@ fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
     } else {
         1.0
     }
+}
+
+fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
+    let next = if pixels_per_point.is_finite() {
+        pixels_per_point.clamp(0.1, 16.0)
+    } else {
+        1.0
+    };
+    let prev = if model.pixels_per_point.is_finite() {
+        model.pixels_per_point.clamp(0.1, 16.0)
+    } else {
+        1.0
+    };
+    if (prev - next).abs() <= 1e-3 {
+        return;
+    }
+
+    let ratio = (next / prev).clamp(0.1, 16.0);
+    model.pixels_per_point = next;
+    model.gizmo.config = model.gizmo.config.scale_for_pixels_per_point(ratio);
+    model.view_gizmo.config = model.view_gizmo.config.scale_for_pixels_per_point(ratio);
 }
 
 fn apply_click_selection_op(
@@ -2695,6 +2717,42 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         }
     }
 
+    fn handle_global_changes(
+        &mut self,
+        context: WinitWindowContext<'_, Self::WindowState>,
+        changed: &[TypeId],
+    ) {
+        if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
+            return;
+        }
+
+        let pixels_per_point = context
+            .app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(context.window))
+            .unwrap_or(1.0);
+
+        let model = context
+            .app
+            .with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
+                svc.per_window.get(&context.window).cloned()
+            });
+        let Some(model) = model else {
+            return;
+        };
+
+        let did_change = model
+            .update(context.app, |m, _cx| {
+                let before = m.pixels_per_point;
+                apply_pixels_per_point(m, pixels_per_point);
+                (m.pixels_per_point - before).abs() > 1e-3
+            })
+            .unwrap_or(false);
+        if did_change {
+            context.app.request_redraw(context.window);
+        }
+    }
+
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
         let model = app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
             svc.per_window.get(&event.window).cloned()
@@ -2704,6 +2762,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let rec_to_record = model.update(app, |m, _cx| {
+            apply_pixels_per_point(m, event.geometry.pixels_per_point);
             if m.viewport_target != event.target {
                 return None;
             }
@@ -3341,7 +3400,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         state: &mut Self::WindowState,
         context: &WgpuContext,
         renderer: &mut Renderer,
-        scale_factor: f32,
+        _scale_factor: f32,
         _tick_id: fret_runtime::TickId,
         _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
@@ -3351,14 +3410,6 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         let animating = state
             .demo
             .update(app, |m, _cx| {
-                let scale_factor = scale_factor.clamp(0.1, 16.0);
-                if (m.pixels_per_point - scale_factor).abs() > 1e-3 {
-                    let ratio = (scale_factor / m.pixels_per_point).clamp(0.1, 16.0);
-                    m.pixels_per_point = scale_factor;
-                    m.gizmo.config = m.gizmo.config.scale_for_pixels_per_point(ratio);
-                    m.view_gizmo.config = m.view_gizmo.config.scale_for_pixels_per_point(ratio);
-                }
-
                 let now = Instant::now();
                 let dt = m
                     .last_frame_instant
