@@ -22,6 +22,9 @@ use crate::ops::{
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
+use crate::runtime::callbacks::{NodeGraphCallbacks, connection_changes_from_transaction};
+use crate::runtime::changes::NodeGraphChanges;
+use crate::runtime::events::ViewChange;
 use crate::runtime::store::NodeGraphStore;
 
 use crate::ui::commands::{
@@ -133,6 +136,7 @@ pub struct NodeGraphCanvas {
     store_rev: Option<u64>,
     presenter: Box<dyn NodeGraphPresenter>,
     edge_types: Option<NodeGraphEdgeTypes>,
+    callbacks: Option<Box<dyn NodeGraphCallbacks>>,
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
 
@@ -206,6 +210,33 @@ impl NodeGraphCanvas {
         } else {
             base
         }
+    }
+
+    fn emit_graph_callbacks(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+
+        callbacks.on_graph_commit(committed, changes);
+        if !changes.nodes.is_empty() {
+            callbacks.on_nodes_change(&changes.nodes);
+        }
+        if !changes.edges.is_empty() {
+            callbacks.on_edges_change(&changes.edges);
+        }
+        for change in connection_changes_from_transaction(committed) {
+            callbacks.on_connection_change(change);
+        }
+    }
+
+    fn emit_view_callbacks(&mut self, changes: &[ViewChange]) {
+        let Some(callbacks) = self.callbacks.as_mut() else {
+            return;
+        };
+        if changes.is_empty() {
+            return;
+        }
+        callbacks.on_view_change(changes);
     }
 
     fn toast_from_diagnostics(diags: &[Diagnostic]) -> Option<(DiagnosticSeverity, Arc<str>)> {
@@ -381,6 +412,7 @@ impl NodeGraphCanvas {
                 auto_measured.clone(),
             )),
             edge_types: None,
+            callbacks: None,
             style: NodeGraphStyle::default(),
             close_command: None,
             auto_measured,
@@ -413,6 +445,15 @@ impl NodeGraphCanvas {
     /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
     pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
         self.edge_types = Some(edge_types);
+        self
+    }
+
+    /// Attaches B-layer callbacks for controlled/uncontrolled integrations (ReactFlow-style).
+    ///
+    /// This is a convenience surface: callbacks are invoked for commits originating from this
+    /// canvas (including undo/redo).
+    pub fn with_callbacks(mut self, callbacks: impl NodeGraphCallbacks) -> Self {
+        self.callbacks = Some(Box::new(callbacks));
         self
     }
 
@@ -915,6 +956,16 @@ impl NodeGraphCanvas {
         host: &mut H,
         f: impl FnOnce(&mut NodeGraphViewState),
     ) {
+        let before = if self.callbacks.is_some() {
+            if let Some(store) = self.store.as_ref() {
+                store.read_ref(host, |s| s.view_state().clone()).ok()
+            } else {
+                self.view_state.read_ref(host, |s| s.clone()).ok()
+            }
+        } else {
+            None
+        };
+
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let style = self.style.clone();
         if let Some(store) = self.store.as_ref() {
@@ -951,6 +1002,30 @@ impl NodeGraphCanvas {
             });
         }
         self.sync_view_state(host);
+
+        if let Some(before) = before {
+            let after = self.view_state.read_ref(host, |s| s.clone()).ok();
+            if let Some(after) = after {
+                let mut changes: Vec<ViewChange> = Vec::new();
+                if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {
+                    changes.push(ViewChange::Viewport {
+                        pan: after.pan,
+                        zoom: after.zoom,
+                    });
+                }
+                if before.selected_nodes != after.selected_nodes
+                    || before.selected_edges != after.selected_edges
+                    || before.selected_groups != after.selected_groups
+                {
+                    changes.push(ViewChange::Selection {
+                        nodes: after.selected_nodes.clone(),
+                        edges: after.selected_edges.clone(),
+                        groups: after.selected_groups.clone(),
+                    });
+                }
+                self.emit_view_callbacks(&changes);
+            }
+        }
     }
 
     fn clamp_pan_to_translate_extent(
@@ -1069,6 +1144,7 @@ impl NodeGraphCanvas {
                 }) {
                     Ok(Ok(outcome)) => {
                         self.sync_view_state(host);
+                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                         return Ok(outcome.committed);
                     }
                     Ok(Err(err)) => match &err {
@@ -1100,6 +1176,7 @@ impl NodeGraphCanvas {
             match store.update(host, |store, _cx| store.dispatch_transaction(tx)) {
                 Ok(Ok(outcome)) => {
                     self.sync_view_state(host);
+                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                     return Ok(outcome.committed);
                 }
                 Ok(Err(err)) => {
@@ -1182,6 +1259,8 @@ impl NodeGraphCanvas {
             *g = scratch;
         });
 
+        let changes = NodeGraphChanges::from_transaction(&committed);
+        self.emit_graph_callbacks(&committed, &changes);
         Ok(committed)
     }
 
@@ -1231,8 +1310,9 @@ impl NodeGraphCanvas {
         if let Some(store) = self.store.as_ref() {
             if let Some(profile) = self.presenter.profile_mut() {
                 match store.update(host, |store, _cx| store.undo_with_profile(profile)) {
-                    Ok(Ok(Some(_outcome))) => {
+                    Ok(Ok(Some(outcome))) => {
                         self.sync_view_state(host);
+                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                         self.update_view_state(host, |s| {
                             s.selected_edges.clear();
                             s.selected_nodes.clear();
@@ -1264,8 +1344,9 @@ impl NodeGraphCanvas {
             }
 
             match store.update(host, |store, _cx| store.undo()) {
-                Ok(Ok(Some(_outcome))) => {
+                Ok(Ok(Some(outcome))) => {
                     self.sync_view_state(host);
+                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                     self.update_view_state(host, |s| {
                         s.selected_edges.clear();
                         s.selected_nodes.clear();
@@ -1326,8 +1407,9 @@ impl NodeGraphCanvas {
         if let Some(store) = self.store.as_ref() {
             if let Some(profile) = self.presenter.profile_mut() {
                 match store.update(host, |store, _cx| store.redo_with_profile(profile)) {
-                    Ok(Ok(Some(_outcome))) => {
+                    Ok(Ok(Some(outcome))) => {
                         self.sync_view_state(host);
+                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                         self.update_view_state(host, |s| {
                             s.selected_edges.clear();
                             s.selected_nodes.clear();
@@ -1359,8 +1441,9 @@ impl NodeGraphCanvas {
             }
 
             match store.update(host, |store, _cx| store.redo()) {
-                Ok(Ok(Some(_outcome))) => {
+                Ok(Ok(Some(outcome))) => {
                     self.sync_view_state(host);
+                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
                     self.update_view_state(host, |s| {
                         s.selected_edges.clear();
                         s.selected_nodes.clear();

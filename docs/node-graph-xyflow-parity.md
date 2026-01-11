@@ -133,7 +133,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [ ] **Controlled/uncontrolled patterns**
   - XyFlow: controlled nodes/edges vs internal store
-  - fret-node: needs an explicit contract for app-owned graph state vs editor-owned derived state
+  - fret-node:
+    - runtime pieces: `ecosystem/fret-node/src/runtime/callbacks.rs` + `ecosystem/fret-node/src/runtime/apply.rs`
+    - UI glue (canvas callbacks surface): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_callbacks`)
+  - Notes:
+    - view-state remains separate (`NodeGraphViewState`); callbacks receive `ViewChange` for viewport/selection.
 
 ## 0.3 View registry (NodeTypes / EdgeTypes) and interaction policies
 
