@@ -334,6 +334,14 @@ pub fn handle_dock_window_created<H: UiHost>(
             return false;
         }
 
+        if let Some(drag) = app.drag_mut()
+            && drag.kind == fret_runtime::DragKind::DockPanel
+            && drag.source_window == *source_window
+        {
+            drag.source_window = new_window;
+            drag.current_window = new_window;
+        }
+
         dock.clear_viewport_layout_for_window(*source_window);
         dock.clear_viewport_layout_for_window(new_window);
         invalidate_windows(app, [*source_window, new_window]);
@@ -546,6 +554,62 @@ mod tests {
     }
 
     #[test]
+    fn window_created_updates_drag_source_window_for_active_dock_drag() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        app.begin_cross_window_drag_with_kind(
+            fret_runtime::DragKind::DockPanel,
+            window_a,
+            fret_core::Point::default(),
+            (),
+        );
+
+        let op = DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        let create = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+                _ => None,
+            })
+            .expect("expected WindowRequest::Create");
+
+        assert!(handle_dock_window_created(&mut app, &create, window_b));
+
+        let drag = app.drag().expect("expected active drag session");
+        assert_eq!(drag.source_window, window_b);
+        assert_eq!(drag.current_window, window_b);
+    }
+
+    #[test]
     fn request_float_canceled_by_close_panel_closes_created_window() {
         let window_a = AppWindowId::from(KeyData::from_ffi(1));
         let window_b = AppWindowId::from(KeyData::from_ffi(2));
@@ -610,5 +674,69 @@ mod tests {
             dock.graph.find_panel_in_window(window_b, &panel).is_none(),
             "expected panel not to be moved after cancelation"
         );
+    }
+
+    #[test]
+    fn window_created_does_not_update_drag_source_when_canceled() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        app.begin_cross_window_drag_with_kind(
+            fret_runtime::DragKind::DockPanel,
+            window_a,
+            fret_core::Point::default(),
+            (),
+        );
+
+        let op = DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        let create = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+                _ => None,
+            })
+            .expect("expected WindowRequest::Create");
+
+        assert!(handle_dock_op(
+            &mut app,
+            DockOp::ClosePanel {
+                window: window_a,
+                panel: panel.clone(),
+            }
+        ));
+
+        assert!(handle_dock_window_created(&mut app, &create, window_b));
+
+        let drag = app.drag().expect("expected active drag session");
+        assert_eq!(drag.source_window, window_a);
+        assert_eq!(drag.current_window, window_a);
     }
 }

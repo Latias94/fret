@@ -3519,19 +3519,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             self.driver
                                 .window_created(&mut self.app, &create, new_window);
 
-                            // If this window was created as part of an active dock tear-off drag,
-                            // update the drag session's source window so dropping over another
-                            // window emits `DockOp::MovePanel` with the correct `source_window`.
-                            if let CreateWindowKind::DockFloating { source_window, .. } =
-                                create.kind
-                                && let Some(drag) = self.app.drag_mut()
-                                && drag.kind == fret_app::DragKind::DockPanel
-                                && drag.source_window == source_window
-                            {
-                                drag.source_window = new_window;
-                                drag.current_window = new_window;
-                            }
-
                             self.app.request_redraw(new_window);
                         }
                         WindowRequest::Raise {
