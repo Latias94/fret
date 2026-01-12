@@ -1066,8 +1066,8 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Collapsible::new(open.clone())
-                .into_element_with_open_model(
+            vec![
+                fret_ui_shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {
                         fret_ui_shadcn::CollapsibleTrigger::new(
@@ -1081,7 +1081,8 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
                         fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
                             .into_element(cx)
                     },
-                )]
+                ),
+            ]
         },
     );
 
@@ -1106,8 +1107,8 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Collapsible::new(open.clone())
-                .into_element_with_open_model(
+            vec![
+                fret_ui_shadcn::Collapsible::new(open.clone()).into_element_with_open_model(
                     cx,
                     |cx, open, is_open| {
                         fret_ui_shadcn::CollapsibleTrigger::new(
@@ -1121,7 +1122,8 @@ fn radix_web_collapsible_toggle_state_matches_fret() {
                         fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
                             .into_element(cx)
                     },
-                )]
+                ),
+            ]
         },
     );
 

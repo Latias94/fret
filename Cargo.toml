@@ -2,7 +2,7 @@
 members = ["crates/*", "ecosystem/*", "apps/*"]
 default-members = ["crates/*", "ecosystem/*"]
 exclude = [
-    # Not part of the default workspace yet (may be promoted or moved to `apps/` later).
+    # Not part of the default workspace yet (maybe promoted or moved to `apps/` later).
     # Incomplete / incubating.
     "apps/fret-editor",
 ]
@@ -28,7 +28,7 @@ pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 slotmap = "1"
-stacksafe = "0.1"
+stacksafe = "1"
 taffy = "0.9.2"
 thiserror = "2"
 time = "0.3"
@@ -49,8 +49,8 @@ uuid = { version = "1", features = ["v4", "v5", "serde", "js"] }
 lyon = "1"
 glam = "0.30"
 etagere = "0.2.15"
-resvg = { version = "0.45.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
-usvg = { version = "0.45.0", default-features = false }
+resvg = { version = "0.46.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
+usvg = { version = "0.46.0", default-features = false }
 rust-embed = { version = "8.9.0", features = ["include-exclude"] }
 windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Input_Ime", "Win32_UI_WindowsAndMessaging"] }
 virtualizer = "0.3.0"
@@ -81,12 +81,12 @@ tree-sitter-kotlin-ng = "1.1.0"
 tree-sitter-lua = "0.4.1"
 tree-sitter-make = "1.1.1"
 tree-sitter-md = "0.5.1"
-tree-sitter-proto = "0.2.0"
+tree-sitter-proto = "0.4.0"
 tree-sitter-php = "0.24.2"
-tree-sitter-python = "0.23.6"
+tree-sitter-python = "0.25"
 tree-sitter-ruby = "0.23.1"
 tree-sitter-rust = "0.24.0"
-tree-sitter-scala = "0.23.4"
+tree-sitter-scala = "0.24"
 tree-sitter-sequel = "0.3.8"
 tree-sitter-swift = "0.7.0"
 tree-sitter-toml-ng = "0.7.0"

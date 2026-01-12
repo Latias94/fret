@@ -207,11 +207,11 @@ impl<T> UndoHistory<T> {
             self.record(record);
             return;
         }
-        if let Some(prev) = self.undo.last_mut() {
-            if prev.coalesce_key == Some(key) {
-                *prev = record;
-                return;
-            }
+        if let Some(prev) = self.undo.last_mut()
+            && prev.coalesce_key == Some(key)
+        {
+            *prev = record;
+            return;
         }
         self.record(record);
     }

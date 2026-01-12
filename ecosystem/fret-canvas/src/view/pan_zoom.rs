@@ -94,9 +94,10 @@ mod tests {
             Point::new(Px(10.0), Px(20.0)),
             fret_core::Size::new(Px(800.0), Px(600.0)),
         );
-        let mut view = PanZoom2D::default();
-        view.pan = Point::new(Px(-3.0), Px(5.0));
-        view.zoom = 2.0;
+        let mut view = PanZoom2D {
+            pan: Point::new(Px(-3.0), Px(5.0)),
+            zoom: 2.0,
+        };
 
         let center = Point::new(Px(200.0), Px(150.0));
         let before = view.screen_to_canvas(bounds, center);

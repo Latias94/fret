@@ -2048,7 +2048,7 @@
                                           },
                                           "children": [
                                             {
-                                              "tag": "span",
+                                              "tag": "img",
                                               "path": [
                                                 3,
                                                 3,
@@ -2061,7 +2061,7 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-slot": "avatar-fallback"
+                                                "data-slot": "avatar-image"
                                               },
                                               "children": [],
                                               "rect": {
@@ -2069,8 +2069,7 @@
                                                 "y": 887,
                                                 "w": 32,
                                                 "h": 32
-                                              },
-                                              "text": "CN"
+                                              }
                                             }
                                           ],
                                           "rect": {
@@ -2078,8 +2077,7 @@
                                             "y": 887,
                                             "w": 32,
                                             "h": 32
-                                          },
-                                          "text": "CN"
+                                          }
                                         }
                                       ],
                                       "rect": {
@@ -2088,7 +2086,7 @@
                                         "w": 200,
                                         "h": 48
                                       },
-                                      "text": "CNshadcnshadcn@example.com"
+                                      "text": "shadcnshadcn@example.com"
                                     },
                                     {
                                       "tag": "button",
@@ -2125,7 +2123,7 @@
                                           },
                                           "children": [
                                             {
-                                              "tag": "span",
+                                              "tag": "img",
                                               "path": [
                                                 3,
                                                 3,
@@ -2138,7 +2136,7 @@
                                                 0
                                               ],
                                               "attrs": {
-                                                "data-slot": "avatar-fallback"
+                                                "data-slot": "avatar-image"
                                               },
                                               "children": [],
                                               "rect": {
@@ -2146,8 +2144,7 @@
                                                 "y": 887,
                                                 "w": 32,
                                                 "h": 32
-                                              },
-                                              "text": "LR"
+                                              }
                                             }
                                           ],
                                           "rect": {
@@ -2155,8 +2152,7 @@
                                             "y": 887,
                                             "w": 32,
                                             "h": 32
-                                          },
-                                          "text": "LR"
+                                          }
                                         }
                                       ],
                                       "rect": {
@@ -2164,8 +2160,7 @@
                                         "y": 885,
                                         "w": 36,
                                         "h": 36
-                                      },
-                                      "text": "LR"
+                                      }
                                     }
                                   ],
                                   "rect": {
@@ -2174,7 +2169,7 @@
                                     "w": 398,
                                     "h": 48
                                   },
-                                  "text": "CNshadcnshadcn@example.comLR"
+                                  "text": "shadcnshadcn@example.com"
                                 }
                               ],
                               "rect": {
@@ -2183,7 +2178,7 @@
                                 "w": 448,
                                 "h": 98
                               },
-                              "text": "CNshadcnshadcn@example.comLR"
+                              "text": "shadcnshadcn@example.com"
                             }
                           ],
                           "rect": {
@@ -2192,7 +2187,7 @@
                             "w": 448,
                             "h": 134
                           },
-                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                          "text": "With Avatarshadcnshadcn@example.com"
                         },
                         {
                           "tag": "div",

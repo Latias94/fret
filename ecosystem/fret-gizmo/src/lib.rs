@@ -7,6 +7,8 @@
 //!   `ViewportSurface` element) (ADR 0139).
 //! - Optional screen-space affordances (labels/HUD) may be rendered as regular UI overlays.
 
+#![allow(clippy::too_many_arguments)]
+
 mod gizmo;
 mod grid;
 mod light_radius_plugin;
@@ -20,12 +22,12 @@ mod view_gizmo;
 mod viewport_input;
 
 pub use gizmo::{
-    Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness,
-    GizmoInput, GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode,
+    Aabb3, BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
+    DepthMode, Gizmo, GizmoConfig, GizmoCustomEdit, GizmoDrawList3d, GizmoHandedness, GizmoInput,
+    GizmoMode, GizmoOps, GizmoOrientation, GizmoPhase, GizmoPickPolicy, GizmoPivotMode,
     GizmoPluginId, GizmoPropertyKey, GizmoResult, GizmoSizePolicy, GizmoState, GizmoTarget3d,
-    GizmoTargetId, GizmoUpdate, HandleId, Line3d, Transform3d, Triangle3d,
-    BUILTIN_HANDLE_GROUP_ROTATE, BUILTIN_HANDLE_GROUP_SCALE, BUILTIN_HANDLE_GROUP_TRANSLATE,
-    HANDLE_LOCAL_GROUP_SHIFT, delta_matrix_trs,
+    GizmoTargetId, GizmoUpdate, HANDLE_LOCAL_GROUP_SHIFT, HandleId, Line3d, Transform3d,
+    Triangle3d, delta_matrix_trs,
 };
 pub use grid::{Grid3d, Grid3dConfig};
 pub use light_radius_plugin::{

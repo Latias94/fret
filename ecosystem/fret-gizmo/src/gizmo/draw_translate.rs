@@ -368,31 +368,30 @@ impl Gizmo {
         }
 
         // Screen translate fill (center handle), always-on-top.
-        if include_screen {
-            if let Some(view_dir) =
+        if include_screen
+            && let Some(view_dir) =
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-            {
-                let (u, v) = plane_basis(view_dir);
-                let half = length_world * pv.translate_center_half_fraction.max(0.0);
-                let handle_id = TranslateHandle::Screen.id();
-                let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
-                    mix_alpha(self.config.hover_color, 1.0)
-                } else {
-                    mix_alpha(self.config.hover_color, 0.65)
-                };
-                let fill = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
-                    mix_alpha(outline, 0.65)
-                } else {
-                    mix_alpha(outline, 0.35)
-                };
+        {
+            let (u, v) = plane_basis(view_dir);
+            let half = length_world * pv.translate_center_half_fraction.max(0.0);
+            let handle_id = TranslateHandle::Screen.id();
+            let outline = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(self.config.hover_color, 1.0)
+            } else {
+                mix_alpha(self.config.hover_color, 0.65)
+            };
+            let fill = if self.is_handle_highlighted(GizmoMode::Translate, handle_id) {
+                mix_alpha(outline, 0.65)
+            } else {
+                mix_alpha(outline, 0.35)
+            };
 
-                let p0 = origin + (-u - v) * half;
-                let p1 = origin + (u - v) * half;
-                let p2 = origin + (u + v) * half;
-                let p3 = origin + (-u + v) * half;
-                self.push_tri(&mut out, p0, p1, p2, fill, DepthMode::Always);
-                self.push_tri(&mut out, p0, p2, p3, fill, DepthMode::Always);
-            }
+            let p0 = origin + (-u - v) * half;
+            let p1 = origin + (u - v) * half;
+            let p2 = origin + (u + v) * half;
+            let p3 = origin + (-u + v) * half;
+            self.push_tri(&mut out, p0, p1, p2, fill, DepthMode::Always);
+            self.push_tri(&mut out, p0, p2, p3, fill, DepthMode::Always);
         }
 
         out

@@ -26,18 +26,13 @@ pub enum GizmoPivotMode {
     Center,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum GizmoHandedness {
     /// Right-handed coordinate convention.
+    #[default]
     RightHanded,
     /// Left-handed coordinate convention.
     LeftHanded,
-}
-
-impl Default for GizmoHandedness {
-    fn default() -> Self {
-        Self::RightHanded
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

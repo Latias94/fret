@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "radio-group-example",
   "primitive": "radio-group",
   "scenario": "select-second",
-  "url": "http://localhost:4000/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/radio-group-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -136,7 +136,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 110.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -154,9 +160,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 109,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Default"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Default"
                                     },
                                     {
@@ -214,9 +232,21 @@
                                                 "data-state": "checked",
                                                 "data-slot": "radio-group-indicator"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 142.875,
+                                                "w": 14,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 141.875,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -234,9 +264,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 140.25,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Comfortable"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 140.25,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Comfortable"
                                     },
                                     {
@@ -276,7 +318,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 173.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -294,18 +342,48 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 171.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Compact"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 171.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Compact"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 81.75
+                                  },
                                   "text": "DefaultComfortableCompact"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 284.75
+                              },
                               "text": "DefaultComfortableCompact"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 320.75
+                          },
                           "text": "BasicDefaultComfortableCompact"
                         },
                         {
@@ -418,9 +496,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 145.25,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For individuals and small teams"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 122,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "PlusFor individuals and small teams"
                                             },
                                             {
@@ -463,14 +553,38 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 1051,
+                                                    "y": 124,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 123,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 110,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "PlusFor individuals and small teams"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "PlusFor individuals and small teams"
                                     },
                                     {
@@ -541,9 +655,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 227.5,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For growing businesses"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 204.25,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "ProFor growing businesses"
                                             },
                                             {
@@ -567,12 +693,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 205.25,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 192.25,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "ProFor growing businesses"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 191.25,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "ProFor growing businesses"
                                     },
                                     {
@@ -643,9 +787,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 309.75,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For large teams and enterprises"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 286.5,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "EnterpriseFor large teams and enterprises"
                                             },
                                             {
@@ -669,21 +825,57 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 287.5,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 274.5,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "EnterpriseFor large teams and enterprises"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 273.5,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "EnterpriseFor large teams and enterprises"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 234.75
+                                  },
                                   "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 284.75
+                              },
                               "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 320.75
+                          },
                           "text": "With DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                         },
                         {
@@ -740,6 +932,12 @@
                                         "data-slot": "field-legend"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 461.75,
+                                        "w": 100.046875,
+                                        "h": 24
+                                      },
                                       "text": "Battery Level"
                                     },
                                     {
@@ -757,6 +955,12 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 493.75,
+                                        "w": 239.6875,
+                                        "h": 21
+                                      },
                                       "text": "Choose your preferred battery level."
                                     },
                                     {
@@ -816,7 +1020,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 528.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -835,9 +1045,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 526.75,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "High"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 526.75,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "High"
                                         },
                                         {
@@ -898,9 +1120,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 202,
+                                                    "y": 560.625,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 559.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -919,9 +1153,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 558,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "Medium"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 558,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "Medium"
                                         },
                                         {
@@ -963,7 +1209,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 590.875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -982,21 +1234,57 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 589.25,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "Low"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 589.25,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "Low"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 526.75,
+                                        "w": 239.6875,
+                                        "h": 81.75
+                                      },
                                       "text": "HighMediumLow"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 461.75,
+                                    "w": 239.6875,
+                                    "h": 146.75
+                                  },
                                   "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 436.75,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 400.75,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "With FieldSetBattery LevelChoose your preferred battery level.HighMediumLow"
                         },
                         {
@@ -1095,12 +1383,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 476.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 462.75,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Small"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 461.75,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -1176,14 +1482,38 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 898,
+                                                    "y": 477.375,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 897,
+                                                "y": 476.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 885,
+                                            "y": 462.75,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Medium"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 884,
+                                        "y": 461.75,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Medium"
                                     },
                                     {
@@ -1240,12 +1570,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 529.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 516,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Large"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 515,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Large"
                                     },
                                     {
@@ -1302,21 +1650,57 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 897,
+                                                "y": 529.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 885,
+                                            "y": 516,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "X-Large"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 884,
+                                        "y": 515,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "X-Large"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 461.75,
+                                    "w": 398,
+                                    "h": 98.5
+                                  },
                                   "text": "SmallMediumLargeX-Large"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 436.75,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "SmallMediumLargeX-Large"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 400.75,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "Grid LayoutSmallMediumLargeX-Large"
                         },
                         {
@@ -1400,7 +1784,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 728.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1418,9 +1808,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 726.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 1"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 726.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 1"
                                     },
                                     {
@@ -1480,9 +1882,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "radio-group-indicator"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 760.375,
+                                                "w": 14,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 759.375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1500,9 +1914,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 757.75,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 2"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 757.75,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 2"
                                     },
                                     {
@@ -1543,7 +1969,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 790.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1561,18 +1993,48 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 789,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 3"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 789,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 3"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 726.5,
+                                    "w": 398,
+                                    "h": 81.75
+                                  },
                                   "text": "Option 1Option 2Option 3"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 701.5,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Option 1Option 2Option 3"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 665.5,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "DisabledOption 1Option 2Option 3"
                         },
                         {
@@ -1629,6 +2091,12 @@
                                         "data-slot": "field-legend"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 726.5,
+                                        "w": 185.640625,
+                                        "h": 24
+                                      },
                                       "text": "Notification Preferences"
                                     },
                                     {
@@ -1646,6 +2114,12 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 758.5,
+                                        "w": 305.40625,
+                                        "h": 21
+                                      },
                                       "text": "Choose how you want to receive notifications."
                                     },
                                     {
@@ -1725,9 +2199,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 682,
+                                                    "y": 794.125,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 793.125,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -1746,9 +2232,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 791.5,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "Email only"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 791.5,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "Email only"
                                         },
                                         {
@@ -1791,7 +2289,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 824.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -1810,9 +2314,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 822.75,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "SMS only"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 822.75,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "SMS only"
                                         },
                                         {
@@ -1855,7 +2371,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 855.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -1874,30 +2396,84 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 854,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "Both Email & SMS"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 854,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "Both Email & SMS"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 791.5,
+                                        "w": 305.40625,
+                                        "h": 81.75
+                                      },
                                       "text": "Email onlySMS onlyBoth Email & SMS"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 726.5,
+                                    "w": 305.40625,
+                                    "h": 146.75
+                                  },
                                   "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 701.5,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 665.5,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "InvalidNotification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 946.25
+                      },
                       "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 946.25
+                  },
                   "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 946.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1912,9 +2488,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 946.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 946.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -2186,30 +2774,6 @@
               ]
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -2354,7 +2918,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 110.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -2372,9 +2942,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 109,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Default"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Default"
                                     },
                                     {
@@ -2432,9 +3014,21 @@
                                                 "data-state": "checked",
                                                 "data-slot": "radio-group-indicator"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 142.875,
+                                                "w": 14,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 141.875,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -2452,9 +3046,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 140.25,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Comfortable"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 140.25,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Comfortable"
                                     },
                                     {
@@ -2494,7 +3100,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 173.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -2512,18 +3124,48 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 171.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Compact"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 171.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Compact"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 81.75
+                                  },
                                   "text": "DefaultComfortableCompact"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 284.75
+                              },
                               "text": "DefaultComfortableCompact"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 320.75
+                          },
                           "text": "BasicDefaultComfortableCompact"
                         },
                         {
@@ -2636,9 +3278,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 145.25,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For individuals and small teams"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 122,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "PlusFor individuals and small teams"
                                             },
                                             {
@@ -2681,14 +3335,38 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 1051,
+                                                    "y": 124,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 123,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 110,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "PlusFor individuals and small teams"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "PlusFor individuals and small teams"
                                     },
                                     {
@@ -2759,9 +3437,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 227.5,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For growing businesses"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 204.25,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "ProFor growing businesses"
                                             },
                                             {
@@ -2785,12 +3475,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 205.25,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 192.25,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "ProFor growing businesses"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 191.25,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "ProFor growing businesses"
                                     },
                                     {
@@ -2861,9 +3569,21 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 694,
+                                                    "y": 309.75,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "For large teams and enterprises"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 286.5,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "EnterpriseFor large teams and enterprises"
                                             },
                                             {
@@ -2887,21 +3607,57 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 1050,
+                                                "y": 287.5,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 274.5,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "EnterpriseFor large teams and enterprises"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 273.5,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "EnterpriseFor large teams and enterprises"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 234.75
+                                  },
                                   "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 284.75
+                              },
                               "text": "PlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 320.75
+                          },
                           "text": "With DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor large teams and enterprises"
                         },
                         {
@@ -2958,6 +3714,12 @@
                                         "data-slot": "field-legend"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 461.75,
+                                        "w": 100.046875,
+                                        "h": 24
+                                      },
                                       "text": "Battery Level"
                                     },
                                     {
@@ -2975,6 +3737,12 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 493.75,
+                                        "w": 239.6875,
+                                        "h": 21
+                                      },
                                       "text": "Choose your preferred battery level."
                                     },
                                     {
@@ -3034,7 +3802,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 528.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -3053,9 +3827,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 526.75,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "High"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 526.75,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "High"
                                         },
                                         {
@@ -3116,9 +3902,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 202,
+                                                    "y": 560.625,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 559.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -3137,9 +3935,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 558,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "Medium"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 558,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "Medium"
                                         },
                                         {
@@ -3181,7 +3991,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 201,
+                                                "y": 590.875,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -3200,21 +4016,57 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 229,
+                                                "y": 589.25,
+                                                "w": 211.6875,
+                                                "h": 19.25
+                                              },
                                               "text": "Low"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 589.25,
+                                            "w": 239.6875,
+                                            "h": 19.25
+                                          },
                                           "text": "Low"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 526.75,
+                                        "w": 239.6875,
+                                        "h": 81.75
+                                      },
                                       "text": "HighMediumLow"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 461.75,
+                                    "w": 239.6875,
+                                    "h": 146.75
+                                  },
                                   "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 436.75,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Battery LevelChoose your preferred battery level.HighMediumLow"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 400.75,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "With FieldSetBattery LevelChoose your preferred battery level.HighMediumLow"
                         },
                         {
@@ -3313,12 +4165,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 476.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 462.75,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Small"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 461.75,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Small"
                                     },
                                     {
@@ -3394,14 +4264,38 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 898,
+                                                    "y": 477.375,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 897,
+                                                "y": 476.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 885,
+                                            "y": 462.75,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Medium"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 884,
+                                        "y": 461.75,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Medium"
                                     },
                                     {
@@ -3458,12 +4352,30 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 694,
+                                                "y": 529.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 516,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "Large"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 515,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "Large"
                                     },
                                     {
@@ -3520,21 +4432,57 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 897,
+                                                "y": 529.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 885,
+                                            "y": 516,
+                                            "w": 193,
+                                            "h": 43.25
+                                          },
                                           "text": "X-Large"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 884,
+                                        "y": 515,
+                                        "w": 195,
+                                        "h": 45.25
+                                      },
                                       "text": "X-Large"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 461.75,
+                                    "w": 398,
+                                    "h": 98.5
+                                  },
                                   "text": "SmallMediumLargeX-Large"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 436.75,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "SmallMediumLargeX-Large"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 400.75,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "Grid LayoutSmallMediumLargeX-Large"
                         },
                         {
@@ -3618,7 +4566,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 728.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3636,9 +4590,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 726.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 1"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 726.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 1"
                                     },
                                     {
@@ -3698,9 +4664,21 @@
                                                 "data-disabled": "",
                                                 "data-slot": "radio-group-indicator"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 202,
+                                                "y": 760.375,
+                                                "w": 14,
+                                                "h": 16
+                                              }
                                             }
-                                          ]
+                                          ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 759.375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3718,9 +4696,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 757.75,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 2"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 757.75,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 2"
                                     },
                                     {
@@ -3761,7 +4751,13 @@
                                             "tabindex": "-1",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 790.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3779,18 +4775,48 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 789,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Option 3"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 789,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Option 3"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 726.5,
+                                    "w": 398,
+                                    "h": 81.75
+                                  },
                                   "text": "Option 1Option 2Option 3"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 701.5,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Option 1Option 2Option 3"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 665.5,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "DisabledOption 1Option 2Option 3"
                         },
                         {
@@ -3847,6 +4873,12 @@
                                         "data-slot": "field-legend"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 726.5,
+                                        "w": 185.640625,
+                                        "h": 24
+                                      },
                                       "text": "Notification Preferences"
                                     },
                                     {
@@ -3864,6 +4896,12 @@
                                         "data-slot": "field-description"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 758.5,
+                                        "w": 305.40625,
+                                        "h": 21
+                                      },
                                       "text": "Choose how you want to receive notifications."
                                     },
                                     {
@@ -3943,9 +4981,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "radio-group-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 682,
+                                                    "y": 794.125,
+                                                    "w": 14,
+                                                    "h": 16
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 793.125,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -3964,9 +5014,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 791.5,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "Email only"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 791.5,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "Email only"
                                         },
                                         {
@@ -4009,7 +5071,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 824.375,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -4028,9 +5096,21 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 822.75,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "SMS only"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 822.75,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "SMS only"
                                         },
                                         {
@@ -4073,7 +5153,13 @@
                                                 "tabindex": "-1",
                                                 "data-radix-collection-item": ""
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 855.625,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "label",
@@ -4092,30 +5178,84 @@
                                                 "data-slot": "field-label"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 709,
+                                                "y": 854,
+                                                "w": 277.40625,
+                                                "h": 19.25
+                                              },
                                               "text": "Both Email & SMS"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 854,
+                                            "w": 305.40625,
+                                            "h": 19.25
+                                          },
                                           "text": "Both Email & SMS"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 791.5,
+                                        "w": 305.40625,
+                                        "h": 81.75
+                                      },
                                       "text": "Email onlySMS onlyBoth Email & SMS"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 726.5,
+                                    "w": 305.40625,
+                                    "h": 146.75
+                                  },
                                   "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 701.5,
+                                "w": 448,
+                                "h": 196.75
+                              },
                               "text": "Notification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 665.5,
+                            "w": 448,
+                            "h": 232.75
+                          },
                           "text": "InvalidNotification PreferencesChoose how you want to receive notifications.Email onlySMS onlyBoth Email & SMS"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 946.25
+                      },
                       "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 946.25
+                  },
                   "text": "BasicDefaultComfortableCompactWith DescriptionsPlusFor individuals and small teamsProFor growing businessesEnterpriseFor…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 946.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -4130,9 +5270,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 946.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 946.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -4403,30 +5555,6 @@
                   "name": "Both Email & SMS"
                 }
               ]
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

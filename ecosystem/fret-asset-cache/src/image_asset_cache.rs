@@ -122,6 +122,7 @@ impl ImageAssetCache {
         (key, image)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn use_rgba8_keyed<H: GlobalsHost + TimeHost + EffectSink>(
         &mut self,
         host: &mut H,
@@ -274,6 +275,7 @@ impl ImageAssetCache {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn use_rgba8_keyed_inner<H: GlobalsHost + TimeHost + EffectSink>(
         &mut self,
         host: &mut H,
@@ -344,6 +346,7 @@ impl ImageAssetCache {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn schedule_upload<H: GlobalsHost + TimeHost + EffectSink>(
         &mut self,
         host: &mut H,
@@ -361,10 +364,10 @@ impl ImageAssetCache {
             svc.request_rgba8(host, window, width, height, bytes, color_space)
         });
 
-        if let Some(existing) = self.entries.get(&key) {
-            if let ImageAssetState::Pending { token, .. } = &existing.state {
-                self.token_to_key.remove(token);
-            }
+        if let Some(existing) = self.entries.get(&key)
+            && let ImageAssetState::Pending { token, .. } = &existing.state
+        {
+            self.token_to_key.remove(token);
         }
 
         self.entries.insert(

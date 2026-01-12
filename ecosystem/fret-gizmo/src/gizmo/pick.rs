@@ -63,7 +63,7 @@ impl Gizmo {
             )
             .map(|(h, _kind)| h)
         } else {
-            let h = match self.config.mode {
+            match self.config.mode {
                 GizmoMode::Translate => self.pick_translate_handle(
                     view_projection,
                     viewport,
@@ -104,8 +104,7 @@ impl Gizmo {
                         size_length_world,
                     )
                     .map(|(h, _kind)| h),
-            };
-            h
+            }
         };
 
         hit.map(|h| (h.handle, h.score))
@@ -134,70 +133,64 @@ impl Gizmo {
         // 3) Axis handles (distance to segment)
         //
         // This avoids a common frustration where the axis segment "steals" clicks near the origin.
-        if include_screen {
-            if let Some(p0) =
+        if include_screen
+            && let Some(p0) =
                 project_point(view_projection, viewport, origin, self.config.depth_range)
+        {
+            let r = self.config.pick_radius_px.max(6.0);
+            if let Some(d) = (PickCircle2d {
+                center: p0.screen,
+                radius: r,
+            })
+            .hit_distance(cursor)
             {
-                let r = self.config.pick_radius_px.max(6.0);
-                if let Some(d) = (PickCircle2d {
-                    center: p0.screen,
-                    radius: r,
-                })
-                .hit_distance(cursor)
-                {
-                    return Some(PickHit {
-                        handle: TranslateHandle::Screen.id(),
-                        score: d,
-                    });
-                }
+                return Some(PickHit {
+                    handle: TranslateHandle::Screen.id(),
+                    score: d,
+                });
             }
         }
 
         // Dolly translation handle (a small ring in the view plane around the center).
-        if include_depth {
-            if let Some(view_dir) =
+        if include_depth
+            && let Some(view_dir) =
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-            {
-                let axis_dir = view_dir.normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let (u, v) = plane_basis(axis_dir);
-                    let r_world = (length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
-                        .max(length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
-                    let segments: usize = 36;
-                    let mut prev_world = origin + u * r_world;
-                    let mut best_d = f32::INFINITY;
-                    for i in 1..=segments {
-                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
-                        let world = origin + (u * t.cos() + v * t.sin()) * r_world;
-                        let Some(pa) = project_point(
-                            view_projection,
-                            viewport,
-                            prev_world,
-                            self.config.depth_range,
-                        ) else {
-                            prev_world = world;
-                            continue;
-                        };
-                        let Some(pb) = project_point(
-                            view_projection,
-                            viewport,
-                            world,
-                            self.config.depth_range,
-                        ) else {
-                            prev_world = world;
-                            continue;
-                        };
-                        best_d =
-                            best_d.min(distance_point_to_segment_px(cursor, pa.screen, pb.screen));
+        {
+            let axis_dir = view_dir.normalize_or_zero();
+            if axis_dir.length_squared() > 0.0 {
+                let (u, v) = plane_basis(axis_dir);
+                let r_world = (length_world * pv.translate_depth_ring_radius_fraction.max(0.0))
+                    .max(length_world * pv.translate_depth_ring_radius_min_fraction.max(0.0));
+                let segments: usize = 36;
+                let mut prev_world = origin + u * r_world;
+                let mut best_d = f32::INFINITY;
+                for i in 1..=segments {
+                    let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
+                    let world = origin + (u * t.cos() + v * t.sin()) * r_world;
+                    let Some(pa) = project_point(
+                        view_projection,
+                        viewport,
+                        prev_world,
+                        self.config.depth_range,
+                    ) else {
                         prev_world = world;
-                    }
-                    let r = self.config.pick_radius_px.max(6.0);
-                    if best_d.is_finite() && best_d <= r {
-                        return Some(PickHit {
-                            handle: TranslateHandle::Depth.id(),
-                            score: best_d,
-                        });
-                    }
+                        continue;
+                    };
+                    let Some(pb) =
+                        project_point(view_projection, viewport, world, self.config.depth_range)
+                    else {
+                        prev_world = world;
+                        continue;
+                    };
+                    best_d = best_d.min(distance_point_to_segment_px(cursor, pa.screen, pb.screen));
+                    prev_world = world;
+                }
+                let r = self.config.pick_radius_px.max(6.0);
+                if best_d.is_finite() && best_d <= r {
+                    return Some(PickHit {
+                        handle: TranslateHandle::Depth.id(),
+                        score: best_d,
+                    });
                 }
             }
         }
@@ -384,22 +377,21 @@ impl Gizmo {
         };
 
         // Uniform scale at the origin.
-        if include_uniform {
-            if let Some(p0) =
+        if include_uniform
+            && let Some(p0) =
                 project_point(view_projection, viewport, origin, self.config.depth_range)
+        {
+            let r = self.config.pick_radius_px.max(6.0);
+            if let Some(d) = (PickCircle2d {
+                center: p0.screen,
+                radius: r,
+            })
+            .hit_distance(cursor)
             {
-                let r = self.config.pick_radius_px.max(6.0);
-                if let Some(d) = (PickCircle2d {
-                    center: p0.screen,
-                    radius: r,
-                })
-                .hit_distance(cursor)
-                {
-                    return Some(PickHit {
-                        handle: ScaleHandle::Uniform.id(),
-                        score: d,
-                    });
-                }
+                return Some(PickHit {
+                    handle: ScaleHandle::Uniform.id(),
+                    score: d,
+                });
             }
         }
 
@@ -708,10 +700,10 @@ impl Gizmo {
                     .flatten()
                     .map(|h| (h, 1usize));
 
-                if let Some((hit, _)) = scale {
-                    if hit.handle == ScaleHandle::Uniform.id() {
-                        return Some((hit, GizmoMode::Scale));
-                    }
+                if let Some((hit, _)) = scale
+                    && hit.handle == ScaleHandle::Uniform.id()
+                {
+                    return Some((hit, GizmoMode::Scale));
                 }
 
                 let bounds = bounds_enabled
@@ -732,10 +724,10 @@ impl Gizmo {
                 // Bounds handles are explicit solid affordances. If the cursor is inside a bounds
                 // handle, it should win over other scaling candidates that may overlap in
                 // projection (axis end boxes, plane edges, etc).
-                if let Some((hit, _)) = bounds {
-                    if hit.score <= self.config.pick_policy.bounds_inside_score_max {
-                        return Some((hit, GizmoMode::Scale));
-                    }
+                if let Some((hit, _)) = bounds
+                    && hit.score <= self.config.pick_policy.bounds_inside_score_max
+                {
+                    return Some((hit, GizmoMode::Scale));
                 }
 
                 let mut best: Option<(PickHit, usize)> = None;
@@ -803,10 +795,10 @@ impl Gizmo {
             )
             .map(|h| (h, 1usize));
 
-        if let Some((hit, _)) = scale {
-            if hit.handle == ScaleHandle::Uniform.id() {
-                return Some(hit);
-            }
+        if let Some((hit, _)) = scale
+            && hit.handle == ScaleHandle::Uniform.id()
+        {
+            return Some(hit);
         }
 
         let bounds = self
@@ -828,10 +820,10 @@ impl Gizmo {
 
         // Bounds handles are explicit solid affordances. If the cursor is inside a bounds handle,
         // it should win over axis end-box scaling that may overlap in projection.
-        if let Some((hit, _)) = bounds {
-            if hit.score <= self.config.pick_policy.bounds_inside_score_max {
-                return Some(hit);
-            }
+        if let Some((hit, _)) = bounds
+            && hit.score <= self.config.pick_policy.bounds_inside_score_max
+        {
+            return Some(hit);
         }
 
         let mut best: Option<(PickHit, usize)> = None;

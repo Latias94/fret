@@ -1521,32 +1521,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
 
-        let mut tx = GraphTransaction {
+        let tx = GraphTransaction {
             label: label.map(|s| s.to_string()),
             ops,
         };
-
-        let snapshot = self.sync_view_state(host);
-        let outcome = {
-            let ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
-                style: &self.style,
-                bounds: self.interaction.last_bounds,
-                pan: snapshot.pan,
-                zoom: snapshot.zoom,
-            };
-            self.middleware.before_commit(host, window, &ctx, &mut tx)
-        };
-        match outcome {
-            NodeGraphCanvasCommitOutcome::Continue => self.commit_transaction(host, window, &tx),
-            NodeGraphCanvasCommitOutcome::Reject { diagnostics } => {
-                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diagnostics) {
-                    self.show_toast(host, window, sev, msg);
-                }
-                false
-            }
-        }
+        self.commit_transaction(host, window, &tx)
     }
 
     fn commit_transaction<H: UiHost>(

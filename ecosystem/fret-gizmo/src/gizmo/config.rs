@@ -361,12 +361,13 @@ impl GizmoConfig {
     /// `Default` stays conservative; this opt-in preset biases toward "easy to hit" and
     /// "readable at a glance" in typical game-editor viewports.
     pub fn editor_default() -> Self {
-        let mut cfg = Self::default();
-        cfg.size_px = 112.0;
-        cfg.pick_radius_px = 12.0;
-        cfg.line_thickness_px = 8.0;
-        cfg.bounds_handle_size_px = 14.0;
-        cfg
+        Self {
+            size_px: 112.0,
+            pick_radius_px: 12.0,
+            line_thickness_px: 8.0,
+            bounds_handle_size_px: 14.0,
+            ..Self::default()
+        }
     }
 
     /// Scales pixel-based knobs when the host's cursor/viewport units are logical "points".

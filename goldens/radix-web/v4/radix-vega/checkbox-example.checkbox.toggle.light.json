@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "checkbox-example",
   "primitive": "checkbox",
   "scenario": "toggle",
-  "url": "http://localhost:4000/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/checkbox-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -115,7 +115,13 @@
                                         "data-state": "unchecked",
                                         "data-slot": "checkbox"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 110.625,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -132,15 +138,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 229,
+                                        "y": 109,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Accept terms and conditions"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Accept terms and conditions"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 115.25
+                              },
                               "text": "Accept terms and conditions"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 151.25
+                          },
                           "text": "BasicAccept terms and conditions"
                         },
                         {
@@ -218,9 +248,21 @@
                                             "data-state": "checked",
                                             "data-slot": "checkbox-indicator"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 111,
+                                            "w": 14,
+                                            "h": 14
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 110,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -253,6 +295,12 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 709,
+                                            "y": 109,
+                                            "w": 192.125,
+                                            "h": 19.25
+                                          },
                                           "text": "Accept terms and conditions"
                                         },
                                         {
@@ -271,18 +319,48 @@
                                             "data-slot": "field-description"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 709,
+                                            "y": 132.25,
+                                            "w": 370,
+                                            "h": 42
+                                          },
                                           "text": "By clicking this checkbox, you agree to the terms and conditions."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 709,
+                                        "y": 109,
+                                        "w": 370,
+                                        "h": 65.25
+                                      },
                                       "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 65.25
+                                  },
                                   "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 115.25
+                              },
                               "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 151.25
+                          },
                           "text": "With DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                         },
                         {
@@ -344,7 +422,13 @@
                                         "data-slot": "checkbox",
                                         "aria-invalid": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 293.875,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -361,15 +445,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 229,
+                                        "y": 292.25,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Accept terms and conditions"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 292.25,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Accept terms and conditions"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 267.25,
+                                "w": 448,
+                                "h": 69.25
+                              },
                               "text": "Accept terms and conditions"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 231.25,
+                            "w": 448,
+                            "h": 105.25
+                          },
                           "text": "InvalidAccept terms and conditions"
                         },
                         {
@@ -431,7 +539,13 @@
                                         "data-disabled": "",
                                         "data-slot": "checkbox"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 293.875,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -448,15 +562,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 709,
+                                        "y": 292.25,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Enable notifications"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 292.25,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Enable notifications"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 267.25,
+                                "w": 448,
+                                "h": 69.25
+                              },
                               "text": "Enable notifications"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 231.25,
+                            "w": 448,
+                            "h": 105.25
+                          },
                           "text": "DisabledEnable notifications"
                         },
                         {
@@ -569,9 +707,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "checkbox-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 215,
+                                                    "y": 444.5,
+                                                    "w": 14,
+                                                    "h": 14
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 214,
+                                                "y": 443.5,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "div",
@@ -608,6 +758,12 @@
                                                     "data-slot": "field-label"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 442.5,
+                                                    "w": 131.890625,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Enable notifications"
                                                 },
                                                 {
@@ -628,15 +784,39 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 465.75,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "You can enable or disable notifications at any time."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 242,
+                                                "y": 442.5,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "Enable notificationsYou can enable or disable notifications at any time."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 430.5,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "Enable notificationsYou can enable or disable notifications at any time."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 429.5,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "Enable notificationsYou can enable or disable notifications at any time."
                                     },
                                     {
@@ -693,7 +873,13 @@
                                                 "data-disabled": "",
                                                 "data-slot": "checkbox"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 214,
+                                                "y": 541.75,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "div",
@@ -730,6 +916,12 @@
                                                     "data-slot": "field-label"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 540.75,
+                                                    "w": 131.890625,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Enable notifications"
                                                 },
                                                 {
@@ -750,24 +942,66 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 564,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "You can enable or disable notifications at any time."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 242,
+                                                "y": 540.75,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "Enable notificationsYou can enable or disable notifications at any time."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 528.75,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "Enable notificationsYou can enable or disable notifications at any time."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 527.75,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "Enable notificationsYou can enable or disable notifications at any time."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 429.5,
+                                    "w": 398,
+                                    "h": 168.5
+                                  },
                                   "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 404.5,
+                                "w": 448,
+                                "h": 237.5
+                              },
                               "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 368.5,
+                            "w": 448,
+                            "h": 273.5
+                          },
                           "text": "With TitleEnable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or …"
                         },
                         {
@@ -896,9 +1130,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 441.25,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 429.5,
+                                                    "w": 24,
+                                                    "h": 40
+                                                  }
                                                 },
                                                 {
                                                   "tag": "th",
@@ -918,6 +1164,12 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 429.5,
+                                                    "w": 137.609375,
+                                                    "h": 40
+                                                  },
                                                   "text": "Name"
                                                 },
                                                 {
@@ -938,6 +1190,12 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 429.5,
+                                                    "w": 234.171875,
+                                                    "h": 40
+                                                  },
                                                   "text": "Email"
                                                 },
                                                 {
@@ -958,12 +1216,30 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 429.5,
+                                                    "w": 58.171875,
+                                                    "h": 40
+                                                  },
                                                   "text": "Role"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 429.5,
+                                                "w": 453.953125,
+                                                "h": 40
+                                              },
                                               "text": "NameEmailRole"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 429.5,
+                                            "w": 453.953125,
+                                            "h": 40
+                                          },
                                           "text": "NameEmailRole"
                                         },
                                         {
@@ -1060,11 +1336,29 @@
                                                             "data-state": "checked",
                                                             "data-slot": "checkbox-indicator"
                                                           },
-                                                          "children": []
+                                                          "children": [],
+                                                          "rect": {
+                                                            "x": 690,
+                                                            "y": 481,
+                                                            "w": 14,
+                                                            "h": 14
+                                                          }
                                                         }
-                                                      ]
+                                                      ],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 480,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 469.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -1084,6 +1378,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 469.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Sarah Chen"
                                                 },
                                                 {
@@ -1104,6 +1404,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 469.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "sarah.chen@example.com"
                                                 },
                                                 {
@@ -1124,9 +1430,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 469.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "Admin"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 469.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Sarah Chensarah.chen@example.comAdmin"
                                             },
                                             {
@@ -1185,9 +1503,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 517,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 506.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -1207,6 +1537,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 506.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Marcus Rodriguez"
                                                 },
                                                 {
@@ -1227,6 +1563,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 506.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "marcus.rodriguez@example.com"
                                                 },
                                                 {
@@ -1247,9 +1589,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 506.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "User"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 506.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Marcus Rodriguezmarcus.rodriguez@example.comUser"
                                             },
                                             {
@@ -1308,9 +1662,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 554,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 543.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -1330,6 +1696,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 543.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Priya Patel"
                                                 },
                                                 {
@@ -1350,6 +1722,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 543.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "priya.patel@example.com"
                                                 },
                                                 {
@@ -1370,9 +1748,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 543.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "User"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 543.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Priya Patelpriya.patel@example.comUser"
                                             },
                                             {
@@ -1431,9 +1821,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 591,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 580.5,
+                                                    "w": 24,
+                                                    "h": 36.5
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -1453,6 +1855,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 580.5,
+                                                    "w": 137.609375,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "David Kim"
                                                 },
                                                 {
@@ -1473,6 +1881,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 580.5,
+                                                    "w": 234.171875,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "david.kim@example.com"
                                                 },
                                                 {
@@ -1493,24 +1907,66 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 580.5,
+                                                    "w": 58.171875,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "Editor"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 580.5,
+                                                "w": 453.953125,
+                                                "h": 36.5
+                                              },
                                               "text": "David Kimdavid.kim@example.comEditor"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 469.5,
+                                            "w": 453.953125,
+                                            "h": 147.5
+                                          },
                                           "text": "Sarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel@example.comU…"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 429.5,
+                                        "w": 453.953125,
+                                        "h": 187.5
+                                      },
                                       "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 429.5,
+                                    "w": 398,
+                                    "h": 187.5
+                                  },
                                   "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 404.5,
+                                "w": 448,
+                                "h": 237.5
+                              },
                               "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 368.5,
+                            "w": 448,
+                            "h": 273.5
+                          },
                           "text": "In TableNameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpri…"
                         },
                         {
@@ -1569,6 +2025,12 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 735,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Show these items on the desktop:"
                                     },
                                     {
@@ -1606,7 +2068,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 767.875,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1624,9 +2092,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 766.25,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Hard disks"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 766.25,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Hard disks"
                                     },
                                     {
@@ -1664,7 +2144,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 799.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1682,9 +2168,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 797.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "External disks"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 797.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "External disks"
                                     },
                                     {
@@ -1722,7 +2220,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 830.375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1740,9 +2244,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 828.75,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "CDs, DVDs, and iPods"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 828.75,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "CDs, DVDs, and iPods"
                                     },
                                     {
@@ -1780,7 +2296,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 861.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -1798,27 +2320,75 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 860,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Connected servers"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 860,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Connected servers"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 735,
+                                    "w": 398,
+                                    "h": 144.25
+                                  },
                                   "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 710,
+                                "w": 448,
+                                "h": 194.25
+                              },
                               "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 674,
+                            "w": 448,
+                            "h": 230.25
+                          },
                           "text": "GroupShow these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 952.25
+                      },
                       "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 952.25
+                  },
                   "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 952.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -1833,9 +2403,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 952.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 952.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -2064,30 +2646,6 @@
               "name": "Connected servers"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -2225,9 +2783,21 @@
                                             "data-state": "checked",
                                             "data-slot": "checkbox-indicator"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 111.625,
+                                            "w": 14,
+                                            "h": 14
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 110.625,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -2244,15 +2814,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 229,
+                                        "y": 109,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Accept terms and conditions"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Accept terms and conditions"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 115.25
+                              },
                               "text": "Accept terms and conditions"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 151.25
+                          },
                           "text": "BasicAccept terms and conditions"
                         },
                         {
@@ -2330,9 +2924,21 @@
                                             "data-state": "checked",
                                             "data-slot": "checkbox-indicator"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 682,
+                                            "y": 111,
+                                            "w": 14,
+                                            "h": 14
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 110,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "div",
@@ -2365,6 +2971,12 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 709,
+                                            "y": 109,
+                                            "w": 192.125,
+                                            "h": 19.25
+                                          },
                                           "text": "Accept terms and conditions"
                                         },
                                         {
@@ -2383,18 +2995,48 @@
                                             "data-slot": "field-description"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 709,
+                                            "y": 132.25,
+                                            "w": 370,
+                                            "h": 42
+                                          },
                                           "text": "By clicking this checkbox, you agree to the terms and conditions."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 709,
+                                        "y": 109,
+                                        "w": 370,
+                                        "h": 65.25
+                                      },
                                       "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 65.25
+                                  },
                                   "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 115.25
+                              },
                               "text": "Accept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 151.25
+                          },
                           "text": "With DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the terms and conditions."
                         },
                         {
@@ -2456,7 +3098,13 @@
                                         "data-slot": "checkbox",
                                         "aria-invalid": "true"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 293.875,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -2473,15 +3121,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 229,
+                                        "y": 292.25,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Accept terms and conditions"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 292.25,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Accept terms and conditions"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 267.25,
+                                "w": 448,
+                                "h": 69.25
+                              },
                               "text": "Accept terms and conditions"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 231.25,
+                            "w": 448,
+                            "h": 105.25
+                          },
                           "text": "InvalidAccept terms and conditions"
                         },
                         {
@@ -2543,7 +3215,13 @@
                                         "data-disabled": "",
                                         "data-slot": "checkbox"
                                       },
-                                      "children": []
+                                      "children": [],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 293.875,
+                                        "w": 16,
+                                        "h": 16
+                                      }
                                     },
                                     {
                                       "tag": "label",
@@ -2560,15 +3238,39 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 709,
+                                        "y": 292.25,
+                                        "w": 370,
+                                        "h": 19.25
+                                      },
                                       "text": "Enable notifications"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 292.25,
+                                    "w": 398,
+                                    "h": 19.25
+                                  },
                                   "text": "Enable notifications"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 267.25,
+                                "w": 448,
+                                "h": 69.25
+                              },
                               "text": "Enable notifications"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 231.25,
+                            "w": 448,
+                            "h": 105.25
+                          },
                           "text": "DisabledEnable notifications"
                         },
                         {
@@ -2681,9 +3383,21 @@
                                                     "data-state": "checked",
                                                     "data-slot": "checkbox-indicator"
                                                   },
-                                                  "children": []
+                                                  "children": [],
+                                                  "rect": {
+                                                    "x": 215,
+                                                    "y": 444.5,
+                                                    "w": 14,
+                                                    "h": 14
+                                                  }
                                                 }
-                                              ]
+                                              ],
+                                              "rect": {
+                                                "x": 214,
+                                                "y": 443.5,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "div",
@@ -2720,6 +3434,12 @@
                                                     "data-slot": "field-label"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 442.5,
+                                                    "w": 131.890625,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Enable notifications"
                                                 },
                                                 {
@@ -2740,15 +3460,39 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 465.75,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "You can enable or disable notifications at any time."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 242,
+                                                "y": 442.5,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "Enable notificationsYou can enable or disable notifications at any time."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 430.5,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "Enable notificationsYou can enable or disable notifications at any time."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 429.5,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "Enable notificationsYou can enable or disable notifications at any time."
                                     },
                                     {
@@ -2805,7 +3549,13 @@
                                                 "data-disabled": "",
                                                 "data-slot": "checkbox"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 214,
+                                                "y": 541.75,
+                                                "w": 16,
+                                                "h": 16
+                                              }
                                             },
                                             {
                                               "tag": "div",
@@ -2842,6 +3592,12 @@
                                                     "data-slot": "field-label"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 540.75,
+                                                    "w": 131.890625,
+                                                    "h": 19.25
+                                                  },
                                                   "text": "Enable notifications"
                                                 },
                                                 {
@@ -2862,24 +3618,66 @@
                                                     "data-slot": "field-description"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 242,
+                                                    "y": 564,
+                                                    "w": 344,
+                                                    "h": 21
+                                                  },
                                                   "text": "You can enable or disable notifications at any time."
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 242,
+                                                "y": 540.75,
+                                                "w": 344,
+                                                "h": 44.25
+                                              },
                                               "text": "Enable notificationsYou can enable or disable notifications at any time."
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 202,
+                                            "y": 528.75,
+                                            "w": 396,
+                                            "h": 68.25
+                                          },
                                           "text": "Enable notificationsYou can enable or disable notifications at any time."
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 527.75,
+                                        "w": 398,
+                                        "h": 70.25
+                                      },
                                       "text": "Enable notificationsYou can enable or disable notifications at any time."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 429.5,
+                                    "w": 398,
+                                    "h": 168.5
+                                  },
                                   "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 404.5,
+                                "w": 448,
+                                "h": 237.5
+                              },
                               "text": "Enable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or disable no…"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 368.5,
+                            "w": 448,
+                            "h": 273.5
+                          },
                           "text": "With TitleEnable notificationsYou can enable or disable notifications at any time.Enable notificationsYou can enable or …"
                         },
                         {
@@ -3008,9 +3806,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 441.25,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 429.5,
+                                                    "w": 24,
+                                                    "h": 40
+                                                  }
                                                 },
                                                 {
                                                   "tag": "th",
@@ -3030,6 +3840,12 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 429.5,
+                                                    "w": 137.609375,
+                                                    "h": 40
+                                                  },
                                                   "text": "Name"
                                                 },
                                                 {
@@ -3050,6 +3866,12 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 429.5,
+                                                    "w": 234.171875,
+                                                    "h": 40
+                                                  },
                                                   "text": "Email"
                                                 },
                                                 {
@@ -3070,12 +3892,30 @@
                                                     "data-slot": "table-head"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 429.5,
+                                                    "w": 58.171875,
+                                                    "h": 40
+                                                  },
                                                   "text": "Role"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 429.5,
+                                                "w": 453.953125,
+                                                "h": 40
+                                              },
                                               "text": "NameEmailRole"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 429.5,
+                                            "w": 453.953125,
+                                            "h": 40
+                                          },
                                           "text": "NameEmailRole"
                                         },
                                         {
@@ -3172,11 +4012,29 @@
                                                             "data-state": "checked",
                                                             "data-slot": "checkbox-indicator"
                                                           },
-                                                          "children": []
+                                                          "children": [],
+                                                          "rect": {
+                                                            "x": 690,
+                                                            "y": 481,
+                                                            "w": 14,
+                                                            "h": 14
+                                                          }
                                                         }
-                                                      ]
+                                                      ],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 480,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 469.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -3196,6 +4054,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 469.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Sarah Chen"
                                                 },
                                                 {
@@ -3216,6 +4080,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 469.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "sarah.chen@example.com"
                                                 },
                                                 {
@@ -3236,9 +4106,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 469.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "Admin"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 469.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Sarah Chensarah.chen@example.comAdmin"
                                             },
                                             {
@@ -3297,9 +4179,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 517,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 506.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -3319,6 +4213,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 506.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Marcus Rodriguez"
                                                 },
                                                 {
@@ -3339,6 +4239,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 506.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "marcus.rodriguez@example.com"
                                                 },
                                                 {
@@ -3359,9 +4265,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 506.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "User"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 506.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Marcus Rodriguezmarcus.rodriguez@example.comUser"
                                             },
                                             {
@@ -3420,9 +4338,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 554,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 543.5,
+                                                    "w": 24,
+                                                    "h": 37
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -3442,6 +4372,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 543.5,
+                                                    "w": 137.609375,
+                                                    "h": 37
+                                                  },
                                                   "text": "Priya Patel"
                                                 },
                                                 {
@@ -3462,6 +4398,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 543.5,
+                                                    "w": 234.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "priya.patel@example.com"
                                                 },
                                                 {
@@ -3482,9 +4424,21 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 543.5,
+                                                    "w": 58.171875,
+                                                    "h": 37
+                                                  },
                                                   "text": "User"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 543.5,
+                                                "w": 453.953125,
+                                                "h": 37
+                                              },
                                               "text": "Priya Patelpriya.patel@example.comUser"
                                             },
                                             {
@@ -3543,9 +4497,21 @@
                                                         "data-state": "unchecked",
                                                         "data-slot": "checkbox"
                                                       },
-                                                      "children": []
+                                                      "children": [],
+                                                      "rect": {
+                                                        "x": 689,
+                                                        "y": 591,
+                                                        "w": 16,
+                                                        "h": 16
+                                                      }
                                                     }
-                                                  ]
+                                                  ],
+                                                  "rect": {
+                                                    "x": 681,
+                                                    "y": 580.5,
+                                                    "w": 24,
+                                                    "h": 36.5
+                                                  }
                                                 },
                                                 {
                                                   "tag": "td",
@@ -3565,6 +4531,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 705,
+                                                    "y": 580.5,
+                                                    "w": 137.609375,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "David Kim"
                                                 },
                                                 {
@@ -3585,6 +4557,12 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 842.609375,
+                                                    "y": 580.5,
+                                                    "w": 234.171875,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "david.kim@example.com"
                                                 },
                                                 {
@@ -3605,24 +4583,66 @@
                                                     "data-slot": "table-cell"
                                                   },
                                                   "children": [],
+                                                  "rect": {
+                                                    "x": 1076.78125,
+                                                    "y": 580.5,
+                                                    "w": 58.171875,
+                                                    "h": 36.5
+                                                  },
                                                   "text": "Editor"
                                                 }
                                               ],
+                                              "rect": {
+                                                "x": 681,
+                                                "y": 580.5,
+                                                "w": 453.953125,
+                                                "h": 36.5
+                                              },
                                               "text": "David Kimdavid.kim@example.comEditor"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 681,
+                                            "y": 469.5,
+                                            "w": 453.953125,
+                                            "h": 147.5
+                                          },
                                           "text": "Sarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel@example.comU…"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 429.5,
+                                        "w": 453.953125,
+                                        "h": 187.5
+                                      },
                                       "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 429.5,
+                                    "w": 398,
+                                    "h": 187.5
+                                  },
                                   "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 404.5,
+                                "w": 448,
+                                "h": 237.5
+                              },
                               "text": "NameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpriya.patel…"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 368.5,
+                            "w": 448,
+                            "h": 273.5
+                          },
                           "text": "In TableNameEmailRoleSarah Chensarah.chen@example.comAdminMarcus Rodriguezmarcus.rodriguez@example.comUserPriya Patelpri…"
                         },
                         {
@@ -3681,6 +4701,12 @@
                                         "data-slot": "field-label"
                                       },
                                       "children": [],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 735,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Show these items on the desktop:"
                                     },
                                     {
@@ -3718,7 +4744,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 767.875,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3736,9 +4768,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 766.25,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Hard disks"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 766.25,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Hard disks"
                                     },
                                     {
@@ -3776,7 +4820,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 799.125,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3794,9 +4844,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 797.5,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "External disks"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 797.5,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "External disks"
                                     },
                                     {
@@ -3834,7 +4896,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 830.375,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3852,9 +4920,21 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 828.75,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "CDs, DVDs, and iPods"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 828.75,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "CDs, DVDs, and iPods"
                                     },
                                     {
@@ -3892,7 +4972,13 @@
                                             "data-state": "unchecked",
                                             "data-slot": "checkbox"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 861.625,
+                                            "w": 16,
+                                            "h": 16
+                                          }
                                         },
                                         {
                                           "tag": "label",
@@ -3910,27 +4996,75 @@
                                             "data-slot": "field-label"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 229,
+                                            "y": 860,
+                                            "w": 370,
+                                            "h": 19.25
+                                          },
                                           "text": "Connected servers"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 860,
+                                        "w": 398,
+                                        "h": 19.25
+                                      },
                                       "text": "Connected servers"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 735,
+                                    "w": 398,
+                                    "h": 144.25
+                                  },
                                   "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 710,
+                                "w": 448,
+                                "h": 194.25
+                              },
                               "text": "Show these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 674,
+                            "w": 448,
+                            "h": 230.25
+                          },
                           "text": "GroupShow these items on the desktop:Hard disksExternal disksCDs, DVDs, and iPodsConnected servers"
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 952.25
+                      },
                       "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 952.25
+                  },
                   "text": "BasicAccept terms and conditionsWith DescriptionAccept terms and conditionsBy clicking this checkbox, you agree to the t…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 952.25
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -3945,9 +5079,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 952.25,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 952.25
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -4175,30 +5321,6 @@
             {
               "role": "StaticText",
               "name": "Connected servers"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

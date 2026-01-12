@@ -41,9 +41,11 @@ Non-goals:
 The middleware is **policy-light**: it may decide to intercept, rewrite, or reject, but it does
 not own the graph model.
 
-Reference implementation scaffold (not yet wired as a stable contract):
+Reference implementation (wired into the canvas):
 
 - `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs` (`Widget::event`, `Widget::command`, `commit_transaction`)
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
 
 ### 2) A is the core: `before_commit` is the single edit gate
 
@@ -117,4 +119,3 @@ Node graph middleware remains domain-specific:
 
 - Canvas guidance: `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
 - Undo/redo direction: `docs/adr/0024-undo-redo-and-edit-transactions.md`
-

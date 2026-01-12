@@ -61,6 +61,8 @@ impl Separator {
                 layout.size = SizeStyle {
                     width: Length::Fill,
                     height: Length::Px(thickness),
+                    min_height: Some(thickness),
+                    max_height: Some(thickness),
                     ..layout.size
                 };
             }
@@ -68,6 +70,8 @@ impl Separator {
                 layout.size = SizeStyle {
                     width: Length::Px(thickness),
                     height: Length::Fill,
+                    min_width: Some(thickness),
+                    max_width: Some(thickness),
                     ..layout.size
                 };
             }

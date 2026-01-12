@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "tabs-example",
   "primitive": "tabs",
   "scenario": "click-second-tab",
-  "url": "http://localhost:4000/preview/radix/tabs-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/tabs-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/tabs-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/tabs-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -139,6 +139,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 112.5,
+                                            "w": 57.546875,
+                                            "h": 29
+                                          },
                                           "text": "Home"
                                         },
                                         {
@@ -164,18 +170,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 261.546875,
+                                            "y": 112.5,
+                                            "w": 72.921875,
+                                            "h": 29
+                                          },
                                           "text": "Settings"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 136.46875,
+                                        "h": 36
+                                      },
                                       "text": "HomeSettings"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "HomeSettings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "HomeSettings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicHomeSettings"
                         },
                         {
@@ -260,6 +296,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 112.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -285,6 +327,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 769.546875,
+                                            "y": 112.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -310,18 +358,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 853.65625,
+                                            "y": 112.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 245.703125,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReports"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReports"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "OverviewAnalyticsReports"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "LineOverviewAnalyticsReports"
                         },
                         {
@@ -421,6 +499,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 204,
+                                                "y": 266.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -447,12 +531,30 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 285.546875,
+                                                "y": 266.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 263,
+                                            "w": 167.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 263,
+                                        "w": 167.65625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalytics"
                                     },
                                     {
@@ -515,6 +617,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 387.65625,
+                                                "y": 266.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -541,21 +649,57 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 473.203125,
+                                                "y": 266.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 384.65625,
+                                            "y": 263,
+                                            "w": 171.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384.65625,
+                                        "y": 263,
+                                        "w": 171.65625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalytics"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsOverviewAnalytics"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "OverviewAnalyticsOverviewAnalytics"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Variants AlignmentOverviewAnalyticsOverviewAnalytics"
                         },
                         {
@@ -640,6 +784,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 266.5,
+                                            "w": 57.546875,
+                                            "h": 29
+                                          },
                                           "text": "Home"
                                         },
                                         {
@@ -666,18 +816,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 741.546875,
+                                            "y": 266.5,
+                                            "w": 76.1875,
+                                            "h": 29
+                                          },
                                           "text": "Disabled"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 263,
+                                        "w": 139.734375,
+                                        "h": 36
+                                      },
                                       "text": "HomeDisabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "HomeDisabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "HomeDisabled"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledHomeDisabled"
                         },
                         {
@@ -762,6 +942,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 420.5,
+                                            "w": 93.265625,
+                                            "h": 29
+                                          },
                                           "text": "Preview"
                                         },
                                         {
@@ -787,18 +973,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 297.265625,
+                                            "y": 420.5,
+                                            "w": 75.609375,
+                                            "h": 29
+                                          },
                                           "text": "Code"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 417,
+                                        "w": 174.875,
+                                        "h": 36
+                                      },
                                       "text": "PreviewCode"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "PreviewCode"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "PreviewCode"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconsPreviewCode"
                         },
                         {
@@ -882,7 +1098,13 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -906,7 +1128,13 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 718,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -930,15 +1158,45 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 752,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 417,
+                                        "w": 108,
+                                        "h": 36
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 398,
+                                    "h": 36
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Icon Only"
                         },
                         {
@@ -1023,6 +1281,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 574.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -1048,6 +1312,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 285.546875,
+                                            "y": 574.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -1073,6 +1343,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 365.65625,
+                                            "y": 574.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         },
                                         {
@@ -1098,18 +1374,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 435.703125,
+                                            "y": 574.5,
+                                            "w": 72.921875,
+                                            "h": 29
+                                          },
                                           "text": "Settings"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 571,
+                                        "w": 310.625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReportsSettings"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReportsSettings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReportsSettings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "MultipleOverviewAnalyticsReportsSettings"
                         },
                         {
@@ -1194,6 +1500,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 574.5,
+                                            "w": 74.046875,
+                                            "h": 29
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -1219,6 +1531,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 758.046875,
+                                            "y": 574.5,
+                                            "w": 83.59375,
+                                            "h": 29
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -1244,9 +1562,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 841.640625,
+                                            "y": 574.5,
+                                            "w": 103.09375,
+                                            "h": 29
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 571,
+                                        "w": 266.734375,
+                                        "h": 36
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -1283,6 +1613,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 706,
+                                            "y": 640,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -1305,7 +1641,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -1327,18 +1669,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 615,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "With ContentAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -1423,6 +1795,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 826.5,
+                                            "w": 74.046875,
+                                            "h": 29
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -1448,6 +1826,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 282.046875,
+                                            "y": 826.5,
+                                            "w": 83.59375,
+                                            "h": 29
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -1473,9 +1857,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 369.640625,
+                                            "y": 826.5,
+                                            "w": 103.09375,
+                                            "h": 29
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 823,
+                                        "w": 274.734375,
+                                        "h": 36
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -1512,6 +1908,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 226,
+                                            "y": 892,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -1534,7 +1936,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -1556,18 +1964,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 867,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 823,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 798,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 762,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "Line With ContentAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -1652,6 +2090,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 826.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -1677,6 +2121,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 769.546875,
+                                            "y": 826.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -1703,18 +2153,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 853.65625,
+                                            "y": 826.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 823,
+                                        "w": 245.703125,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReports"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 823,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReports"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 798,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReports"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 762,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "Line DisabledOverviewAnalyticsReports"
                         },
                         {
@@ -1814,6 +2294,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 204,
+                                                "y": 1078.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -1840,6 +2326,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 285.546875,
+                                                "y": 1078.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             },
                                             {
@@ -1866,9 +2358,21 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 365.65625,
+                                                "y": 1078.5,
+                                                "w": 70.046875,
+                                                "h": 29
+                                              },
                                               "text": "Reports"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 1075,
+                                            "w": 237.703125,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalyticsReports"
                                         },
                                         {
@@ -1890,9 +2394,21 @@
                                             "data-state": "closed"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 567,
+                                            "y": 1077,
+                                            "w": 32,
+                                            "h": 32
+                                          },
                                           "text": "More options"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1075,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReportsMore options"
                                     },
                                     {
@@ -1929,6 +2445,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 226,
+                                            "y": 1144,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "View your dashboard metrics and key performance indicators."
                                         },
                                         {
@@ -1951,7 +2473,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -1973,18 +2501,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1119,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "View your dashboard metrics and key performance indicators."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1075,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "OverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1050,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1014,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "With DropdownOverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                         },
                         {
@@ -2069,6 +2627,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1078,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -2094,6 +2658,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1108,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -2119,9 +2689,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1138,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 1075,
+                                        "w": 109.09375,
+                                        "h": 96
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -2158,6 +2740,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 823.09375,
+                                            "y": 1100,
+                                            "w": 230.90625,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -2180,7 +2768,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -2202,18 +2796,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 798.09375,
+                                        "y": 1075,
+                                        "w": 280.90625,
+                                        "h": 96
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 1075,
+                                    "w": 398,
+                                    "h": 96
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 1050,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 1014,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "VerticalAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -2313,6 +2937,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 387,
+                                                "y": 1330.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -2339,9 +2969,21 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 468.546875,
+                                                "y": 1330.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 384,
+                                            "y": 1327,
+                                            "w": 167.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         },
                                         {
@@ -2374,7 +3016,13 @@
                                               "attrs": {
                                                 "data-slot": "input"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 646.921875,
+                                                "y": 1327,
+                                                "w": 176,
+                                                "h": 36
+                                              }
                                             },
                                             {
                                               "tag": "button",
@@ -2393,12 +3041,30 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 830.921875,
+                                                "y": 1327,
+                                                "w": 65.078125,
+                                                "h": 36
+                                              },
                                               "text": "Action"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 646.921875,
+                                            "y": 1327,
+                                            "w": 249.078125,
+                                            "h": 36
+                                          },
                                           "text": "Action"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384,
+                                        "y": 1327,
+                                        "w": 512,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsAction"
                                     },
                                     {
@@ -2435,6 +3101,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 409,
+                                            "y": 1396,
+                                            "w": 462,
+                                            "h": 20
+                                          },
                                           "text": "View your dashboard metrics and key performance indicators."
                                         },
                                         {
@@ -2457,7 +3129,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -2479,27 +3157,75 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384,
+                                        "y": 1371,
+                                        "w": 512,
+                                        "h": 70
+                                      },
                                       "text": "View your dashboard metrics and key performance indicators."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 384,
+                                    "y": 1327,
+                                    "w": 512,
+                                    "h": 114
+                                  },
                                   "text": "OverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1302,
+                                "w": 928,
+                                "h": 164
+                              },
                               "text": "OverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1266,
+                            "w": 928,
+                            "h": 200
+                          },
                           "text": "With Input and ButtonOverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1514
+                      },
                       "text": "BasicHomeSettingsLineOverviewAnalyticsReportsVariants AlignmentOverviewAnalyticsOverviewAnalyticsDisabledHomeDisabledWit…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1514
+                  },
                   "text": "BasicHomeSettingsLineOverviewAnalyticsReportsVariants AlignmentOverviewAnalyticsOverviewAnalyticsDisabledHomeDisabledWit…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1514
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -2514,9 +3240,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1514,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1514
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -2870,30 +3608,6 @@
               "name": "Overview"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -3044,6 +3758,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 112.5,
+                                            "w": 57.546875,
+                                            "h": 29
+                                          },
                                           "text": "Home"
                                         },
                                         {
@@ -3069,18 +3789,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 261.546875,
+                                            "y": 112.5,
+                                            "w": 72.921875,
+                                            "h": 29
+                                          },
                                           "text": "Settings"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 109,
+                                        "w": 136.46875,
+                                        "h": 36
+                                      },
                                       "text": "HomeSettings"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "HomeSettings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "HomeSettings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "BasicHomeSettings"
                         },
                         {
@@ -3165,6 +3915,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 112.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -3190,6 +3946,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 769.546875,
+                                            "y": 112.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -3215,18 +3977,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 853.65625,
+                                            "y": 112.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 109,
+                                        "w": 245.703125,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReports"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReports"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "OverviewAnalyticsReports"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "LineOverviewAnalyticsReports"
                         },
                         {
@@ -3326,6 +4118,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 204,
+                                                "y": 266.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -3352,12 +4150,30 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 285.546875,
+                                                "y": 266.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 263,
+                                            "w": 167.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 263,
+                                        "w": 167.65625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalytics"
                                     },
                                     {
@@ -3420,6 +4236,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 387.65625,
+                                                "y": 266.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -3446,21 +4268,57 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 473.203125,
+                                                "y": 266.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 384.65625,
+                                            "y": 263,
+                                            "w": 171.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384.65625,
+                                        "y": 263,
+                                        "w": 171.65625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalytics"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsOverviewAnalytics"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "OverviewAnalyticsOverviewAnalytics"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Variants AlignmentOverviewAnalyticsOverviewAnalytics"
                         },
                         {
@@ -3545,6 +4403,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 266.5,
+                                            "w": 57.546875,
+                                            "h": 29
+                                          },
                                           "text": "Home"
                                         },
                                         {
@@ -3571,18 +4435,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 741.546875,
+                                            "y": 266.5,
+                                            "w": 76.1875,
+                                            "h": 29
+                                          },
                                           "text": "Disabled"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 263,
+                                        "w": 139.734375,
+                                        "h": 36
+                                      },
                                       "text": "HomeDisabled"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "HomeDisabled"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "HomeDisabled"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "DisabledHomeDisabled"
                         },
                         {
@@ -3667,6 +4561,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 420.5,
+                                            "w": 93.265625,
+                                            "h": 29
+                                          },
                                           "text": "Preview"
                                         },
                                         {
@@ -3692,18 +4592,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 297.265625,
+                                            "y": 420.5,
+                                            "w": 75.609375,
+                                            "h": 29
+                                          },
                                           "text": "Code"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 417,
+                                        "w": 174.875,
+                                        "h": 36
+                                      },
                                       "text": "PreviewCode"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "PreviewCode"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
                               "text": "PreviewCode"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "With IconsPreviewCode"
                         },
                         {
@@ -3787,7 +4717,13 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -3811,7 +4747,13 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 718,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         },
                                         {
                                           "tag": "button",
@@ -3835,15 +4777,45 @@
                                             "data-orientation": "horizontal",
                                             "data-radix-collection-item": ""
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 752,
+                                            "y": 420.5,
+                                            "w": 34,
+                                            "h": 29
+                                          }
                                         }
-                                      ]
+                                      ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 417,
+                                        "w": 108,
+                                        "h": 36
+                                      }
                                     }
-                                  ]
+                                  ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 398,
+                                    "h": 36
+                                  }
                                 }
-                              ]
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              }
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
                           "text": "Icon Only"
                         },
                         {
@@ -3928,6 +4900,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 574.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -3953,6 +4931,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 285.546875,
+                                            "y": 574.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -3978,6 +4962,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 365.65625,
+                                            "y": 574.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         },
                                         {
@@ -4003,18 +4993,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 435.703125,
+                                            "y": 574.5,
+                                            "w": 72.921875,
+                                            "h": 29
+                                          },
                                           "text": "Settings"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 571,
+                                        "w": 310.625,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReportsSettings"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReportsSettings"
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReportsSettings"
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "MultipleOverviewAnalyticsReportsSettings"
                         },
                         {
@@ -4099,6 +5119,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 574.5,
+                                            "w": 74.046875,
+                                            "h": 29
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -4124,6 +5150,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 758.046875,
+                                            "y": 574.5,
+                                            "w": 83.59375,
+                                            "h": 29
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -4149,9 +5181,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 841.640625,
+                                            "y": 574.5,
+                                            "w": 103.09375,
+                                            "h": 29
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 571,
+                                        "w": 266.734375,
+                                        "h": 36
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -4188,6 +5232,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 706,
+                                            "y": 640,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -4210,7 +5260,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -4232,18 +5288,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 615,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "With ContentAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -4328,6 +5414,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 204,
+                                            "y": 826.5,
+                                            "w": 74.046875,
+                                            "h": 29
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -4353,6 +5445,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 282.046875,
+                                            "y": 826.5,
+                                            "w": 83.59375,
+                                            "h": 29
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -4378,9 +5476,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 369.640625,
+                                            "y": 826.5,
+                                            "w": 103.09375,
+                                            "h": 29
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 823,
+                                        "w": 274.734375,
+                                        "h": 36
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -4417,6 +5527,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 226,
+                                            "y": 892,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -4439,7 +5555,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -4461,18 +5583,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 867,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 823,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 798,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 762,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "Line With ContentAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -4557,6 +5709,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 826.5,
+                                            "w": 81.546875,
+                                            "h": 29
+                                          },
                                           "text": "Overview"
                                         },
                                         {
@@ -4582,6 +5740,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 769.546875,
+                                            "y": 826.5,
+                                            "w": 80.109375,
+                                            "h": 29
+                                          },
                                           "text": "Analytics"
                                         },
                                         {
@@ -4608,18 +5772,48 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 853.65625,
+                                            "y": 826.5,
+                                            "w": 70.046875,
+                                            "h": 29
+                                          },
                                           "text": "Reports"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 823,
+                                        "w": 245.703125,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReports"
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 823,
+                                    "w": 398,
+                                    "h": 36
+                                  },
                                   "text": "OverviewAnalyticsReports"
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 798,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReports"
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 762,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "Line DisabledOverviewAnalyticsReports"
                         },
                         {
@@ -4719,6 +5913,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 204,
+                                                "y": 1078.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -4745,6 +5945,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 285.546875,
+                                                "y": 1078.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             },
                                             {
@@ -4771,9 +5977,21 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 365.65625,
+                                                "y": 1078.5,
+                                                "w": 70.046875,
+                                                "h": 29
+                                              },
                                               "text": "Reports"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 201,
+                                            "y": 1075,
+                                            "w": 237.703125,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalyticsReports"
                                         },
                                         {
@@ -4795,9 +6013,21 @@
                                             "data-state": "closed"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 567,
+                                            "y": 1077,
+                                            "w": 32,
+                                            "h": 32
+                                          },
                                           "text": "More options"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1075,
+                                        "w": 398,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsReportsMore options"
                                     },
                                     {
@@ -4834,6 +6064,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 226,
+                                            "y": 1144,
+                                            "w": 348,
+                                            "h": 40
+                                          },
                                           "text": "View your dashboard metrics and key performance indicators."
                                         },
                                         {
@@ -4856,7 +6092,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -4878,18 +6120,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 1119,
+                                        "w": 398,
+                                        "h": 90
+                                      },
                                       "text": "View your dashboard metrics and key performance indicators."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 1075,
+                                    "w": 398,
+                                    "h": 134
+                                  },
                                   "text": "OverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1050,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "OverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1014,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "With DropdownOverviewAnalyticsReportsMore optionsView your dashboard metrics and key performance indicators."
                         },
                         {
@@ -4974,6 +6246,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1078,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Account"
                                         },
                                         {
@@ -4999,6 +6277,12 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1108,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Password"
                                         },
                                         {
@@ -5024,9 +6308,21 @@
                                             "data-radix-collection-item": ""
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 684,
+                                            "y": 1138,
+                                            "w": 103.09375,
+                                            "h": 30
+                                          },
                                           "text": "Notifications"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 681,
+                                        "y": 1075,
+                                        "w": 109.09375,
+                                        "h": 96
+                                      },
                                       "text": "AccountPasswordNotifications"
                                     },
                                     {
@@ -5063,6 +6359,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 823.09375,
+                                            "y": 1100,
+                                            "w": 230.90625,
+                                            "h": 40
+                                          },
                                           "text": "Manage your account preferences and profile information."
                                         },
                                         {
@@ -5085,7 +6387,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -5107,18 +6415,48 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 798.09375,
+                                        "y": 1075,
+                                        "w": 280.90625,
+                                        "h": 96
+                                      },
                                       "text": "Manage your account preferences and profile information."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 1075,
+                                    "w": 398,
+                                    "h": 96
+                                  },
                                   "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                                 }
                               ],
+                              "rect": {
+                                "x": 656,
+                                "y": 1050,
+                                "w": 448,
+                                "h": 184
+                              },
                               "text": "AccountPasswordNotificationsManage your account preferences and profile information."
                             }
                           ],
+                          "rect": {
+                            "x": 656,
+                            "y": 1014,
+                            "w": 448,
+                            "h": 220
+                          },
                           "text": "VerticalAccountPasswordNotificationsManage your account preferences and profile information."
                         },
                         {
@@ -5218,6 +6556,12 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 387,
+                                                "y": 1330.5,
+                                                "w": 81.546875,
+                                                "h": 29
+                                              },
                                               "text": "Overview"
                                             },
                                             {
@@ -5244,9 +6588,21 @@
                                                 "data-radix-collection-item": ""
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 468.546875,
+                                                "y": 1330.5,
+                                                "w": 80.109375,
+                                                "h": 29
+                                              },
                                               "text": "Analytics"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 384,
+                                            "y": 1327,
+                                            "w": 167.65625,
+                                            "h": 36
+                                          },
                                           "text": "OverviewAnalytics"
                                         },
                                         {
@@ -5279,7 +6635,13 @@
                                               "attrs": {
                                                 "data-slot": "input"
                                               },
-                                              "children": []
+                                              "children": [],
+                                              "rect": {
+                                                "x": 646.921875,
+                                                "y": 1327,
+                                                "w": 176,
+                                                "h": 36
+                                              }
                                             },
                                             {
                                               "tag": "button",
@@ -5298,12 +6660,30 @@
                                                 "data-slot": "button"
                                               },
                                               "children": [],
+                                              "rect": {
+                                                "x": 830.921875,
+                                                "y": 1327,
+                                                "w": 65.078125,
+                                                "h": 36
+                                              },
                                               "text": "Action"
                                             }
                                           ],
+                                          "rect": {
+                                            "x": 646.921875,
+                                            "y": 1327,
+                                            "w": 249.078125,
+                                            "h": 36
+                                          },
                                           "text": "Action"
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384,
+                                        "y": 1327,
+                                        "w": 512,
+                                        "h": 36
+                                      },
                                       "text": "OverviewAnalyticsAction"
                                     },
                                     {
@@ -5340,6 +6720,12 @@
                                             "data-slot": "tabs-content"
                                           },
                                           "children": [],
+                                          "rect": {
+                                            "x": 409,
+                                            "y": 1396,
+                                            "w": 462,
+                                            "h": 20
+                                          },
                                           "text": "View your dashboard metrics and key performance indicators."
                                         },
                                         {
@@ -5362,7 +6748,13 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         },
                                         {
                                           "tag": "div",
@@ -5384,27 +6776,75 @@
                                             "tabindex": "0",
                                             "data-slot": "tabs-content"
                                           },
-                                          "children": []
+                                          "children": [],
+                                          "rect": {
+                                            "x": 0,
+                                            "y": 0,
+                                            "w": 0,
+                                            "h": 0
+                                          }
                                         }
                                       ],
+                                      "rect": {
+                                        "x": 384,
+                                        "y": 1371,
+                                        "w": 512,
+                                        "h": 70
+                                      },
                                       "text": "View your dashboard metrics and key performance indicators."
                                     }
                                   ],
+                                  "rect": {
+                                    "x": 384,
+                                    "y": 1327,
+                                    "w": 512,
+                                    "h": 114
+                                  },
                                   "text": "OverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                                 }
                               ],
+                              "rect": {
+                                "x": 176,
+                                "y": 1302,
+                                "w": 928,
+                                "h": 164
+                              },
                               "text": "OverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                             }
                           ],
+                          "rect": {
+                            "x": 176,
+                            "y": 1266,
+                            "w": 928,
+                            "h": 200
+                          },
                           "text": "With Input and ButtonOverviewAnalyticsActionView your dashboard metrics and key performance indicators."
                         }
                       ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1514
+                      },
                       "text": "BasicHomeSettingsLineOverviewAnalyticsReportsVariants AlignmentOverviewAnalyticsOverviewAnalyticsDisabledHomeDisabledWit…"
                     }
                   ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1514
+                  },
                   "text": "BasicHomeSettingsLineOverviewAnalyticsReportsVariants AlignmentOverviewAnalyticsOverviewAnalyticsDisabledHomeDisabledWit…"
                 }
               ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1514
+              },
               "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
             },
             {
@@ -5419,9 +6859,21 @@
                 "aria-relevant": "additions text",
                 "aria-atomic": "false"
               },
-              "children": []
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1514,
+                "w": 1280,
+                "h": 0
+              }
             }
-          ]
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1514
+          }
         },
         "ax": {
           "role": "RootWebArea",
@@ -5774,30 +7226,6 @@
             {
               "role": "tabpanel",
               "name": "Overview"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

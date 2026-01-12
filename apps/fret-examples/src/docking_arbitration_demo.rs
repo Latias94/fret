@@ -5,6 +5,11 @@ use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     ViewportInputEvent, geometry::Px,
 };
+use fret_docking::{
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
+    handle_dock_window_created, render_and_bind_dock_panels,
+};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -13,11 +18,6 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels,
-};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};

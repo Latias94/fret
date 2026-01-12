@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseUrl": "http://localhost:4000",
+  "baseUrl": "http://localhost:4020",
   "base": "radix",
   "style": "vega",
   "baseColor": "neutral",
@@ -13,12 +13,12 @@
   "item": "context-menu-example",
   "primitive": "context-menu",
   "scenario": "context-open-close",
-  "url": "http://localhost:4000/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
   "steps": [
     {
       "action": {
         "kind": "load",
-        "url": "http://localhost:4000/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+        "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
       },
       "snapshot": {
         "focus": {
@@ -967,30 +967,6 @@
               "haspopup": "dialog"
             },
             {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
-            },
-            {
               "role": "region",
               "name": "Notifications alt+T"
             }
@@ -1007,7 +983,7 @@
         "focus": {
           "tag": "div",
           "path": [
-            57,
+            27,
             0
           ],
           "attrs": {
@@ -1862,18 +1838,6 @@
                     "h": 1169.5
                   },
                   "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
-                },
-                {
-                  "tag": "div",
-                  "path": [
-                    3,
-                    4
-                  ],
-                  "attrs": {
-                    "aria-hidden": "true"
-                  },
-                  "children": [],
-                  "text": "xssmmdlgxl2xl"
                 }
               ],
               "rect": {
@@ -1905,190 +1869,9 @@
               }
             },
             {
-              "tag": "title",
-              "path": [
-                8
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": [],
-              "text": "context-menu-example - shadcn/ui"
-            },
-            {
-              "tag": "link",
-              "path": [
-                9
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                10
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                11
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                12
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                13
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                14
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                15
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                16
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                17
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                18
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                19
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                20
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                21
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                22
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                23
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "meta",
-              "path": [
-                24
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
-              "tag": "link",
-              "path": [
-                25
-              ],
-              "attrs": {
-                "aria-hidden": "true"
-              },
-              "children": []
-            },
-            {
               "tag": "next-route-announcer",
               "path": [
-                56
+                26
               ],
               "attrs": {
                 "aria-hidden": "true"
@@ -2104,14 +1887,14 @@
             {
               "tag": "div",
               "path": [
-                57
+                27
               ],
               "attrs": {},
               "children": [
                 {
                   "tag": "div",
                   "path": [
-                    57,
+                    27,
                     0
                   ],
                   "attrs": {
@@ -2128,7 +1911,7 @@
                     {
                       "tag": "div",
                       "path": [
-                        57,
+                        27,
                         0,
                         0
                       ],
@@ -2140,7 +1923,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            57,
+                            27,
                             0,
                             0,
                             0
@@ -2164,7 +1947,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            57,
+                            27,
                             0,
                             0,
                             1
@@ -2190,7 +1973,7 @@
                         {
                           "tag": "div",
                           "path": [
-                            57,
+                            27,
                             0,
                             0,
                             2
@@ -2241,7 +2024,7 @@
             {
               "tag": "span",
               "path": [
-                58
+                28
               ],
               "attrs": {
                 "tabindex": "0",
@@ -3246,30 +3029,6 @@
               "role": "button",
               "name": "Open Dialog",
               "haspopup": "dialog"
-            },
-            {
-              "role": "StaticText",
-              "name": "xs"
-            },
-            {
-              "role": "StaticText",
-              "name": "sm"
-            },
-            {
-              "role": "StaticText",
-              "name": "md"
-            },
-            {
-              "role": "StaticText",
-              "name": "lg"
-            },
-            {
-              "role": "StaticText",
-              "name": "xl"
-            },
-            {
-              "role": "StaticText",
-              "name": "2xl"
             },
             {
               "role": "region",

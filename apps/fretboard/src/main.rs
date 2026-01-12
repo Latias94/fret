@@ -685,9 +685,17 @@ fn dev_native(args: Vec<String>) -> Result<(), String> {
 
     let mut cmd = Command::new("cargo");
     cmd.current_dir(&root).args(["run", "-p", "fret-demo"]);
+    let mut cargo_features: Vec<&str> = Vec::new();
     if hotpatch || hotpatch_devserver_ws.is_some() {
-        cmd.args(["--features", "hotpatch"]);
+        cargo_features.push("hotpatch");
         cmd.env("FRET_HOTPATCH", "1");
+    }
+    if matches!(bin.as_str(), "node_graph_demo" | "node_graph_domain_demo") {
+        cargo_features.push("node-graph-demos");
+    }
+    let cargo_features = cargo_features.join(",");
+    if !cargo_features.is_empty() {
+        cmd.args(["--features", &cargo_features]);
     }
     if hotpatch {
         let trigger_path = hotpatch_trigger_path
@@ -839,11 +847,17 @@ fn dev_native_hotpatch_dx(
         cmd.env("FRET_HOTPATCH_BUILD_ID", build_id.to_string());
     }
 
+    let mut cargo_features: Vec<&str> = vec!["hotpatch"];
+    if matches!(bin, "node_graph_demo" | "node_graph_domain_demo") {
+        cargo_features.push("node-graph-demos");
+    }
+    let cargo_features = cargo_features.join(",");
+
     cmd.args([
         "--package",
         "fret-demo",
         "--features",
-        "hotpatch",
+        &cargo_features,
         "--bin",
         bin,
     ]);

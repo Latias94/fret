@@ -83,6 +83,14 @@ impl TextCache {
             .wrapping_add(0x9e3779b97f4a7c15)
             .wrapping_add(state << 6)
             .wrapping_add(state >> 2);
+        state ^= u64::from(style.line_height.map(|v| v.0.to_bits()).unwrap_or(0))
+            .wrapping_add(0x9e3779b97f4a7c15)
+            .wrapping_add(state << 6)
+            .wrapping_add(state >> 2);
+        state ^= u64::from(style.letter_spacing_em.map(|v| v.to_bits()).unwrap_or(0))
+            .wrapping_add(0x9e3779b97f4a7c15)
+            .wrapping_add(state << 6)
+            .wrapping_add(state >> 2);
         state ^= u64::from(constraints.scale_factor.to_bits())
             .wrapping_add(0x9e3779b97f4a7c15)
             .wrapping_add(state << 6)
@@ -100,5 +108,58 @@ impl TextCache {
             .wrapping_add(state << 6)
             .wrapping_add(state >> 2);
         state
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{Px, TextOverflow, TextWrap};
+
+    #[test]
+    fn key_includes_line_height() {
+        let style_a = TextStyle {
+            line_height: None,
+            ..TextStyle::default()
+        };
+        let style_b = TextStyle {
+            line_height: Some(Px(22.0)),
+            ..TextStyle::default()
+        };
+
+        let k_a = TextCache::key_for("hello", &style_a, TextConstraints::default());
+        let k_b = TextCache::key_for("hello", &style_b, TextConstraints::default());
+        assert_ne!(k_a, k_b);
+    }
+
+    #[test]
+    fn key_includes_letter_spacing() {
+        let style_a = TextStyle {
+            letter_spacing_em: None,
+            ..TextStyle::default()
+        };
+        let style_b = TextStyle {
+            letter_spacing_em: Some(0.05),
+            ..TextStyle::default()
+        };
+
+        let k_a = TextCache::key_for("hello", &style_a, TextConstraints::default());
+        let k_b = TextCache::key_for("hello", &style_b, TextConstraints::default());
+        assert_ne!(k_a, k_b);
+    }
+
+    #[test]
+    fn key_includes_constraints() {
+        let mut a = TextConstraints::default();
+        a.scale_factor = 1.0;
+        a.wrap = TextWrap::Word;
+        a.overflow = TextOverflow::Clip;
+
+        let mut b = a;
+        b.scale_factor = 2.0;
+
+        let k_a = TextCache::key_for("hello", &TextStyle::default(), a);
+        let k_b = TextCache::key_for("hello", &TextStyle::default(), b);
+        assert_ne!(k_a, k_b);
     }
 }

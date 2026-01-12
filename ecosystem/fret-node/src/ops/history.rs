@@ -55,6 +55,7 @@ impl GraphHistory {
 
     /// Records a committed transaction (original + derived concretization ops).
     pub fn record(&mut self, tx: GraphTransaction) {
+        let tx = super::normalize_transaction(tx);
         if tx.ops.is_empty() {
             return;
         }

@@ -117,62 +117,60 @@ impl Gizmo {
             }
         }
 
-        if include_view {
-            if let Some(view_dir) =
+        if include_view
+            && let Some(view_dir) =
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-            {
-                let axis_dir = view_dir.normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let (u, v) = plane_basis(axis_dir);
-                    let handle = RotateHandle::View.id();
-                    let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
-                    let base = Color {
-                        r: 0.9,
-                        g: 0.9,
-                        b: 0.9,
-                        a: 0.8,
-                    };
-                    let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
-                        self.config.hover_color
-                    } else {
-                        base
-                    };
+        {
+            let axis_dir = view_dir.normalize_or_zero();
+            if axis_dir.length_squared() > 0.0 {
+                let (u, v) = plane_basis(axis_dir);
+                let handle = RotateHandle::View.id();
+                let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
+                let base = Color {
+                    r: 0.9,
+                    g: 0.9,
+                    b: 0.9,
+                    a: 0.8,
+                };
+                let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
+                    self.config.hover_color
+                } else {
+                    base
+                };
 
-                    push_ring_band(u, v, r, c, DepthMode::Always, pv.occlusion.rotate_view_ring);
-                }
+                push_ring_band(u, v, r, c, DepthMode::Always, pv.occlusion.rotate_view_ring);
             }
         }
 
-        if include_arcball {
-            if let Some(view_dir) =
+        if include_arcball
+            && let Some(view_dir) =
                 view_dir_at_origin(view_projection, viewport, origin, self.config.depth_range)
-            {
-                let axis_dir = (-view_dir).normalize_or_zero();
-                if axis_dir.length_squared() > 0.0 {
-                    let (u, v) = plane_basis(axis_dir);
-                    let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
+        {
+            let axis_dir = (-view_dir).normalize_or_zero();
+            if axis_dir.length_squared() > 0.0 {
+                let (u, v) = plane_basis(axis_dir);
+                let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
 
-                    let handle = RotateHandle::Arcball.id();
-                    let base = Color {
-                        r: 1.0,
-                        g: 1.0,
-                        b: 1.0,
-                        a: 0.12,
-                    };
-                    let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
-                        mix_alpha(self.config.hover_color, 0.55)
-                    } else {
-                        base
-                    };
-                    push_ring_band(
-                        u,
-                        v,
-                        r,
-                        c,
-                        DepthMode::Always,
-                        pv.occlusion.rotate_arcball_ring,
-                    );
-                }
+                let handle = RotateHandle::Arcball.id();
+                let base = Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 0.12,
+                };
+                let c = if self.is_handle_highlighted(GizmoMode::Rotate, handle) {
+                    mix_alpha(self.config.hover_color, 0.55)
+                } else {
+                    base
+                };
+                push_ring_band(
+                    u,
+                    v,
+                    r,
+                    c,
+                    DepthMode::Always,
+                    pv.occlusion.rotate_arcball_ring,
+                );
             }
         }
 
@@ -368,39 +366,38 @@ impl Gizmo {
             }
         }
 
-        if self.state.drag_snap {
-            if let Some(step) = self
+        if self.state.drag_snap
+            && let Some(step) = self
                 .config
                 .rotate_snap_step_radians
                 .filter(|s| s.is_finite() && *s > 0.0)
-            {
-                let ticks = (std::f32::consts::TAU / step).round() as usize;
-                if (4..=128).contains(&ticks) {
-                    let tick_color = Color {
-                        r: 0.9,
-                        g: 0.9,
-                        b: 0.9,
-                        a: 0.35,
-                    };
-                    for k in 0..ticks {
-                        let t = (k as f32) * step;
-                        let dir = (u * t.cos() + v * t.sin()).normalize_or_zero();
-                        if dir.length_squared() == 0.0 {
-                            continue;
-                        }
-                        let a = origin + dir * (outer_r + half * 0.8);
-                        let b = origin + dir * (outer_r + half * 2.2);
-                        if feedback_allow_ghost {
-                            self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
-                        } else {
-                            self.push_line_no_ghost(
-                                &mut out.lines,
-                                a,
-                                b,
-                                tick_color,
-                                DepthMode::Always,
-                            );
-                        }
+        {
+            let ticks = (std::f32::consts::TAU / step).round() as usize;
+            if (4..=128).contains(&ticks) {
+                let tick_color = Color {
+                    r: 0.9,
+                    g: 0.9,
+                    b: 0.9,
+                    a: 0.35,
+                };
+                for k in 0..ticks {
+                    let t = (k as f32) * step;
+                    let dir = (u * t.cos() + v * t.sin()).normalize_or_zero();
+                    if dir.length_squared() == 0.0 {
+                        continue;
+                    }
+                    let a = origin + dir * (outer_r + half * 0.8);
+                    let b = origin + dir * (outer_r + half * 2.2);
+                    if feedback_allow_ghost {
+                        self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
+                    } else {
+                        self.push_line_no_ghost(
+                            &mut out.lines,
+                            a,
+                            b,
+                            tick_color,
+                            DepthMode::Always,
+                        );
                     }
                 }
             }

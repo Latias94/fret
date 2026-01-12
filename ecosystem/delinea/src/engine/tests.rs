@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 use std::collections::BTreeMap;
 
 use crate::action::Action;
