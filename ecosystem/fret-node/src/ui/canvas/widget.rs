@@ -7677,7 +7677,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             max_width: Px,
         }
 
-        let hovered_edge = self.interaction.hover_edge;
+        let edge_insert_target = self
+            .interaction
+            .edge_insert_drag
+            .as_ref()
+            .map(|d| d.edge)
+            .or_else(|| {
+                self.interaction
+                    .pending_edge_insert_drag
+                    .as_ref()
+                    .map(|d| d.edge)
+            });
+        let hovered_edge = edge_insert_target.or(self.interaction.hover_edge);
         let hovered_port = self.interaction.hover_port;
         let hovered_port_valid = self.interaction.hover_port_valid;
         let hovered_port_convertible = self.interaction.hover_port_convertible;
@@ -7685,6 +7696,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let focused_port_valid = self.interaction.focused_port_valid;
         let focused_port_convertible = self.interaction.focused_port_convertible;
         let wire_drag = self.interaction.wire_drag.clone();
+        let edge_insert_marker_request = self
+            .interaction
+            .edge_insert_drag
+            .as_ref()
+            .map(|d| (d.edge, d.pos));
         let marked_ports: HashSet<PortId> = match wire_drag.as_ref().map(|w| &w.kind) {
             Some(WireDragKind::New { bundle, .. }) if bundle.len() > 1 => {
                 bundle.iter().copied().collect()
@@ -7968,6 +7984,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let mut edges_hovered: Vec<EdgePaint> = Vec::new();
         let mut edge_labels: Vec<(Point, Point, EdgeRouteKind, Arc<str>, bool, bool)> = Vec::new();
 
+        let edge_insert_marker: Option<(Point, Color)> =
+            edge_insert_marker_request.and_then(|(edge_id, pos)| {
+                render.edges.iter().find(|e| e.id == edge_id).map(|e| {
+                    (
+                        closest_point_on_edge_route(e.hint.route, e.from, e.to, zoom, pos),
+                        e.color,
+                    )
+                })
+            });
+
         for edge in render.edges {
             let mut width = self.style.wire_width * edge.hint.width_mul.max(0.0);
             if edge.selected {
@@ -8074,6 +8100,51 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
 
         self.paint_cache.prune(cx.services, 300, 30_000);
+
+        if let Some((pos, color)) = edge_insert_marker {
+            let z = zoom.max(1.0e-6);
+            let r = 7.0 / z;
+            let border_w = 2.0 / z;
+            let rect = Rect::new(
+                Point::new(Px(pos.x.0 - r), Px(pos.y.0 - r)),
+                Size::new(Px(2.0 * r), Px(2.0 * r)),
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(4),
+                rect,
+                background: Color::TRANSPARENT,
+                border: Edges::all(Px(border_w)),
+                border_color: color,
+                corner_radii: Corners::all(Px(r)),
+            });
+
+            let arm = 10.0 / z;
+            let thick = (2.0 / z).max(0.5 / z);
+            let h_rect = Rect::new(
+                Point::new(Px(pos.x.0 - arm * 0.5), Px(pos.y.0 - thick * 0.5)),
+                Size::new(Px(arm), Px(thick)),
+            );
+            let v_rect = Rect::new(
+                Point::new(Px(pos.x.0 - thick * 0.5), Px(pos.y.0 - arm * 0.5)),
+                Size::new(Px(thick), Px(arm)),
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(4),
+                rect: h_rect,
+                background: color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(4),
+                rect: v_rect,
+                background: color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
 
         if !edge_labels.is_empty() {
             let pad_screen = 6.0;
@@ -8893,6 +8964,73 @@ fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
     }
 
     best
+}
+
+fn closest_point_on_edge_route(
+    route: EdgeRouteKind,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    p: Point,
+) -> Point {
+    match route {
+        EdgeRouteKind::Bezier => closest_point_on_wire_bezier(p, from, to, zoom),
+        EdgeRouteKind::Straight => closest_point_on_segment(p, from, to).0,
+        EdgeRouteKind::Step => closest_point_on_step_wire(p, from, to).0,
+    }
+}
+
+fn closest_point_on_wire_bezier(p: Point, from: Point, to: Point, zoom: f32) -> Point {
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+
+    let steps: usize = 24;
+    let mut best = (from, f32::INFINITY);
+
+    let mut prev = from;
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        let cur = cubic_bezier(from, c1, c2, to, t);
+        let cand = closest_point_on_segment(p, prev, cur);
+        if cand.1 < best.1 {
+            best = cand;
+        }
+        prev = cur;
+    }
+
+    best.0
+}
+
+fn closest_point_on_step_wire(p: Point, from: Point, to: Point) -> (Point, f32) {
+    let mx = 0.5 * (from.x.0 + to.x.0);
+    let p1 = Point::new(Px(mx), from.y);
+    let p2 = Point::new(Px(mx), to.y);
+    let c0 = closest_point_on_segment(p, from, p1);
+    let c1 = closest_point_on_segment(p, p1, p2);
+    let c2 = closest_point_on_segment(p, p2, to);
+    [c0, c1, c2]
+        .into_iter()
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap_or((from, f32::INFINITY))
+}
+
+fn closest_point_on_segment(p: Point, a: Point, b: Point) -> (Point, f32) {
+    let apx = p.x.0 - a.x.0;
+    let apy = p.y.0 - a.y.0;
+    let abx = b.x.0 - a.x.0;
+    let aby = b.y.0 - a.y.0;
+
+    let ab2 = abx * abx + aby * aby;
+    if ab2 <= 1.0e-9 {
+        let d2 = apx * apx + apy * apy;
+        return (a, d2);
+    }
+
+    let t = ((apx * abx + apy * aby) / ab2).clamp(0.0, 1.0);
+    let cx = a.x.0 + t * abx;
+    let cy = a.y.0 + t * aby;
+    let dx = p.x.0 - cx;
+    let dy = p.y.0 - cy;
+    (Point::new(Px(cx), Px(cy)), dx * dx + dy * dy)
 }
 
 fn step_wire_distance2(p: Point, from: Point, to: Point) -> f32 {
