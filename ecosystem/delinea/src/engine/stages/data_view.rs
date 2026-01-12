@@ -57,10 +57,13 @@ impl DataViewKey {
 enum DataViewEntry {
     Ready {
         data_rev: Revision,
+        row_count: usize,
+        end_limit: usize,
         indices: Arc<[u32]>,
     },
     Building {
         data_rev: Revision,
+        row_count: usize,
         next: usize,
         end: usize,
         indices: Vec<u32>,
@@ -152,8 +155,15 @@ impl DataViewStage {
     }
 
     pub fn prepare_requests(&mut self, datasets: &DatasetStore) {
-        // Prune cache entries that are no longer desired.
-        self.cache.retain(|k, _| self.requested_set.contains(k));
+        // Prune cache entries that are no longer desired, but keep a single best "prefix" entry
+        // per requested key so append-only streams can reuse prefix scans when the request end grows.
+        let mut keep = self.requested_set.clone();
+        for key in &self.requested {
+            if let Some(prefix) = self.best_prefix_x_filter_key(*key) {
+                keep.insert(prefix);
+            }
+        }
+        self.cache.retain(|k, _| keep.contains(k));
 
         // Ensure desired entries exist (as placeholders) so step() can build them deterministically.
         for key in &self.requested {
@@ -165,16 +175,116 @@ impl DataViewStage {
                 continue;
             };
             let DataViewKind::XFilter { start, end, .. } = key.kind;
+
+            // Append-only optimization: if the request end grew (typical when selection is `All`),
+            // reuse the best available prefix entry and continue scanning from its completion point.
+            let mut seed_indices: Vec<u32> = Vec::new();
+            let mut seed_next = start as usize;
+            if let Some((seed, seed_end_limit)) = self.best_prefix_x_filter_seed(*key) {
+                seed_indices = seed;
+                seed_next = seed_end_limit;
+            }
+
             self.cache.insert(
                 *key,
                 DataViewEntry::Building {
                     data_rev: table.revision,
-                    next: start as usize,
+                    row_count: table.row_count,
+                    next: seed_next,
                     end: end as usize,
-                    indices: Vec::new(),
+                    indices: seed_indices,
                 },
             );
         }
+    }
+
+    fn best_prefix_x_filter_key(&self, requested: DataViewKey) -> Option<DataViewKey> {
+        let DataViewKind::XFilter {
+            x_col,
+            start,
+            end,
+            min_bits,
+            max_bits,
+        } = requested.kind;
+
+        let requested_end = end as usize;
+        let mut best: Option<(usize, DataViewKey)> = None;
+
+        for (k, _) in self.cache.iter() {
+            if k.dataset != requested.dataset {
+                continue;
+            }
+            let DataViewKind::XFilter {
+                x_col: c,
+                start: s,
+                end: e,
+                min_bits: min_b,
+                max_bits: max_b,
+            } = k.kind;
+            if c != x_col || s != start || min_b != min_bits || max_b != max_bits {
+                continue;
+            }
+
+            let prefix_end = e as usize;
+            if prefix_end >= requested_end {
+                continue;
+            }
+
+            match best {
+                Some((best_end, _)) if prefix_end <= best_end => {}
+                _ => best = Some((prefix_end, *k)),
+            }
+        }
+
+        best.map(|(_, k)| k)
+    }
+
+    fn best_prefix_x_filter_seed(&self, requested: DataViewKey) -> Option<(Vec<u32>, usize)> {
+        let DataViewKind::XFilter {
+            x_col,
+            start,
+            end,
+            min_bits,
+            max_bits,
+        } = requested.kind;
+
+        let requested_end = end as usize;
+        let mut best: Option<(usize, Vec<u32>, usize)> = None;
+
+        for (k, entry) in self.cache.iter() {
+            if k.dataset != requested.dataset {
+                continue;
+            }
+            let DataViewKind::XFilter {
+                x_col: c,
+                start: s,
+                end: e,
+                min_bits: min_b,
+                max_bits: max_b,
+            } = k.kind;
+            if c != x_col || s != start || min_b != min_bits || max_b != max_bits {
+                continue;
+            }
+
+            let prefix_end = e as usize;
+            if prefix_end >= requested_end {
+                continue;
+            }
+
+            let (indices, end_limit) = match entry {
+                DataViewEntry::Ready {
+                    indices, end_limit, ..
+                } => (indices.to_vec(), *end_limit),
+                DataViewEntry::Building { indices, next, .. } => (indices.clone(), *next),
+            };
+
+            match best {
+                Some((best_end, ..)) if prefix_end <= best_end => {}
+                _ => best = Some((prefix_end, indices, end_limit)),
+            }
+        }
+
+        best.map(|(_, indices, next)| (indices, next))
     }
 
     pub fn step(
@@ -207,31 +317,68 @@ impl DataViewStage {
 
             let data_rev = table.revision;
             match entry {
-                DataViewEntry::Ready { data_rev: r, .. } => {
-                    if *r != data_rev {
-                        let DataViewKind::XFilter { start, end, .. } = key.kind;
-                        *entry = DataViewEntry::Building {
-                            data_rev,
-                            next: start as usize,
-                            end: end as usize,
-                            indices: Vec::new(),
-                        };
-                    } else {
+                DataViewEntry::Ready {
+                    data_rev: r,
+                    row_count: cached_len,
+                    end_limit,
+                    indices,
+                } => {
+                    if *r == data_rev {
                         self.cursor += 1;
                         continue;
+                    }
+
+                    let DataViewKind::XFilter { start, end, .. } = key.kind;
+                    let requested_end = end as usize;
+                    let next_end_limit = requested_end.min(table.row_count);
+
+                    // Append-only fast path: if the dataset grew, continue scanning from the
+                    // previous completion point and keep accumulated indices.
+                    let is_append_only = table.row_count >= *cached_len;
+                    if is_append_only && next_end_limit >= *end_limit {
+                        if next_end_limit == *end_limit {
+                            // No new rows inside the request range; just bump the revision.
+                            *r = data_rev;
+                            *cached_len = table.row_count;
+                            self.cursor += 1;
+                            continue;
+                        }
+
+                        *entry = DataViewEntry::Building {
+                            data_rev,
+                            row_count: table.row_count,
+                            next: *end_limit,
+                            end: requested_end,
+                            indices: indices.to_vec(),
+                        };
+                    } else {
+                        *entry = DataViewEntry::Building {
+                            data_rev,
+                            row_count: table.row_count,
+                            next: start as usize,
+                            end: requested_end,
+                            indices: Vec::new(),
+                        };
                     }
                 }
                 DataViewEntry::Building {
                     data_rev: r,
+                    row_count: cached_len,
                     next,
                     indices,
                     ..
                 } => {
                     if *r != data_rev {
                         let DataViewKind::XFilter { start, .. } = key.kind;
+                        let is_append_only = table.row_count >= *cached_len;
+                        let can_resume = is_append_only && *next <= *cached_len;
+
                         *r = data_rev;
-                        *next = start as usize;
-                        indices.clear();
+                        *cached_len = table.row_count;
+                        if !can_resume {
+                            *next = start as usize;
+                            indices.clear();
+                        }
                     }
                 }
             }
@@ -295,6 +442,8 @@ impl DataViewStage {
                 let frozen: Arc<[u32]> = std::mem::take(indices).into();
                 *entry = DataViewEntry::Ready {
                     data_rev,
+                    row_count: table.row_count,
+                    end_limit,
                     indices: frozen,
                 };
                 self.cursor += 1;
@@ -318,9 +467,9 @@ impl DataViewStage {
     ) -> Option<RowSelection> {
         let key = DataViewKey::x_filter(dataset, x_col, selection_range, filter);
         match self.cache.get(&key) {
-            Some(DataViewEntry::Ready { data_rev, indices }) if *data_rev == table_rev => {
-                Some(RowSelection::Indices(indices.clone()))
-            }
+            Some(DataViewEntry::Ready {
+                data_rev, indices, ..
+            }) if *data_rev == table_rev => Some(RowSelection::Indices(indices.clone())),
             _ => None,
         }
     }
@@ -357,6 +506,7 @@ mod tests {
         range: RowRange,
         filter: AxisFilter1D,
         data_rev: Revision,
+        row_count: usize,
     ) -> DataViewStage {
         let key = DataViewKey::x_filter(dataset_id, x_col, range, filter);
         let mut stage = DataViewStage::default();
@@ -367,6 +517,7 @@ mod tests {
             key,
             DataViewEntry::Building {
                 data_rev,
+                row_count,
                 next: start as usize,
                 end: end as usize,
                 indices: Vec::new(),
@@ -391,7 +542,14 @@ mod tests {
 
         let range = RowRange { start: 0, end: 100 };
 
-        let mut stage = build_stage_with_single_key(dataset_id, 0, range, filter, table.revision);
+        let mut stage = build_stage_with_single_key(
+            dataset_id,
+            0,
+            range,
+            filter,
+            table.revision,
+            table.row_count,
+        );
 
         let mut budget = WorkBudget::new(1, 0, 0);
         assert!(!stage.step(&store, &mut budget));
@@ -427,7 +585,14 @@ mod tests {
         let range = RowRange { start: 0, end: 100 };
 
         let data_rev = store.dataset(dataset_id).unwrap().revision;
-        let mut stage = build_stage_with_single_key(dataset_id, 0, range, filter, data_rev);
+        let mut stage = build_stage_with_single_key(
+            dataset_id,
+            0,
+            range,
+            filter,
+            data_rev,
+            store.dataset(dataset_id).unwrap().row_count,
+        );
 
         let mut budget = WorkBudget::new(4096, 0, 0);
         assert!(stage.step(&store, &mut budget));
@@ -452,7 +617,7 @@ mod tests {
 
         // A step should rebuild the selection for the same key, now including the appended row.
         stage.cursor = 0;
-        let mut budget = WorkBudget::new(4096, 0, 0);
+        let mut budget = WorkBudget::new(1, 0, 0);
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
@@ -462,6 +627,54 @@ mod tests {
             panic!("expected indices selection");
         };
 
+        assert_eq!(&indices[..], &[2u32, 3u32, 5u32]);
+    }
+
+    #[test]
+    fn data_view_stage_resumes_scans_on_append_only_changes() {
+        let dataset_id = DatasetId::new(1);
+
+        let mut store = DatasetStore::default();
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 10.0, 5.0, 7.0, 2.0]));
+        store.insert(dataset_id, table);
+
+        let filter = AxisFilter1D {
+            min: Some(4.0),
+            max: Some(8.0),
+        };
+        let range = RowRange { start: 0, end: 100 };
+
+        let rev0 = store.dataset(dataset_id).unwrap().revision;
+        let mut stage = build_stage_with_single_key(
+            dataset_id,
+            0,
+            range,
+            filter,
+            rev0,
+            store.dataset(dataset_id).unwrap().row_count,
+        );
+
+        let mut budget = WorkBudget::new(4096, 0, 0);
+        assert!(stage.step(&store, &mut budget));
+
+        let table = store.dataset_mut(dataset_id).unwrap();
+        table.append_row_f64(&[6.0]).unwrap();
+        let rev1 = table.revision;
+
+        stage.cursor = 0;
+        let mut budget = WorkBudget::new(1, 0, 0);
+        assert!(
+            stage.step(&store, &mut budget),
+            "append-only should require scanning only the appended rows"
+        );
+
+        let sel = stage
+            .selection_for(dataset_id, 0, range, filter, rev1)
+            .expect("selection should be updated for the new revision");
+        let RowSelection::Indices(indices) = sel else {
+            panic!("expected indices selection");
+        };
         assert_eq!(&indices[..], &[2u32, 3u32, 5u32]);
     }
 }

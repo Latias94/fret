@@ -96,7 +96,7 @@ single “at a glance” view of:
 - where it is implemented (evidence anchors),
 - and what is still missing vs ECharts.
 
-**S1 — DataZoom X inside + slider window writes** (`[x]`)
+**S1 - DataZoom X inside + slider window writes** (`[x]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/AxisProxy.ts`, `repo-ref/echarts/src/component/dataZoom/dataZoomProcessor.ts`
 - ADR(s): `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`, `docs/adr/0138-delinea-datazoom-component-composition-and-span-policy.md`
@@ -109,7 +109,7 @@ single “at a glance” view of:
   - X slider (bottom) supports pan drag + min/max handle drags + click-to-jump.
   - Locks (`Ctrl + LMB` toggle) gate slider + wheel writes for the locked axis.
 
-**S2 — DataZoom Y + 2D zoom parity boundary (v1 divergence)** (`[~]`)
+**S2 - DataZoom Y + 2D zoom parity boundary (v1 divergence)** (`[~]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` (order-sensitive multi-dim filtering)
 - ADR(s): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`, `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
@@ -123,7 +123,7 @@ single “at a glance” view of:
   - ECharts-style “weakFilter/empty” behaviors for sparse selections,
   - 2D zoom interactions that can materialize sparse selections when needed.
 
-**S3 — 2D box zoom writes an atomic paired window action** (`[x]`)
+**S3 - 2D box zoom writes an atomic paired window action** (`[x]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/dataZoom/*` + brush/interaction glue (behavioral reference only; implementation differs)
 - ADR(s): `docs/adr/0136-delinea-datazoom-y-and-2d-semantics.md`
@@ -134,7 +134,7 @@ single “at a glance” view of:
   - `Alt` expands horizontally; `Shift` expands vertically (unless `Shift` is used to start the gesture).
   - If either axis is zoom-locked or fixed, the gesture does not start.
 
-**S4 — Category axis under zoom for non-bar series** (`[~]`)
+**S4 - Category axis under zoom for non-bar series** (`[~]`)
 
 - ECharts reference: category axis + dataZoom behavior (series sampling under ordinal transforms)
 - ADR(s): `docs/adr/0130-delinea-axis-scales-and-coordinate-mapping.md`, `docs/adr/0140-delinea-dataset-storage-and-indices.md`
@@ -147,7 +147,7 @@ single “at a glance” view of:
   - fully stable ordinal mapping semantics for line/scatter under zoom (not just bars/axis pointer),
   - conformance tests that lock “raw index ↔ ordinal index” invariants across transforms.
 
-**S5 — Tooltip content parity + formatting hooks** (`[~]`)
+**S5 - Tooltip content parity + formatting hooks** (`[~]`)
 
 - ECharts reference: tooltip formatter + axisPointer sampling behavior (series order, missing values, snapping rules)
 - ADR(s): `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`, `docs/adr/0148-delinea-tooltip-formatting-contract.md`
@@ -168,7 +168,7 @@ single “at a glance” view of:
   - ECharts formatter parity (callback-style formatting, rich text/HTML markers, per-series overrides),
   - richer tooltip layout (structural columns, rich text/HTML) and additional snapping policies.
 
-**S6 — Legend semantics (series visibility) + UI parity** (`[~]`)
+**S6 - Legend semantics (series visibility) + UI parity** (`[~]`)
 
 - ECharts reference: legend selection model + event semantics
 - ADR(s): (engine-level visibility is part of the core model contract; UI parity is adapter work)
@@ -185,7 +185,7 @@ single “at a glance” view of:
   - scroll/overflow handling, multi-legend layout, and selection UX parity (`Shift` range, invert, select-all/none),
   - conformance scenarios for legend <-> tooltip/axisPointer interactions.
 
-**S7 — VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
+**S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)
 
 - ECharts reference: `repo-ref/echarts/src/component/visualMap/VisualMapModel.ts`, `repo-ref/echarts/src/component/visualMap/visualEncoding.ts`
 - ADR(s): `docs/adr/0147-delinea-visualmap-and-data-driven-styling.md`
@@ -227,15 +227,17 @@ single “at a glance” view of:
 **S9 - Append/update semantics (`appendData`)** (`[~]`)
 
 - ECharts reference: `appendData` and incremental updates on `DataStore`
-- ADR(s): likely an ADR 0140 follow-up (dataset store contract expansion) once we commit to a stable surface
+- ADR(s): `docs/adr/0140-delinea-dataset-storage-and-indices.md`, `docs/adr/0149-delinea-appenddata-and-incremental-caches.md`
 - ADR(s): `docs/adr/0140-delinea-dataset-storage-and-indices.md` (append-only rule; v1 ingestion API)
 - Evidence:
   - `ecosystem/delinea/src/data/mod.rs` (`DataTable::append_row_f64`, `DataTable::append_columns_f64`)
-  - `ecosystem/delinea/src/engine/stages/data_view.rs` (revision-gated invalidation; rebuild under budget)
+  - `ecosystem/delinea/src/engine/stages/data_view.rs` (append-only resume for XFilter index scans)
+  - `ecosystem/delinea/src/engine/stages/ordinal_index.rs` (append-only resume for ordinal inverted index scans)
 - Validation (headless): `cargo nextest run -p delinea` (see `data_view_stage_invalidates_indices_on_data_revision_change`)
 - Missing vs ECharts (high value):
-  - explicit “append vs replace” mutation taxonomy at the dataset API boundary (so stages can do incremental extension safely),
-  - append-aware incremental rebuild for index caches when the selection is `All` (avoid rescanning the full dataset).
+  - append-aware incremental mark rebuild for `RowSelection::All` (avoid rebuilding the entire mark tree on stream append),
+  - append-aware incremental bounds extension (monotonic X fast path),
+  - streaming-focused benchmarks and CI gates for regressions.
 
 ### Active axis selection and routing
 
