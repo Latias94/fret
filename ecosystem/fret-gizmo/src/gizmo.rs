@@ -945,6 +945,7 @@ impl Gizmo {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn push_ring_band(
         &self,
         out: &mut GizmoDrawList3d,
@@ -1137,6 +1138,7 @@ impl Gizmo {
         plane_basis(dir).0.normalize_or_zero()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn mixed_translate_axis_tip_intent(
         &self,
         view_projection: Mat4,
@@ -1147,10 +1149,14 @@ impl Gizmo {
         size_length_world: f32,
         hit: PickHit,
     ) -> bool {
-        if !matches!(hit.handle.0, 1 | 2 | 3) {
+        if handle_group(hit.handle) != HANDLE_GROUP_TRANSLATE {
             return false;
         }
-        let axis_dir = axes[(hit.handle.0.saturating_sub(1)) as usize].normalize_or_zero();
+        let sub = handle_sub_id(hit.handle);
+        if !(1..=3).contains(&sub) {
+            return false;
+        }
+        let axis_dir = axes[(sub.saturating_sub(1)) as usize].normalize_or_zero();
         if axis_dir.length_squared() == 0.0 {
             return false;
         }
@@ -1174,6 +1180,7 @@ impl Gizmo {
         d <= r
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn mixed_pick_band(
         &self,
         view_projection: Mat4,
@@ -1192,7 +1199,8 @@ impl Gizmo {
                 if hit.handle == TranslateHandle::Screen.id() {
                     return MixedPickBand::TranslateCenter;
                 }
-                if matches!(hit.handle.0, 4 | 5 | 6)
+                if handle_group(hit.handle) == HANDLE_GROUP_TRANSLATE
+                    && (4..=6).contains(&handle_sub_id(hit.handle))
                     && hit.score <= self.config.pick_policy.translate_plane_inside_score_max
                 {
                     return MixedPickBand::TranslatePlaneInside;
