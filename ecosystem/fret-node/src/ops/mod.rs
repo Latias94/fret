@@ -4,6 +4,7 @@ mod apply;
 mod build;
 mod fragment;
 mod history;
+mod normalize;
 
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +17,7 @@ pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
+pub(crate) use normalize::normalize_transaction;
 
 /// Edge endpoint pair (from/to ports).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -170,6 +172,10 @@ impl GraphTransaction {
     /// Pushes an op.
     pub fn push(&mut self, op: GraphOp) {
         self.ops.push(op);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ops.is_empty()
     }
 }
 

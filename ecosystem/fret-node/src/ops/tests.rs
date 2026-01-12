@@ -230,6 +230,60 @@ fn set_group_rect_and_child_positions_roundtrip_through_invert_transaction() {
 }
 
 #[test]
+fn normalize_transaction_drops_noop_set_ops() {
+    let node_id = NodeId::new();
+    let p0 = CanvasPoint { x: 10.0, y: 20.0 };
+
+    let tx = GraphTransaction {
+        label: Some("Normalize".to_string()),
+        ops: vec![
+            GraphOp::SetNodePos {
+                id: node_id,
+                from: p0,
+                to: p0,
+            },
+            GraphOp::SetNodeCollapsed {
+                id: node_id,
+                from: false,
+                to: false,
+            },
+            GraphOp::SetNodeData {
+                id: node_id,
+                from: serde_json::Value::Null,
+                to: serde_json::Value::Null,
+            },
+            GraphOp::AddNode {
+                id: node_id,
+                node: make_node("core.a"),
+            },
+        ],
+    };
+
+    let normalized = crate::ops::normalize_transaction(tx);
+    assert_eq!(normalized.label.as_deref(), Some("Normalize"));
+    assert_eq!(normalized.ops.len(), 1);
+    assert!(matches!(normalized.ops[0], GraphOp::AddNode { .. }));
+}
+
+#[test]
+fn normalize_transaction_keeps_non_noop_set_ops() {
+    let node_id = NodeId::new();
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetNodePos {
+            id: node_id,
+            from: CanvasPoint { x: 10.0, y: 20.0 },
+            to: CanvasPoint { x: 11.0, y: 21.0 },
+        }],
+    };
+
+    let normalized = crate::ops::normalize_transaction(tx);
+    assert_eq!(normalized.ops.len(), 1);
+    assert!(matches!(normalized.ops[0], GraphOp::SetNodePos { .. }));
+}
+
+#[test]
 fn set_node_size_roundtrips_through_invert_transaction() {
     let mut graph = Graph::default();
     let node_id = NodeId::new();
