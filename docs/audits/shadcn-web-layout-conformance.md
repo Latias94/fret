@@ -71,6 +71,7 @@ patterns:
 - `radio-group-demo`
 - `tabs-demo`
 - `switch-demo`
+- `input-demo`
 - `empty-avatar`
 - `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
