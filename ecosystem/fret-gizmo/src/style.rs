@@ -6,6 +6,37 @@ use crate::gizmo::GizmoConfig;
 use crate::view_gizmo::ViewGizmoConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GizmoOcclusionPolicy {
+    pub rotate_axis_rings: bool,
+    pub rotate_view_ring: bool,
+    pub rotate_arcball_ring: bool,
+    pub translate_plane_fill: bool,
+    pub scale_plane_fill: bool,
+    pub bounds: bool,
+    pub handles: bool,
+}
+
+impl Default for GizmoOcclusionPolicy {
+    fn default() -> Self {
+        Self::classic()
+    }
+}
+
+impl GizmoOcclusionPolicy {
+    pub fn classic() -> Self {
+        Self {
+            rotate_axis_rings: true,
+            rotate_view_ring: true,
+            rotate_arcball_ring: true,
+            translate_plane_fill: true,
+            scale_plane_fill: true,
+            bounds: true,
+            handles: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoVisuals {
     pub size_px: f32,
     pub pick_radius_px: f32,
@@ -41,8 +72,7 @@ pub struct GizmoPartVisuals {
     pub rotate_ring_thickness_scale: f32,
     pub rotate_ring_fill_alpha: f32,
     pub rotate_ring_edge_alpha: f32,
-    pub translate_plane_show_occluded: bool,
-    pub scale_plane_show_occluded: bool,
+    pub occlusion: GizmoOcclusionPolicy,
 }
 
 impl Default for GizmoPartVisuals {
@@ -74,8 +104,7 @@ impl GizmoPartVisuals {
             rotate_ring_thickness_scale: 1.0,
             rotate_ring_fill_alpha: 0.22,
             rotate_ring_edge_alpha: 0.95,
-            translate_plane_show_occluded: true,
-            scale_plane_show_occluded: true,
+            occlusion: GizmoOcclusionPolicy::classic(),
         }
     }
 }

@@ -2795,6 +2795,8 @@ impl Gizmo {
         size_length_world: f32,
         targets: &[GizmoTarget3d],
     ) {
+        let pv = self.state.part_visuals;
+        let allow_ghost = pv.occlusion.bounds;
         if targets.is_empty() {
             return;
         }
@@ -2848,13 +2850,23 @@ impl Gizmo {
             (2, 6),
             (3, 7),
         ] {
-            self.push_line(
-                &mut out.lines,
-                corners_world[a],
-                corners_world[b],
-                box_color,
-                self.config.depth_mode,
-            );
+            if allow_ghost {
+                self.push_line(
+                    &mut out.lines,
+                    corners_world[a],
+                    corners_world[b],
+                    box_color,
+                    self.config.depth_mode,
+                );
+            } else {
+                self.push_line_no_ghost(
+                    &mut out.lines,
+                    corners_world[a],
+                    corners_world[b],
+                    box_color,
+                    self.config.depth_mode,
+                );
+            }
         }
 
         let Some(view_dir) =
@@ -2894,10 +2906,33 @@ impl Gizmo {
             let p1 = pos + (u - v) * handle_half_world;
             let p2 = pos + (u + v) * handle_half_world;
             let p3 = pos + (-u + v) * handle_half_world;
-            this.push_tri(&mut out.triangles, p0, p1, p2, fill, this.config.depth_mode);
-            this.push_tri(&mut out.triangles, p0, p2, p3, fill, this.config.depth_mode);
+            if allow_ghost {
+                this.push_tri(&mut out.triangles, p0, p1, p2, fill, this.config.depth_mode);
+                this.push_tri(&mut out.triangles, p0, p2, p3, fill, this.config.depth_mode);
+            } else {
+                this.push_tri_no_ghost(
+                    &mut out.triangles,
+                    p0,
+                    p1,
+                    p2,
+                    fill,
+                    this.config.depth_mode,
+                );
+                this.push_tri_no_ghost(
+                    &mut out.triangles,
+                    p0,
+                    p2,
+                    p3,
+                    fill,
+                    this.config.depth_mode,
+                );
+            }
             for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-                this.push_line(&mut out.lines, a, b, outline, this.config.depth_mode);
+                if allow_ghost {
+                    this.push_line(&mut out.lines, a, b, outline, this.config.depth_mode);
+                } else {
+                    this.push_line_no_ghost(&mut out.lines, a, b, outline, this.config.depth_mode);
+                }
             }
         };
 
@@ -2982,6 +3017,17 @@ impl Gizmo {
                 out.push(Line3d { a, b, color, depth });
             }
         }
+    }
+
+    fn push_line_no_ghost(
+        &self,
+        out: &mut Vec<Line3d>,
+        a: Vec3,
+        b: Vec3,
+        color: Color,
+        depth: DepthMode,
+    ) {
+        out.push(Line3d { a, b, color, depth });
     }
 
     fn push_tri(
@@ -3728,13 +3774,24 @@ impl Gizmo {
             } else {
                 color
             };
-            self.push_line(
-                &mut out,
-                origin,
-                origin + axis_dir * shaft_len,
-                mix_alpha(c, alpha),
-                self.config.depth_mode,
-            );
+            let c = mix_alpha(c, alpha);
+            if pv.occlusion.handles {
+                self.push_line(
+                    &mut out,
+                    origin,
+                    origin + axis_dir * shaft_len,
+                    c,
+                    self.config.depth_mode,
+                );
+            } else {
+                self.push_line_no_ghost(
+                    &mut out,
+                    origin,
+                    origin + axis_dir * shaft_len,
+                    c,
+                    self.config.depth_mode,
+                );
+            }
         }
         out
     }
@@ -3915,6 +3972,18 @@ impl Gizmo {
         let axis_tip_len = length_world * self.translate_axis_tip_scale();
 
         let mut out = Vec::new();
+        let push_handle_tri = |out: &mut Vec<Triangle3d>,
+                               a: Vec3,
+                               b: Vec3,
+                               c: Vec3,
+                               color: Color,
+                               depth: DepthMode| {
+            if pv.occlusion.handles {
+                self.push_tri(out, a, b, c, color, depth);
+            } else {
+                self.push_tri_no_ghost(out, a, b, c, color, depth);
+            }
+        };
 
         if include_axes {
             for &(((axis_dir, color), handle), axis_index) in &[
@@ -3955,10 +4024,10 @@ impl Gizmo {
                 let c3 = base + (u - v) * s;
 
                 let c = mix_alpha(c, alpha);
-                self.push_tri(&mut out, tip, c0, c1, c, self.config.depth_mode);
-                self.push_tri(&mut out, tip, c1, c2, c, self.config.depth_mode);
-                self.push_tri(&mut out, tip, c2, c3, c, self.config.depth_mode);
-                self.push_tri(&mut out, tip, c3, c0, c, self.config.depth_mode);
+                push_handle_tri(&mut out, tip, c0, c1, c, self.config.depth_mode);
+                push_handle_tri(&mut out, tip, c1, c2, c, self.config.depth_mode);
+                push_handle_tri(&mut out, tip, c2, c3, c, self.config.depth_mode);
+                push_handle_tri(&mut out, tip, c3, c0, c, self.config.depth_mode);
             }
         }
 
@@ -4012,7 +4081,7 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                if pv.translate_plane_show_occluded {
+                if pv.occlusion.translate_plane_fill {
                     self.push_tri(
                         &mut out,
                         quad[0],
@@ -4122,38 +4191,46 @@ impl Gizmo {
         )
         .unwrap_or(radius_world * 0.04);
 
-        let mut push_ring_band =
-            |u: Vec3, v: Vec3, radius_world: f32, color: Color, depth: DepthMode| {
-                let half = (thickness_world * 0.55)
-                    .clamp(radius_world * 0.010, radius_world * 0.075)
-                    .max(1e-6);
-                let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
-                let outer_r = radius_world + half;
+        let mut push_ring_band = |u: Vec3,
+                                  v: Vec3,
+                                  radius_world: f32,
+                                  color: Color,
+                                  depth: DepthMode,
+                                  allow_ghost: bool| {
+            let half = (thickness_world * 0.55)
+                .clamp(radius_world * 0.010, radius_world * 0.075)
+                .max(1e-6);
+            let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
+            let outer_r = radius_world + half;
 
-                let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
-                let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
+            let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
+            let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
 
-                let point = |theta: f32, r: f32| -> Vec3 {
-                    origin + (u * theta.cos() + v * theta.sin()) * r
-                };
+            let point =
+                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
 
-                let step = std::f32::consts::TAU / (segments as f32);
-                let mut prev_outer = point(0.0, outer_r);
-                for i in 0..segments {
-                    let t0 = step * (i as f32);
-                    let t1 = step * ((i + 1) as f32);
-                    let o0 = point(t0, outer_r);
-                    let i0 = point(t0, inner_r);
-                    let o1 = point(t1, outer_r);
-                    let i1 = point(t1, inner_r);
+            let step = std::f32::consts::TAU / (segments as f32);
+            let mut prev_outer = point(0.0, outer_r);
+            for i in 0..segments {
+                let t0 = step * (i as f32);
+                let t1 = step * ((i + 1) as f32);
+                let o0 = point(t0, outer_r);
+                let i0 = point(t0, inner_r);
+                let o1 = point(t1, outer_r);
+                let i1 = point(t1, inner_r);
 
+                if allow_ghost {
                     self.push_tri(&mut out.triangles, o0, i0, i1, fill, depth);
                     self.push_tri(&mut out.triangles, o0, i1, o1, fill, depth);
-
                     self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
-                    prev_outer = o1;
+                } else {
+                    self.push_tri_no_ghost(&mut out.triangles, o0, i0, i1, fill, depth);
+                    self.push_tri_no_ghost(&mut out.triangles, o0, i1, o1, fill, depth);
+                    self.push_line_no_ghost(&mut out.lines, prev_outer, o1, edge, depth);
                 }
-            };
+                prev_outer = o1;
+            }
+        };
 
         if include_axis {
             for &(((axis_dir, color), handle), axis_index) in &[
@@ -4181,7 +4258,14 @@ impl Gizmo {
                 };
                 let c = mix_alpha(c, alpha);
 
-                push_ring_band(u, v, radius_world, c, self.config.depth_mode);
+                push_ring_band(
+                    u,
+                    v,
+                    radius_world,
+                    c,
+                    self.config.depth_mode,
+                    pv.occlusion.rotate_axis_rings,
+                );
             }
         }
 
@@ -4206,7 +4290,7 @@ impl Gizmo {
                         base
                     };
 
-                    push_ring_band(u, v, r, c, DepthMode::Always);
+                    push_ring_band(u, v, r, c, DepthMode::Always, pv.occlusion.rotate_view_ring);
                 }
             }
         }
@@ -4232,7 +4316,14 @@ impl Gizmo {
                     } else {
                         base
                     };
-                    push_ring_band(u, v, r, c, DepthMode::Always);
+                    push_ring_band(
+                        u,
+                        v,
+                        r,
+                        c,
+                        DepthMode::Always,
+                        pv.occlusion.rotate_arcball_ring,
+                    );
                 }
             }
         }
@@ -4767,7 +4858,11 @@ impl Gizmo {
                 let c = mix_alpha(c, alpha);
 
                 let end = origin + axis_dir * length_world;
-                self.push_line(&mut out, origin, end, c, self.config.depth_mode);
+                if pv.occlusion.handles {
+                    self.push_line(&mut out, origin, end, c, self.config.depth_mode);
+                } else {
+                    self.push_line_no_ghost(&mut out, origin, end, c, self.config.depth_mode);
+                }
 
                 // End box, screen-facing.
                 let half = length_world * pv.scale_axis_end_box_half_fraction.max(0.0);
@@ -4776,7 +4871,11 @@ impl Gizmo {
                 let p2 = end + (u + v) * half;
                 let p3 = end + (-u + v) * half;
                 for (a, b) in [(p0, p1), (p1, p2), (p2, p3), (p3, p0)] {
-                    self.push_line(&mut out, a, b, c, self.config.depth_mode);
+                    if pv.occlusion.handles {
+                        self.push_line(&mut out, a, b, c, self.config.depth_mode);
+                    } else {
+                        self.push_line_no_ghost(&mut out, a, b, c, self.config.depth_mode);
+                    }
                 }
             }
         }
@@ -4931,8 +5030,13 @@ impl Gizmo {
                 let p1 = end + (u - v) * half;
                 let p2 = end + (u + v) * half;
                 let p3 = end + (-u + v) * half;
-                self.push_tri(&mut out, p0, p1, p2, fill, self.config.depth_mode);
-                self.push_tri(&mut out, p0, p2, p3, fill, self.config.depth_mode);
+                if pv.occlusion.handles {
+                    self.push_tri(&mut out, p0, p1, p2, fill, self.config.depth_mode);
+                    self.push_tri(&mut out, p0, p2, p3, fill, self.config.depth_mode);
+                } else {
+                    self.push_tri_no_ghost(&mut out, p0, p1, p2, fill, self.config.depth_mode);
+                    self.push_tri_no_ghost(&mut out, p0, p2, p3, fill, self.config.depth_mode);
+                }
             }
         }
 
@@ -4986,7 +5090,7 @@ impl Gizmo {
                     continue;
                 }
                 let fill = mix_alpha(fill, alpha);
-                if pv.scale_plane_show_occluded {
+                if pv.occlusion.scale_plane_fill {
                     self.push_tri(
                         &mut out,
                         quad[0],
@@ -6680,7 +6784,7 @@ mod tests {
         gizmo.config.operation_mask = Some(GizmoOps::translate_plane());
 
         let mut pv = GizmoPartVisuals::classic();
-        pv.translate_plane_show_occluded = false;
+        pv.occlusion.translate_plane_fill = false;
         gizmo.set_part_visuals(pv);
 
         let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
@@ -6698,6 +6802,94 @@ mod tests {
         assert!(
             draw.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
             "expected translate plane fill to be able to suppress occluded ghost pass"
+        );
+    }
+
+    #[test]
+    fn rotate_axis_ring_can_disable_occluded_ghost_pass() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        gizmo.config.depth_mode = DepthMode::Test;
+        gizmo.config.show_occluded = true;
+        gizmo.config.show_view_axis_ring = false;
+        gizmo.config.show_arcball = false;
+        gizmo.config.operation_mask = Some(GizmoOps::rotate_axis());
+
+        let mut pv = GizmoPartVisuals::classic();
+        pv.occlusion.rotate_axis_rings = false;
+        gizmo.set_part_visuals(pv);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let target = GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: None,
+        };
+        let draw = gizmo.draw(view_proj, vp, target.id, &[target]);
+        assert!(
+            draw.triangles.iter().any(|t| t.depth == DepthMode::Test),
+            "expected rotate axis rings to emit depth-tested triangles"
+        );
+        assert!(
+            draw.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
+            "expected rotate axis rings to be able to suppress occluded ghost pass"
+        );
+        assert!(
+            draw.lines.iter().all(|l| l.depth != DepthMode::Ghost),
+            "expected rotate axis ring edge strokes to be able to suppress occluded ghost pass"
+        );
+    }
+
+    #[test]
+    fn bounds_can_disable_occluded_ghost_pass() {
+        let mut gizmo = base_gizmo(GizmoMode::Scale);
+        gizmo.config.depth_mode = DepthMode::Test;
+        gizmo.config.show_occluded = true;
+
+        let mut pv = GizmoPartVisuals::classic();
+        pv.occlusion.bounds = false;
+        gizmo.set_part_visuals(pv);
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let axes = [Vec3::X, Vec3::Y, Vec3::Z];
+        let size_length_world = test_size_length_world_no_targets(&gizmo, view_proj, vp, origin);
+
+        let target = GizmoTarget3d {
+            id: GizmoTargetId(1),
+            transform: Transform3d::default(),
+            local_bounds: Some(Aabb3 {
+                min: Vec3::splat(-0.5),
+                max: Vec3::splat(0.5),
+            }),
+        };
+
+        let mut out = GizmoDrawList3d::default();
+        gizmo.draw_bounds(
+            &mut out,
+            view_proj,
+            vp,
+            origin,
+            axes,
+            size_length_world,
+            &[target],
+        );
+        assert!(
+            out.lines.iter().any(|l| l.depth == DepthMode::Test),
+            "expected bounds to emit depth-tested lines"
+        );
+        assert!(
+            out.triangles.iter().any(|t| t.depth == DepthMode::Test),
+            "expected bounds handles to emit depth-tested triangles"
+        );
+        assert!(
+            out.lines.iter().all(|l| l.depth != DepthMode::Ghost),
+            "expected bounds to be able to suppress occluded ghost pass for lines"
+        );
+        assert!(
+            out.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
+            "expected bounds to be able to suppress occluded ghost pass for triangles"
         );
     }
 
