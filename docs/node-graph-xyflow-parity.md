@@ -471,9 +471,14 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: store `nodeExtent`
   - fret-node: `NodeGraphInteractionState.node_extent` applied in node drag + node resize
 
-- [ ] **Per-node extent**
+- [~] **Per-node extent**
   - XyFlow: `node.extent` supports `'parent'` or custom extents; also `expandParent`
-  - fret-node: parent/child exists in model, but extent constraints are not fully implemented
+  - fret-node: supports node-local extent rects and group-parent extents (with `expand_parent` escape hatch)
+  - fret-node (now):
+    - model: `Node.extent: Option<NodeExtent>` + `Node.expand_parent: Option<bool>` (`ecosystem/fret-node/src/core/model.rs`)
+    - node drag: `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs` (per-node rect clamp; parent clamp vs expand)
+    - node resize: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` (bound intersection; expand parent on resize)
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 
 ## 4.5 Auto-pan while dragging
 
@@ -693,9 +698,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 7.3 Parent/child coupling (expand parent)
 
-- [ ] **Expand parent while child moves/resizes**
+- [~] **Expand parent while child moves/resizes**
   - XyFlow: `expandParent` / `extent: 'parent'` pipeline in store + resizer
-  - fret-node: model supports parent; policy and UI behavior not implemented
+  - fret-node:
+    - implemented for `Node.parent: GroupId` containers (groups expand to contain moved/resized child when `expand_parent=true`)
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 
 ---
 

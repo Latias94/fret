@@ -111,6 +111,8 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![c_out],

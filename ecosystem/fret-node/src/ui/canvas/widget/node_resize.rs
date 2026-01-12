@@ -1,7 +1,7 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
-use crate::core::CanvasSize;
+use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 
 use super::super::geometry::{node_ports, node_size_default_px};
 use super::super::state::{NodeResizeHandle, ViewSnapshot};
@@ -13,6 +13,70 @@ fn clamp_finite_positive(v: f32, fallback: f32) -> f32 {
     } else {
         fallback.max(0.0)
     }
+}
+
+fn canvas_rect_intersection(a: CanvasRect, b: CanvasRect) -> CanvasRect {
+    let ax0 = a.origin.x;
+    let ay0 = a.origin.y;
+    let ax1 = a.origin.x + a.size.width;
+    let ay1 = a.origin.y + a.size.height;
+
+    let bx0 = b.origin.x;
+    let by0 = b.origin.y;
+    let bx1 = b.origin.x + b.size.width;
+    let by1 = b.origin.y + b.size.height;
+
+    let x0 = ax0.max(bx0);
+    let y0 = ay0.max(by0);
+    let x1 = ax1.min(bx1);
+    let y1 = ay1.min(by1);
+
+    CanvasRect {
+        origin: crate::core::CanvasPoint { x: x0, y: y0 },
+        size: CanvasSize {
+            width: (x1 - x0).max(0.0),
+            height: (y1 - y0).max(0.0),
+        },
+    }
+}
+
+fn canvas_rect_union(a: CanvasRect, b: CanvasRect) -> CanvasRect {
+    let ax0 = a.origin.x;
+    let ay0 = a.origin.y;
+    let ax1 = a.origin.x + a.size.width;
+    let ay1 = a.origin.y + a.size.height;
+
+    let bx0 = b.origin.x;
+    let by0 = b.origin.y;
+    let bx1 = b.origin.x + b.size.width;
+    let by1 = b.origin.y + b.size.height;
+
+    let x0 = ax0.min(bx0);
+    let y0 = ay0.min(by0);
+    let x1 = ax1.max(bx1);
+    let y1 = ay1.max(by1);
+
+    CanvasRect {
+        origin: crate::core::CanvasPoint { x: x0, y: y0 },
+        size: CanvasSize {
+            width: (x1 - x0).max(0.0),
+            height: (y1 - y0).max(0.0),
+        },
+    }
+}
+
+fn normalize_canvas_rect(mut rect: CanvasRect) -> CanvasRect {
+    if rect.size.width.is_finite() {
+        rect.size.width = rect.size.width.max(0.0);
+    } else {
+        rect.size.width = 0.0;
+    }
+    if rect.size.height.is_finite() {
+        rect.size.height = rect.size.height.max(0.0);
+    } else {
+        rect.size.height = 0.0;
+    }
+    rect
 }
 
 fn resolve_min_size_px<H: UiHost>(
@@ -248,47 +312,41 @@ pub(super) fn handle_node_resize_move<H: UiHost>(
         .graph
         .read_ref(cx.app, |g| {
             let mut bound = snapshot.interaction.node_extent;
-            if let Some(node) = g.nodes.get(&resize.node)
+            let Some(node) = g.nodes.get(&resize.node) else {
+                return bound;
+            };
+
+            if let Some(NodeExtent::Rect { rect }) = node.extent {
+                bound = Some(match bound {
+                    Some(b) => canvas_rect_intersection(b, rect),
+                    None => rect,
+                });
+            }
+
+            let expand_parent = node.expand_parent.unwrap_or(false);
+            if !expand_parent
                 && let Some(parent) = node.parent
                 && let Some(group) = g.groups.get(&parent)
             {
-                // Prefer the tighter bound (group bounds).
+                // Groups act as parent containers; by default child nodes are constrained within.
+                // This matches XyFlow's `extent: 'parent'` behavior, with the escape hatch
+                // `expand_parent=true` to avoid clamping and expand the parent instead.
                 let group_rect = group.rect;
                 bound = Some(match bound {
-                    Some(extent) => crate::core::CanvasRect {
-                        origin: crate::core::CanvasPoint {
-                            x: extent.origin.x.max(group_rect.origin.x),
-                            y: extent.origin.y.max(group_rect.origin.y),
-                        },
-                        size: crate::core::CanvasSize {
-                            width: (extent.origin.x + extent.size.width)
-                                .min(group_rect.origin.x + group_rect.size.width)
-                                - extent.origin.x.max(group_rect.origin.x),
-                            height: (extent.origin.y + extent.size.height)
-                                .min(group_rect.origin.y + group_rect.size.height)
-                                - extent.origin.y.max(group_rect.origin.y),
-                        },
-                    },
+                    Some(b) => canvas_rect_intersection(b, group_rect),
                     None => group_rect,
                 });
             }
+
+            if node.extent == Some(NodeExtent::Parent) && !expand_parent && node.parent.is_none() {
+                // No parent to clamp to.
+            }
+
             bound
         })
         .ok()
         .flatten()
-        .map(|mut extent| {
-            if extent.size.width.is_finite() {
-                extent.size.width = extent.size.width.max(0.0);
-            } else {
-                extent.size.width = 0.0;
-            }
-            if extent.size.height.is_finite() {
-                extent.size.height = extent.size.height.max(0.0);
-            } else {
-                extent.size.height = 0.0;
-            }
-            extent
-        });
+        .map(normalize_canvas_rect);
 
     let (new_pos, new_size_px) = apply_resize_handle(
         resize.handle,
@@ -312,6 +370,22 @@ pub(super) fn handle_node_resize_move<H: UiHost>(
         };
         node.pos = new_pos;
         node.size = Some(new_size_px);
+
+        let expand_parent = node.expand_parent.unwrap_or(false);
+        if expand_parent
+            && let Some(parent) = node.parent
+            && let Some(group) = g.groups.get_mut(&parent)
+        {
+            let z = zoom.max(1.0e-6);
+            let child_rect = CanvasRect {
+                origin: new_pos,
+                size: CanvasSize {
+                    width: (new_size_px.width / z).max(0.0),
+                    height: (new_size_px.height / z).max(0.0),
+                },
+            };
+            group.rect = canvas_rect_union(group.rect, child_rect);
+        }
     });
 
     // Invalidate derived geometry caches that depend on node bounds.

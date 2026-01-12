@@ -18,6 +18,8 @@ fn make_node(kind: &str) -> Node {
         connectable: None,
         deletable: None,
         parent: None,
+        extent: None,
+        expand_parent: None,
         size: None,
         collapsed: false,
         ports: Vec::new(),

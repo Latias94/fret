@@ -10,7 +10,11 @@ use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
 use super::super::super::state::{EdgeDrag, WireDragKind};
-use super::super::{NodeGraphCanvas, edge_drag, left_click, marquee, pending_drag, pointer_up};
+use super::super::super::state::{NodeDrag, NodeResize, NodeResizeHandle};
+use super::super::{
+    NodeGraphCanvas, edge_drag, left_click, marquee, node_drag, node_resize, pending_drag,
+    pointer_up,
+};
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
 use fret_ui::retained_bridge::Widget as _;
 
@@ -31,6 +35,8 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
                 height: 80.0,
@@ -69,6 +75,8 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
                 height: 80.0,
@@ -108,6 +116,363 @@ fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
     );
 
     (graph, edge, out, inn)
+}
+
+#[test]
+fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: crate::core::CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let node_id = NodeId::new();
+    graph_value.nodes.insert(
+        node_id,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 10.0, y: 10.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: Some(group_id),
+            extent: None,
+            expand_parent: Some(false),
+            size: Some(CanvasSize {
+                width: 80.0,
+                height: 40.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: node_id,
+        node_ids: vec![node_id],
+        nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    // Try moving the node to x=80 (right edge would be 160), should clamp to max_x=20.
+    assert!(node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(10.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos = graph
+        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos.x, 20.0);
+
+    let group_rect = graph
+        .read_ref(&mut host, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(group_rect.size.width, 100.0);
+}
+
+#[test]
+fn child_node_drag_expands_group_when_expand_parent_is_true() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: crate::core::CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let node_id = NodeId::new();
+    graph_value.nodes.insert(
+        node_id,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 10.0, y: 10.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: Some(group_id),
+            extent: None,
+            expand_parent: Some(true),
+            size: Some(CanvasSize {
+                width: 80.0,
+                height: 40.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: node_id,
+        node_ids: vec![node_id],
+        nodes: vec![(node_id, CanvasPoint { x: 10.0, y: 10.0 })],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    // Move the node to x=80 (right edge would be 160): group should expand to include it.
+    assert!(node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(10.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos = graph
+        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos.x, 80.0);
+
+    let group_rect = graph
+        .read_ref(&mut host, |g| g.groups.get(&group_id).map(|gr| gr.rect))
+        .unwrap()
+        .unwrap();
+    assert_eq!(group_rect.size.width, 160.0);
+}
+
+#[test]
+fn node_drag_respects_per_node_extent_rect() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let node_id = NodeId::new();
+    graph_value.nodes.insert(
+        node_id,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: Some(crate::core::NodeExtent::Rect {
+                rect: crate::core::CanvasRect {
+                    origin: CanvasPoint { x: 0.0, y: 0.0 },
+                    size: CanvasSize {
+                        width: 100.0,
+                        height: 100.0,
+                    },
+                },
+            }),
+            expand_parent: None,
+            size: Some(CanvasSize {
+                width: 80.0,
+                height: 40.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_drag = Some(NodeDrag {
+        primary: node_id,
+        node_ids: vec![node_id],
+        nodes: vec![(node_id, CanvasPoint { x: 0.0, y: 0.0 })],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    // Attempt to move to x=80 (right edge would be 160); extent allows max_x=20.
+    assert!(node_drag::handle_node_drag_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let node_pos = graph
+        .read_ref(&mut host, |g| g.nodes.get(&node_id).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    assert_eq!(node_pos.x, 20.0);
+}
+
+#[test]
+fn node_resize_expands_group_when_expand_parent_is_true() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: crate::core::CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let node_id = NodeId::new();
+    graph_value.nodes.insert(
+        node_id,
+        Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 10.0, y: 10.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: Some(group_id),
+            extent: None,
+            expand_parent: Some(true),
+            size: Some(CanvasSize {
+                width: 80.0,
+                height: 40.0,
+            }),
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.node_resize = Some(NodeResize {
+        node: node_id,
+        handle: NodeResizeHandle::Right,
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+        start_node_pos: CanvasPoint { x: 10.0, y: 10.0 },
+        start_size: CanvasSize {
+            width: 80.0,
+            height: 40.0,
+        },
+        start_size_opt: Some(CanvasSize {
+            width: 80.0,
+            height: 40.0,
+        }),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut cx = event_cx(&mut host, &mut services, bounds);
+
+    // Attempt to resize width by +80 (right edge would be at x=170): group should expand.
+    assert!(node_resize::handle_node_resize_move(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(80.0), Px(0.0)),
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    let (group_rect, node) = graph
+        .read_ref(&mut host, |g| {
+            (
+                g.groups.get(&group_id).map(|gr| gr.rect),
+                g.nodes.get(&node_id).cloned(),
+            )
+        })
+        .unwrap();
+
+    let group_rect = group_rect.unwrap();
+    let node = node.unwrap();
+
+    let z = snapshot.zoom.max(1.0e-6);
+    let size_px = node.size.unwrap();
+    let node_w_canvas = size_px.width / z;
+    let right = node.pos.x + node_w_canvas;
+    let group_right = group_rect.origin.x + group_rect.size.width;
+
+    assert!(group_rect.size.width > 100.0, "group should expand");
+    assert!(
+        group_right + 1.0e-3 >= right,
+        "group must contain resized node (group_right={group_right}, node_right={right})"
+    );
 }
 
 #[test]
@@ -1495,6 +1860,8 @@ fn connectable_false_prevents_connecting_to_target_port() {
             connectable: None,
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
                 height: 80.0,
@@ -1533,6 +1900,8 @@ fn connectable_false_prevents_connecting_to_target_port() {
             connectable: Some(false),
             deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: Some(CanvasSize {
                 width: 220.0,
                 height: 80.0,

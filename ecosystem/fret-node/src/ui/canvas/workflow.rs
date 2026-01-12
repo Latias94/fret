@@ -223,6 +223,8 @@ mod tests {
                 connectable: None,
                 deletable: None,
                 parent: None,
+                extent: None,
+                expand_parent: None,
                 size: None,
                 collapsed: false,
                 ports: vec![src_out],

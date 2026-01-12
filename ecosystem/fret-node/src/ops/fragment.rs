@@ -162,6 +162,8 @@ mod tests {
             connectable: None,
             deletable: None,
             parent,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: ports.to_vec(),

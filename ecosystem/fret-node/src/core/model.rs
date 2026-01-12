@@ -132,6 +132,19 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<GroupId>,
 
+    /// Optional per-node movement/resize extent override.
+    ///
+    /// This mirrors XyFlow's `node.extent` concept. It is an editor-structure constraint (UI-facing),
+    /// not a semantic graph rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<NodeExtent>,
+
+    /// Whether moving/resizing this node can expand its parent container (if any).
+    ///
+    /// This mirrors XyFlow's `node.expandParent` behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expand_parent: Option<bool>,
+
     /// Optional explicit node size in logical px at zoom=1 (semantic sizing).
     ///
     /// The editor converts this into canvas space by dividing by the current zoom so node content
@@ -154,6 +167,16 @@ pub struct Node {
     /// This must be preserved for unknown node kinds.
     #[serde(default)]
     pub data: Value,
+}
+
+/// Per-node movement/resize extent.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum NodeExtent {
+    /// Constrain to the node's parent container (if any).
+    Parent,
+    /// Constrain to the given rect in canvas space.
+    Rect { rect: CanvasRect },
 }
 
 /// Port direction.

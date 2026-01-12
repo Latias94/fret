@@ -215,6 +215,8 @@ impl InsertNodeTemplate {
                 connectable: None,
                 deletable: None,
                 parent: None,
+                extent: None,
+                expand_parent: None,
                 size: None,
                 collapsed: self.collapsed,
                 ports: Vec::new(),

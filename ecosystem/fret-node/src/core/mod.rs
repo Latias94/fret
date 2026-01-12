@@ -9,8 +9,8 @@ pub use ids::{
 };
 pub use model::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeKind, EdgeReconnectable,
-    EdgeReconnectableEndpoint, Graph, Group, Node, Port, PortCapacity, PortDirection, PortKind,
-    StickyNote, Symbol,
+    EdgeReconnectableEndpoint, Graph, Group, Node, NodeExtent, Port, PortCapacity, PortDirection,
+    PortKind, StickyNote, Symbol,
 };
 pub use validate::{GraphValidationError, GraphValidationReport, validate_graph};
 
