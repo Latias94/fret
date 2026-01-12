@@ -6,6 +6,8 @@ pub struct RenderDocCapture {
     api: RenderDog,
     pending: bool,
     capture_dir: PathBuf,
+    autocapture_after_frames: Option<u32>,
+    frame_index: u32,
 }
 
 impl RenderDocCapture {
@@ -18,6 +20,8 @@ impl RenderDocCapture {
     // 2) Enable capture:
     //    - Set `FRET_RENDERDOC=1` to enable the integration.
     //    - Optional: set `FRET_RENDERDOC_AUTOCAPTURE=1` to capture the first rendered frame automatically.
+    //    - Optional: set `FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES=<n>` to capture the Nth rendered frame
+    //      (useful when the first frame is not representative).
     //    - Optional: set `FRET_RENDERDOC_CAPTURE_DIR=<path>` to control where `.rdc` files are written.
     //
     // 3) If capture hotkey doesn't work, prefer Vulkan backend for debugging:
@@ -53,14 +57,22 @@ impl RenderDocCapture {
             );
         }
 
-        let pending = std::env::var_os("FRET_RENDERDOC_AUTOCAPTURE")
-            .filter(|v| !v.is_empty())
-            .is_some();
+        let autocapture_after_frames = std::env::var("FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .filter(|v| *v > 0)
+            .or_else(|| {
+                std::env::var_os("FRET_RENDERDOC_AUTOCAPTURE")
+                    .filter(|v| !v.is_empty())
+                    .map(|_| 1)
+            });
 
         Some(Self {
             api,
-            pending,
+            pending: false,
             capture_dir,
+            autocapture_after_frames,
+            frame_index: 0,
         })
     }
 
@@ -88,6 +100,14 @@ impl RenderDocCapture {
     }
 
     pub fn begin_capture_if_requested(&mut self) -> bool {
+        self.frame_index = self.frame_index.saturating_add(1);
+        if let Some(after) = self.autocapture_after_frames {
+            if self.frame_index >= after {
+                self.autocapture_after_frames = None;
+                self.pending = true;
+            }
+        }
+
         if !std::mem::take(&mut self.pending) {
             return false;
         }

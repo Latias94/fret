@@ -18,6 +18,8 @@ $env:FRET_RENDERDOC=1
 $env:FRET_RENDERDOC_DLL="C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current\\renderdoc.dll"
 # Optional:
 $env:FRET_RENDERDOC_AUTOCAPTURE=1
+# Optional: capture a later, more representative frame (overrides `FRET_RENDERDOC_AUTOCAPTURE`):
+# $env:FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES=60
 # Optional:
 $env:FRET_RENDERDOC_CAPTURE_DIR=".fret\\renderdoc"
 

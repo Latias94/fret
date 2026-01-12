@@ -268,6 +268,70 @@ def summarize_matches(matches):
     }
 
 
+def summarize_action_tree(actions):
+    # Summary over the full action tree, independent of any matching filter.
+    #
+    # This helps diagnose captures where RenderDoc collapses drawcalls into coarse nodes (e.g. only
+    # pass-level markers appear). In that case, `matches_count` may be misleadingly low.
+    total = 0
+    total_children = 0
+    max_depth = 0
+
+    flag_draw = 0
+    flag_dispatch = 0
+    flag_marker_push = 0
+    flag_marker_pop = 0
+
+    def visit(nodes, depth):
+        nonlocal total, total_children, max_depth
+        nonlocal flag_draw, flag_dispatch, flag_marker_push, flag_marker_pop
+
+        if depth > max_depth:
+            max_depth = depth
+
+        for a in nodes:
+            total += 1
+
+            try:
+                flags = int(a.flags)
+            except Exception:
+                flags = 0
+
+            try:
+                if flags & int(rd.ActionFlags.Drawcall):
+                    flag_draw += 1
+                if flags & int(rd.ActionFlags.Dispatch):
+                    flag_dispatch += 1
+                if flags & int(rd.ActionFlags.PushMarker):
+                    flag_marker_push += 1
+                if flags & int(rd.ActionFlags.PopMarker):
+                    flag_marker_pop += 1
+            except Exception:
+                pass
+
+            try:
+                kids = list(a.children or [])
+            except Exception:
+                kids = []
+
+            if kids:
+                total_children += int(len(kids))
+                visit(kids, depth + 1)
+
+    visit(actions, 1)
+    return {
+        "total_actions": int(total),
+        "total_children": int(total_children),
+        "max_depth": int(max_depth),
+        "flags": {
+            "drawcall": int(flag_draw),
+            "dispatch": int(flag_dispatch),
+            "push_marker": int(flag_marker_push),
+            "pop_marker": int(flag_marker_pop),
+        },
+    }
+
+
 def decode_viewport_uniform(data: bytes):
     # Rust: ViewportUniform (repr(C))
     #   viewport_size: [f32; 2]
@@ -1058,6 +1122,7 @@ def main() -> None:
 
             payload = {
                 "capture_path": req["capture_path"],
+                "action_tree": summarize_action_tree(controller.GetRootActions()),
                 "matches": matches,
                 "selection": selection,
                 "summary": summarize_matches(matches),

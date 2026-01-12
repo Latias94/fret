@@ -44,6 +44,9 @@ Then inspect:
 
 Tip: if you only care about `fret-*` passes, search for `"fret"` inside `top_marker_paths` entries.
 
+If `matches_count` is unexpectedly low, also check `result.action_tree.flags.drawcall`: that value counts
+drawcalls across the *entire* action tree and helps diagnose captures that only expose pass-level nodes.
+
 ## What to look for (examples)
 
 ### Clip mask generation (`fret clip mask pass`)
