@@ -57,9 +57,8 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     }
 
     // Use a screen-space threshold, but positions are in canvas space (scaled by `1/zoom`).
-    let z = zoom.max(1.0e-6);
-    let threshold_canvas = 6.0 / z;
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_canvas) {
+    let threshold_screen = 6.0;
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
         return false;
     }
 

@@ -17,7 +17,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
 
     let threshold_screen = snapshot.interaction.connection_drag_threshold;
-    if !exceeds_drag_threshold(drag.start_pos, position, threshold_screen) {
+    if !exceeds_drag_threshold(drag.start_pos, position, threshold_screen, zoom) {
         return false;
     }
 

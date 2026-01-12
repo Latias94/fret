@@ -12,7 +12,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    _zoom: f32,
+    zoom: f32,
 ) -> bool {
     if canvas.interaction.node_drag.is_some() {
         return false;
@@ -22,7 +22,7 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     };
 
     let threshold_screen = snapshot.interaction.node_drag_threshold;
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
         return true;
     }
 

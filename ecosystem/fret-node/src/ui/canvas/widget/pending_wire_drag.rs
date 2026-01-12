@@ -22,7 +22,7 @@ pub(super) fn handle_pending_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
     };
 
     let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, zoom) {
         return true;
     }
 

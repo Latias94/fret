@@ -19,7 +19,7 @@ pub(super) fn handle_pending_edge_insert_drag_move<H: UiHost, M: NodeGraphCanvas
     };
 
     let threshold_screen = snapshot.interaction.connection_drag_threshold.max(0.0);
-    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen, snapshot.zoom) {
         return true;
     }
 

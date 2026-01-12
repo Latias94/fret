@@ -1,3 +1,4 @@
+use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, MouseButton, Point};
 use fret_ui::UiHost;
 
@@ -340,9 +341,10 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
         if pending.select_action != PendingNodeSelectAction::None {
             let dx = position.x.0 - pending.start_pos.x.0;
             let dy = position.y.0 - pending.start_pos.y.0;
-            let click_distance = snapshot.interaction.node_click_distance.max(0.0);
-            let is_click =
-                click_distance == 0.0 || (dx * dx + dy * dy) <= click_distance * click_distance;
+            let click_distance_screen = snapshot.interaction.node_click_distance.max(0.0);
+            let click_distance_canvas = canvas_units_from_screen_px(click_distance_screen, zoom);
+            let is_click = click_distance_screen == 0.0
+                || (dx * dx + dy * dy) <= click_distance_canvas * click_distance_canvas;
 
             if is_click {
                 let node = pending.primary;
