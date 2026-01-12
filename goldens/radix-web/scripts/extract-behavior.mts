@@ -729,7 +729,7 @@ const scenarios: Scenario[] = [
     item: "collapsible-example",
     async run(ctx) {
       await pushStep(ctx, { kind: "load", url: ctx.url })
-      await clickFirst(ctx.page, "button")
+      await clickFirst(ctx.page, '[data-slot="collapsible-trigger"]')
       await sleep(50)
       await pushStep(ctx, { kind: "click", target: "collapsible-trigger" })
     },

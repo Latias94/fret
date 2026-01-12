@@ -4,12 +4,12 @@ use fret_core::{
     Px, Rect, SemanticsRole, Size as CoreSize, UiServices,
 };
 use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, SemanticsProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -322,9 +322,11 @@ fn radix_web_checkbox_toggle_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Checkbox::new(checked.clone())
-                .a11y_label("Checkbox")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Checkbox::new(checked.clone())
+                    .a11y_label("Checkbox")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -344,9 +346,11 @@ fn radix_web_checkbox_toggle_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Checkbox::new(checked.clone())
-                .a11y_label("Checkbox")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Checkbox::new(checked.clone())
+                    .a11y_label("Checkbox")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -396,9 +400,11 @@ fn radix_web_switch_toggle_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Switch::new(checked.clone())
-                .a11y_label("Switch")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Switch::new(checked.clone())
+                    .a11y_label("Switch")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -418,9 +424,11 @@ fn radix_web_switch_toggle_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Switch::new(checked.clone())
-                .a11y_label("Switch")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Switch::new(checked.clone())
+                    .a11y_label("Switch")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -474,10 +482,12 @@ fn radix_web_tabs_click_second_tab_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Tabs::new(selected.clone())
-                .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
-                .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Tabs::new(selected.clone())
+                    .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
+                    .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -497,10 +507,12 @@ fn radix_web_tabs_click_second_tab_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Tabs::new(selected.clone())
-                .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
-                .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Tabs::new(selected.clone())
+                    .item(fret_ui_shadcn::TabsItem::new("tab0", labels[0], Vec::new()))
+                    .item(fret_ui_shadcn::TabsItem::new("tab1", labels[1], Vec::new()))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -556,11 +568,13 @@ fn radix_web_radio_group_click_second_radio_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::RadioGroup::new(selected.clone())
-                .a11y_label("Options")
-                .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
-                .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::RadioGroup::new(selected.clone())
+                    .a11y_label("Options")
+                    .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
+                    .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -585,11 +599,13 @@ fn radix_web_radio_group_click_second_radio_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::RadioGroup::new(selected.clone())
-                .a11y_label("Options")
-                .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
-                .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::RadioGroup::new(selected.clone())
+                    .a11y_label("Options")
+                    .item(fret_ui_shadcn::RadioGroupItem::new("r0", labels[0]))
+                    .item(fret_ui_shadcn::RadioGroupItem::new("r1", labels[1]))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -641,9 +657,11 @@ fn radix_web_toggle_click_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Toggle::new(pressed.clone())
-                .a11y_label("Toggle")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Toggle::new(pressed.clone())
+                    .a11y_label("Toggle")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -668,9 +686,11 @@ fn radix_web_toggle_click_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Toggle::new(pressed.clone())
-                .a11y_label("Toggle")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Toggle::new(pressed.clone())
+                    .a11y_label("Toggle")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -724,16 +744,18 @@ fn radix_web_toggle_group_click_second_item_state_matches_fret() {
         FrameId(1),
         true,
         |cx| {
-            vec![fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
-                .item(
-                    fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
-                        .a11y_label(labels[0]),
-                )
-                .item(
-                    fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
-                        .a11y_label(labels[1]),
-                )
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
+                    .item(
+                        fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
+                            .a11y_label(labels[0]),
+                    )
+                    .item(
+                        fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
+                            .a11y_label(labels[1]),
+                    )
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -758,16 +780,18 @@ fn radix_web_toggle_group_click_second_item_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
-                .item(
-                    fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
-                        .a11y_label(labels[0]),
-                )
-                .item(
-                    fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
-                        .a11y_label(labels[1]),
-                )
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::ToggleGroup::multiple(selected.clone())
+                    .item(
+                        fret_ui_shadcn::ToggleGroupItem::new("bold", vec![cx.text(labels[0])])
+                            .a11y_label(labels[0]),
+                    )
+                    .item(
+                        fret_ui_shadcn::ToggleGroupItem::new("italic", vec![cx.text(labels[1])])
+                            .a11y_label(labels[1]),
+                    )
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -860,9 +884,11 @@ fn radix_web_slider_arrow_right_state_matches_fret() {
         FrameId(2),
         true,
         |cx| {
-            vec![fret_ui_shadcn::Slider::new(values.clone())
-                .a11y_label("Slider")
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Slider::new(values.clone())
+                    .a11y_label("Slider")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -940,11 +966,13 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
             let trigger = fret_ui_shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
                 .a11y_label(label.clone());
             let content = fret_ui_shadcn::AccordionContent::new(vec![cx.text("Content")]);
-            vec![fret_ui_shadcn::Accordion::single(open.clone())
-                .item(fret_ui_shadcn::AccordionItem::new(
-                    "item-0", trigger, content,
-                ))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Accordion::single(open.clone())
+                    .item(fret_ui_shadcn::AccordionItem::new(
+                        "item-0", trigger, content,
+                    ))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -972,11 +1000,13 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
             let trigger = fret_ui_shadcn::AccordionTrigger::new(vec![cx.text(label.clone())])
                 .a11y_label(label.clone());
             let content = fret_ui_shadcn::AccordionContent::new(vec![cx.text("Content")]);
-            vec![fret_ui_shadcn::Accordion::single(open.clone())
-                .item(fret_ui_shadcn::AccordionItem::new(
-                    "item-0", trigger, content,
-                ))
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Accordion::single(open.clone())
+                    .item(fret_ui_shadcn::AccordionItem::new(
+                        "item-0", trigger, content,
+                    ))
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -986,6 +1016,121 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
         .expect("semantics snapshot");
     let trigger = find_semantics(&snap, SemanticsRole::Button, &label);
     assert_eq!(trigger.flags.expanded, expected_expanded);
+}
+
+#[test]
+fn radix_web_collapsible_toggle_state_matches_fret() {
+    let golden = read_timeline("collapsible-example.collapsible.toggle.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "collapsible");
+    assert_eq!(golden.scenario, "toggle");
+    assert!(golden.steps.len() >= 2);
+
+    let step = &golden.steps[1];
+    let Action::Click { target } = &step.action else {
+        panic!("expected click action");
+    };
+    assert_eq!(target, "collapsible-trigger");
+
+    let trigger = find_first(&step.snapshot.dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "collapsible-trigger")
+            && n.attrs.contains_key("aria-expanded")
+    })
+    .expect("web collapsible trigger");
+    let expected_expanded = parse_bool_attr(&trigger.attrs, "aria-expanded");
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let label: Arc<str> = Arc::from("Collapsible");
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![fret_ui_shadcn::Collapsible::new(open.clone())
+                .into_element_with_open_model(
+                    cx,
+                    |cx, open, is_open| {
+                        fret_ui_shadcn::CollapsibleTrigger::new(
+                            open.clone(),
+                            vec![cx.text("Trigger")],
+                        )
+                        .a11y_label(label.clone())
+                        .into_element(cx, is_open)
+                    },
+                    |cx| {
+                        fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
+                            .into_element(cx)
+                    },
+                )]
+        },
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let button = find_semantics(&snap, SemanticsRole::Button, &label);
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(button.bounds),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| {
+            vec![fret_ui_shadcn::Collapsible::new(open.clone())
+                .into_element_with_open_model(
+                    cx,
+                    |cx, open, is_open| {
+                        fret_ui_shadcn::CollapsibleTrigger::new(
+                            open.clone(),
+                            vec![cx.text("Trigger")],
+                        )
+                        .a11y_label(label.clone())
+                        .into_element(cx, is_open)
+                    },
+                    |cx| {
+                        fret_ui_shadcn::CollapsibleContent::new(vec![cx.text("Content")])
+                            .into_element(cx)
+                    },
+                )]
+        },
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let button = find_semantics(&snap, SemanticsRole::Button, &label);
+    assert_eq!(button.flags.expanded, Some(expected_expanded));
 }
 
 #[test]
@@ -1054,14 +1199,16 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
             move |_cx| children,
         );
 
-        vec![fret_ui_shadcn::ScrollArea::new(vec![content])
-            .scroll_handle(handle)
-            .refine_layout(
-                fret_ui_shadcn::prelude::LayoutRefinement::default()
-                    .w_full()
-                    .h_px(fret_ui_shadcn::prelude::MetricRef::Px(Px(200.0))),
-            )
-            .into_element(cx)]
+        vec![
+            fret_ui_shadcn::ScrollArea::new(vec![content])
+                .scroll_handle(handle)
+                .refine_layout(
+                    fret_ui_shadcn::prelude::LayoutRefinement::default()
+                        .w_full()
+                        .h_px(fret_ui_shadcn::prelude::MetricRef::Px(Px(200.0))),
+                )
+                .into_element(cx),
+        ]
     }
 
     render_frame(
