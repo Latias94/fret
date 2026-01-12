@@ -1,8 +1,12 @@
 use fret_app::App;
-use fret_core::{AppWindowId, ImageId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
+use fret_core::{
+    AppWindowId, ImageId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize, TextOverflow,
+    TextWrap,
+};
 use fret_runtime::Model;
+use fret_ui::Theme;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextProps,
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
@@ -182,6 +186,72 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
+#[derive(Default)]
+struct StyleAwareServices;
+
+impl fret_core::TextService for StyleAwareServices {
+    fn prepare(
+        &mut self,
+        text: &str,
+        style: &fret_core::TextStyle,
+        constraints: fret_core::TextConstraints,
+    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let line_height = style
+            .line_height
+            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
+
+        let char_w = (style.size.0 * 0.55).max(1.0);
+        let est_w = Px(char_w * text.chars().count() as f32);
+
+        let max_w = constraints.max_width.unwrap_or(est_w);
+        let (lines, w) = match constraints.wrap {
+            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
+                (lines, Px(est_w.0.min(max_w.0)))
+            }
+            _ => (1, est_w),
+        };
+
+        let h = Px(line_height.0 * lines as f32);
+
+        (
+            fret_core::TextBlobId::default(),
+            fret_core::TextMetrics {
+                size: CoreSize::new(w, h),
+                baseline: Px(h.0 * 0.8),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for StyleAwareServices {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for StyleAwareServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
 fn run_fret_root(
     bounds: Rect,
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
@@ -211,6 +281,41 @@ fn run_fret_root(
     ui.set_root(root);
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot")
+}
+
+fn run_fret_root_with_services(
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        f,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, services, bounds, 1.0);
 
     ui.semantics_snapshot()
         .cloned()
@@ -431,6 +536,140 @@ fn web_vs_fret_layout_label_demo_geometry() {
         "label-demo label h",
         label.bounds.size.height,
         web_label.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_checkbox_with_text_geometry() {
+    let web = read_web_golden("checkbox-with-text");
+    let theme = web_theme(&web);
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
+    })
+    .expect("web checkbox");
+    let web_label = web_find_by_tag_and_text(&theme.root, "label", "Accept terms and conditions")
+        .expect("web label");
+    let web_desc =
+        web_find_by_tag_and_text(&theme.root, "p", "Terms of Service").expect("web desc");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+
+        let checkbox = fret_ui_shadcn::Checkbox::new(model)
+            .a11y_label("Terms")
+            .into_element(cx);
+
+        let label = fret_ui_shadcn::Label::new("Accept terms and conditions").into_element(cx);
+        let label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:checkbox-with-text:label")),
+                ..Default::default()
+            },
+            move |_cx| vec![label],
+        );
+
+        let desc = cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::from("You agree to our Terms of Service and Privacy Policy."),
+            style: None,
+            color: Some(theme.color_required("muted-foreground")),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        });
+        let desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:checkbox-with-text:desc")),
+                ..Default::default()
+            },
+            move |_cx| vec![desc],
+        );
+
+        let content = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(6.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            move |_cx| vec![label, desc],
+        );
+
+        let row = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(8.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            move |_cx| vec![checkbox, content],
+        );
+
+        vec![row]
+    });
+
+    let checkbox = find_semantics(&snap, SemanticsRole::Checkbox, Some("Terms"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret checkbox node");
+    let label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:checkbox-with-text:label"),
+    )
+    .expect("fret label node");
+    let desc = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:checkbox-with-text:desc"),
+    )
+    .expect("fret desc node");
+
+    assert_close_px(
+        "checkbox-with-text checkbox w",
+        checkbox.bounds.size.width,
+        web_checkbox.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "checkbox-with-text checkbox h",
+        checkbox.bounds.size.height,
+        web_checkbox.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "checkbox-with-text label x",
+        label.bounds.origin.x,
+        web_label.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "checkbox-with-text label y",
+        label.bounds.origin.y,
+        web_label.rect.y,
+        1.0,
+    );
+
+    assert_close_px(
+        "checkbox-with-text desc y",
+        desc.bounds.origin.y,
+        web_desc.rect.y,
         1.0,
     );
 }
@@ -2132,4 +2371,289 @@ fn web_vs_fret_layout_card_with_form_width() {
     .expect("fret card root");
 
     assert_close_px("card width", card.bounds.size.width, web_card.rect.w, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_field_input_geometry() {
+    let web = read_web_golden("field-input");
+    let theme = web_theme(&web);
+
+    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_username_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Username").expect("web username label");
+    let web_password_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Password").expect("web password label");
+    let web_username_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input");
+    let web_inputs: Vec<&WebNode> = {
+        let mut out = Vec::new();
+        fn walk<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+            if n.tag == "input" {
+                out.push(n);
+            }
+            for c in &n.children {
+                walk(c, out);
+            }
+        }
+        walk(&theme.root, &mut out);
+        out.sort_by(|a, b| {
+            a.rect
+                .y
+                .partial_cmp(&b.rect.y)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        out
+    };
+    let web_password_input = web_inputs.get(1).copied().unwrap_or(web_username_input);
+    let web_username_desc = web_find_by_tag_and_text(
+        &theme.root,
+        "p",
+        "Choose a unique username for your account.",
+    )
+    .expect("web username desc");
+    let web_password_desc = web_find_by_tag_and_text(&theme.root, "p", "Must be at least 8")
+        .expect("web password desc");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let username: Model<String> = cx.app.models_mut().insert(String::new());
+        let password: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let username_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-input:username:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Username").into_element(cx)],
+        );
+        let username_input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from("Golden:field-input:username:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(username)
+                        .a11y_label("Username")
+                        .placeholder("Max Leiter")
+                        .into_element(cx),
+                ]
+            },
+        );
+        let username_desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-input:username:desc")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::FieldDescription::new(
+                        "Choose a unique username for your account.",
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let username_field = fret_ui_shadcn::Field::new(username_input)
+            .label(username_label)
+            .description(username_desc)
+            .into_element(cx);
+
+        let password_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-input:password:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Password").into_element(cx)],
+        );
+        let password_input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from("Golden:field-input:password:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(password)
+                        .a11y_label("Password")
+                        .placeholder("????????")
+                        .into_element(cx),
+                ]
+            },
+        );
+        let password_desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-input:password:desc")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::FieldDescription::new("Must be at least 8 characters long.")
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        let password_field = fret_ui_shadcn::Field::new(password_input)
+            .label(password_label)
+            .description(password_desc)
+            .description_before_control(true)
+            .into_element(cx);
+
+        let group =
+            fret_ui_shadcn::FieldGroup::new(vec![username_field, password_field]).into_element(cx);
+        let set = fret_ui_shadcn::FieldSet::new(vec![group]).into_element(cx);
+
+        let root = cx.container(
+            ContainerProps {
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &Theme::global(&*cx.app),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![set],
+        );
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-input:root")),
+                ..Default::default()
+            },
+            move |_cx| vec![root],
+        )]
+    });
+
+    let root = find_semantics(&snap, SemanticsRole::Panel, Some("Golden:field-input:root"))
+        .expect("fret root");
+
+    let username_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-input:username:label"),
+    )
+    .expect("fret username label");
+    let username_input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:field-input:username:input"),
+    )
+    .expect("fret username input");
+    let username_desc = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-input:username:desc"),
+    )
+    .expect("fret username desc");
+
+    let password_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-input:password:label"),
+    )
+    .expect("fret password label");
+    let password_input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:field-input:password:input"),
+    )
+    .expect("fret password input");
+    let password_desc = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-input:password:desc"),
+    )
+    .expect("fret password desc");
+
+    assert_close_px(
+        "field-input root width",
+        root.bounds.size.width,
+        web_root.rect.w,
+        1.0,
+    );
+
+    assert_close_px(
+        "field-input username label y",
+        username_label.bounds.origin.y,
+        web_username_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-input username input y",
+        username_input.bounds.origin.y,
+        web_username_input.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-input username desc y",
+        username_desc.bounds.origin.y,
+        web_username_desc.rect.y,
+        1.0,
+    );
+
+    let username_label_to_input_gap = username_input.bounds.origin.y.0
+        - (username_label.bounds.origin.y.0 + username_label.bounds.size.height.0);
+    assert!(
+        (username_label_to_input_gap - 12.0).abs() <= 1.0,
+        "field-input username label->input gap: expected ~12 got={username_label_to_input_gap}"
+    );
+
+    let username_input_to_desc_gap = username_desc.bounds.origin.y.0
+        - (username_input.bounds.origin.y.0 + username_input.bounds.size.height.0);
+    assert!(
+        (username_input_to_desc_gap - 12.0).abs() <= 1.0,
+        "field-input username input->desc gap: expected ~12 got={username_input_to_desc_gap}"
+    );
+
+    assert_close_px(
+        "field-input password label y",
+        password_label.bounds.origin.y,
+        web_password_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-input password desc y",
+        password_desc.bounds.origin.y,
+        web_password_desc.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-input password input y",
+        password_input.bounds.origin.y,
+        web_password_input.rect.y,
+        1.0,
+    );
+
+    let password_label_to_desc_gap = password_desc.bounds.origin.y.0
+        - (password_label.bounds.origin.y.0 + password_label.bounds.size.height.0);
+    assert!(
+        (password_label_to_desc_gap - 8.0).abs() <= 1.0,
+        "field-input password label->desc gap: expected ~8 got={password_label_to_desc_gap}"
+    );
+
+    let password_desc_to_input_gap = password_input.bounds.origin.y.0
+        - (password_desc.bounds.origin.y.0 + password_desc.bounds.size.height.0);
+    assert!(
+        (password_desc_to_input_gap - 12.0).abs() <= 1.0,
+        "field-input password desc->input gap: expected ~12 got={password_desc_to_input_gap}"
+    );
+
+    let field_to_field_gap = password_label.bounds.origin.y.0
+        - (username_desc.bounds.origin.y.0 + username_desc.bounds.size.height.0);
+    assert!(
+        (field_to_field_gap - 28.0).abs() <= 1.0,
+        "field-input field->field gap: expected ~28 got={field_to_field_gap}"
+    );
 }
