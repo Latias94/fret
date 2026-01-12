@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use fret_core::{Point, Px};
+use fret_core::{Point, Px, Rect};
 
 use crate::core::{EdgeId, Graph, PortId};
 
@@ -185,6 +185,24 @@ impl CanvasSpatialIndex {
             }
         }
     }
+
+    pub(crate) fn query_edges_in_rect(&self, rect: Rect, out: &mut Vec<EdgeId>) {
+        out.clear();
+        let min_x = rect.origin.x.0.min(rect.origin.x.0 + rect.size.width.0);
+        let min_y = rect.origin.y.0.min(rect.origin.y.0 + rect.size.height.0);
+        let max_x = rect.origin.x.0.max(rect.origin.x.0 + rect.size.width.0);
+        let max_y = rect.origin.y.0.max(rect.origin.y.0 + rect.size.height.0);
+        let (x0, x1, y0, y1) = cell_range_for_aabb(min_x, min_y, max_x, max_y, self.cell_size);
+        for y in y0..=y1 {
+            for x in x0..=x1 {
+                if let Some(ids) = self.edges.get(&cell_key(Cell { x, y })) {
+                    out.extend_from_slice(ids);
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+    }
 }
 
 impl Default for CanvasSpatialIndex {
@@ -198,8 +216,8 @@ mod tests {
     use fret_core::{Point, Px, Rect, Size};
 
     use crate::core::{
-        CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection,
-        PortId, PortKey, PortKind,
+        CanvasPoint, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
+        PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
 
     use super::super::geometry::{CanvasGeometry, NodeGeometry, PortHandleGeometry};
@@ -279,5 +297,140 @@ mod tests {
         index.query_ports(query_pos, 1.0, &mut out);
 
         assert!(out.contains(&port));
+    }
+
+    #[test]
+    fn edge_query_in_rect_returns_candidate_edge() {
+        let mut graph = Graph::new(GraphId::new());
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+        let out_port = PortId::new();
+        let in_port = PortId::new();
+        let edge = EdgeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: NodeKindKey::new("test.a"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![out_port],
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind: NodeKindKey::new("test.b"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![in_port],
+                data: serde_json::Value::Null,
+            },
+        );
+
+        graph.ports.insert(
+            out_port,
+            Port {
+                node: a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            in_port,
+            Port {
+                node: b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+
+        graph.edges.insert(
+            edge,
+            crate::core::Edge {
+                kind: EdgeKind::Data,
+                from: out_port,
+                to: in_port,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let mut geom = CanvasGeometry::default();
+        geom.order = vec![a, b];
+        geom.node_rank.insert(a, 0);
+        geom.node_rank.insert(b, 1);
+        geom.nodes.insert(
+            a,
+            NodeGeometry {
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            },
+        );
+        geom.nodes.insert(
+            b,
+            NodeGeometry {
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            },
+        );
+        geom.ports.insert(
+            out_port,
+            PortHandleGeometry {
+                node: a,
+                dir: PortDirection::Out,
+                center: Point::new(Px(0.0), Px(0.0)),
+                bounds: Rect::new(Point::new(Px(-2.0), Px(-2.0)), Size::new(Px(4.0), Px(4.0))),
+            },
+        );
+        geom.ports.insert(
+            in_port,
+            PortHandleGeometry {
+                node: b,
+                dir: PortDirection::In,
+                center: Point::new(Px(1000.0), Px(0.0)),
+                bounds: Rect::new(Point::new(Px(998.0), Px(-2.0)), Size::new(Px(4.0), Px(4.0))),
+            },
+        );
+
+        let index = CanvasSpatialIndex::build(&graph, &geom, 1.0, 0.0);
+
+        let mut out: Vec<EdgeId> = Vec::new();
+        let rect = Rect::new(
+            Point::new(Px(480.0), Px(-10.0)),
+            Size::new(Px(40.0), Px(20.0)),
+        );
+        index.query_edges_in_rect(rect, &mut out);
+
+        assert!(out.contains(&edge));
     }
 }

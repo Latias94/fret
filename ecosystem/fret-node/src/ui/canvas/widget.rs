@@ -7497,7 +7497,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             _ => HashSet::new(),
         };
 
-        let geom = self.canvas_geometry(&*cx.app, &snapshot);
+        let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
         self.update_measured_output_store(snapshot.zoom, &geom);
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
         let render = {
@@ -7507,6 +7507,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 snapshot.selected_groups.iter().copied().collect();
             let this = &*self;
             let geom = geom.clone();
+            let index = index.clone();
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
             let cull = render_cull_rect;
             this.graph
@@ -7514,6 +7515,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let mut out = RenderData::default();
 
                     let geom = geom.as_ref();
+                    let index = index.as_ref();
                     let node_pad = this.style.node_padding;
                     let pin_gap = 8.0;
                     let pin_r = this.style.pin_radius;
@@ -7602,7 +7604,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         out.pins.push((port_id, handle.bounds, color));
                     }
 
-                    for (&edge_id, edge) in &graph.edges {
+                    let mut edge_ids: Vec<EdgeId> = Vec::new();
+                    if let Some(c) = cull {
+                        index.query_edges_in_rect(c, &mut edge_ids);
+                    } else {
+                        edge_ids.extend(graph.edges.keys().copied());
+                    }
+
+                    for edge_id in edge_ids {
+                        let Some(edge) = graph.edges.get(&edge_id) else {
+                            continue;
+                        };
                         if this
                             .interaction
                             .wire_drag
