@@ -829,6 +829,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
     - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
     - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - derived internals conformance (semantic zoom + pan-only invalidation): `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
     - connect/reconnect determinism (forced target + conversion workflows): `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
     - hit-testing conformance (Strict vs Loose): `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
     - portal conformance (input-transparent overlay root): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_conformance.rs`

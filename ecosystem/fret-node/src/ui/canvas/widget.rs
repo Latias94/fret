@@ -8742,6 +8742,7 @@ mod tests {
     mod connection_mode_conformance;
     mod hit_testing_conformance;
     mod interaction_conformance;
+    mod internals_conformance;
     mod perf_cache;
     mod portal_conformance;
     mod portal_keyboard_conformance;
