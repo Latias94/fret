@@ -293,6 +293,7 @@ pub struct AxisPointerSpec {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
     pub pointer_type: AxisPointerType,
+    pub label: AxisPointerLabelSpec,
     /// When true, snapping is enabled:
     /// - `trigger=Item`: the crosshair snaps to the nearest hit point.
     /// - `trigger=Axis`: the crosshair aligns its axis coordinate to a nearest sample on the
@@ -328,12 +329,19 @@ pub enum AxisPointerType {
     Shadow,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AxisPointerLabelSpec {
+    pub show: bool,
+}
+
 impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
             trigger: AxisPointerTrigger::Axis,
             pointer_type: AxisPointerType::Line,
+            label: AxisPointerLabelSpec { show: false },
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,

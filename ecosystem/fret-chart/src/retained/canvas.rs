@@ -4112,6 +4112,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .axis_pointer
                 .map(|p| p.pointer_type)
                 .unwrap_or_default();
+            let axis_pointer_label_enabled = self
+                .engine
+                .model()
+                .axis_pointer
+                .is_some_and(|p| p.label.show);
 
             let plot = self.last_layout.plot;
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
@@ -4176,6 +4181,106 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     border_color: Color::TRANSPARENT,
                     corner_radii: Corners::all(Px(0.0)),
                 });
+            }
+
+            if matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_label_enabled
+            {
+                let band = match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                        delinea::AxisKind::X => self
+                            .last_layout
+                            .x_axes
+                            .iter()
+                            .find(|b| b.axis == axis.axis)
+                            .copied(),
+                        delinea::AxisKind::Y => self
+                            .last_layout
+                            .y_axes
+                            .iter()
+                            .find(|b| b.axis == axis.axis)
+                            .copied(),
+                    },
+                    _ => None,
+                };
+                if let Some(band) = band {
+                    let (axis_id, axis_value) = match &axis_pointer.tooltip {
+                        delinea::TooltipOutput::Axis(axis) => (axis.axis, axis.axis_value),
+                        _ => unreachable!(),
+                    };
+                    let axis_window = self
+                        .engine
+                        .output()
+                        .axis_windows
+                        .get(&axis_id)
+                        .copied()
+                        .unwrap_or_default();
+                    let label_text = delinea::engine::axis::format_value_for(
+                        self.engine.model(),
+                        axis_id,
+                        axis_window,
+                        axis_value,
+                    );
+
+                    let text_style = TextStyle {
+                        size: Px(11.0),
+                        weight: FontWeight::MEDIUM,
+                        ..TextStyle::default()
+                    };
+                    let constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor,
+                    };
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare(&label_text, &text_style, constraints);
+                    self.tooltip_text.push(blob);
+
+                    let pad_x = 6.0f32;
+                    let pad_y = 3.0f32;
+                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                    let (mut box_x, mut box_y) = match &axis_pointer.tooltip {
+                        delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                            delinea::AxisKind::X => (
+                                x - 0.5 * w,
+                                band.rect.origin.y.0 + 0.5 * (band.rect.size.height.0 - h),
+                            ),
+                            delinea::AxisKind::Y => (
+                                band.rect.origin.x.0 + 0.5 * (band.rect.size.width.0 - w),
+                                y - 0.5 * h,
+                            ),
+                        },
+                        _ => unreachable!(),
+                    };
+
+                    let bx0 = band.rect.origin.x.0;
+                    let by0 = band.rect.origin.y.0;
+                    let bx1 = bx0 + band.rect.size.width.0;
+                    let by1 = by0 + band.rect.size.height.0;
+                    box_x = box_x.clamp(bx0, (bx1 - w).max(bx0));
+                    box_y = box_y.clamp(by0, (by1 - h).max(by0));
+
+                    let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_020));
+                    cx.scene.push(SceneOp::Quad {
+                        order: label_order,
+                        rect: Rect::new(Point::new(Px(box_x), Px(box_y)), Size::new(Px(w), Px(h))),
+                        background: self.style.tooltip_background,
+                        border: Edges::all(self.style.tooltip_border_width),
+                        border_color: self.style.tooltip_border_color,
+                        corner_radii: Corners::all(Px(4.0)),
+                    });
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(label_order.0.saturating_add(1)),
+                        origin: Point::new(Px(box_x + pad_x), Px(box_y + pad_y)),
+                        text: blob,
+                        color: self.style.tooltip_text_color,
+                    });
+                }
             }
 
             if !shadow {

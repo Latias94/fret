@@ -266,6 +266,7 @@ impl ChartModel {
                 enabled: p.enabled,
                 trigger: p.trigger,
                 pointer_type: p.pointer_type,
+                label: AxisPointerLabelModel { show: p.label.show },
                 snap: p.snap,
                 trigger_distance_px: p.trigger_distance_px,
                 throttle_px: p.throttle_px,
@@ -685,9 +686,15 @@ pub struct AxisPointerModel {
     pub enabled: bool,
     pub trigger: AxisPointerTrigger,
     pub pointer_type: crate::spec::AxisPointerType,
+    pub label: AxisPointerLabelModel,
     pub snap: bool,
     pub trigger_distance_px: f32,
     pub throttle_px: f32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct AxisPointerLabelModel {
+    pub show: bool,
 }
 
 #[derive(Debug, Clone)]
