@@ -428,6 +428,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::ViewportInput(event) => {
                     self.driver.viewport_input(&mut self.app, event);
                 }
+                Effect::ViewportInputLegacy(event) => {
+                    self.driver.viewport_input_legacy(&mut self.app, event);
+                }
                 Effect::Dock(op) => {
                     self.driver.dock_op(&mut self.app, op);
                 }

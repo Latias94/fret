@@ -9,7 +9,10 @@
 mod gizmo;
 mod grid;
 mod math;
+mod picking;
+mod style;
 mod view_gizmo;
+mod viewport_input;
 
 pub use gizmo::{
     Aabb3, DepthMode, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoHandedness, GizmoInput, GizmoMode,
@@ -22,7 +25,15 @@ pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,
 };
+pub use picking::{
+    PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d, distance_point_to_segment_px,
+    point_in_convex_quad, quad_edge_distance,
+};
+pub use style::{GizmoVisualPreset, GizmoVisuals, ViewGizmoVisualPreset, ViewGizmoVisuals};
 pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,
+};
+pub use viewport_input::{
+    viewport_input_cursor_target_px, viewport_input_cursor_target_px_clamped,
 };

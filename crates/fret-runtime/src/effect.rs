@@ -62,6 +62,7 @@ pub enum Effect {
         fonts: Vec<Vec<u8>>,
     },
     ViewportInput(fret_core::ViewportInputEvent),
+    ViewportInputLegacy(fret_core::ViewportInputEventLegacy),
     Dock(fret_core::DockOp),
     ImeAllow {
         window: AppWindowId,

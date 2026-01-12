@@ -9,13 +9,14 @@ use fret_core::{
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
     GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
-    GizmoTarget3d, GizmoTargetId, Grid3d, HandleId, Transform3d, ViewGizmo, ViewGizmoAnchor,
-    ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate, ViewportRect,
+    GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, Transform3d, ViewGizmo,
+    ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate,
+    ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
 };
 use fret_launch::{
     EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
     WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    record_viewport_overlay_3d,
+    WinitWindowContext, record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
@@ -29,6 +30,7 @@ use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use glam::{Mat4, Quat, Vec2, Vec3};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;
@@ -472,6 +474,35 @@ fn selection_op(modifiers: &fret_core::Modifiers) -> SelectionOp {
     }
 }
 
+fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
+    if modifiers.ctrl || modifiers.meta {
+        0.2
+    } else {
+        1.0
+    }
+}
+
+fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
+    let next = if pixels_per_point.is_finite() {
+        pixels_per_point.clamp(0.1, 16.0)
+    } else {
+        1.0
+    };
+    let prev = if model.pixels_per_point.is_finite() {
+        model.pixels_per_point.clamp(0.1, 16.0)
+    } else {
+        1.0
+    };
+    if (prev - next).abs() <= 1e-3 {
+        return;
+    }
+
+    let ratio = (next / prev).clamp(0.1, 16.0);
+    model.pixels_per_point = next;
+    model.gizmo.config = model.gizmo.config.scale_for_pixels_per_point(ratio);
+    model.view_gizmo.config = model.view_gizmo.config.scale_for_pixels_per_point(ratio);
+}
+
 fn apply_click_selection_op(
     selection: &mut Vec<GizmoTargetId>,
     active_target: &mut GizmoTargetId,
@@ -842,8 +873,11 @@ struct MarqueeSelection {
 struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
+    pixels_per_point: f32,
     gizmo: Gizmo,
     view_gizmo: ViewGizmo,
+    gizmo_visual_preset_index: usize,
+    view_gizmo_visual_preset_index: usize,
     theme_preset_index: usize,
     op_mask_enabled: bool,
     op_mask_preset_index: usize,
@@ -905,6 +939,7 @@ impl Gizmo3dDemoModel {
         out.push_str("  O: toggle depth mode (depth test / on top)\n");
         out.push_str("  D: toggle Universal dolly handle (coarse Universal only)\n");
         out.push_str("  Y: cycle theme (Fret/Godot/HardHacker)\n");
+        out.push_str("  G: cycle gizmo visuals preset (Shift: view gizmo)\n");
         out.push_str("  ; / ': bounds adjust (Shift: bigger step)\n");
         out.push_str("  -/=: gizmo size   ,/.: thickness + pick radius (Shift: bigger step)\n");
         out.push_str("  H: toggle help\n");
@@ -937,6 +972,17 @@ impl Gizmo3dDemoModel {
         out.push_str(&format!(
             "Theme preset: {}\n",
             DEMO_THEME_PRESETS[self.theme_preset_index % DEMO_THEME_PRESETS.len()].0
+        ));
+        out.push_str(&format!(
+            "Gizmo visuals: {}\n",
+            GizmoVisualPreset::ALL[self.gizmo_visual_preset_index % GizmoVisualPreset::ALL.len()]
+                .name()
+        ));
+        out.push_str(&format!(
+            "View gizmo visuals: {}\n",
+            ViewGizmoVisualPreset::ALL
+                [self.view_gizmo_visual_preset_index % ViewGizmoVisualPreset::ALL.len()]
+            .name()
         ));
 
         if self.op_mask_enabled {
@@ -1009,12 +1055,21 @@ impl Default for Gizmo3dDemoModel {
         let mut view_gizmo_cfg = ViewGizmoConfig::default();
         view_gizmo_cfg.depth_range = gizmo_cfg.depth_range;
         view_gizmo_cfg.anchor = ViewGizmoAnchor::TopRight;
+        let gizmo_visual_preset_index = 0;
+        let view_gizmo_visual_preset_index = 0;
+        GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_config(&mut gizmo_cfg);
+        ViewGizmoVisualPreset::ALL[view_gizmo_visual_preset_index]
+            .apply_to_config(&mut view_gizmo_cfg);
+
         let view_gizmo = ViewGizmo::new(view_gizmo_cfg);
         Self {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
+            pixels_per_point: 1.0,
             gizmo: Gizmo::new(gizmo_cfg),
             view_gizmo,
+            gizmo_visual_preset_index,
+            view_gizmo_visual_preset_index,
             theme_preset_index: 0,
             op_mask_enabled: false,
             op_mask_preset_index: 0,
@@ -1035,6 +1090,7 @@ impl Default for Gizmo3dDemoModel {
                 dragging: false,
                 snap: false,
                 cancel: false,
+                precision: 1.0,
             },
             camera: OrbitCamera::default(),
             last_frame_instant: None,
@@ -2280,6 +2336,31 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 app.request_redraw(window);
             }
             Event::KeyDown {
+                key: fret_core::KeyCode::KeyG,
+                modifiers,
+                repeat: false,
+                ..
+            } => {
+                let _ = state.demo.update(app, |m, _cx| {
+                    if m.is_busy() {
+                        return;
+                    }
+
+                    if modifiers.shift {
+                        m.view_gizmo_visual_preset_index = (m.view_gizmo_visual_preset_index + 1)
+                            % ViewGizmoVisualPreset::ALL.len();
+                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
+                            .apply_to_config(&mut m.view_gizmo.config);
+                    } else {
+                        m.gizmo_visual_preset_index =
+                            (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
+                        GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
+                            .apply_to_config(&mut m.gizmo.config);
+                    }
+                });
+                app.request_redraw(window);
+            }
+            Event::KeyDown {
                 key: fret_core::KeyCode::KeyV,
                 repeat: false,
                 ..
@@ -2636,6 +2717,42 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         }
     }
 
+    fn handle_global_changes(
+        &mut self,
+        context: WinitWindowContext<'_, Self::WindowState>,
+        changed: &[TypeId],
+    ) {
+        if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
+            return;
+        }
+
+        let pixels_per_point = context
+            .app
+            .global::<fret_core::WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(context.window))
+            .unwrap_or(1.0);
+
+        let model = context
+            .app
+            .with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
+                svc.per_window.get(&context.window).cloned()
+            });
+        let Some(model) = model else {
+            return;
+        };
+
+        let did_change = model
+            .update(context.app, |m, _cx| {
+                let before = m.pixels_per_point;
+                apply_pixels_per_point(m, pixels_per_point);
+                (m.pixels_per_point - before).abs() > 1e-3
+            })
+            .unwrap_or(false);
+        if did_change {
+            context.app.request_redraw(context.window);
+        }
+    }
+
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
         let model = app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
             svc.per_window.get(&event.window).cloned()
@@ -2645,15 +2762,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         };
 
         let rec_to_record = model.update(app, |m, _cx| {
+            apply_pixels_per_point(m, event.geometry.pixels_per_point);
             if m.viewport_target != event.target {
                 return None;
             }
 
-            // Use UV instead of integer target pixels to avoid cursor quantization.
-            let cursor_px = Vec2::new(
-                event.uv.0 * m.viewport_px.0 as f32,
-                event.uv.1 * m.viewport_px.1 as f32,
-            );
+            let cursor_px = viewport_input_cursor_target_px(&event).unwrap_or_else(|| {
+                // Fallback: use UV instead of integer target pixels to avoid quantization.
+                let (tw, th) = event.geometry.target_px_size;
+                Vec2::new(event.uv.0 * tw as f32, event.uv.1 * th as f32)
+            });
 
             let mut rec_to_record: Option<UndoRecord<ValueTx<Vec<GizmoTarget3d>>>> = None;
 
@@ -2780,6 +2898,17 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ViewportInputKind::Wheel { modifiers, .. } => modifiers.shift,
             };
 
+            let precision = match event.kind {
+                ViewportInputKind::PointerMove { modifiers, .. } => {
+                    precision_multiplier(&modifiers)
+                }
+                ViewportInputKind::PointerDown { modifiers, .. } => {
+                    precision_multiplier(&modifiers)
+                }
+                ViewportInputKind::PointerUp { modifiers, .. } => precision_multiplier(&modifiers),
+                ViewportInputKind::Wheel { modifiers, .. } => precision_multiplier(&modifiers),
+            };
+
             let is_navigating = m.camera.orbiting || m.camera.panning;
             let hovered = !is_navigating;
 
@@ -2831,6 +2960,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     dragging: false,
                     snap,
                     cancel: false,
+                    precision,
                 };
             };
 
@@ -2981,6 +3111,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             dragging: false,
                             snap: modifiers.shift,
                             cancel: false,
+                            precision,
                         };
                         let _ = m.gizmo.update(
                             view_projection,
@@ -3162,6 +3293,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 dragging,
                 snap,
                 cancel: false,
+                precision,
             };
 
             let selected: Vec<GizmoTarget3d> = m

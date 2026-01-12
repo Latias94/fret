@@ -43,7 +43,10 @@ pub use input::{
     ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton, PointerEvent,
     PointerType, keycode_to_ascii_lowercase,
 };
-pub use input::{MouseButtons, ViewportInputEvent, ViewportInputKind};
+pub use input::{
+    MouseButtons, ViewportInputEvent, ViewportInputEventLegacy, ViewportInputGeometry,
+    ViewportInputKind,
+};
 pub use panels::{PanelKey, PanelKind};
 pub use scene::{
     Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,

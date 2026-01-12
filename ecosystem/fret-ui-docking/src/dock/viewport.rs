@@ -24,6 +24,7 @@ pub(super) struct ViewportCaptureState {
 pub(super) fn viewport_input_from_hit(
     window: fret_core::AppWindowId,
     hit: ViewportHit,
+    pixels_per_point: f32,
     position: Point,
     kind: ViewportInputKind,
 ) -> Option<ViewportInputEvent> {
@@ -32,11 +33,20 @@ pub(super) fn viewport_input_from_hit(
         target_px_size: hit.viewport.target_px_size,
         fit: hit.viewport.fit,
     };
+    let mapped = mapping.map();
     let uv = mapping.window_point_to_uv(position)?;
     let target_px = mapping.window_point_to_target_px(position)?;
     Some(ViewportInputEvent {
         window,
         target: hit.viewport.target,
+        geometry: fret_core::ViewportInputGeometry {
+            content_rect_px: hit.content,
+            draw_rect_px: mapped.draw_rect,
+            target_px_size: hit.viewport.target_px_size,
+            fit: hit.viewport.fit,
+            pixels_per_point,
+        },
+        cursor_px: position,
         uv,
         target_px,
         kind,
@@ -46,6 +56,7 @@ pub(super) fn viewport_input_from_hit(
 pub(super) fn viewport_input_from_hit_clamped(
     window: fret_core::AppWindowId,
     hit: ViewportHit,
+    pixels_per_point: f32,
     position: Point,
     kind: ViewportInputKind,
 ) -> ViewportInputEvent {
@@ -54,11 +65,20 @@ pub(super) fn viewport_input_from_hit_clamped(
         target_px_size: hit.viewport.target_px_size,
         fit: hit.viewport.fit,
     };
+    let mapped = mapping.map();
     let uv = mapping.window_point_to_uv_clamped(position);
     let target_px = mapping.window_point_to_target_px_clamped(position);
     ViewportInputEvent {
         window,
         target: hit.viewport.target,
+        geometry: fret_core::ViewportInputGeometry {
+            content_rect_px: hit.content,
+            draw_rect_px: mapped.draw_rect,
+            target_px_size: hit.viewport.target_px_size,
+            fit: hit.viewport.fit,
+            pixels_per_point,
+        },
+        cursor_px: position,
         uv,
         target_px,
         kind,

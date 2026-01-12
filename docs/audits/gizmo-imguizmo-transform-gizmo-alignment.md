@@ -67,9 +67,12 @@ Fret's current contract:
 - Output is **3D world-space line/triangle lists** with a depth policy:
   - `Line3d` / `Triangle3d` with `DepthMode::{Test,Ghost,Always}`
 - Input is a small host-provided state machine:
-  - `GizmoInput { cursor_px, hovered, drag_started, dragging, snap, cancel }`
+  - `GizmoInput { cursor_px, hovered, drag_started, dragging, snap, cancel, precision }`
 - Multi-target support is built-in:
   - `GizmoUpdate` returns `updated_targets: Vec<GizmoTarget3d>` and includes begin/update/commit/cancel phases.
+- DPI / scale-factor handling is host-driven:
+  - `GizmoConfig::scale_for_pixels_per_point(scale_factor)`
+  - `ViewGizmoConfig::scale_for_pixels_per_point(scale_factor)`
 
 ## Alignment legend
 
@@ -98,7 +101,7 @@ Fret's current contract:
 | --- | --- | --- | --- |
 | Draw space | ImGui draw list (2D overlay) | viewport-space vertices (2D overlay) | **world-space 3D geometry** (engine pass) |
 | Depth / occlusion | overlay (no depth test) | overlay (no depth test) | depth-tested optional (`DepthMode`) |
-| Constant pixel size | yes (clip-space sizing knobs) | yes (`scale_factor`, `pixels_per_point`) | yes (`axis_length_world(...)`) |
+| Constant pixel size | yes (clip-space sizing knobs) | yes (`scale_factor`, `pixels_per_point`) | yes (`axis_length_world(...)` + host `scale_for_pixels_per_point`) |
 
 ## Feature alignment matrix (detailed)
 
@@ -155,6 +158,7 @@ Fret's current contract:
 | Feature | ImGuizmo | transform-gizmo | Fret status | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | Toggle snapping during drag | Yes | Yes | **Aligned** | `GizmoInput.snap` gates step snapping. |
+| Precision modifier (fine control) | External (editor convention) | External (editor convention) | **Aligned (Fret enhancement)** | `GizmoInput.precision` scales drag deltas without hard-coded keybindings (host-defined). Demo maps Ctrl/Meta to `0.2` (`apps/fret-examples/src/gizmo3d_demo.rs`). |
 | Translation snap step | Yes | Yes | **Aligned** | `translate_snap_step: Option<f32>`. |
 | Rotation snap step | Yes (degrees) | Yes (radians) | **Aligned** | `rotate_snap_step_radians: Option<f32>`; note unit differences vs ImGuizmo. |
 | Scale snap step | Yes | Yes | **Aligned** | `scale_snap_step: Option<f32>`. |
@@ -233,8 +237,8 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
    - Suggested work: expose all Universal inclusions as explicit toggles (translate depth, axis scale, optional rotate view ring, arcball),
      and add more overlap regression tests (ortho + very wide FOV + tight proximity to the origin).
 3. **Precision controls**
-   - Add a host-facing way to provide "precision modifier" inputs (e.g. Shift/Alt slows movement, Ctrl changes snap step),
-     without hard-binding to a specific input system.
+   - Implemented: `GizmoInput.precision` scales drag deltas without hard-binding to a specific input system.
+   - Remaining: align demo/editor modifier mapping with the host's input conventions and ensure it composes well with snapping + camera navigation.
 4. **Styling API parity**
    - ImGuizmo offers per-part thickness/sizes (translation arrow size, center circle size, ring thickness, etc).
    - transform-gizmo offers a compact visuals struct (stroke width + gizmo size + highlight alpha).

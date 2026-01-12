@@ -232,6 +232,23 @@ impl Default for ViewGizmoConfig {
     }
 }
 
+impl ViewGizmoConfig {
+    /// Scales pixel-based knobs when the host's cursor/viewport units are physical pixels.
+    ///
+    /// Pass the platform scale factor (pixels-per-point / device pixel ratio) so the view gizmo
+    /// remains consistent across DPI settings.
+    pub fn scale_for_pixels_per_point(mut self, pixels_per_point: f32) -> Self {
+        let s = pixels_per_point.clamp(0.1, 16.0);
+        self.margin_px *= s;
+        self.size_px *= s;
+        self.pick_padding_px *= s;
+        self.drag_threshold_px *= s;
+        self.center_button_radius_px *= s;
+        self.orbit_sensitivity_radians_per_px /= s;
+        self
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ViewGizmoInput {
     pub cursor_px: Vec2,

@@ -1,7 +1,7 @@
 use std::{fmt, sync::Arc, time::Duration};
 
 use fret_app::App;
-use fret_core::{Event, Rect, Scene, UiServices, ViewportInputEvent};
+use fret_core::{Event, Rect, Scene, UiServices, ViewportInputEvent, ViewportInputEventLegacy};
 use fret_render::viewport_overlay::ViewportOverlay3dContext;
 use fret_render::{ClearColor, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
@@ -376,6 +376,7 @@ pub struct FnDriverHooks<D, S> {
         ) -> EngineFrameUpdate,
     >,
     pub viewport_input: Option<fn(&mut D, &mut App, ViewportInputEvent)>,
+    pub viewport_input_legacy: Option<fn(&mut D, &mut App, ViewportInputEventLegacy)>,
     pub dock_op: Option<fn(&mut D, &mut App, fret_core::DockOp)>,
     pub handle_command:
         Option<for<'d, 'cx> fn(&'d mut D, WinitCommandContext<'cx, S>, fret_app::CommandId)>,
@@ -467,6 +468,7 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             gpu_frame_prepare: None,
             record_engine_frame: None,
             viewport_input: None,
+            viewport_input_legacy: None,
             dock_op: None,
             handle_command: None,
             handle_global_command: None,
@@ -576,6 +578,8 @@ pub trait WinitAppDriver {
     }
 
     fn viewport_input(&mut self, _app: &mut App, _event: ViewportInputEvent) {}
+
+    fn viewport_input_legacy(&mut self, _app: &mut App, _event: ViewportInputEventLegacy) {}
 
     fn dock_op(&mut self, _app: &mut App, _op: fret_core::DockOp) {}
 
@@ -877,6 +881,21 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
         if let Some(f) = self.hooks.viewport_input {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, event));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, event);
+            }
+        }
+    }
+
+    fn viewport_input_legacy(&mut self, app: &mut App, event: ViewportInputEventLegacy) {
+        if let Some(f) = self.hooks.viewport_input_legacy {
             #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
             {
                 let mut hot = subsecond::HotFn::current(f);
