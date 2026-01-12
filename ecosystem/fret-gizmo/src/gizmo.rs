@@ -4361,6 +4361,7 @@ impl Gizmo {
         size_length_world: f32,
     ) -> GizmoDrawList3d {
         let pv = self.state.part_visuals;
+        let feedback_allow_ghost = pv.occlusion.feedback;
         if self.state.drag_mode != GizmoMode::Rotate {
             return GizmoDrawList3d::default();
         }
@@ -4389,8 +4390,19 @@ impl Gizmo {
             for i in 1..=segments {
                 let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
                 let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
-                self.push_line(&mut out.lines, prev, p, outline, DepthMode::Always);
-                self.push_tri(&mut out.triangles, origin, prev, p, fill, DepthMode::Always);
+                if feedback_allow_ghost {
+                    self.push_line(&mut out.lines, prev, p, outline, DepthMode::Always);
+                } else {
+                    self.push_line_no_ghost(&mut out.lines, prev, p, outline, DepthMode::Always);
+                }
+                self.push_tri_no_ghost(
+                    &mut out.triangles,
+                    origin,
+                    prev,
+                    p,
+                    fill,
+                    DepthMode::Always,
+                );
                 prev = p;
             }
             return out;
@@ -4481,39 +4493,52 @@ impl Gizmo {
                 let o1 = point(t1, outer_r);
                 let i1 = point(t1, inner_r);
 
-                self.push_tri(&mut out.triangles, o0, i0, i1, fill, DepthMode::Always);
-                self.push_tri(&mut out.triangles, o0, i1, o1, fill, DepthMode::Always);
+                self.push_tri_no_ghost(&mut out.triangles, o0, i0, i1, fill, DepthMode::Always);
+                self.push_tri_no_ghost(&mut out.triangles, o0, i1, o1, fill, DepthMode::Always);
 
-                self.push_line(&mut out.lines, prev_outer, o1, edge, DepthMode::Always);
+                if feedback_allow_ghost {
+                    self.push_line(&mut out.lines, prev_outer, o1, edge, DepthMode::Always);
+                } else {
+                    self.push_line_no_ghost(
+                        &mut out.lines,
+                        prev_outer,
+                        o1,
+                        edge,
+                        DepthMode::Always,
+                    );
+                }
                 prev_outer = o1;
             }
 
             let start_dir = (u * start.cos() + v * start.sin()).normalize_or_zero();
             let end_dir = (u * end.cos() + v * end.sin()).normalize_or_zero();
             if start_dir.length_squared() > 0.0 {
-                self.push_line(
-                    &mut out.lines,
-                    origin,
-                    origin + start_dir * radius_world,
-                    mix_alpha(color, 0.35),
-                    DepthMode::Always,
-                );
+                let a = origin;
+                let b = origin + start_dir * radius_world;
+                let c = mix_alpha(color, 0.35);
+                if feedback_allow_ghost {
+                    self.push_line(&mut out.lines, a, b, c, DepthMode::Always);
+                } else {
+                    self.push_line_no_ghost(&mut out.lines, a, b, c, DepthMode::Always);
+                }
             }
             if end_dir.length_squared() > 0.0 {
-                self.push_line(
-                    &mut out.lines,
-                    origin,
-                    origin + end_dir * radius_world,
-                    mix_alpha(color, 0.75),
-                    DepthMode::Always,
-                );
-                self.push_line(
-                    &mut out.lines,
-                    origin + end_dir * inner_r,
-                    origin + end_dir * (outer_r + half * 0.8),
-                    edge,
-                    DepthMode::Always,
-                );
+                let a0 = origin;
+                let b0 = origin + end_dir * radius_world;
+                let c0 = mix_alpha(color, 0.75);
+                if feedback_allow_ghost {
+                    self.push_line(&mut out.lines, a0, b0, c0, DepthMode::Always);
+                } else {
+                    self.push_line_no_ghost(&mut out.lines, a0, b0, c0, DepthMode::Always);
+                }
+
+                let a1 = origin + end_dir * inner_r;
+                let b1 = origin + end_dir * (outer_r + half * 0.8);
+                if feedback_allow_ghost {
+                    self.push_line(&mut out.lines, a1, b1, edge, DepthMode::Always);
+                } else {
+                    self.push_line_no_ghost(&mut out.lines, a1, b1, edge, DepthMode::Always);
+                }
             }
         }
 
@@ -4539,7 +4564,17 @@ impl Gizmo {
                         }
                         let a = origin + dir * (outer_r + half * 0.8);
                         let b = origin + dir * (outer_r + half * 2.2);
-                        self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
+                        if feedback_allow_ghost {
+                            self.push_line(&mut out.lines, a, b, tick_color, DepthMode::Always);
+                        } else {
+                            self.push_line_no_ghost(
+                                &mut out.lines,
+                                a,
+                                b,
+                                tick_color,
+                                DepthMode::Always,
+                            );
+                        }
                     }
                 }
             }
@@ -6877,6 +6912,36 @@ mod tests {
         assert!(
             out.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
             "expected bounds to be able to suppress occluded ghost pass for triangles"
+        );
+    }
+
+    #[test]
+    fn rotate_feedback_never_emits_ghost_triangles_even_when_enabled() {
+        let mut gizmo = base_gizmo(GizmoMode::Rotate);
+        gizmo.config.depth_mode = DepthMode::Test;
+        gizmo.config.show_occluded = true;
+
+        let mut pv = GizmoPartVisuals::classic();
+        pv.occlusion.feedback = true;
+        gizmo.set_part_visuals(pv);
+
+        // Put the gizmo into a "mid-drag rotate" state so feedback draws.
+        gizmo.state.drag_mode = GizmoMode::Rotate;
+        gizmo.state.active = Some(HandleId(1));
+        gizmo.state.drag_has_started = true;
+        gizmo.state.drag_axis_dir = Vec3::X;
+        gizmo.state.drag_basis_u = Vec3::Y;
+        gizmo.state.drag_basis_v = Vec3::Z;
+        gizmo.state.drag_start_angle = 0.0;
+        gizmo.state.drag_total_angle_applied = std::f32::consts::FRAC_PI_2;
+
+        let vp = ViewportRect::new(Vec2::ZERO, Vec2::new(800.0, 600.0));
+        let view_proj = test_view_projection((800.0, 600.0));
+        let origin = Vec3::ZERO;
+        let out = gizmo.draw_rotate_feedback(view_proj, vp, origin, 1.0);
+        assert!(
+            out.triangles.iter().all(|t| t.depth != DepthMode::Ghost),
+            "feedback triangles should remain non-ghost to preserve legibility"
         );
     }
 

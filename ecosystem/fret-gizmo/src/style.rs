@@ -14,6 +14,7 @@ pub struct GizmoOcclusionPolicy {
     pub scale_plane_fill: bool,
     pub bounds: bool,
     pub handles: bool,
+    pub feedback: bool,
 }
 
 impl Default for GizmoOcclusionPolicy {
@@ -32,6 +33,7 @@ impl GizmoOcclusionPolicy {
             scale_plane_fill: true,
             bounds: true,
             handles: true,
+            feedback: false,
         }
     }
 }
