@@ -169,7 +169,7 @@ impl AlertDialog {
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
 
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
-                    let desired_w = last_size.map(|s| s.width).unwrap_or(Px(420.0));
+                    let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
                     let desired_h = last_size.map(|s| s.height).unwrap_or(Px(240.0));
 
                     let content_w = Px(desired_w.0.min(available_w.0).max(0.0));
@@ -336,7 +336,7 @@ impl AlertDialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(420.0)))
+            .max_w(MetricRef::Px(Px(512.0)))
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);

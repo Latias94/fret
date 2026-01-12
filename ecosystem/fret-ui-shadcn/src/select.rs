@@ -1825,6 +1825,7 @@ fn select_impl<H: UiHost>(
             } else {
                 Length::Fill
             };
+            let auto_width_trigger = matches!(content_width, Length::Auto);
             let chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
@@ -1856,13 +1857,17 @@ fn select_impl<H: UiHost>(
                         vec![
                             {
                                 let layout = {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Auto;
-                                    layout.size.min_width = Some(Px(0.0));
-                                    layout.flex.grow = 1.0;
-                                    layout.flex.shrink = 1.0;
-                                    layout.flex.basis = Length::Px(Px(0.0));
-                                    layout
+                                    if auto_width_trigger {
+                                        LayoutStyle::default()
+                                    } else {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Auto;
+                                        layout.size.min_width = Some(Px(0.0));
+                                        layout.flex.grow = 1.0;
+                                        layout.flex.shrink = 1.0;
+                                        layout.flex.basis = Length::Px(Px(0.0));
+                                        layout
+                                    }
                                 };
 
                                 let value_node = cx.container(
@@ -1874,7 +1879,11 @@ fn select_impl<H: UiHost>(
                                         vec![cx.text_props(TextProps {
                                             layout: {
                                                 let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Fill;
+                                                layout.size.width = if auto_width_trigger {
+                                                    Length::Auto
+                                                } else {
+                                                    Length::Fill
+                                                };
                                                 layout
                                             },
                                             text: label,

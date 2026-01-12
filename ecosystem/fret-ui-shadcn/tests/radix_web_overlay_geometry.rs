@@ -81,7 +81,7 @@ fn read_timeline(file_stem: &str) -> TimelineGolden {
     let path = radix_web_path(file_stem);
     let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
         panic!(
-            "missing radix web golden: {}\nerror: {err}\n\nRe-generate it via (PowerShell):\n  pnpm -C repo-ref/ui/apps/v4 build\n  $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json F:/SourceCodes/Rust/fret-worktrees/wt-layout-engine2/goldens/radix-web/scripts/extract-behavior.mts --all --update --baseUrl=http://localhost:4020\n\nDocs:\n  goldens/radix-web/README.md",
+            "missing radix web golden: {}\nerror: {err}\n\nRe-generate it via (PowerShell):\n  pnpm -C repo-ref/ui/apps/v4 build\n  $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020\n  pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/radix-web/scripts/extract-behavior.mts --all --update --baseUrl=http://localhost:4020\n\nDocs:\n  goldens/radix-web/README.md",
             path.display()
         )
     });
@@ -1353,7 +1353,10 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     let fret_left_delta = fret_listbox_rect.x - fret_trigger_rect.x;
     let fret_width_delta = fret_listbox_rect.w - fret_trigger_rect.w;
 
-    if (fret_top_delta - web_top_delta).abs() > 2.5 {
+    if (fret_top_delta - web_top_delta).abs() > 2.5
+        || (fret_left_delta - web_left_delta).abs() > 2.5
+        || (fret_width_delta - web_width_delta).abs() > 3.0
+    {
         eprintln!("-- select mismatch debug");
         eprintln!("web trigger rect:   {:?}", web_trigger_rect);
         eprintln!("web listbox rect:   {:?}", web_listbox_rect);
@@ -1824,32 +1827,82 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
         FrameId(1),
         false,
         |cx| {
-            let trigger = fixed_trigger(
-                cx,
-                "ContextMenu Trigger",
-                web_trigger_rect.x,
-                web_trigger_rect.y,
-                web_trigger_rect.w,
-                web_trigger_rect.h,
-            );
-            let menu = fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
-                cx,
-                |_cx| trigger,
-                |_cx| {
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+            root_layout.position = PositionStyle::Relative;
+
+            let open = open.clone();
+            let trigger_left = web_trigger_rect.x;
+            let trigger_top = web_trigger_rect.y;
+            let trigger_w = web_trigger_rect.w;
+            let trigger_h = web_trigger_rect.h;
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: root_layout,
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                move |cx| {
                     vec![
-                        fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Back"),
-                        ),
-                        fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Forward"),
-                        ),
-                        fret_ui_shadcn::ContextMenuEntry::Item(
-                            fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                        spacer(cx, Length::Fill, Length::Px(Px(trigger_top))),
+                        cx.flex(
+                            FlexProps {
+                                direction: fret_core::Axis::Horizontal,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let open = open.clone();
+                                let trigger = cx.pressable(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(trigger_w));
+                                            layout.size.height = Length::Px(Px(trigger_h));
+                                            layout
+                                        },
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(Arc::from("ContextMenu Trigger")),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx, _st| vec![fixed_size_container(cx, trigger_w, trigger_h)],
+                                );
+
+                                let menu = fret_ui_shadcn::ContextMenu::new(open).into_element(
+                                    cx,
+                                    |_cx| trigger,
+                                    |_cx| {
+                                        vec![
+                                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                                fret_ui_shadcn::ContextMenuItem::new("Back"),
+                                            ),
+                                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                                fret_ui_shadcn::ContextMenuItem::new("Forward"),
+                                            ),
+                                            fret_ui_shadcn::ContextMenuEntry::Item(
+                                                fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                                            ),
+                                        ]
+                                    },
+                                );
+
+                                vec![
+                                    spacer(
+                                        cx,
+                                        Length::Px(Px(trigger_left)),
+                                        Length::Px(Px(trigger_h)),
+                                    ),
+                                    menu,
+                                ]
+                            },
                         ),
                     ]
                 },
-            );
-            vec![menu]
+            )]
         },
     );
 
@@ -1890,32 +1943,84 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
             FrameId(2 + tick),
             request_semantics,
             |cx| {
-                let trigger = fixed_trigger(
-                    cx,
-                    "ContextMenu Trigger",
-                    web_trigger_rect.x,
-                    web_trigger_rect.y,
-                    web_trigger_rect.w,
-                    web_trigger_rect.h,
-                );
-                let menu = fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
-                    cx,
-                    |_cx| trigger,
-                    |_cx| {
+                let mut root_layout = LayoutStyle::default();
+                root_layout.size.width = Length::Fill;
+                root_layout.size.height = Length::Fill;
+                root_layout.position = PositionStyle::Relative;
+
+                let open = open.clone();
+                let trigger_left = web_trigger_rect.x;
+                let trigger_top = web_trigger_rect.y;
+                let trigger_w = web_trigger_rect.w;
+                let trigger_h = web_trigger_rect.h;
+
+                vec![cx.flex(
+                    FlexProps {
+                        layout: root_layout,
+                        direction: fret_core::Axis::Vertical,
+                        ..Default::default()
+                    },
+                    move |cx| {
                         vec![
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Back"),
-                            ),
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Forward"),
-                            ),
-                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                            spacer(cx, Length::Fill, Length::Px(Px(trigger_top))),
+                            cx.flex(
+                                FlexProps {
+                                    direction: fret_core::Axis::Horizontal,
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    let open = open.clone();
+                                    let trigger = cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(trigger_w));
+                                                layout.size.height = Length::Px(Px(trigger_h));
+                                                layout
+                                            },
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("ContextMenu Trigger")),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        |cx, _st| {
+                                            vec![fixed_size_container(cx, trigger_w, trigger_h)]
+                                        },
+                                    );
+
+                                    let menu = fret_ui_shadcn::ContextMenu::new(open).into_element(
+                                        cx,
+                                        |_cx| trigger,
+                                        |_cx| {
+                                            vec![
+                                                fret_ui_shadcn::ContextMenuEntry::Item(
+                                                    fret_ui_shadcn::ContextMenuItem::new("Back"),
+                                                ),
+                                                fret_ui_shadcn::ContextMenuEntry::Item(
+                                                    fret_ui_shadcn::ContextMenuItem::new("Forward"),
+                                                ),
+                                                fret_ui_shadcn::ContextMenuEntry::Item(
+                                                    fret_ui_shadcn::ContextMenuItem::new("Reload"),
+                                                ),
+                                            ]
+                                        },
+                                    );
+
+                                    vec![
+                                        spacer(
+                                            cx,
+                                            Length::Px(Px(trigger_left)),
+                                            Length::Px(Px(trigger_h)),
+                                        ),
+                                        menu,
+                                    ]
+                                },
                             ),
                         ]
                     },
-                );
-                vec![menu]
+                )]
             },
         );
     }
@@ -2960,6 +3065,16 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
         ui.debug_node_visual_bounds(fret_dialog.id)
             .expect("fret alert-dialog visual bounds"),
     );
+
+    if (fret_dialog_rect.x - web_content_rect.x).abs() > 2.0
+        || (fret_dialog_rect.y - web_content_rect.y).abs() > 2.0
+        || (fret_dialog_rect.w - web_content_rect.w).abs() > 2.0
+        || (fret_dialog_rect.h - web_content_rect.h).abs() > 2.0
+    {
+        eprintln!("-- alert-dialog mismatch debug");
+        eprintln!("web content rect:  {:?}", web_content_rect);
+        eprintln!("fret dialog rect:  {:?}", fret_dialog_rect);
+    }
 
     assert_rect_close("alert-dialog rect", fret_dialog_rect, web_content_rect, 2.0);
 }
