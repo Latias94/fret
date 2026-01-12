@@ -24,4 +24,5 @@ This audit compares Fret’s shadcn-aligned `Input` against the upstream shadcn/
 
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn -F fret-ui/layout-engine-v2 --test web_vs_fret_layout`
   (`web_vs_fret_layout_input_demo_geometry`).
-
+- Additional layout gate: `web_vs_fret_layout_input_with_label_geometry` (matches `gap-3`/`max-w-sm`
+  form layout from `input-with-label`).

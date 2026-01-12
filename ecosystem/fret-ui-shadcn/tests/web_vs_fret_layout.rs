@@ -342,6 +342,100 @@ fn web_vs_fret_layout_checkbox_demo_control_size() {
 }
 
 #[test]
+fn web_vs_fret_layout_label_demo_geometry() {
+    let web = read_web_golden("label-demo");
+    let theme = web_theme(&web);
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
+    })
+    .expect("web checkbox");
+    let web_label = web_find_by_tag_and_text(&theme.root, "label", "Accept terms and conditions")
+        .expect("web label");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+        let checkbox = fret_ui_shadcn::Checkbox::new(model)
+            .a11y_label("Terms")
+            .into_element(cx);
+        let label = fret_ui_shadcn::Label::new("Accept terms and conditions").into_element(cx);
+        let label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:label-demo:label")),
+                ..Default::default()
+            },
+            move |_cx| vec![label],
+        );
+
+        let row = cx.flex(
+            FlexProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(8.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| vec![checkbox, label],
+        );
+
+        vec![row]
+    });
+
+    let checkbox = find_semantics(&snap, SemanticsRole::Checkbox, Some("Terms"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret checkbox node");
+    let label = find_semantics(&snap, SemanticsRole::Panel, Some("Golden:label-demo:label"))
+        .expect("fret label node");
+
+    assert_close_px(
+        "label-demo checkbox w",
+        checkbox.bounds.size.width,
+        web_checkbox.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "label-demo checkbox h",
+        checkbox.bounds.size.height,
+        web_checkbox.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "label-demo label x",
+        label.bounds.origin.x,
+        web_label.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "label-demo label y",
+        label.bounds.origin.y,
+        web_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "label-demo label h",
+        label.bounds.size.height,
+        web_label.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_switch_demo_track_size() {
     let web = read_web_golden("switch-demo");
     let theme = web_theme(&web);
@@ -1788,6 +1882,117 @@ fn web_vs_fret_layout_input_demo_geometry() {
         "input height",
         input.bounds.size.height,
         web_input.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_input_with_label_geometry() {
+    let web = read_web_golden("input-with-label");
+    let theme = web_theme(&web);
+    let web_label = find_first(&theme.root, &|n| n.tag == "label").expect("web label");
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:input-with-label:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::Label::new("Email").into_element(cx)],
+        );
+
+        let input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:input-with-label:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(model)
+                        .a11y_label("Email")
+                        .placeholder("Email")
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        let col = cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(12.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            move |_cx| vec![label, input],
+        );
+
+        let container = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_label.rect.w)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![col],
+        );
+
+        vec![container]
+    });
+
+    let label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-with-label:label"),
+    )
+    .expect("fret label");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-with-label:input"),
+    )
+    .expect("fret input");
+
+    assert_close_px(
+        "input-with-label label h",
+        label.bounds.size.height,
+        web_label.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-with-label input w",
+        input.bounds.size.width,
+        web_input.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-with-label input h",
+        input.bounds.size.height,
+        web_input.rect.h,
+        1.0,
+    );
+
+    let gap_y = input.bounds.origin.y.0 - (label.bounds.origin.y.0 + label.bounds.size.height.0);
+    assert_close_px(
+        "input-with-label gap",
+        Px(gap_y),
+        web_input.rect.y - (web_label.rect.y + web_label.rect.h),
         1.0,
     );
 }

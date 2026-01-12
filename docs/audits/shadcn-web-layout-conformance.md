@@ -72,6 +72,8 @@ patterns:
 - `tabs-demo`
 - `switch-demo`
 - `input-demo`
+- `label-demo`
+- `input-with-label`
 - `empty-avatar`
 - `empty-avatar-group`
 - `popover-demo` (overlay placement + transform origin)
