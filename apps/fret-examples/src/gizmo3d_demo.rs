@@ -22,9 +22,8 @@ use fret_launch::{
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
-    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dLineVertex, Overlay3dPipelines,
-    Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext, push_thick_line_quad,
-    push_triangle,
+    Overlay3dCache, Overlay3dCpuBuilder, Overlay3dPipelines, Overlay3dUniforms, Overlay3dVertex,
+    ViewportOverlay3dContext, push_thick_line_quad, push_triangle,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -449,7 +448,6 @@ impl Default for OrbitCamera {
 }
 
 type Vertex = Overlay3dVertex;
-type LineVertex = Overlay3dLineVertex;
 
 const CAMERA_NEAR: f32 = 0.05;
 const CAMERA_FAR: f32 = 50.0;
@@ -1665,7 +1663,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
             };
 
             let line_vertex_layout = wgpu::VertexBufferLayout {
-                array_stride: std::mem::size_of::<LineVertex>() as u64,
+                array_stride: std::mem::size_of::<Overlay3dLineVertex>() as u64,
                 step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: &wgpu::vertex_attr_array![
                     0 => Float32x3, // a

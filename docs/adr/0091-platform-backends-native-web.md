@@ -42,7 +42,6 @@ Runners remain responsible for event-loop ownership and presentation:
 
 Compatibility shims may exist temporarily to reduce churn:
 
-- `crates/fret-platform-desktop` re-exports `fret-platform-native`.
 - `crates/fret-runner-web` re-exports `fret-platform-web`.
 
 ## Invariants

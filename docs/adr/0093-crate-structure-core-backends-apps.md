@@ -54,7 +54,6 @@ Core crates live in `crates/` and must remain backend-agnostic:
 
 Backend crates also live in `crates/`, but are explicitly platform-/API-specific:
 
-- `fret-platform-desktop`: compatibility shim that re-exports `fret-platform-native`.
 - `fret-platform-native`: native (non-wasm) implementations of `fret-platform`.
 - `fret-platform-web`: wasm/browser implementations of `fret-platform` services.
 - `fret-runner-winit`: winit adapter responsible for translating winit window/input events into `fret-core::Event`

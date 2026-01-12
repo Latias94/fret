@@ -3,7 +3,6 @@ members = ["crates/*", "ecosystem/*", "apps/*"]
 default-members = ["crates/*", "ecosystem/*"]
 exclude = [
     # Not part of the default workspace yet (may be promoted or moved to `apps/` later).
-    "crates/fret-platform-desktop",
     # Incomplete / incubating.
     "apps/fret-editor",
 ]

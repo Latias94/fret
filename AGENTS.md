@@ -11,7 +11,6 @@
   - `crates/fret-platform`: portable platform I/O contracts.
   - `crates/fret-platform-native`: native platform I/O implementation.
   - `crates/fret-platform-web`: wasm platform I/O implementation.
-  - `crates/fret-platform-desktop`: compatibility shim re-exporting `fret-platform-native`.
   - `crates/fret-runner-winit`: winit adapter (event/input mapping).
   - `crates/fret-runner-web`: compatibility shim re-exporting `fret-platform-web` (dedicated DOM adapter TBD).
   - `crates/fret-fonts`: bundled default font bytes for wasm/bootstrap.

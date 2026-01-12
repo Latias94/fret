@@ -39,7 +39,6 @@ Notes:
 - Backends (desktop-first now, wasm/WebGPU later):
   - `fret-platform` (portable contracts)
   - `fret-platform-native` (desktop backend)
-  - `fret-platform-desktop` (compat shim re-exporting `fret-platform-native`)
   - `fret-platform-web` (web backend)
   - `fret-runner-winit` (winit platform adapter: event mapping + input normalization)
   - `fret-runner-web` (compat shim re-exporting `fret-platform-web`)
