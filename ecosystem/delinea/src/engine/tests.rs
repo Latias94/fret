@@ -4256,6 +4256,136 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
 }
 
 #[test]
+fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let value_field = crate::ids::FieldId::new(1);
+    let category_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: value_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: category_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: crate::scale::AxisScale::Category(crate::scale::CategoryAxisScale {
+                    categories: vec!["A".into(), "B".into(), "C".into(), "D".into()],
+                }),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            trigger: crate::spec::AxisPointerTrigger::Axis,
+            snap: true,
+            trigger_distance_px: 0.0,
+            throttle_px: 0.0,
+        }),
+        visual_maps: vec![],
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Bar,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: value_field,
+                y: category_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            stack: None,
+            stack_strategy: Default::default(),
+            bar_layout: Default::default(),
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![1.0, -2.0, 3.0, 0.5]));
+    table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(50.0), Px(150.0)),
+    });
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
+    let crate::TooltipOutput::Axis(axis) = &axis_pointer.tooltip else {
+        panic!("expected axis-trigger tooltip payload");
+    };
+    assert_eq!(axis.axis, y_axis);
+    assert_eq!(axis.axis_kind, AxisKind::Y);
+    assert_eq!(axis.axis_value, 1.0);
+
+    let trigger_window = engine
+        .output()
+        .axis_windows
+        .get(&y_axis)
+        .copied()
+        .unwrap_or_default();
+    let expected_y = crate::engine::axis::y_px_at_data_in_rect(trigger_window, 1.0, viewport);
+    assert!((axis_pointer.crosshair_px.y.0 - expected_y).abs() < 1e-4);
+
+    assert_eq!(axis.series.len(), 1);
+    assert_eq!(axis.series[0].series, series_id);
+    assert_eq!(axis.series[0].value_axis, x_axis);
+    assert_eq!(
+        axis.series[0].value,
+        crate::TooltipSeriesValue::Scalar(-2.0)
+    );
+}
+
+#[test]
 fn scatter_emits_point_marks() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

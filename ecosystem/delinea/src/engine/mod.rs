@@ -1517,7 +1517,19 @@ fn snap_axis_pointer_to_nearest_sample(
             axis_value,
             hover_px,
         ),
-        crate::spec::AxisKind::Y => None,
+        crate::spec::AxisKind::Y => snap_axis_pointer_y_to_series(
+            model,
+            datasets,
+            view,
+            data_views,
+            stack_dims,
+            axis_windows,
+            viewport,
+            primary,
+            trigger_window,
+            axis_value,
+            hover_px,
+        ),
     }
 }
 
@@ -1701,6 +1713,158 @@ fn nearest_raw_index_at_x_view(
     }
 
     best_raw_index.map(|i| (i, best_x))
+}
+
+fn snap_axis_pointer_y_to_series(
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &ViewState,
+    data_views: &DataViewStage,
+    stack_dims: &StackDimsStage,
+    axis_windows: &BTreeMap<crate::ids::AxisId, window::DataWindow>,
+    viewport: Rect,
+    primary: &crate::engine::model::SeriesModel,
+    trigger_window: window::DataWindow,
+    axis_value: f64,
+    hover_px: Point,
+) -> Option<(f64, Option<HoverHit>)> {
+    // Bars use category axes and snap via ordinal rounding above.
+    if primary.kind == crate::spec::SeriesKind::Bar {
+        return None;
+    }
+
+    // Only support Y-axis snapping when the trigger axis is the series value axis (future-facing;
+    // v1 typically triggers on X, except for bar charts).
+    let trigger_axis = primary.y_axis;
+    if model
+        .axes
+        .get(&trigger_axis)
+        .is_some_and(|a| a.kind != crate::spec::AxisKind::Y)
+    {
+        return None;
+    }
+
+    let table = datasets.dataset(primary.dataset)?;
+    let table_rev = table.revision;
+    let model_rev = model.revs.data;
+
+    let dataset = model.datasets.get(&primary.dataset)?;
+    let x_col = dataset.fields.get(&primary.encode.x).copied()?;
+    let y0_col = dataset.fields.get(&primary.encode.y).copied()?;
+
+    let x = table.column_f64(x_col)?;
+    let y0 = table.column_f64(y0_col)?;
+    let y1 = primary
+        .encode
+        .y2
+        .and_then(|y2_field| dataset.fields.get(&y2_field).copied())
+        .and_then(|y2_col| table.column_f64(y2_col));
+
+    let (selection_range, filter, base_selection) = match view.series_view(primary.id) {
+        Some(series_view) => {
+            let selection_range = series_view.selection.as_range(table.row_count);
+            let selection_range = RowRange {
+                start: selection_range.start,
+                end: selection_range.end,
+            };
+            (
+                selection_range,
+                series_view.x_policy.filter,
+                series_view.selection.clone(),
+            )
+        }
+        None => (
+            RowRange {
+                start: 0,
+                end: table.row_count,
+            },
+            crate::engine::window_policy::AxisFilter1D::default(),
+            RowSelection::default(),
+        ),
+    };
+
+    let table_view = data_views.table_view_for(
+        table,
+        primary.dataset,
+        x_col,
+        selection_range,
+        filter,
+        base_selection,
+    );
+
+    let view_len = table_view.len();
+    if view_len == 0 {
+        return None;
+    }
+    if view_len > MAX_UNSORTED_AXIS_SCAN_POINTS {
+        return None;
+    }
+
+    let mut best: Option<(usize, f64, f64)> = None; // (raw_index, x_raw, y_eff)
+    let mut best_dist = f64::INFINITY;
+
+    for view_index in 0..view_len {
+        let Some(raw_index) = table_view.get_raw_index(view_index) else {
+            continue;
+        };
+
+        let x_raw = x.get(raw_index).copied().unwrap_or(f64::NAN);
+        if !x_raw.is_finite() {
+            continue;
+        }
+
+        let Some(sampled) = sample_at_raw_index(
+            model,
+            datasets,
+            stack_dims,
+            model_rev,
+            table_rev,
+            primary.id,
+            raw_index,
+            y0,
+            y1.as_deref(),
+        ) else {
+            continue;
+        };
+
+        if !sampled.y0.is_finite() {
+            continue;
+        }
+        let dist = (axis_value - sampled.y0).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best = Some((raw_index, x_raw, sampled.y0));
+        }
+    }
+
+    let (raw_index, x_raw, y_eff) = best?;
+    if !y_eff.is_finite() {
+        return None;
+    }
+
+    let x_window = axis_windows
+        .get(&primary.x_axis)
+        .copied()
+        .unwrap_or_default();
+
+    let px_x = crate::engine::axis::x_px_at_data_in_rect(x_window, x_raw, viewport);
+    let px_y = crate::engine::axis::y_px_at_data_in_rect(trigger_window, y_eff, viewport);
+    let point_px = Point::new(Px(px_x), Px(px_y));
+
+    let dx = hover_px.x.0 - point_px.x.0;
+    let dy = hover_px.y.0 - point_px.y.0;
+    let dist2_px = dx * dx + dy * dy;
+
+    let hit = HoverHit {
+        series: primary.id,
+        data_index: raw_index as u32,
+        point_px,
+        dist2_px,
+        x_value: x_raw,
+        y_value: y_eff,
+    };
+
+    Some((y_eff, Some(hit)))
 }
 
 #[derive(Debug, Clone, Copy)]
