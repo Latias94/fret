@@ -1529,9 +1529,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let ctx = NodeGraphCanvasMiddlewareCx {
                 graph: &self.graph,
                 view_state: &self.view_state,
-                store: self.store.as_ref(),
-                edit_queue: self.edit_queue.as_ref(),
-                overlays: self.overlays.as_ref(),
                 style: &self.style,
                 bounds: self.interaction.last_bounds,
                 pan: snapshot.pan,
@@ -5632,9 +5629,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let mw_ctx = NodeGraphCanvasMiddlewareCx {
                 graph: &self.graph,
                 view_state: &self.view_state,
-                store: self.store.as_ref(),
-                edit_queue: self.edit_queue.as_ref(),
-                overlays: self.overlays.as_ref(),
                 style: &self.style,
                 bounds: self.interaction.last_bounds,
                 pan: snapshot.pan,
@@ -6513,9 +6507,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             let mw_ctx = NodeGraphCanvasMiddlewareCx {
                 graph: &self.graph,
                 view_state: &self.view_state,
-                store: self.store.as_ref(),
-                edit_queue: self.edit_queue.as_ref(),
-                overlays: self.overlays.as_ref(),
                 style: &self.style,
                 bounds: Some(cx.bounds),
                 pan: snapshot.pan,

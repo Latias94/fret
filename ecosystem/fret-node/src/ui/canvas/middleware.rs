@@ -7,9 +7,6 @@ use crate::core::{CanvasPoint, Graph};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
 use crate::rules::Diagnostic;
-use crate::runtime::store::NodeGraphStore;
-use crate::ui::edit_queue::NodeGraphEditQueue;
-use crate::ui::overlays::NodeGraphOverlayState;
 use crate::ui::style::NodeGraphStyle;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,9 +31,6 @@ pub enum NodeGraphCanvasCommitOutcome {
 pub struct NodeGraphCanvasMiddlewareCx<'a> {
     pub graph: &'a Model<Graph>,
     pub view_state: &'a Model<NodeGraphViewState>,
-    pub store: Option<&'a Model<NodeGraphStore>>,
-    pub edit_queue: Option<&'a Model<NodeGraphEditQueue>>,
-    pub overlays: Option<&'a Model<NodeGraphOverlayState>>,
     pub style: &'a NodeGraphStyle,
     pub bounds: Option<Rect>,
     pub pan: CanvasPoint,
