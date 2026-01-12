@@ -178,11 +178,13 @@ single “at a glance” view of:
   - `LMB click` on a legend row toggles that series visibility.
   - `LMB double-click` isolates the clicked series (hides all others).
   - When a series is already isolated, `LMB double-click` restores all series visibility.
+  - `Shift + LMB click` toggles a contiguous range (anchor -> clicked) to match the clicked toggle target.
+  - `RMB click` inside the legend panel restores all series visibility.
 - What exists in v1:
   - A built-in legend overlay in `fret-chart` (panel + swatch + hover highlight).
   - Visibility is wired through `delinea::Action::SetSeriesVisible` (headless model is authoritative).
 - Missing vs ECharts:
-  - scroll/overflow handling, multi-legend layout, and selection UX parity (`Shift` range, invert, select-all/none),
+  - scroll/overflow handling, multi-legend layout, and selection UX parity (invert, select-all/none),
   - conformance scenarios for legend <-> tooltip/axisPointer interactions.
 
 **S7 - VisualMap (continuous + piecewise) multi-channel baseline** (`[~]`)

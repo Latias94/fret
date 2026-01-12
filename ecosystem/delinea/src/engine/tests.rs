@@ -2836,6 +2836,46 @@ fn set_series_visible_hides_marks() {
 }
 
 #[test]
+fn set_series_visibility_batch_bumps_visual_revision_once() {
+    let mut spec = basic_spec();
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let series_a = crate::ids::SeriesId::new(1);
+    let series_b = crate::ids::SeriesId::new(2);
+
+    spec.series.push(SeriesSpec {
+        id: series_b,
+        name: None,
+        kind: SeriesKind::Line,
+        dataset: dataset_id,
+        encode: SeriesEncode {
+            x: x_field,
+            y: y_field,
+            y2: None,
+        },
+        x_axis: crate::ids::AxisId::new(1),
+        y_axis: crate::ids::AxisId::new(2),
+        stack: None,
+        stack_strategy: Default::default(),
+        bar_layout: Default::default(),
+        area_baseline: None,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let before = engine.model().revs.visual.0;
+
+    engine.apply_action(Action::SetSeriesVisibility {
+        updates: vec![(series_a, false), (series_b, false)],
+    });
+
+    assert!(!engine.model().series.get(&series_a).unwrap().visible);
+    assert!(!engine.model().series.get(&series_b).unwrap().visible);
+    assert_eq!(engine.model().revs.visual.0, before + 1);
+}
+
+#[test]
 fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);

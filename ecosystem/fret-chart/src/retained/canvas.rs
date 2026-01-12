@@ -171,7 +171,9 @@ pub struct ChartCanvas {
     tooltip_text: Vec<TextBlobId>,
     legend_text: Vec<TextBlobId>,
     legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
+    legend_panel_rect: Option<Rect>,
     legend_hover: Option<delinea::SeriesId>,
+    legend_anchor: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     brush_drag: Option<BoxZoomDrag>,
@@ -225,7 +227,9 @@ impl ChartCanvas {
             tooltip_text: Vec::default(),
             legend_text: Vec::default(),
             legend_item_rects: Vec::default(),
+            legend_panel_rect: None,
             legend_hover: None,
+            legend_anchor: None,
             pan_drag: None,
             box_zoom_drag: None,
             brush_drag: None,
@@ -1476,6 +1480,7 @@ impl ChartCanvas {
             services.text().release(blob);
         }
         self.legend_item_rects.clear();
+        self.legend_panel_rect = None;
     }
 
     fn series_color(&self, series: delinea::SeriesId) -> Color {
@@ -1508,38 +1513,94 @@ impl ChartCanvas {
 
     fn apply_legend_double_click(&mut self, clicked: delinea::SeriesId) {
         let model = self.engine.model();
-        let series: Vec<(delinea::SeriesId, bool)> =
-            model.series_in_order().map(|s| (s.id, s.visible)).collect();
-        if series.is_empty() {
+        if model.series_order.is_empty() {
             return;
         }
 
-        let clicked_visible = series
-            .iter()
-            .find_map(|(id, visible)| (*id == clicked).then_some(*visible))
+        let clicked_visible = model
+            .series
+            .get(&clicked)
+            .map(|s| s.visible)
             .unwrap_or(true);
-        let only_clicked_visible =
-            clicked_visible && series.iter().all(|(id, v)| *id == clicked || !*v);
+        let only_clicked_visible = clicked_visible
+            && model
+                .series_in_order()
+                .all(|s| s.id == clicked || !s.visible);
 
+        let mut updates = Vec::new();
         if only_clicked_visible {
-            for (id, visible) in series {
-                if !visible {
-                    self.engine.apply_action(Action::SetSeriesVisible {
-                        series: id,
-                        visible: true,
-                    });
+            for s in model.series_in_order() {
+                if !s.visible {
+                    updates.push((s.id, true));
                 }
             }
         } else {
-            for (id, visible) in series {
-                let target = id == clicked;
-                if visible != target {
-                    self.engine.apply_action(Action::SetSeriesVisible {
-                        series: id,
-                        visible: target,
-                    });
+            for s in model.series_in_order() {
+                let target = s.id == clicked;
+                if s.visible != target {
+                    updates.push((s.id, target));
                 }
             }
+        }
+
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
+        }
+    }
+
+    fn apply_legend_reset(&mut self) {
+        let model = self.engine.model();
+        let mut updates = Vec::new();
+        for s in model.series_in_order() {
+            if !s.visible {
+                updates.push((s.id, true));
+            }
+        }
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
+        }
+    }
+
+    fn apply_legend_shift_range_toggle(
+        &mut self,
+        anchor: delinea::SeriesId,
+        clicked: delinea::SeriesId,
+    ) {
+        let model = self.engine.model();
+        let Some(anchor_idx) = model.series_order.iter().position(|id| *id == anchor) else {
+            return;
+        };
+        let Some(clicked_idx) = model.series_order.iter().position(|id| *id == clicked) else {
+            return;
+        };
+
+        let clicked_visible = model
+            .series
+            .get(&clicked)
+            .map(|s| s.visible)
+            .unwrap_or(true);
+        let target = !clicked_visible;
+
+        let (lo, hi) = if anchor_idx <= clicked_idx {
+            (anchor_idx, clicked_idx)
+        } else {
+            (clicked_idx, anchor_idx)
+        };
+
+        let mut updates = Vec::new();
+        for id in &model.series_order[lo..=hi] {
+            if let Some(s) = model.series.get(id)
+                && s.visible != target
+            {
+                updates.push((*id, target));
+            }
+        }
+
+        if !updates.is_empty() {
+            self.engine
+                .apply_action(Action::SetSeriesVisibility { updates });
         }
     }
 
@@ -1607,6 +1668,7 @@ impl ChartCanvas {
             Point::new(Px(x0), Px(y0)),
             Size::new(Px(legend_w), Px(legend_h)),
         );
+        self.legend_panel_rect = Some(legend_rect);
 
         let legend_order = DrawOrder(self.style.draw_order.0.saturating_add(8_900));
         cx.scene.push(SceneOp::Quad {
@@ -2701,19 +2763,41 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     if *click_count >= 2 {
                         self.apply_legend_double_click(series);
                     } else {
-                        let visible = self
-                            .engine
-                            .model()
-                            .series
-                            .get(&series)
-                            .map(|s| s.visible)
-                            .unwrap_or(true);
-                        self.engine.apply_action(Action::SetSeriesVisible {
-                            series,
-                            visible: !visible,
-                        });
+                        if modifiers.shift
+                            && let Some(anchor) = self.legend_anchor
+                        {
+                            self.apply_legend_shift_range_toggle(anchor, series);
+                        } else {
+                            let visible = self
+                                .engine
+                                .model()
+                                .series
+                                .get(&series)
+                                .map(|s| s.visible)
+                                .unwrap_or(true);
+                            self.engine.apply_action(Action::SetSeriesVisible {
+                                series,
+                                visible: !visible,
+                            });
+                        }
                     }
+                    self.legend_anchor = Some(series);
                     self.legend_hover = Some(series);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if *button == MouseButton::Right
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && self
+                        .legend_panel_rect
+                        .is_some_and(|r| r.contains(*position))
+                {
+                    self.apply_legend_reset();
+                    self.legend_anchor = None;
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();

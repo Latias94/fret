@@ -104,6 +104,13 @@ pub enum Action {
         series: SeriesId,
         visible: bool,
     },
+    /// Batch version of `SetSeriesVisible` for interaction patterns that update multiple series
+    /// at once (legend isolate, range selection, reset).
+    ///
+    /// The engine will apply all updates and bump revisions at most once.
+    SetSeriesVisibility {
+        updates: Vec<(SeriesId, bool)>,
+    },
     SetLinkGroup {
         group: Option<LinkGroupId>,
     },

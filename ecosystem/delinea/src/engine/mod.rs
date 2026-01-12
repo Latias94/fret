@@ -565,6 +565,22 @@ impl ChartEngine {
                 }
                 self.state.revision.bump();
             }
+            Action::SetSeriesVisibility { updates } => {
+                let mut changed = false;
+                for (series, visible) in updates {
+                    if let Some(existing) = self.model.series.get_mut(&series)
+                        && existing.visible != visible
+                    {
+                        existing.visible = visible;
+                        changed = true;
+                    }
+                }
+                if changed {
+                    self.model.revs.bump_visual();
+                    self.marks_stage.mark_dirty();
+                }
+                self.state.revision.bump();
+            }
             Action::SetDatasetRowRange { dataset, range } => {
                 if let Some(mut range) = range {
                     range.clamp_to_len(usize::MAX);
