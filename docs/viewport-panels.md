@@ -65,6 +65,20 @@ In `record_engine_frame`, the driver receives `&WgpuContext` and `&mut Renderer`
 
 Note: on desktop, a simple `wgpu::TextureFormat::Bgra8UnormSrgb` target is usually fine.
 
+## Helper: `ViewportRenderTarget` / `ViewportRenderTargetWithDepth`
+
+To reduce boilerplate for "allocate/resize + register/update", use:
+
+- `ViewportRenderTarget` (color only)
+- `ViewportRenderTargetWithDepth` (color + depth)
+
+Advanced configuration:
+
+- `.with_usage(...)` and `.with_view_formats(...)` let you opt into extra texture usage flags or view formats
+  (useful for video/postprocess panels that need additional bindings).
+- `.ensure_size_owned_view(...)` / `.ensure_size_owned_views(...)` return cloned `TextureView`s for callers that
+  want to avoid borrowing across additional state reads.
+
 ## Input forwarding (best practice)
 
 If your viewport panel needs interaction, embed it with `fret-ui-kit::viewport_surface_panel(...)`.

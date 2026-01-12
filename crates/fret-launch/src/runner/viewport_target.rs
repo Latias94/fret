@@ -18,6 +18,8 @@ pub struct ViewportRenderTarget {
     size: (u32, u32),
     format: wgpu::TextureFormat,
     color_space: RenderTargetColorSpace,
+    usage: wgpu::TextureUsages,
+    view_formats: Vec<wgpu::TextureFormat>,
     texture: Option<wgpu::Texture>,
     view: Option<wgpu::TextureView>,
 }
@@ -29,9 +31,21 @@ impl ViewportRenderTarget {
             size: (0, 0),
             format,
             color_space,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: Vec::new(),
             texture: None,
             view: None,
         }
+    }
+
+    pub fn with_usage(mut self, usage: wgpu::TextureUsages) -> Self {
+        self.usage = usage;
+        self
+    }
+
+    pub fn with_view_formats(mut self, view_formats: &[wgpu::TextureFormat]) -> Self {
+        self.view_formats = view_formats.to_vec();
+        self
     }
 
     pub fn id(&self) -> RenderTargetId {
@@ -42,12 +56,42 @@ impl ViewportRenderTarget {
         self.size
     }
 
+    pub fn format(&self) -> wgpu::TextureFormat {
+        self.format
+    }
+
+    pub fn color_space(&self) -> RenderTargetColorSpace {
+        self.color_space
+    }
+
+    pub fn usage(&self) -> wgpu::TextureUsages {
+        self.usage
+    }
+
+    pub fn view_formats(&self) -> &[wgpu::TextureFormat] {
+        &self.view_formats
+    }
+
     pub fn texture(&self) -> Option<&wgpu::Texture> {
         self.texture.as_ref()
     }
 
     pub fn view(&self) -> Option<&wgpu::TextureView> {
         self.view.as_ref()
+    }
+
+    pub fn ensure_size_owned_view(
+        &mut self,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        desired_size: (u32, u32),
+        label: Option<&str>,
+    ) -> (RenderTargetId, wgpu::TextureView) {
+        let (id, view) = {
+            let (id, view_ref) = self.ensure_size(context, renderer, desired_size, label);
+            (id, view_ref.clone())
+        };
+        (id, view)
     }
 
     pub fn ensure_size(
@@ -75,9 +119,8 @@ impl ViewportRenderTarget {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: self.format,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::TEXTURE_BINDING,
-                view_formats: &[],
+                usage: self.usage,
+                view_formats: &self.view_formats,
             });
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -122,6 +165,8 @@ impl ViewportRenderTarget {
 pub struct ViewportRenderTargetWithDepth {
     color: ViewportRenderTarget,
     depth_format: wgpu::TextureFormat,
+    depth_usage: wgpu::TextureUsages,
+    depth_view_formats: Vec<wgpu::TextureFormat>,
     depth_texture: Option<wgpu::Texture>,
     depth_view: Option<wgpu::TextureView>,
 }
@@ -135,9 +180,31 @@ impl ViewportRenderTargetWithDepth {
         Self {
             color: ViewportRenderTarget::new(color_format, color_space),
             depth_format,
+            depth_usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            depth_view_formats: Vec::new(),
             depth_texture: None,
             depth_view: None,
         }
+    }
+
+    pub fn with_color_usage(mut self, usage: wgpu::TextureUsages) -> Self {
+        self.color = self.color.with_usage(usage);
+        self
+    }
+
+    pub fn with_color_view_formats(mut self, view_formats: &[wgpu::TextureFormat]) -> Self {
+        self.color = self.color.with_view_formats(view_formats);
+        self
+    }
+
+    pub fn with_depth_usage(mut self, usage: wgpu::TextureUsages) -> Self {
+        self.depth_usage = usage;
+        self
+    }
+
+    pub fn with_depth_view_formats(mut self, view_formats: &[wgpu::TextureFormat]) -> Self {
+        self.depth_view_formats = view_formats.to_vec();
+        self
     }
 
     pub fn id(&self) -> RenderTargetId {
@@ -146,6 +213,22 @@ impl ViewportRenderTargetWithDepth {
 
     pub fn size(&self) -> (u32, u32) {
         self.color.size()
+    }
+
+    pub fn ensure_size_owned_views(
+        &mut self,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        desired_size: (u32, u32),
+        color_label: Option<&str>,
+        depth_label: Option<&str>,
+    ) -> (RenderTargetId, wgpu::TextureView, wgpu::TextureView) {
+        let (id, color, depth) = {
+            let (id, color_ref, depth_ref) =
+                self.ensure_size(context, renderer, desired_size, color_label, depth_label);
+            (id, color_ref.clone(), depth_ref.clone())
+        };
+        (id, color, depth)
     }
 
     pub fn ensure_size(
@@ -175,8 +258,8 @@ impl ViewportRenderTargetWithDepth {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: self.depth_format,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                view_formats: &[],
+                usage: self.depth_usage,
+                view_formats: &self.depth_view_formats,
             });
             let depth_view = depth.create_view(&wgpu::TextureViewDescriptor::default());
             self.depth_texture = Some(depth);
