@@ -18,6 +18,8 @@ $env:FRET_RENDERDOC=1
 $env:FRET_RENDERDOC_DLL="C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current\\renderdoc.dll"
 # Optional:
 $env:FRET_RENDERDOC_AUTOCAPTURE=1
+# Optional: capture a later, more representative frame (overrides `FRET_RENDERDOC_AUTOCAPTURE`):
+# $env:FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES=60
 # Optional:
 $env:FRET_RENDERDOC_CAPTURE_DIR=".fret\\renderdoc"
 
@@ -25,6 +27,23 @@ cargo run -p fret-demo --bin fret-demo -- effects_demo
 ```
 
 Captures are written under `.fret/renderdoc/` (or `FRET_RENDERDOC_CAPTURE_DIR`).
+
+### 1.1.1 Dump the CPU RenderPlan (no RenderDoc required)
+
+If you need to validate pass structure/scissors/origins without a GPU capture, enable the CPU-side plan dump:
+
+```powershell
+$env:FRET_RENDERPLAN_DUMP=1
+# Optional:
+# $env:FRET_RENDERPLAN_DUMP_FRAME=60
+# $env:FRET_RENDERPLAN_DUMP_AFTER_FRAMES=60
+# $env:FRET_RENDERPLAN_DUMP_EVERY=60
+# $env:FRET_RENDERPLAN_DUMP_DIR=".fret\\renderplan"
+
+cargo run -p fret-demo --bin fret-demo -- effects_demo
+```
+
+The renderer writes JSON files under `.fret/renderplan/` (or `FRET_RENDERPLAN_DUMP_DIR`).
 
 ### 1.2 Inspect a pass (scriptable)
 
@@ -38,6 +57,20 @@ cargo run -p fret-renderdoc -- dump `
 ```
 
 See `docs/renderdoc-inspection.md` for what fields to validate for common passes.
+
+Tip: for a quick "frame health" breakdown (which marker paths dominate drawcalls), run with an empty marker and a
+high `--max-results`, then inspect `result.summary.*` in the JSON response (see `docs/renderdoc-inspection.md`).
+
+Tip: if you're debugging pixelate/blur effects, start with:
+
+```powershell
+cargo run -p fret-renderdoc -- dump `
+  --renderdoc-dir "C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current" `
+  --capture ".fret\\renderdoc\\fret_capture.rdc" `
+  --marker "nearest" `
+  --selection all `
+  --no-outputs-png
+```
 
 ### 1.3 What “correct” usually looks like
 
@@ -65,6 +98,57 @@ Practical checklist:
    - scissor/viewport state for the pass,
    - clip stack head/count and mask viewport origin/size (for masked writebacks),
    - output target(s) at each step (export PNGs).
+
+### 1.5 Debugging streaming image updates (video frames)
+
+When debugging `Effect::ImageUpdate*` ingestion (ADR 0121 / ADR 0126), prefer collecting *both*:
+
+- per-frame counters via `fret_core::StreamingUploadPerfSnapshot`, and
+- (optional) runner debug logs when drops/delays happen.
+
+Useful env vars:
+
+```powershell
+# Update `StreamingUploadPerfSnapshot` and log budget/drops (when relevant).
+$env:FRET_STREAMING_DEBUG="1"
+
+# Optional: debug override to try the NV12 GPU path (experimental; falls back to CPU).
+$env:FRET_STREAMING_GPU_YUV="1"
+
+# Demo-only helpers (apps/fret-examples streaming_*_demo.rs).
+$env:FRET_DEMO_STREAMING_PERF_EVERY="60"
+$env:FRET_DEMO_AUTO_EXIT_FRAMES="240"
+```
+
+Run a minimal repro demo:
+
+```powershell
+cargo run -p fret-demo --bin streaming_nv12_demo
+# or:
+cargo run -p fret-demo --bin streaming_i420_demo
+```
+
+Notes on the NV12 GPU path (`FRET_STREAMING_GPU_YUV=1`):
+
+- Currently only accelerates `Effect::ImageUpdateNv12` into `Rgba8UnormSrgb` image storage (sRGB) and forces
+  `AlphaMode::Opaque` for the target image.
+- `StreamingUploadPerfSnapshot.yuv_convert_us` measures CPU-side work (plane repack + command encoding), not GPU time.
+- `StreamingUploadPerfSnapshot.upload_bytes_budgeted` reflects the conservative estimate used for budgets, while
+  `upload_bytes_applied` reflects actual CPU->GPU uploads performed by the applied path.
+- A quick sanity check is that `streaming_nv12_demo` should show a significantly smaller `yuv_us` vs CPU fallback.
+
+Notes on capability gating (ADR 0124):
+
+- The runner publishes a per-session capability snapshot as an app global: `fret_render::RendererCapabilities`.
+- NV12 GPU conversion requires both:
+  - `RendererCapabilities.streaming_images.nv12_gpu_convert == true` (supported), and
+  - an enable switch (either `WinitRunnerConfig.streaming_nv12_gpu_convert_enabled = true` or `FRET_STREAMING_GPU_YUV=1`).
+
+If you need structured logs from the runner:
+
+```powershell
+$env:RUST_LOG="fret_launch=debug"
+```
 
 ## 2) Layout debugging
 

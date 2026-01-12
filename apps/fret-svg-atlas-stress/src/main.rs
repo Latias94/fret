@@ -10,6 +10,19 @@ use fret_runtime::PlatformCapabilities;
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
 
+fn try_println(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let _ = out.write_fmt(args);
+    let _ = out.write_all(b"\n");
+}
+
+macro_rules! try_println {
+    ($($tt:tt)*) => {
+        try_println(format_args!($($tt)*))
+    };
+}
+
 const SVG_SQUARE: &str = r#"
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
   <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z"/>
@@ -130,19 +143,19 @@ struct SvgAtlasStressDriver {
 
 impl SvgAtlasStressDriver {
     fn print_help() {
-        println!("svg_atlas_stress controls:");
-        println!("  Space: toggle phase (A/B)");
-        println!("  T: toggle auto phase flip");
-        println!("  F: cycle SvgFit mode");
-        println!("  B: cycle svg_raster_budget_bytes preset (standalone rasters only)");
-        println!("  C: clear svg raster cache");
-        println!("  M: clear svg mask atlas cache");
-        println!("  H: print this help");
+        try_println!("svg_atlas_stress controls:");
+        try_println!("  Space: toggle phase (A/B)");
+        try_println!("  T: toggle auto phase flip");
+        try_println!("  F: cycle SvgFit mode");
+        try_println!("  B: cycle svg_raster_budget_bytes preset (standalone rasters only)");
+        try_println!("  C: clear svg raster cache");
+        try_println!("  M: clear svg mask atlas cache");
+        try_println!("  H: print this help");
     }
 
     fn print_state(state: &SvgAtlasStressState) {
         let budget = state.budget_presets[state.budget_index];
-        println!(
+        try_println!(
             "phase={} auto_phase={} fit={:?} svg_raster_budget_bytes={}KB (standalone only)",
             if state.phase { "B" } else { "A" },
             state.auto_phase,
@@ -247,6 +260,7 @@ fn run_headless(
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_svg_raster_budget_bytes(budget_bytes);
     renderer.set_svg_perf_enabled(true);
+    renderer.set_perf_enabled(true);
 
     let svg_square = renderer.register_svg(SVG_SQUARE.as_bytes());
     let svg_wide = renderer.register_svg(SVG_WIDE.as_bytes());
@@ -429,7 +443,7 @@ fn run_headless(
         }
         if frame % 60 == 0 {
             let _ = ctx.device.poll(wgpu::PollType::Poll);
-            println!("headless progress: {frame}/{frames}");
+            try_println!("headless progress: {frame}/{frames}");
         }
     }
     let _ = ctx.device.poll(if wait_gpu {
@@ -445,7 +459,7 @@ fn run_headless(
         } else {
             (snap.svg_mask_atlas_used_px as f64 / snap.svg_mask_atlas_capacity_px as f64) * 100.0
         };
-        println!(
+        try_println!(
             "headless: frames={} wall={:.2}s prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}% wait_gpu={} wait_every={} churn={} churn_every={} churn_drop={}",
             frames,
             elapsed.as_secs_f64(),
@@ -469,6 +483,51 @@ fn run_headless(
         );
     }
 
+    if let Some(snap) = renderer.take_perf_snapshot() {
+        let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+        try_println!(
+            "headless_renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+            snap.frames,
+            snap.encode_scene_us as f64 / 1000.0,
+            snap.prepare_svg_us as f64 / 1000.0,
+            snap.prepare_text_us as f64 / 1000.0,
+            snap.draw_calls,
+            snap.quad_draw_calls,
+            snap.viewport_draw_calls,
+            snap.image_draw_calls,
+            snap.text_draw_calls,
+            snap.path_draw_calls,
+            snap.mask_draw_calls,
+            snap.fullscreen_draw_calls,
+            snap.clip_mask_draw_calls,
+            snap.pipeline_switches,
+            snap.bind_group_switches,
+            snap.uniform_bind_group_switches,
+            snap.texture_bind_group_switches,
+            snap.scissor_sets,
+            snap.uniform_bytes / 1024,
+            snap.instance_bytes / 1024,
+            snap.vertex_bytes / 1024,
+            snap.scene_encoding_cache_hits,
+            snap.scene_encoding_cache_misses
+        );
+        if pipeline_breakdown {
+            try_println!(
+                "headless_renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                snap.pipeline_switches_quad,
+                snap.pipeline_switches_viewport,
+                snap.pipeline_switches_mask,
+                snap.pipeline_switches_text_mask,
+                snap.pipeline_switches_text_color,
+                snap.pipeline_switches_path,
+                snap.pipeline_switches_path_msaa,
+                snap.pipeline_switches_composite,
+                snap.pipeline_switches_fullscreen,
+                snap.pipeline_switches_clip_mask,
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -482,6 +541,7 @@ impl WinitAppDriver for SvgAtlasStressDriver {
         renderer: &mut fret_render::Renderer,
     ) {
         renderer.set_svg_perf_enabled(true);
+        renderer.set_perf_enabled(true);
     }
 
     fn create_window_state(&mut self, _app: &mut App, _window: AppWindowId) -> Self::WindowState {
@@ -522,6 +582,53 @@ impl WinitAppDriver for SvgAtlasStressDriver {
             Some(last) => now.duration_since(last) >= Duration::from_secs(1),
         };
         if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    let pipeline_breakdown =
+                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                    try_println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.quad_draw_calls,
+                        snap.viewport_draw_calls,
+                        snap.image_draw_calls,
+                        snap.text_draw_calls,
+                        snap.path_draw_calls,
+                        snap.mask_draw_calls,
+                        snap.fullscreen_draw_calls,
+                        snap.clip_mask_draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bind_group_switches,
+                        snap.texture_bind_group_switches,
+                        snap.scissor_sets,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                    if pipeline_breakdown {
+                        try_println!(
+                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                            snap.pipeline_switches_quad,
+                            snap.pipeline_switches_viewport,
+                            snap.pipeline_switches_mask,
+                            snap.pipeline_switches_text_mask,
+                            snap.pipeline_switches_text_color,
+                            snap.pipeline_switches_path,
+                            snap.pipeline_switches_path_msaa,
+                            snap.pipeline_switches_composite,
+                            snap.pipeline_switches_fullscreen,
+                            snap.pipeline_switches_clip_mask,
+                        );
+                    }
+                }
+            }
             if let Some(snap) = renderer.take_svg_perf_snapshot() {
                 if snap.frames == 0 {
                     state.last_renderer_report = Some(now);
@@ -533,7 +640,7 @@ impl WinitAppDriver for SvgAtlasStressDriver {
                     (snap.svg_mask_atlas_used_px as f64 / snap.svg_mask_atlas_capacity_px as f64)
                         * 100.0
                 };
-                println!(
+                try_println!(
                     "renderer_svg: frames={} prepare={:.2}ms hits={} misses={} alpha_raster={} ({:.2}ms) rgba_raster={} ({:.2}ms) atlas_inserts={} atlas_write={:.2}ms pages={} rasters={} standalone={}KB atlas={}KB fill={:.1}%",
                     snap.frames,
                     snap.prepare_svg_ops_us as f64 / 1000.0,
@@ -586,11 +693,11 @@ impl WinitAppDriver for SvgAtlasStressDriver {
             }
             KeyCode::KeyC => {
                 state.clear_requested = true;
-                println!("svg_atlas_stress: clear svg raster cache requested");
+                try_println!("svg_atlas_stress: clear svg raster cache requested");
             }
             KeyCode::KeyM => {
                 state.clear_atlas_requested = true;
-                println!("svg_atlas_stress: clear svg mask atlas cache requested");
+                try_println!("svg_atlas_stress: clear svg mask atlas cache requested");
             }
             KeyCode::KeyH => Self::print_help(),
             _ => {}
@@ -654,7 +761,7 @@ impl WinitAppDriver for SvgAtlasStressDriver {
                 state.render_time_accum.as_secs_f64() * 1_000_000.0
                     / state.render_frames_accum as f64
             };
-            println!(
+            try_println!(
                 "frames={} icons/frame={} avg_driver_render={:.1}us budget={}KB fit={:?} phase={}",
                 state.frame,
                 icons_emitted,
@@ -761,7 +868,7 @@ fn main() -> anyhow::Result<()> {
                 churn_drop = value.parse()?;
             }
             "--help" | "-h" => {
-                println!(
+                try_println!(
                     "Usage: fret-svg-atlas-stress [--frames N] [--headless] [--budget-kb KB] [--wait-gpu] [--wait-every N] [--churn] [--churn-every N] [--churn-drop N]"
                 );
                 return Ok(());

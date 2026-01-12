@@ -67,10 +67,17 @@ Any dropping/delay is purely visual freshness. It must not affect:
 
 The system must expose counters (debug/perf snapshot):
 
-- bytes uploaded per frame/window,
+- bytes uploaded per frame/window (both budgeted and actual),
 - dropped update count per image/window,
 - peak staging bytes,
 - time-to-present for the latest frame (optional).
+
+Implementation note:
+
+- The budget decision often needs a conservative estimate (e.g. assume YUV updates expand to RGBA for budgeting).
+  Therefore observability should report *both*:
+  - `upload_bytes_budgeted`: the estimate used for budget decisions, and
+  - `upload_bytes_applied`: the actual CPU->GPU upload bytes performed by the chosen apply path.
 
 ### 5) Web/wasm constraints
 

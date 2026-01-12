@@ -10,16 +10,17 @@ use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
     OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
-    OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, PointerActionHooks,
-    PressableActionHooks, PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
+    OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel,
+    PointerActionHooks, PressableActionHooks, PressableHoverActionHooks, RovingActionHooks,
+    TimerActionHooks,
 };
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps, GridProps,
     HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
     PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
     ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
-    VirtualListProps, VirtualListState, VisualTransformProps,
+    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
+    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -925,6 +926,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_on_wheel(&mut self, handler: OnWheel) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_wheel = Some(handler);
+        });
+    }
+
     pub fn pointer_region_add_on_pointer_up(&mut self, handler: OnPointerUp) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = match hooks.on_pointer_up.clone() {
@@ -939,9 +946,29 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pointer_region_add_on_wheel(&mut self, handler: OnWheel) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_wheel = match hooks.on_wheel.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, wheel| {
+                        prev(host, cx, wheel) || next(host, cx, wheel)
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pointer_region_clear_on_pointer_up(&mut self) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = None;
+        });
+    }
+
+    pub fn pointer_region_clear_on_wheel(&mut self) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_wheel = None;
         });
     }
 
@@ -1306,6 +1333,33 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::Image(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn viewport_surface(&mut self, target: fret_core::RenderTargetId) -> AnyElement {
+        self.viewport_surface_props(ViewportSurfaceProps::new(target))
+    }
+
+    #[track_caller]
+    pub fn viewport_surface_mapped(
+        &mut self,
+        target: fret_core::RenderTargetId,
+        target_px_size: (u32, u32),
+        fit: fret_core::ViewportFit,
+    ) -> AnyElement {
+        self.viewport_surface_props(ViewportSurfaceProps {
+            target_px_size,
+            fit,
+            ..ViewportSurfaceProps::new(target)
+        })
+    }
+
+    #[track_caller]
+    pub fn viewport_surface_props(&mut self, props: ViewportSurfaceProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::ViewportSurface(props), Vec::new())
         })
     }
 

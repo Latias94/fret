@@ -62,7 +62,7 @@ effects and be registered by the runner/renderer at a well-defined synchronizati
 Current minimal contract:
 
 - Token: `fret_core::ImageUploadToken` (allocated by the host via `UiHost::next_image_upload_token()`).
-- Request: `fret_runtime::Effect::ImageRegisterRgba8 { window, token, width, height, bytes, color_space }`.
+- Request: `fret_runtime::Effect::ImageRegisterRgba8 { window, token, width, height, bytes, color_info, alpha_mode }`.
 - Success: `fret_core::Event::ImageRegistered { token, image, width, height }`.
 - Failure: `fret_core::Event::ImageRegisterFailed { token, message }`.
 - Release: `fret_runtime::Effect::ImageUnregister { image }` (best-effort).
@@ -72,7 +72,7 @@ Notes:
 - This matches the GPUI-style principle that resources are managed at a flush point and UI code only holds stable IDs.
 - Higher-level asset caches (key → async load → register → notify redraw) are expected to live above this minimal
   primitive (similar to GPUI’s `use_asset`), but the core boundary stays effects-based and portable.
-- `color_space` uses the portable `fret_core::ImageColorSpace` enum (Srgb vs Linear).
+- `color_info` / `alpha_mode` are stable metadata types (`fret_core::ImageColorInfo`, `fret_core::AlphaMode`) aligned with ADR 0126.
 
 Zed/GPUI reference (non-normative):
 

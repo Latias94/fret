@@ -771,6 +771,23 @@ impl ElementHostWidget {
                     });
                 }
             }
+            ElementInstance::ViewportSurface(props) => {
+                let opacity = props.opacity.clamp(0.0, 1.0);
+                if opacity <= 0.0 {
+                    return;
+                }
+                let mapping = fret_core::ViewportMapping {
+                    content_rect: cx.bounds,
+                    target_px_size: props.target_px_size,
+                    fit: props.fit,
+                };
+                cx.scene.push(SceneOp::ViewportSurface {
+                    order: DrawOrder(0),
+                    rect: mapping.map().draw_rect,
+                    target: props.target,
+                    opacity,
+                });
+            }
             ElementInstance::SvgIcon(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
                 if opacity <= 0.0 || props.color.a <= 0.0 {

@@ -20,6 +20,19 @@ pub enum RenderTargetUpdate {
     },
 }
 
+impl RenderTargetUpdate {
+    pub fn update(
+        id: fret_core::RenderTargetId,
+        desc: fret_render::RenderTargetDescriptor,
+    ) -> Self {
+        Self::Update { id, desc }
+    }
+
+    pub fn unregister(id: fret_core::RenderTargetId) -> Self {
+        Self::Unregister { id }
+    }
+}
+
 impl fmt::Debug for RenderTargetUpdate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -40,6 +53,26 @@ impl fmt::Debug for RenderTargetUpdate {
 pub struct EngineFrameUpdate {
     pub target_updates: Vec<RenderTargetUpdate>,
     pub command_buffers: Vec<wgpu::CommandBuffer>,
+}
+
+impl EngineFrameUpdate {
+    pub fn push_command_buffer(&mut self, cb: wgpu::CommandBuffer) {
+        self.command_buffers.push(cb);
+    }
+
+    pub fn update_render_target(
+        &mut self,
+        id: fret_core::RenderTargetId,
+        desc: fret_render::RenderTargetDescriptor,
+    ) {
+        self.target_updates
+            .push(RenderTargetUpdate::Update { id, desc });
+    }
+
+    pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) {
+        self.target_updates
+            .push(RenderTargetUpdate::Unregister { id });
+    }
 }
 
 /// App-owned, engine-pass 3D viewport overlay hooks (gizmos, debug draw, selection outlines).
@@ -131,6 +164,11 @@ pub struct WinitRunnerConfig {
     ///
     /// This is used for `SceneOp::SvgMaskIcon` and `SceneOp::SvgImage` rasterizations.
     pub svg_raster_budget_bytes: u64,
+    /// Soft upper bound for total GPU memory used by renderer-owned intermediate targets.
+    ///
+    /// This covers internal multi-pass steps such as MSAA resolves, effect intermediates, clip masks,
+    /// and post-processing substrates (ADR 0120).
+    pub renderer_intermediate_budget_bytes: u64,
     /// MSAA sample count used by the renderer's offscreen path pass.
     ///
     /// Set to `1` to disable MSAA-based AA for paths (more compatible, lower quality).
@@ -142,6 +180,24 @@ pub struct WinitRunnerConfig {
     pub wgpu_init: WgpuInit,
     /// Canvas element id used by the wasm32 backend.
     pub web_canvas_id: String,
+
+    /// Soft upper bound on total CPU->GPU upload bytes per rendered frame (per window) for
+    /// streaming image updates (ADR 0123).
+    pub streaming_upload_budget_bytes_per_frame: u64,
+    /// Soft upper bound on pending streaming update bytes retained for a window (ADR 0123).
+    ///
+    /// Note: this is a forward-looking knob. The initial streaming update MVP applies coalescing
+    /// and per-frame budget at drain points but does not yet maintain a cross-frame pending queue.
+    pub streaming_staging_budget_bytes: u64,
+    /// When enabled, the runner updates `fret_core::StreamingUploadPerfSnapshot` as an app global.
+    pub streaming_perf_snapshot_enabled: bool,
+    /// When enabled, the runner may emit `Event::{ImageUpdateApplied,ImageUpdateDropped}` for
+    /// streaming image updates (ADR 0126).
+    pub streaming_update_ack_enabled: bool,
+
+    /// Enable experimental GPU-assisted NV12 conversion for streaming image updates when supported
+    /// by the selected backend/device (ADR 0124).
+    pub streaming_nv12_gpu_convert_enabled: bool,
 }
 
 pub enum WgpuInit {
@@ -182,11 +238,17 @@ impl Default for WinitRunnerConfig {
             file_dialog_max_file_bytes: 32 * 1024 * 1024,
             file_dialog_max_files: 128,
             svg_raster_budget_bytes: 64 * 1024 * 1024,
+            renderer_intermediate_budget_bytes: 256 * 1024 * 1024,
             path_msaa_samples: 4,
             accessibility_enabled: true,
             text_font_families: fret_render::TextFontFamilyConfig::default(),
             wgpu_init: WgpuInit::CreateDefault,
             web_canvas_id: "fret-canvas".to_string(),
+            streaming_upload_budget_bytes_per_frame: 64 * 1024 * 1024,
+            streaming_staging_budget_bytes: 128 * 1024 * 1024,
+            streaming_perf_snapshot_enabled: false,
+            streaming_update_ack_enabled: false,
+            streaming_nv12_gpu_convert_enabled: false,
         }
     }
 }

@@ -23,6 +23,8 @@ pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
         .map_err(anyhow::Error::from)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod alpha_mode_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assets_demo;
@@ -68,6 +70,12 @@ pub mod sonner_demo;
 pub mod stacked_bars_demo;
 pub mod stairs_demo;
 pub mod stems_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod streaming_i420_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod streaming_image_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod streaming_nv12_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]

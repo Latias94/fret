@@ -2,7 +2,8 @@
 //! 3D plot widgets rendered via viewport surfaces.
 //!
 //! This crate intentionally does **not** depend on `wgpu`/`winit` and does not emit renderer-specific
-//! primitives. Instead, it embeds an engine-owned render target via `SceneOp::ViewportSurface` and
+//! primitives. Instead, it embeds an engine-owned render target via `SceneOp::ViewportSurface` (or
+//! `fret-ui`'s declarative `ViewportSurface` element) and
 //! forwards input using `Effect::ViewportInput` (see ADR 0098).
 
 pub mod retained;

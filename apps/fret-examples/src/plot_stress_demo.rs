@@ -8,10 +8,24 @@ use fret_launch::{
 use fret_plot::cartesian::{DataPoint, DataRect};
 use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
 use fret_plot::series::Series;
+use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+fn try_println(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let _ = out.write_fmt(args);
+    let _ = out.write_all(b"\n");
+}
+
+macro_rules! try_println {
+    ($($tt:tt)*) => {
+        try_println(format_args!($($tt)*))
+    };
+}
 
 const DEFAULT_POINTS: usize = 200_000;
 const DEFAULT_SERIES: usize = 3;
@@ -24,6 +38,7 @@ struct PlotStressWindowState {
     max_frames: Option<u64>,
     frame: u64,
     last_report: Option<Instant>,
+    last_renderer_report: Option<Instant>,
     render_time_accum: Duration,
     render_frames_accum: u64,
 }
@@ -37,10 +52,10 @@ struct PlotStressDriver {
 
 impl PlotStressDriver {
     fn print_help() {
-        println!("plot_stress_demo controls:");
-        println!("  Space: toggle animated bounds (forces path rebuild)");
-        println!("  H: print this help");
-        println!("  Esc: close");
+        try_println!("plot_stress_demo controls:");
+        try_println!("  Space: toggle animated bounds (forces path rebuild)");
+        try_println!("  H: print this help");
+        try_println!("  Esc: close");
     }
 
     fn build_series(points: usize, series_index: usize) -> Series {
@@ -139,6 +154,76 @@ impl PlotStressDriver {
 impl WinitAppDriver for PlotStressDriver {
     type WindowState = PlotStressWindowState;
 
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
+        renderer.set_perf_enabled(true);
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    let pipeline_breakdown =
+                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                    try_println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.quad_draw_calls,
+                        snap.viewport_draw_calls,
+                        snap.image_draw_calls,
+                        snap.text_draw_calls,
+                        snap.path_draw_calls,
+                        snap.mask_draw_calls,
+                        snap.fullscreen_draw_calls,
+                        snap.clip_mask_draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bind_group_switches,
+                        snap.texture_bind_group_switches,
+                        snap.scissor_sets,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                    if pipeline_breakdown {
+                        try_println!(
+                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                            snap.pipeline_switches_quad,
+                            snap.pipeline_switches_viewport,
+                            snap.pipeline_switches_mask,
+                            snap.pipeline_switches_text_mask,
+                            snap.pipeline_switches_text_color,
+                            snap.pipeline_switches_path,
+                            snap.pipeline_switches_path_msaa,
+                            snap.pipeline_switches_composite,
+                            snap.pipeline_switches_fullscreen,
+                            snap.pipeline_switches_clip_mask,
+                        );
+                    }
+                }
+            }
+            state.last_renderer_report = Some(now);
+        }
+    }
+
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         let plot = app
             .models_mut()
@@ -156,6 +241,7 @@ impl WinitAppDriver for PlotStressDriver {
             max_frames: self.max_frames,
             frame: 0,
             last_report: None,
+            last_renderer_report: None,
             render_time_accum: Duration::ZERO,
             render_frames_accum: 0,
         }
@@ -280,9 +366,13 @@ impl WinitAppDriver for PlotStressDriver {
 
             let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
 
-            println!(
+            try_println!(
                 "frames={} points={} series={} animate={} avg_driver_render={:.1}us",
-                state.frame, self.points, self.series, animate, avg_us
+                state.frame,
+                self.points,
+                self.series,
+                animate,
+                avg_us
             );
 
             state.last_report = Some(Instant::now());
@@ -376,7 +466,7 @@ pub fn run() -> anyhow::Result<()> {
                 max_frames = Some(value.parse()?);
             }
             "--help" | "-h" => {
-                println!(
+                try_println!(
                     "Usage: plot_stress_demo [--points N] [--series N] [--frames N]\n\nThis is a minimal stress harness aligned with ADR 0096 conventions (deterministic scene generation, periodic perf prints)."
                 );
                 return Ok(());

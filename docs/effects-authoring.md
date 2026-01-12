@@ -3,6 +3,9 @@
 This document describes how to author scoped UI post-processing effects using the portable effect semantics
 defined in `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
 
+For the recommended user-facing story (Tier A vs Tier B) and the recipe authoring pattern, see:
+`docs/adr/0149-effect-recipes-and-tier-selection-v1.md`.
+
 ## TL;DR
 
 - Use `fret-ui`'s declarative `EffectLayer` wrapper to emit `SceneOp::PushEffect/PopEffect` around a subtree.
@@ -10,6 +13,7 @@ defined in `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.
   to define clipping behavior (ADR 0078).
 - For heavy GPU panels (video playback, game viewports, NLE-class effects), prefer Tier A (`RenderTargetId` + `SceneOp::ViewportSurface`)
   instead of trying to expose `wgpu` to components (ADR 0125).
+  - Declarative helper: `cx.viewport_surface(...)` (`crates/fret-ui/src/elements/cx.rs`)
 
 ## Declarative usage (recommended)
 
@@ -55,6 +59,20 @@ The `glass_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
 - Declarative wrapper (feature-gated): `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
 
 The `pixelate_panel` helper is compiled behind the `fret-ui-kit` `recipes` feature.
+
+## Pixelate semantics (what to expect)
+
+Fret's current pixelation implementation is a **nearest**-based downsample/upscale chain that is **anchored to the
+effect bounds** (not the window origin). This is intentional: it makes nested/translated effects deterministic and
+keeps the "pixel grid" stable within the effect region.
+
+Practical implications:
+
+- Pixelate is not a blur: high-frequency patterns (1–2 px stripes, checkerboards) will alias as `scale` changes.
+- Some `scale` values can make thin patterns appear to disappear or turn into a flat tint, depending on how the block
+  origin lines up with the underlying pattern.
+- If you need a more predictable look across arbitrary content, prefer blur/color-adjust steps, or author content that
+  matches the target `scale` (pixel-art inputs, deliberate block sizes).
 
 ## Token naming conventions (recommended)
 
@@ -131,8 +149,11 @@ let _ = glass_panel(cx, props, |_| Vec::new());
 If your "component" wants to do substantial rendering work (custom shaders, video decoding, engine viewports):
 
 - Render into a texture registered as `RenderTargetId`.
-- Present it in the UI via `SceneOp::ViewportSurface`.
+- Present it in the UI via `SceneOp::ViewportSurface` (or `cx.viewport_surface(...)` in declarative trees).
 - Keep `wgpu::Device/Queue` ownership centralized in the runner (ADR 0038).
+
+If you also need to forward pointer + wheel input into the viewport (e.g. engine panels), use
+`fret-ui-kit`'s `viewport_surface_panel` helper: `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`.
 
 This keeps the UI contracts deterministic and portable, while still enabling advanced GPU workloads.
 

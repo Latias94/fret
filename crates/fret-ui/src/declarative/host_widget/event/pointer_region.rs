@@ -12,6 +12,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         return;
     }
 
+    let pixels_per_point = cx
+        .app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.scale_factor(window))
+        .unwrap_or(1.0);
+
     struct PointerHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -100,6 +106,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             button,
             modifiers,
             pointer_type,
+            click_count,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -112,8 +119,10 @@ pub(super) fn handle_pointer_region<H: UiHost>(
 
             let down = action::PointerDownCx {
                 position: *position,
+                pixels_per_point,
                 button: *button,
                 modifiers: *modifiers,
+                click_count: *click_count,
                 pointer_type: *pointer_type,
             };
 
@@ -175,6 +184,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
 
             let mv = action::PointerMoveCx {
                 position: *position,
+                pixels_per_point,
                 buttons: *buttons,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,
@@ -204,11 +214,61 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 cx.stop_propagation();
             }
         }
+        Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta,
+            modifiers,
+            pointer_type: _,
+        }) => {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::PointerActionHooks::default,
+                |hooks| hooks.on_wheel.clone(),
+            );
+
+            let Some(h) = hook else {
+                return;
+            };
+
+            let wheel = action::WheelCx {
+                position: *position,
+                pixels_per_point,
+                delta: *delta,
+                modifiers: *modifiers,
+            };
+
+            let mut host = PointerHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+                node: cx.node,
+                bounds: cx.bounds,
+                input_ctx: &cx.input_ctx,
+                requested_focus: &mut cx.requested_focus,
+                requested_capture: &mut cx.requested_capture,
+                requested_cursor: &mut cx.requested_cursor,
+            };
+            let handled = h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                wheel,
+            );
+
+            if handled {
+                cx.stop_propagation();
+            }
+        }
         Event::Pointer(fret_core::PointerEvent::Up {
             position,
             button,
             modifiers,
             pointer_type,
+            click_count,
             ..
         }) => {
             let was_captured = cx.captured == Some(cx.node);
@@ -223,8 +283,10 @@ pub(super) fn handle_pointer_region<H: UiHost>(
 
             let up = action::PointerUpCx {
                 position: *position,
+                pixels_per_point,
                 button: *button,
                 modifiers: *modifiers,
+                click_count: *click_count,
                 pointer_type: *pointer_type,
             };
 

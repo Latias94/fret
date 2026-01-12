@@ -1815,8 +1815,10 @@ mod tests {
             },
             PointerDownCx {
                 position: Point::new(Px(10.0), Px(12.0)),
+                pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: PointerType::Mouse,
             },
             &open,
@@ -1845,8 +1847,10 @@ mod tests {
             },
             PointerDownCx {
                 position: Point::new(Px(10.0), Px(12.0)),
+                pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: PointerType::Touch,
             },
             &open,
@@ -1862,8 +1866,10 @@ mod tests {
             },
             PointerUpCx {
                 position: Point::new(Px(13.0), Px(15.0)),
+                pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: PointerType::Touch,
             },
             &open,
@@ -1892,8 +1898,10 @@ mod tests {
             },
             PointerDownCx {
                 position: Point::new(Px(10.0), Px(12.0)),
+                pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: PointerType::Touch,
             },
             &open,
@@ -1907,6 +1915,7 @@ mod tests {
             },
             PointerMoveCx {
                 position: Point::new(Px(40.0), Px(12.0)),
+                pixels_per_point: 1.0,
                 buttons: fret_core::MouseButtons {
                     left: true,
                     right: false,
@@ -1924,8 +1933,10 @@ mod tests {
             },
             PointerUpCx {
                 position: Point::new(Px(40.0), Px(12.0)),
+                pixels_per_point: 1.0,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: PointerType::Touch,
             },
             &open,

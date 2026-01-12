@@ -196,6 +196,9 @@ impl ElementHostWidget {
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
             }
+            ElementInstance::ViewportSurface(_) => {
+                cx.set_role(SemanticsRole::Viewport);
+            }
             _ => {}
         }
     }

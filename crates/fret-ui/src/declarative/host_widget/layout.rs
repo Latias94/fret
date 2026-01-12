@@ -119,6 +119,7 @@ impl ElementHostWidget {
             | ElementInstance::WheelRegion(_)
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
+            | ElementInstance::ViewportSurface(_)
             | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Text(_)
@@ -977,6 +978,9 @@ impl ElementHostWidget {
             }
             ElementInstance::Grid(props) => self.layout_grid_impl(cx, window, props),
             ElementInstance::Image(props) => {
+                clamp_to_constraints(cx.available, props.layout, cx.available)
+            }
+            ElementInstance::ViewportSurface(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }
             ElementInstance::SvgIcon(props) => {

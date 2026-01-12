@@ -2,24 +2,19 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, RenderTargetId};
 use fret_launch::{
-    EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    EngineFrameUpdate, ViewportRenderTarget, WinitAppDriver, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
+use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-
-struct Plot3dDemoTarget {
-    id: RenderTargetId,
-    size: (u32, u32),
-    texture: wgpu::Texture,
-}
 
 struct Plot3dDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<Plot3dModel>,
-    target: Option<Plot3dDemoTarget>,
+    target: ViewportRenderTarget,
 }
 
 #[derive(Default)]
@@ -43,7 +38,10 @@ impl Plot3dDemoDriver {
             ui,
             root: None,
             plot,
-            target: None,
+            target: ViewportRenderTarget::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+            ),
         }
     }
 
@@ -59,67 +57,28 @@ impl Plot3dDemoDriver {
             .read(app, |_app, m| m.viewport.target_px_size)
             .unwrap_or((960, 540));
 
-        let needs_new = state.target.as_ref().is_none_or(|t| t.size != desired_size);
+        let prev_id = state.target.id();
+        let prev_size = state.target.size();
+        let (id, view) = {
+            let (id, view_ref) = state.target.ensure_size(
+                context,
+                renderer,
+                desired_size,
+                Some("plot3d demo target"),
+            );
+            (id, view_ref.clone())
+        };
+        let new_size = state.target.size();
 
-        if needs_new {
-            let (w, h) = desired_size;
-            let w = w.max(1);
-            let h = h.max(1);
-            let size = (w, h);
-
-            let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("plot3d demo target"),
-                size: wgpu::Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::TEXTURE_BINDING,
-                view_formats: &[],
-            });
-
-            let view_for_registry = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-            let id = if let Some(prev) = state.target.take() {
-                renderer.update_render_target(
-                    prev.id,
-                    RenderTargetDescriptor {
-                        view: view_for_registry,
-                        size,
-                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                        color_space: RenderTargetColorSpace::Srgb,
-                    },
-                );
-                prev.id
-            } else {
-                renderer.register_render_target(RenderTargetDescriptor {
-                    view: view_for_registry,
-                    size,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    color_space: RenderTargetColorSpace::Srgb,
-                })
-            };
-
-            state.target = Some(Plot3dDemoTarget { id, size, texture });
-
+        if prev_id != id || prev_size != new_size {
             let _ = state.plot.update(app, |m, _cx| {
                 m.viewport.target = id;
-                m.viewport.target_px_size = size;
+                m.viewport.target_px_size = new_size;
             });
-
             app.request_redraw(window);
         }
 
-        let target = state.target.as_ref().expect("target ensured");
-        let view = target
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        (target.id, view)
+        (id, view)
     }
 }
 

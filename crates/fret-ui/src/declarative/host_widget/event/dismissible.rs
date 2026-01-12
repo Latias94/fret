@@ -13,6 +13,12 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         return;
     }
 
+    let pixels_per_point = cx
+        .app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.scale_factor(window))
+        .unwrap_or(1.0);
+
     struct DismissibleHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
@@ -139,6 +145,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
 
             let mv = action::PointerMoveCx {
                 position: *position,
+                pixels_per_point,
                 buttons: *buttons,
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,

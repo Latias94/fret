@@ -10,6 +10,7 @@ contracts early to avoid large rewrites later.
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
+- Viewport panels (engine/video): `docs/viewport-panels.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`

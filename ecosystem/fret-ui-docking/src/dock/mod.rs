@@ -31,6 +31,13 @@ pub struct DockPanel {
     pub viewport: Option<ViewportPanel>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockViewportLayout {
+    pub content_rect: Rect,
+    pub mapping: ViewportMapping,
+    pub draw_rect: Rect,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ViewportPanel {
     pub target: RenderTargetId,
@@ -44,17 +51,46 @@ pub struct ViewportPanel {
 /// Docking UI is policy-heavy already, but viewport overlay *shapes* are editor/app-specific
 /// (ADR 0027 / ADR 0049). This hook keeps docking focused on "viewport embedding" only.
 pub trait DockViewportOverlayHooks: Send + Sync + 'static {
+    /// Preferred overlay hook: provides the full viewport layout bundle recorded by docking.
+    ///
+    /// This method is non-breaking: the default implementation forwards to `paint(...)`.
     #[allow(clippy::too_many_arguments)]
-    fn paint(
+    fn paint_with_layout(
         &self,
         theme: fret_ui::ThemeSnapshot,
         window: fret_core::AppWindowId,
         panel: &PanelKey,
         viewport: ViewportPanel,
-        mapping: ViewportMapping,
-        draw_rect: Rect,
+        layout: DockViewportLayout,
         scene: &mut Scene,
-    );
+    ) {
+        self.paint(
+            theme,
+            window,
+            panel,
+            viewport,
+            layout.mapping,
+            layout.draw_rect,
+            scene,
+        );
+    }
+
+    /// Legacy overlay hook: prefer `paint_with_layout(...)` for new code.
+    ///
+    /// Default implementation is a no-op to keep implementations minimal when the overlay hook is
+    /// unused.
+    #[allow(clippy::too_many_arguments)]
+    fn paint(
+        &self,
+        _theme: fret_ui::ThemeSnapshot,
+        _window: fret_core::AppWindowId,
+        _panel: &PanelKey,
+        _viewport: ViewportPanel,
+        _mapping: ViewportMapping,
+        _draw_rect: Rect,
+        _scene: &mut Scene,
+    ) {
+    }
 }
 
 pub fn create_dock_space_node<H: UiHost>(

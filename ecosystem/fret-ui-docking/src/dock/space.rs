@@ -1849,16 +1849,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
             dock.clear_viewport_layout_for_window(self.window);
             for (&node_id, &rect) in layout_all.iter() {
                 let (_tab_bar, content) = split_tab_bar(rect);
-                let target = (|| {
+                let viewport = (|| {
                     let DockNode::Tabs { tabs, active } = dock.graph.node(node_id)?.clone() else {
                         return None;
                     };
                     let panel_key = tabs.get(active)?;
                     let panel = dock.panel(panel_key)?;
-                    panel.viewport.map(|vp| vp.target)
+                    panel.viewport
                 })();
-                if let Some(target) = target {
-                    dock.set_viewport_content_rect(self.window, target, content);
+                if let Some(viewport) = viewport {
+                    let mapping = ViewportMapping {
+                        content_rect: content,
+                        target_px_size: viewport.target_px_size,
+                        fit: viewport.fit,
+                    };
+                    dock.set_viewport_layout(
+                        self.window,
+                        viewport.target,
+                        super::DockViewportLayout {
+                            content_rect: content,
+                            mapping,
+                            draw_rect: mapping.map().draw_rect,
+                        },
+                    );
                 }
             }
 

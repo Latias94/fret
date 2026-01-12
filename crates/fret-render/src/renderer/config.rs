@@ -2,6 +2,56 @@ use super::*;
 use crate::text::TextFontFamilyConfig;
 
 impl Renderer {
+    pub fn set_perf_enabled(&mut self, enabled: bool) {
+        self.perf_enabled = enabled;
+        self.perf = RenderPerfStats::default();
+    }
+
+    pub fn take_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
+        if !self.perf_enabled {
+            return None;
+        }
+
+        let snap = RenderPerfSnapshot {
+            frames: self.perf.frames,
+            encode_scene_us: self.perf.encode_scene.as_micros() as u64,
+            prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
+            prepare_text_us: self.perf.prepare_text.as_micros() as u64,
+            draw_calls: self.perf.draw_calls,
+            quad_draw_calls: self.perf.quad_draw_calls,
+            viewport_draw_calls: self.perf.viewport_draw_calls,
+            image_draw_calls: self.perf.image_draw_calls,
+            text_draw_calls: self.perf.text_draw_calls,
+            path_draw_calls: self.perf.path_draw_calls,
+            mask_draw_calls: self.perf.mask_draw_calls,
+            fullscreen_draw_calls: self.perf.fullscreen_draw_calls,
+            clip_mask_draw_calls: self.perf.clip_mask_draw_calls,
+            pipeline_switches: self.perf.pipeline_switches,
+            pipeline_switches_quad: self.perf.pipeline_switches_quad,
+            pipeline_switches_viewport: self.perf.pipeline_switches_viewport,
+            pipeline_switches_mask: self.perf.pipeline_switches_mask,
+            pipeline_switches_text_mask: self.perf.pipeline_switches_text_mask,
+            pipeline_switches_text_color: self.perf.pipeline_switches_text_color,
+            pipeline_switches_path: self.perf.pipeline_switches_path,
+            pipeline_switches_path_msaa: self.perf.pipeline_switches_path_msaa,
+            pipeline_switches_composite: self.perf.pipeline_switches_composite,
+            pipeline_switches_fullscreen: self.perf.pipeline_switches_fullscreen,
+            pipeline_switches_clip_mask: self.perf.pipeline_switches_clip_mask,
+            bind_group_switches: self.perf.bind_group_switches,
+            uniform_bind_group_switches: self.perf.uniform_bind_group_switches,
+            texture_bind_group_switches: self.perf.texture_bind_group_switches,
+            scissor_sets: self.perf.scissor_sets,
+            uniform_bytes: self.perf.uniform_bytes,
+            instance_bytes: self.perf.instance_bytes,
+            vertex_bytes: self.perf.vertex_bytes,
+            scene_encoding_cache_hits: self.perf.scene_encoding_cache_hits,
+            scene_encoding_cache_misses: self.perf.scene_encoding_cache_misses,
+        };
+
+        self.perf = RenderPerfStats::default();
+        Some(snap)
+    }
+
     pub fn set_svg_perf_enabled(&mut self, enabled: bool) {
         self.svg_perf_enabled = enabled;
         self.svg_perf = SvgPerfStats::default();
