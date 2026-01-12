@@ -10,6 +10,7 @@ use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
+use fret_canvas::scale::effective_scale_factor;
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
     PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
@@ -22,6 +23,7 @@ use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget}
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
+use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::retained::{ChartCanvasOutput, ChartCanvasOutputSnapshot};
 
 #[derive(Debug, Default)]
@@ -147,9 +149,9 @@ pub struct ChartCanvas {
     cached_rects: Vec<CachedRect>,
     cached_points: Vec<CachedPoint>,
     series_rank_by_id: BTreeMap<delinea::SeriesId, usize>,
-    axis_text: Vec<TextBlobId>,
-    tooltip_text: Vec<TextBlobId>,
-    legend_text: Vec<TextBlobId>,
+    axis_text: TextCacheGroup,
+    tooltip_text: TextCacheGroup,
+    legend_text: TextCacheGroup,
     legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
     legend_hover: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
@@ -198,9 +200,9 @@ impl ChartCanvas {
             cached_rects: Vec::default(),
             cached_points: Vec::default(),
             series_rank_by_id: BTreeMap::default(),
-            axis_text: Vec::default(),
-            tooltip_text: Vec::default(),
-            legend_text: Vec::default(),
+            axis_text: TextCacheGroup::default(),
+            tooltip_text: TextCacheGroup::default(),
+            legend_text: TextCacheGroup::default(),
             legend_item_rects: Vec::default(),
             legend_hover: None,
             pan_drag: None,
@@ -1248,23 +1250,8 @@ impl ChartCanvas {
         plot_height_px * (1.0 - t)
     }
 
-    fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
-        for blob in self.axis_text.drain(..) {
-            services.text().release(blob);
-        }
-    }
-
     fn clear_tooltip_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
-        for blob in self.tooltip_text.drain(..) {
-            services.text().release(blob);
-        }
-    }
-
-    fn clear_legend_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
-        for blob in self.legend_text.drain(..) {
-            services.text().release(blob);
-        }
-        self.legend_item_rects.clear();
+        self.tooltip_text.clear(services);
     }
 
     fn series_color(&self, series: delinea::SeriesId) -> Color {
@@ -1291,7 +1278,7 @@ impl ChartCanvas {
     }
 
     fn draw_legend<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
-        self.clear_legend_text_cache(cx.services);
+        self.legend_item_rects.clear();
 
         let plot = self.last_layout.plot;
         if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
@@ -1304,6 +1291,20 @@ impl ChartCanvas {
             return;
         }
 
+        let mut key = KeyBuilder::new();
+        key.mix_u64(self.last_theme_revision);
+        key.mix_u64(u64::from(cx.scale_factor.to_bits()));
+        key.mix_u64(u64::from(series.len() as u32));
+        for s in &series {
+            key.mix_u64(u64::from(s.id.0));
+            key.mix_bool(s.visible);
+            if let Some(name) = s.name.as_deref() {
+                key.mix_str(name);
+            }
+        }
+        self.legend_text
+            .reset_if_key_changed(cx.services, key.finish());
+
         let text_style = TextStyle {
             size: Px(12.0),
             weight: FontWeight::NORMAL,
@@ -1313,7 +1314,7 @@ impl ChartCanvas {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor,
+            scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
         };
 
         let mut blobs: Vec<(delinea::SeriesId, TextBlobId, fret_core::TextMetrics, bool)> =
@@ -1327,7 +1328,11 @@ impl ChartCanvas {
                 .as_deref()
                 .map(|n| n.to_string())
                 .unwrap_or_else(|| format!("Series {}", s.id.0));
-            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            let prepared = self
+                .legend_text
+                .prepare(cx.services, &label, &text_style, constraints);
+            let blob = prepared.blob;
+            let metrics = prepared.metrics;
             max_text_w = max_text_w.max(metrics.size.width.0.max(1.0));
             row_h = row_h.max(metrics.size.height.0.max(1.0));
             blobs.push((s.id, blob, metrics, s.visible));
@@ -1409,21 +1414,55 @@ impl ChartCanvas {
                 text: blob,
                 color: text_color,
             });
-            self.legend_text.push(blob);
 
             y += row_h + gap;
         }
     }
 
     fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
-        self.clear_axis_text_cache(cx.services);
-
         let plot = self.last_layout.plot;
         let x_axes = self.last_layout.x_axes.clone();
         let y_axes = self.last_layout.y_axes.clone();
         if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
             return;
         }
+
+        let x_bands: Vec<(AxisBandLayout, DataWindow)> = x_axes
+            .iter()
+            .map(|band| (*band, self.current_window_x(band.axis)))
+            .collect();
+        let y_bands: Vec<(AxisBandLayout, DataWindow)> = y_axes
+            .iter()
+            .map(|band| (*band, self.current_window_y(band.axis)))
+            .collect();
+
+        let mut key = KeyBuilder::new();
+        key.mix_u64(self.last_theme_revision);
+        key.mix_u64(u64::from(cx.scale_factor.to_bits()));
+        key.mix_f32_bits(plot.size.width.0);
+        key.mix_f32_bits(plot.size.height.0);
+        key.mix_u64(u64::from(x_bands.len() as u32));
+        for (band, window) in &x_bands {
+            key.mix_u64(u64::from(band.axis.0));
+            key.mix_f32_bits(band.rect.origin.x.0);
+            key.mix_f32_bits(band.rect.origin.y.0);
+            key.mix_f32_bits(band.rect.size.width.0);
+            key.mix_f32_bits(band.rect.size.height.0);
+            key.mix_f64_bits(window.min);
+            key.mix_f64_bits(window.max);
+        }
+        key.mix_u64(u64::from(y_bands.len() as u32));
+        for (band, window) in &y_bands {
+            key.mix_u64(u64::from(band.axis.0));
+            key.mix_f32_bits(band.rect.origin.x.0);
+            key.mix_f32_bits(band.rect.origin.y.0);
+            key.mix_f32_bits(band.rect.size.width.0);
+            key.mix_f32_bits(band.rect.size.height.0);
+            key.mix_f64_bits(window.min);
+            key.mix_f64_bits(window.max);
+        }
+        self.axis_text
+            .reset_if_key_changed(cx.services, key.finish());
 
         let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(8_500));
         let label_order = DrawOrder(self.style.draw_order.0.saturating_add(8_501));
@@ -1440,15 +1479,14 @@ impl ChartCanvas {
             max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor,
+            scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
         };
 
         let x_tick_count = (plot.size.width.0 / 80.0).round().clamp(2.0, 12.0) as usize;
         let y_tick_count = (plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
 
         // X axes: baseline + ticks + labels.
-        for band in &x_axes {
-            let window = self.current_window_x(band.axis);
+        for (band, window) in &x_bands {
             let model = self.engine.model();
             let baseline_y = match band.position {
                 delinea::AxisPosition::Bottom => band.rect.origin.y.0,
@@ -1470,7 +1508,7 @@ impl ChartCanvas {
 
             let mut last_right = f32::NEG_INFINITY;
             for (value, label) in
-                Self::axis_ticks_with_labels(model, band.axis, window, x_tick_count)
+                Self::axis_ticks_with_labels(model, band.axis, *window, x_tick_count)
             {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let x_px = plot.origin.x.0 + t * plot.size.width.0;
@@ -1493,7 +1531,11 @@ impl ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
 
-                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+                let prepared =
+                    self.axis_text
+                        .prepare(cx.services, &label, &text_style, constraints);
+                let blob = prepared.blob;
+                let metrics = prepared.metrics;
 
                 let label_x = x_px - metrics.size.width.0 * 0.5;
                 let label_y =
@@ -1508,17 +1550,13 @@ impl ChartCanvas {
                         text: blob,
                         color: self.style.axis_label_color,
                     });
-                    self.axis_text.push(blob);
                     last_right = right;
-                } else {
-                    cx.services.text().release(blob);
                 }
             }
         }
 
         // Y axes: baseline + ticks + labels.
-        for band in &y_axes {
-            let window = self.current_window_y(band.axis);
+        for (band, window) in &y_bands {
             let model = self.engine.model();
             let baseline_x = match band.position {
                 delinea::AxisPosition::Left => band.rect.origin.x.0 + band.rect.size.width.0,
@@ -1540,7 +1578,7 @@ impl ChartCanvas {
 
             let mut last_bottom = f32::NEG_INFINITY;
             for (value, label) in
-                Self::axis_ticks_with_labels(model, band.axis, window, y_tick_count)
+                Self::axis_ticks_with_labels(model, band.axis, *window, y_tick_count)
             {
                 let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
                 let y_px = plot.origin.y.0 + (1.0 - t) * plot.size.height.0;
@@ -1563,7 +1601,11 @@ impl ChartCanvas {
                     corner_radii: Corners::all(Px(0.0)),
                 });
 
-                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+                let prepared =
+                    self.axis_text
+                        .prepare(cx.services, &label, &text_style, constraints);
+                let blob = prepared.blob;
+                let metrics = prepared.metrics;
 
                 let label_x = match band.position {
                     delinea::AxisPosition::Left => {
@@ -1584,10 +1626,7 @@ impl ChartCanvas {
                         text: blob,
                         color: self.style.axis_label_color,
                     });
-                    self.axis_text.push(blob);
                     last_bottom = bottom;
-                } else {
-                    cx.services.text().release(blob);
                 }
             }
         }
@@ -3001,7 +3040,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.rebuild_paths_if_needed(cx);
         self.clear_tooltip_text_cache(cx.services);
-        self.clear_legend_text_cache(cx.services);
         self.publish_output(cx.app);
 
         if let Some(background) = self.style.background {
@@ -3189,9 +3227,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
+                scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
             };
-            let (blob, _metrics) = cx.services.text().prepare(label, &text_style, constraints);
+            let prepared = self
+                .tooltip_text
+                .prepare(cx.services, label, &text_style, constraints);
+            let blob = prepared.blob;
 
             let plot = self.last_layout.plot;
             let pad = 6.0f32;
@@ -3202,7 +3243,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 text: blob,
                 color: self.style.axis_tick_color,
             });
-            self.tooltip_text.push(blob);
         }
 
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
@@ -3468,15 +3508,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 max_width: None,
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
+                scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
             };
             let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
             let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
             for line in tooltip_lines {
                 let text = format!("{}: {}", line.label, line.value);
-                let (blob, metrics) = cx.services.text().prepare(&text, &text_style, constraints);
-                line_blobs.push(blob);
-                line_metrics.push(metrics);
+                let prepared =
+                    self.tooltip_text
+                        .prepare(cx.services, &text, &text_style, constraints);
+                line_blobs.push(prepared.blob);
+                line_metrics.push(prepared.metrics);
             }
 
             let pad = self.style.tooltip_padding;
@@ -3542,7 +3584,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     color: self.style.tooltip_text_color,
                 });
                 y += metrics.size.height.0.max(1.0);
-                self.tooltip_text.push(blob);
             }
         }
 
@@ -3558,15 +3599,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
         self.cached_paths.clear();
 
-        for blob in self.axis_text.drain(..) {
-            services.text().release(blob);
-        }
-        for blob in self.tooltip_text.drain(..) {
-            services.text().release(blob);
-        }
-        for blob in self.legend_text.drain(..) {
-            services.text().release(blob);
-        }
+        self.axis_text.clear(services);
+        self.tooltip_text.clear(services);
+        self.legend_text.clear(services);
     }
 }
 
