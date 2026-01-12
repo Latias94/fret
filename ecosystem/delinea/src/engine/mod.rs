@@ -954,10 +954,15 @@ impl ChartEngine {
 
         self.marks_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
+        let wants_append_rebuild = self.marks_stage.take_append_rebuild();
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
             self.output.axis_windows.clear();
             self.marks_stage.reset();
+        } else if wants_append_rebuild {
+            // Append-only updates should not clear marks: keep the previous frame geometry visible
+            // while we incrementally extend/rebuild under budget.
+            self.marks_stage.begin_append_rebuild();
         }
 
         self.stats.stage_data_runs += 1;
