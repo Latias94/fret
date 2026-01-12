@@ -1398,13 +1398,13 @@ impl Renderer {
                             frame_perf.bind_group_switches =
                                 frame_perf.bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -1471,13 +1471,13 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -1649,13 +1649,13 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -1729,13 +1729,13 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -1982,13 +1982,13 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -2053,13 +2053,13 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        if let Some(scissor) = pass.dst_scissor {
-                            if scissor.w != 0 && scissor.h != 0 {
-                                rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                                if perf_enabled {
-                                    frame_perf.scissor_sets =
-                                        frame_perf.scissor_sets.saturating_add(1);
-                                }
+                        if let Some(scissor) = pass.dst_scissor
+                            && scissor.w != 0
+                            && scissor.h != 0
+                        {
+                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                             }
                         }
                         rp.draw(0..3, 0..1);
@@ -2254,10 +2254,11 @@ impl Renderer {
                     let base = u64::from(base) * quad_vertex_size;
                     let len = 6 * quad_vertex_size;
                     rp.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
-                    if let Some(scissor) = pass.dst_scissor {
-                        if scissor.w != 0 && scissor.h != 0 {
-                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                        }
+                    if let Some(scissor) = pass.dst_scissor
+                        && scissor.w != 0
+                        && scissor.h != 0
+                    {
+                        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
                     }
                     rp.draw(0..6, 0..1);
                     if perf_enabled {
@@ -2338,12 +2339,13 @@ impl Renderer {
                         frame_perf.texture_bind_group_switches =
                             frame_perf.texture_bind_group_switches.saturating_add(1);
                     }
-                    if let Some(scissor) = pass.dst_scissor {
-                        if scissor.w != 0 && scissor.h != 0 {
-                            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-                            if perf_enabled {
-                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
-                            }
+                    if let Some(scissor) = pass.dst_scissor
+                        && scissor.w != 0
+                        && scissor.h != 0
+                    {
+                        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                        if perf_enabled {
+                            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
                         }
                     }
                     rp.draw(0..3, 0..1);

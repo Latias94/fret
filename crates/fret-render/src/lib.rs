@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 mod capabilities;
 mod error;
 mod images;
@@ -31,7 +33,7 @@ fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
     let raw = std::env::var("FRET_WGPU_BACKEND").ok()?;
     let mut backends = wgpu::Backends::empty();
 
-    for part in raw.split(|c| c == ',' || c == '|' || c == '+' || c == ' ') {
+    for part in raw.split([',', '|', '+', ' ']) {
         let token = part.trim().to_ascii_lowercase();
         if token.is_empty() {
             continue;

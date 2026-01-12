@@ -401,7 +401,7 @@ fn should_dump_frame(frame_index: u64) -> bool {
     }
 
     if let Some(every) = parse_env_u64("FRET_RENDERPLAN_DUMP_EVERY") {
-        return every > 0 && ((frame_index - after) % every == 0);
+        return every > 0 && (frame_index - after).is_multiple_of(every);
     }
 
     // Default: dump exactly once (first eligible frame).

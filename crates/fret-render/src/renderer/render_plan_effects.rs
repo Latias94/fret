@@ -26,7 +26,7 @@ pub(super) fn available_scratch_targets(
         if t == srcdst {
             continue;
         }
-        if in_use_targets.iter().any(|used| *used == t) {
+        if in_use_targets.contains(&t) {
             continue;
         }
         out.push(t);
@@ -601,9 +601,7 @@ pub(super) fn map_scissor_to_size(
     src_size: (u32, u32),
     dst_size: (u32, u32),
 ) -> Option<ScissorRect> {
-    let Some(scissor) = scissor else {
-        return None;
-    };
+    let scissor = scissor?;
     if scissor.w == 0 || scissor.h == 0 {
         return None;
     }
@@ -645,9 +643,7 @@ pub(super) fn map_scissor_downsample_nearest(
     scale: u32,
     dst_size: (u32, u32),
 ) -> Option<ScissorRect> {
-    let Some(scissor) = scissor else {
-        return None;
-    };
+    let scissor = scissor?;
     if scissor.w == 0 || scissor.h == 0 {
         return None;
     }

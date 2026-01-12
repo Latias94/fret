@@ -822,16 +822,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         stats.upload_bytes_applied = stats.upload_bytes_applied.saturating_add(uploaded_bytes);
 
-        converter.convert_rect_into(
-            &gfx.ctx.device,
-            &gfx.ctx.queue,
-            &entry.uploaded.view,
+        converter.convert_rect_into(super::yuv_gpu::Nv12ConvertRectIntoArgs {
+            device: &gfx.ctx.device,
+            queue: &gfx.ctx.queue,
+            dst_view: &entry.uploaded.view,
             rect,
-            &planes.y_view,
-            &planes.uv_view,
-            color_info.range,
-            color_info.matrix,
-        );
+            y_view: &planes.y_view,
+            uv_view: &planes.uv_view,
+            range: color_info.range,
+            matrix: color_info.matrix,
+        });
 
         stats.yuv_conversions_applied = stats.yuv_conversions_applied.saturating_add(1);
         stats.yuv_convert_us = stats
@@ -1126,17 +1126,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
                     let t0 = std::time::Instant::now();
-                    match super::yuv::nv12_to_rgba8_rect(
+                    match super::yuv::nv12_to_rgba8_rect(super::yuv::Nv12ToRgba8RectInput {
                         width,
                         height,
                         update_rect_px,
                         y_bytes_per_row,
-                        &y_plane,
+                        y_plane: &y_plane,
                         uv_bytes_per_row,
-                        &uv_plane,
-                        color_info.range,
-                        color_info.matrix,
-                    ) {
+                        uv_plane: &uv_plane,
+                        range: color_info.range,
+                        matrix: color_info.matrix,
+                    }) {
                         Ok((rect, rgba)) => {
                             stats.yuv_conversions_applied =
                                 stats.yuv_conversions_applied.saturating_add(1);
@@ -1195,19 +1195,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     stats.yuv_conversions_attempted =
                         stats.yuv_conversions_attempted.saturating_add(1);
                     let t0 = std::time::Instant::now();
-                    match super::yuv::i420_to_rgba8_rect(
+                    match super::yuv::i420_to_rgba8_rect(super::yuv::I420ToRgba8RectInput {
                         width,
                         height,
                         update_rect_px,
                         y_bytes_per_row,
-                        &y_plane,
+                        y_plane: &y_plane,
                         u_bytes_per_row,
-                        &u_plane,
+                        u_plane: &u_plane,
                         v_bytes_per_row,
-                        &v_plane,
-                        color_info.range,
-                        color_info.matrix,
-                    ) {
+                        v_plane: &v_plane,
+                        range: color_info.range,
+                        matrix: color_info.matrix,
+                    }) {
                         Ok((rect, rgba)) => {
                             stats.yuv_conversions_applied =
                                 stats.yuv_conversions_applied.saturating_add(1);

@@ -230,7 +230,7 @@ pub fn write_rgba8_texture_region(
         return;
     }
 
-    let aligned_ok = bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0;
+    let aligned_ok = bytes_per_row.is_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
     let mut owned: Vec<u8> = Vec::new();
     let (bytes, dst_bpr) = if aligned_ok {
         (rgba, bytes_per_row)

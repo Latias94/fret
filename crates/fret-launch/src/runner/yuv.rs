@@ -36,7 +36,7 @@ fn expand_rect_to_even(rect: RectPx, width: u32, height: u32) -> Option<RectPx> 
 }
 
 fn chroma_dims_420(width: u32, height: u32) -> (u32, u32) {
-    ((width + 1) / 2, (height + 1) / 2)
+    (width.div_ceil(2), height.div_ceil(2))
 }
 
 pub(crate) fn normalize_update_rect_420(
@@ -64,7 +64,7 @@ fn yuv_coeffs(matrix: YuvMatrix) -> (f32, f32, f32, f32, f32) {
 }
 
 fn clamp01(v: f32) -> f32 {
-    v.max(0.0).min(1.0)
+    v.clamp(0.0, 1.0)
 }
 
 fn yuv_to_rgb(y: u8, u: u8, v: u8, range: ColorRange, matrix: YuvMatrix) -> (u8, u8, u8) {
@@ -103,16 +103,20 @@ fn yuv_to_rgb(y: u8, u: u8, v: u8, range: ColorRange, matrix: YuvMatrix) -> (u8,
 }
 
 pub(crate) fn nv12_to_rgba8_rect(
-    width: u32,
-    height: u32,
-    update_rect_px: Option<RectPx>,
-    y_bytes_per_row: u32,
-    y_plane: &[u8],
-    uv_bytes_per_row: u32,
-    uv_plane: &[u8],
-    range: ColorRange,
-    matrix: YuvMatrix,
+    input: Nv12ToRgba8RectInput<'_>,
 ) -> Result<(RectPx, Vec<u8>), String> {
+    let Nv12ToRgba8RectInput {
+        width,
+        height,
+        update_rect_px,
+        y_bytes_per_row,
+        y_plane,
+        uv_bytes_per_row,
+        uv_plane,
+        range,
+        matrix,
+    } = input;
+
     let rect = normalize_update_rect_420(width, height, update_rect_px)?;
 
     let (cw, ch) = chroma_dims_420(width, height);
@@ -162,19 +166,35 @@ pub(crate) fn nv12_to_rgba8_rect(
     Ok((rect, out))
 }
 
+pub(crate) struct Nv12ToRgba8RectInput<'a> {
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) update_rect_px: Option<RectPx>,
+    pub(crate) y_bytes_per_row: u32,
+    pub(crate) y_plane: &'a [u8],
+    pub(crate) uv_bytes_per_row: u32,
+    pub(crate) uv_plane: &'a [u8],
+    pub(crate) range: ColorRange,
+    pub(crate) matrix: YuvMatrix,
+}
+
 pub(crate) fn i420_to_rgba8_rect(
-    width: u32,
-    height: u32,
-    update_rect_px: Option<RectPx>,
-    y_bytes_per_row: u32,
-    y_plane: &[u8],
-    u_bytes_per_row: u32,
-    u_plane: &[u8],
-    v_bytes_per_row: u32,
-    v_plane: &[u8],
-    range: ColorRange,
-    matrix: YuvMatrix,
+    input: I420ToRgba8RectInput<'_>,
 ) -> Result<(RectPx, Vec<u8>), String> {
+    let I420ToRgba8RectInput {
+        width,
+        height,
+        update_rect_px,
+        y_bytes_per_row,
+        y_plane,
+        u_bytes_per_row,
+        u_plane,
+        v_bytes_per_row,
+        v_plane,
+        range,
+        matrix,
+    } = input;
+
     let rect = normalize_update_rect_420(width, height, update_rect_px)?;
 
     let (cw, ch) = chroma_dims_420(width, height);
@@ -223,6 +243,20 @@ pub(crate) fn i420_to_rgba8_rect(
     Ok((rect, out))
 }
 
+pub(crate) struct I420ToRgba8RectInput<'a> {
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) update_rect_px: Option<RectPx>,
+    pub(crate) y_bytes_per_row: u32,
+    pub(crate) y_plane: &'a [u8],
+    pub(crate) u_bytes_per_row: u32,
+    pub(crate) u_plane: &'a [u8],
+    pub(crate) v_bytes_per_row: u32,
+    pub(crate) v_plane: &'a [u8],
+    pub(crate) range: ColorRange,
+    pub(crate) matrix: YuvMatrix,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,23 +272,23 @@ mod tests {
         let width = 4;
         let height = 4;
         let y_bpr = width;
-        let (cw, ch) = ((width + 1) / 2, (height + 1) / 2);
+        let (cw, ch) = chroma_dims_420(width, height);
         let uv_bpr = cw * 2;
 
         let y_plane = vec![128u8; (y_bpr * height) as usize];
         let uv_plane = vec![128u8; (uv_bpr * ch) as usize];
 
-        let (rect, rgba) = nv12_to_rgba8_rect(
+        let (rect, rgba) = nv12_to_rgba8_rect(Nv12ToRgba8RectInput {
             width,
             height,
-            None,
-            y_bpr,
-            &y_plane,
-            uv_bpr,
-            &uv_plane,
-            ColorRange::Full,
-            YuvMatrix::Bt709,
-        )
+            update_rect_px: None,
+            y_bytes_per_row: y_bpr,
+            y_plane: &y_plane,
+            uv_bytes_per_row: uv_bpr,
+            uv_plane: &uv_plane,
+            range: ColorRange::Full,
+            matrix: YuvMatrix::Bt709,
+        })
         .unwrap();
         assert_eq!(rect, RectPx::full(width, height));
         assert_eq!(rgba.len(), (width * height * 4) as usize);
@@ -266,25 +300,25 @@ mod tests {
         let width = 4;
         let height = 4;
         let y_bpr = width;
-        let (cw, ch) = ((width + 1) / 2, (height + 1) / 2);
+        let (cw, ch) = chroma_dims_420(width, height);
 
         let y_plane = vec![128u8; (y_bpr * height) as usize];
         let u_plane = vec![128u8; (cw * ch) as usize];
         let v_plane = vec![128u8; (cw * ch) as usize];
 
-        let (rect, rgba) = i420_to_rgba8_rect(
+        let (rect, rgba) = i420_to_rgba8_rect(I420ToRgba8RectInput {
             width,
             height,
-            None,
-            y_bpr,
-            &y_plane,
-            cw,
-            &u_plane,
-            cw,
-            &v_plane,
-            ColorRange::Full,
-            YuvMatrix::Bt709,
-        )
+            update_rect_px: None,
+            y_bytes_per_row: y_bpr,
+            y_plane: &y_plane,
+            u_bytes_per_row: cw,
+            u_plane: &u_plane,
+            v_bytes_per_row: cw,
+            v_plane: &v_plane,
+            range: ColorRange::Full,
+            matrix: YuvMatrix::Bt709,
+        })
         .unwrap();
         assert_eq!(rect, RectPx::full(width, height));
         assert_eq!(rgba.len(), (width * height * 4) as usize);

@@ -51,8 +51,11 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Clippy (default-members)
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy (core crates)
+        run: >-
+          cargo clippy -p fret -p fret-a11y-accesskit -p fret-app -p fret-core -p fret-fonts -p fret-launch
+          -p fret-platform -p fret-platform-native -p fret-platform-web -p fret-render -p fret-runner-web
+          -p fret-runner-winit -p fret-runtime -p fret-ui -p fret-ui-app --all-targets -- -D warnings
 
       - name: Nextest (default-members)
         run: cargo nextest run

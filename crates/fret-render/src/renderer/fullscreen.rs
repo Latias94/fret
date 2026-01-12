@@ -7,7 +7,7 @@ pub(super) fn run_fullscreen_triangle_pass(
     bind_group0: &wgpu::BindGroup,
     bind_group0_offsets: &[u32],
     dst_scissor: Option<super::ScissorRect>,
-    mut perf: Option<&mut super::RenderPerfStats>,
+    perf: Option<&mut super::RenderPerfStats>,
 ) {
     let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),
@@ -27,19 +27,21 @@ pub(super) fn run_fullscreen_triangle_pass(
     });
     rp.set_pipeline(pipeline);
     rp.set_bind_group(0, bind_group0, bind_group0_offsets);
-    if let Some(scissor) = dst_scissor {
-        if scissor.w != 0 && scissor.h != 0 {
-            rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
-        }
+    let has_scissor = dst_scissor.is_some();
+    if let Some(scissor) = dst_scissor
+        && scissor.w != 0
+        && scissor.h != 0
+    {
+        rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
     }
     rp.draw(0..3, 0..1);
 
-    if let Some(perf) = perf.as_deref_mut() {
+    if let Some(perf) = perf {
         perf.pipeline_switches = perf.pipeline_switches.saturating_add(1);
         perf.pipeline_switches_fullscreen = perf.pipeline_switches_fullscreen.saturating_add(1);
         perf.bind_group_switches = perf.bind_group_switches.saturating_add(1);
         perf.texture_bind_group_switches = perf.texture_bind_group_switches.saturating_add(1);
-        if dst_scissor.is_some() {
+        if has_scissor {
             perf.scissor_sets = perf.scissor_sets.saturating_add(1);
         }
         perf.draw_calls = perf.draw_calls.saturating_add(1);

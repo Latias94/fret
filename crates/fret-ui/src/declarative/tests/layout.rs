@@ -5722,8 +5722,10 @@ fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
         bounds,
         "mvp50-container-shrink-wraps",
         |cx| {
-            let mut outer = crate::element::ContainerProps::default();
-            outer.padding = fret_core::Edges::all(Px(2.0));
+            let outer = crate::element::ContainerProps {
+                padding: fret_core::Edges::all(Px(2.0)),
+                ..crate::element::ContainerProps::default()
+            };
 
             vec![cx.container(outer, |cx| {
                 let mut fixed = crate::element::ContainerProps::default();

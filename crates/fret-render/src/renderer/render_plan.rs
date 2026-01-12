@@ -548,41 +548,41 @@ impl RenderPlan {
                 continue;
             }
 
-            if path_samples > 1 {
-                if let OrderedDraw::Path(first) = &draws[cursor] {
-                    flush_scene_range(
-                        cursor,
-                        &mut passes,
-                        &mut draw_scopes,
-                        &mut scene_range_start,
-                    );
+            if path_samples > 1
+                && let OrderedDraw::Path(first) = &draws[cursor]
+            {
+                flush_scene_range(
+                    cursor,
+                    &mut passes,
+                    &mut draw_scopes,
+                    &mut scene_range_start,
+                );
 
-                    let batch_uniform_index = first.uniform_index;
-                    let mut union = first.scissor;
-                    let mut end = cursor + 1;
-                    while end < draws.len() && end < next_marker_at {
-                        match &draws[end] {
-                            OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
-                                union = union_scissor(union, d.scissor);
-                                end += 1;
-                            }
-                            _ => break,
+                let batch_uniform_index = first.uniform_index;
+                let mut union = first.scissor;
+                let mut end = cursor + 1;
+                while end < draws.len() && end < next_marker_at {
+                    match &draws[end] {
+                        OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
+                            union = union_scissor(union, d.scissor);
+                            end += 1;
                         }
+                        _ => break,
                     }
-
-                    let target = draw_scopes.last().expect("draw scope").target;
-                    passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
-                        segment: SceneSegmentId(0),
-                        target,
-                        draw_range: cursor..end,
-                        union_scissor: union,
-                        batch_uniform_index,
-                    }));
-
-                    cursor = end;
-                    scene_range_start = cursor;
-                    continue;
                 }
+
+                let target = draw_scopes.last().expect("draw scope").target;
+                passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+                    segment: SceneSegmentId(0),
+                    target,
+                    draw_range: cursor..end,
+                    union_scissor: union,
+                    batch_uniform_index,
+                }));
+
+                cursor = end;
+                scene_range_start = cursor;
+                continue;
             }
 
             cursor += 1;
@@ -1103,13 +1103,16 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
 fn decompose_pixelate_scale(scale: u32) -> Vec<u32> {
     let mut scale = scale.max(1);
     let mut steps = Vec::new();
-    while scale >= 4 && scale % 2 == 0 {
+    while scale >= 4 && scale.is_multiple_of(2) {
         steps.push(2);
         scale /= 2;
     }
     steps.push(scale.max(1));
     steps
 }
+
+type DownsampleChainEntry = ((u32, u32), u32);
+type DownsampleChainResult = (PlanTarget, (u32, u32), Vec<DownsampleChainEntry>);
 
 fn push_scale_nearest(
     plan: &mut RenderPlan,
@@ -1192,8 +1195,8 @@ fn append_downsample_chain(
     scissor_in_full: Option<ScissorRect>,
     full_size: (u32, u32),
     clear: wgpu::Color,
-) -> (PlanTarget, (u32, u32), Vec<((u32, u32), u32)>) {
-    let mut stack: Vec<((u32, u32), u32)> = Vec::with_capacity(steps.len());
+) -> DownsampleChainResult {
+    let mut stack: Vec<DownsampleChainEntry> = Vec::with_capacity(steps.len());
     for step in steps.iter().copied() {
         let dst_size = downsampled_size(current_size, step);
         let dst_scissor = effects::map_scissor_to_size(scissor_in_full, full_size, dst_size);
@@ -1524,11 +1527,13 @@ fn append_postprocess(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::field_reassign_with_default)]
+
     use super::super::EffectMarker;
     use super::super::intermediate_pool::estimate_texture_bytes;
     use super::*;
 
-    fn strip_releases<'a>(passes: &'a [RenderPlanPass]) -> Vec<&'a RenderPlanPass> {
+    fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
         passes
             .iter()
             .filter(|p| !matches!(p, RenderPlanPass::ReleaseTarget(_)))

@@ -19,7 +19,7 @@ pub(crate) struct Nv12Planes {
 impl Nv12Planes {
     pub(crate) fn new(device: &wgpu::Device, size: (u32, u32)) -> Self {
         let (width, height) = size;
-        let chroma_size = ((width + 1) / 2, (height + 1) / 2);
+        let chroma_size = (width.div_ceil(2), height.div_ceil(2));
 
         let y = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("fret nv12 y plane"),
@@ -126,8 +126,8 @@ pub(crate) fn write_nv12_rect(
     let h_uv = rect.h.div_ceil(2);
     let can_direct_upload = rect.x == 0
         && x_uv == 0
-        && y_bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0
-        && uv_bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0
+        && y_bytes_per_row.is_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+        && uv_bytes_per_row.is_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
         && y_bytes_per_row >= rect.w
         && uv_bytes_per_row >= w_uv.saturating_mul(2);
     if can_direct_upload {
@@ -406,17 +406,18 @@ impl Nv12GpuConverter {
         }
     }
 
-    pub(crate) fn convert_rect_into(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        dst_view: &wgpu::TextureView,
-        rect: RectPx,
-        y_view: &wgpu::TextureView,
-        uv_view: &wgpu::TextureView,
-        range: ColorRange,
-        matrix: YuvMatrix,
-    ) {
+    pub(crate) fn convert_rect_into(&self, args: Nv12ConvertRectIntoArgs<'_>) {
+        let Nv12ConvertRectIntoArgs {
+            device,
+            queue,
+            dst_view,
+            rect,
+            y_view,
+            uv_view,
+            range,
+            matrix,
+        } = args;
+
         if rect.w == 0 || rect.h == 0 {
             return;
         }
@@ -475,4 +476,15 @@ impl Nv12GpuConverter {
         }
         queue.submit(Some(encoder.finish()));
     }
+}
+
+pub(crate) struct Nv12ConvertRectIntoArgs<'a> {
+    pub(crate) device: &'a wgpu::Device,
+    pub(crate) queue: &'a wgpu::Queue,
+    pub(crate) dst_view: &'a wgpu::TextureView,
+    pub(crate) rect: RectPx,
+    pub(crate) y_view: &'a wgpu::TextureView,
+    pub(crate) uv_view: &'a wgpu::TextureView,
+    pub(crate) range: ColorRange,
+    pub(crate) matrix: YuvMatrix,
 }

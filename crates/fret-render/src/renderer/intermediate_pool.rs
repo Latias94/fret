@@ -8,20 +8,11 @@ struct PoolKey {
     sample_count: u32,
 }
 
+#[derive(Default)]
 pub(super) struct IntermediatePool {
     free: HashMap<PoolKey, Vec<wgpu::Texture>>,
     free_bytes: u64,
     perf: PoolPerfStats,
-}
-
-impl Default for IntermediatePool {
-    fn default() -> Self {
-        Self {
-            free: HashMap::new(),
-            free_bytes: 0,
-            perf: PoolPerfStats::default(),
-        }
-    }
 }
 
 pub(super) struct PooledTexture {

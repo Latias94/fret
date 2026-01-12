@@ -99,7 +99,7 @@ pub(crate) fn estimate_rgba8_upload_bytes_for_rect(rect: RectPx, bytes_per_row: 
 
     let row_bytes = rect.w.saturating_mul(4);
     let aligned_row_bytes = round_up(row_bytes, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
-    let effective_bpr = if bytes_per_row % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0 {
+    let effective_bpr = if bytes_per_row.is_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT) {
         bytes_per_row
     } else {
         aligned_row_bytes.max(row_bytes)
@@ -147,7 +147,7 @@ fn estimate_upload_bytes(effect: &Effect) -> u64 {
 }
 
 fn chroma_dims_420(width: u32, height: u32) -> (u32, u32) {
-    ((width + 1) / 2, (height + 1) / 2)
+    (width.div_ceil(2), height.div_ceil(2))
 }
 
 fn validate_nv12_payload(
@@ -176,17 +176,31 @@ fn validate_nv12_payload(
     y_plane.len() == y_expected && uv_plane.len() == uv_expected
 }
 
-fn validate_i420_payload(
+struct I420Payload<'a> {
     width: u32,
     height: u32,
     update_rect_px: Option<RectPx>,
     y_bytes_per_row: u32,
-    y_plane: &[u8],
+    y_plane: &'a [u8],
     u_bytes_per_row: u32,
-    u_plane: &[u8],
+    u_plane: &'a [u8],
     v_bytes_per_row: u32,
-    v_plane: &[u8],
-) -> bool {
+    v_plane: &'a [u8],
+}
+
+fn validate_i420_payload(payload: I420Payload<'_>) -> bool {
+    let I420Payload {
+        width,
+        height,
+        update_rect_px,
+        y_bytes_per_row,
+        y_plane,
+        u_bytes_per_row,
+        u_plane,
+        v_bytes_per_row,
+        v_plane,
+    } = payload;
+
     if width == 0 || height == 0 {
         return false;
     }
@@ -311,17 +325,17 @@ impl StreamingUploadQueue {
                 ..
             } => (
                 *window,
-                validate_i420_payload(
-                    *width,
-                    *height,
-                    *update_rect_px,
-                    *y_bytes_per_row,
+                validate_i420_payload(I420Payload {
+                    width: *width,
+                    height: *height,
+                    update_rect_px: *update_rect_px,
+                    y_bytes_per_row: *y_bytes_per_row,
                     y_plane,
-                    *u_bytes_per_row,
+                    u_bytes_per_row: *u_bytes_per_row,
                     u_plane,
-                    *v_bytes_per_row,
+                    v_bytes_per_row: *v_bytes_per_row,
                     v_plane,
-                ),
+                }),
             ),
             Effect::ImageUpdateRgba8 { window, .. } => (*window, true),
             _ => (None, true),
@@ -378,10 +392,7 @@ impl StreamingUploadQueue {
             },
         );
 
-        let order = self
-            .pending_order
-            .entry(window_bucket)
-            .or_insert_with(VecDeque::new);
+        let order = self.pending_order.entry(window_bucket).or_default();
         order.push_back((key, seq));
 
         let (prev_bucket, prev_staging, prev_window_hint, prev_token) = if let Some(prev) = prev {

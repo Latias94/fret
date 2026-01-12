@@ -409,116 +409,120 @@ impl<D, S> FnDriver<D, S> {
 }
 
 pub struct FnDriverHooks<D, S> {
-    pub init: Option<fn(&mut D, &mut App, fret_core::AppWindowId)>,
-    pub gpu_ready: Option<fn(&mut D, &mut App, &WgpuContext, &mut Renderer)>,
-    pub hot_reload_global: Option<for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>)>,
-    pub hot_reload_window: Option<for<'d, 'cx> fn(&'d mut D, WinitHotReloadContext<'cx, S>)>,
-    pub gpu_frame_prepare: Option<
-        for<'d> fn(
-            &'d mut D,
-            &mut App,
-            fret_core::AppWindowId,
-            &mut S,
-            &WgpuContext,
-            &mut Renderer,
-            f32,
-        ),
-    >,
-    pub record_engine_frame: Option<
-        for<'d> fn(
-            &'d mut D,
-            &mut App,
-            fret_core::AppWindowId,
-            &mut S,
-            &WgpuContext,
-            &mut Renderer,
-            f32,
-            TickId,
-            FrameId,
-        ) -> EngineFrameUpdate,
-    >,
-    pub viewport_input: Option<fn(&mut D, &mut App, ViewportInputEvent)>,
-    pub viewport_input_legacy: Option<fn(&mut D, &mut App, ViewportInputEventLegacy)>,
-    pub dock_op: Option<fn(&mut D, &mut App, fret_core::DockOp)>,
-    pub handle_command:
-        Option<for<'d, 'cx> fn(&'d mut D, WinitCommandContext<'cx, S>, fret_app::CommandId)>,
-    pub handle_global_command:
-        Option<for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>, fret_app::CommandId)>,
-    pub handle_model_changes:
-        Option<for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [fret_app::ModelId])>,
-    pub handle_global_changes:
-        Option<for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [std::any::TypeId])>,
-    pub window_create_spec:
-        Option<fn(&mut D, &mut App, &fret_app::CreateWindowRequest) -> Option<WindowCreateSpec>>,
-    pub window_created:
-        Option<fn(&mut D, &mut App, &fret_app::CreateWindowRequest, fret_core::AppWindowId)>,
-    pub before_close_window: Option<fn(&mut D, &mut App, fret_core::AppWindowId) -> bool>,
-    pub accessibility_snapshot: Option<
-        fn(
-            &mut D,
-            &mut App,
-            fret_core::AppWindowId,
-            &mut S,
-        ) -> Option<Arc<fret_core::SemanticsSnapshot>>,
-    >,
-    pub accessibility_focus:
-        Option<fn(&mut D, &mut App, fret_core::AppWindowId, &mut S, fret_core::NodeId)>,
-    pub accessibility_invoke: Option<
-        fn(
-            &mut D,
-            &mut App,
-            &mut dyn UiServices,
-            fret_core::AppWindowId,
-            &mut S,
-            fret_core::NodeId,
-        ),
-    >,
-    pub accessibility_set_value_text: Option<
-        fn(
-            &mut D,
-            &mut App,
-            &mut dyn UiServices,
-            fret_core::AppWindowId,
-            &mut S,
-            fret_core::NodeId,
-            &str,
-        ),
-    >,
-    pub accessibility_set_value_numeric: Option<
-        fn(
-            &mut D,
-            &mut App,
-            &mut dyn UiServices,
-            fret_core::AppWindowId,
-            &mut S,
-            fret_core::NodeId,
-            f64,
-        ),
-    >,
-    pub accessibility_set_text_selection: Option<
-        fn(
-            &mut D,
-            &mut App,
-            &mut dyn UiServices,
-            fret_core::AppWindowId,
-            &mut S,
-            fret_core::NodeId,
-            u32,
-            u32,
-        ),
-    >,
-    pub accessibility_replace_selected_text: Option<
-        fn(
-            &mut D,
-            &mut App,
-            &mut dyn UiServices,
-            fret_core::AppWindowId,
-            &mut S,
-            fret_core::NodeId,
-            &str,
-        ),
-    >,
+    pub init: Option<FnDriverInitHook<D>>,
+    pub gpu_ready: Option<FnDriverGpuReadyHook<D>>,
+    pub hot_reload_global: Option<FnDriverHotReloadGlobalHook<D>>,
+    pub hot_reload_window: Option<FnDriverHotReloadWindowHook<D, S>>,
+    pub gpu_frame_prepare: Option<FnDriverGpuFramePrepareHook<D, S>>,
+    pub record_engine_frame: Option<FnDriverRecordEngineFrameHook<D, S>>,
+    pub viewport_input: Option<FnDriverViewportInputHook<D>>,
+    pub viewport_input_legacy: Option<FnDriverViewportInputLegacyHook<D>>,
+    pub dock_op: Option<FnDriverDockOpHook<D>>,
+    pub handle_command: Option<FnDriverHandleCommandHook<D, S>>,
+    pub handle_global_command: Option<FnDriverHandleGlobalCommandHook<D>>,
+    pub handle_model_changes: Option<FnDriverHandleModelChangesHook<D, S>>,
+    pub handle_global_changes: Option<FnDriverHandleGlobalChangesHook<D, S>>,
+    pub window_create_spec: Option<FnDriverWindowCreateSpecHook<D>>,
+    pub window_created: Option<FnDriverWindowCreatedHook<D>>,
+    pub before_close_window: Option<FnDriverBeforeCloseWindowHook<D>>,
+    pub accessibility_snapshot: Option<FnDriverAccessibilitySnapshotHook<D, S>>,
+    pub accessibility_focus: Option<FnDriverAccessibilityFocusHook<D, S>>,
+    pub accessibility_invoke: Option<FnDriverAccessibilityInvokeHook<D, S>>,
+    pub accessibility_set_value_text: Option<FnDriverAccessibilitySetValueTextHook<D, S>>,
+    pub accessibility_set_value_numeric: Option<FnDriverAccessibilitySetValueNumericHook<D, S>>,
+    pub accessibility_set_text_selection: Option<FnDriverAccessibilitySetTextSelectionHook<D, S>>,
+    pub accessibility_replace_selected_text:
+        Option<FnDriverAccessibilityReplaceSelectedTextHook<D, S>>,
 }
+
+pub type FnDriverInitHook<D> = fn(&mut D, &mut App, fret_core::AppWindowId);
+pub type FnDriverGpuReadyHook<D> = fn(&mut D, &mut App, &WgpuContext, &mut Renderer);
+pub type FnDriverHotReloadGlobalHook<D> = for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>);
+pub type FnDriverHotReloadWindowHook<D, S> =
+    for<'d, 'cx> fn(&'d mut D, WinitHotReloadContext<'cx, S>);
+pub type FnDriverGpuFramePrepareHook<D, S> = for<'d> fn(
+    &'d mut D,
+    &mut App,
+    fret_core::AppWindowId,
+    &mut S,
+    &WgpuContext,
+    &mut Renderer,
+    f32,
+);
+pub type FnDriverRecordEngineFrameHook<D, S> = for<'d> fn(
+    &'d mut D,
+    &mut App,
+    fret_core::AppWindowId,
+    &mut S,
+    &WgpuContext,
+    &mut Renderer,
+    f32,
+    TickId,
+    FrameId,
+) -> EngineFrameUpdate;
+pub type FnDriverViewportInputHook<D> = fn(&mut D, &mut App, ViewportInputEvent);
+pub type FnDriverViewportInputLegacyHook<D> = fn(&mut D, &mut App, ViewportInputEventLegacy);
+pub type FnDriverDockOpHook<D> = fn(&mut D, &mut App, fret_core::DockOp);
+pub type FnDriverHandleCommandHook<D, S> =
+    for<'d, 'cx> fn(&'d mut D, WinitCommandContext<'cx, S>, fret_app::CommandId);
+pub type FnDriverHandleGlobalCommandHook<D> =
+    for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>, fret_app::CommandId);
+pub type FnDriverHandleModelChangesHook<D, S> =
+    for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [fret_app::ModelId]);
+pub type FnDriverHandleGlobalChangesHook<D, S> =
+    for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [std::any::TypeId]);
+pub type FnDriverWindowCreateSpecHook<D> =
+    fn(&mut D, &mut App, &fret_app::CreateWindowRequest) -> Option<WindowCreateSpec>;
+pub type FnDriverWindowCreatedHook<D> =
+    fn(&mut D, &mut App, &fret_app::CreateWindowRequest, fret_core::AppWindowId);
+pub type FnDriverBeforeCloseWindowHook<D> = fn(&mut D, &mut App, fret_core::AppWindowId) -> bool;
+pub type FnDriverAccessibilitySnapshotHook<D, S> = fn(
+    &mut D,
+    &mut App,
+    fret_core::AppWindowId,
+    &mut S,
+) -> Option<Arc<fret_core::SemanticsSnapshot>>;
+pub type FnDriverAccessibilityFocusHook<D, S> =
+    fn(&mut D, &mut App, fret_core::AppWindowId, &mut S, fret_core::NodeId);
+pub type FnDriverAccessibilityInvokeHook<D, S> =
+    fn(&mut D, &mut App, &mut dyn UiServices, fret_core::AppWindowId, &mut S, fret_core::NodeId);
+pub type FnDriverAccessibilitySetValueTextHook<D, S> = fn(
+    &mut D,
+    &mut App,
+    &mut dyn UiServices,
+    fret_core::AppWindowId,
+    &mut S,
+    fret_core::NodeId,
+    &str,
+);
+pub type FnDriverAccessibilitySetValueNumericHook<D, S> = fn(
+    &mut D,
+    &mut App,
+    &mut dyn UiServices,
+    fret_core::AppWindowId,
+    &mut S,
+    fret_core::NodeId,
+    f64,
+);
+pub type FnDriverAccessibilitySetTextSelectionHook<D, S> = fn(
+    &mut D,
+    &mut App,
+    &mut dyn UiServices,
+    fret_core::AppWindowId,
+    &mut S,
+    fret_core::NodeId,
+    u32,
+    u32,
+);
+pub type FnDriverAccessibilityReplaceSelectedTextHook<D, S> = fn(
+    &mut D,
+    &mut App,
+    &mut dyn UiServices,
+    fret_core::AppWindowId,
+    &mut S,
+    fret_core::NodeId,
+    &str,
+);
 
 impl<D, S> Default for FnDriverHooks<D, S> {
     fn default() -> Self {

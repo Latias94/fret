@@ -18,7 +18,7 @@ fn measure_in_reentrancy_panics_in_debug_builds() {
     let mut ui = UiTree::new();
     ui.set_window(AppWindowId::default());
 
-    let node = ui.create_node(ReentrantMeasureWidget::default());
+    let node = ui.create_node(ReentrantMeasureWidget);
     ui.set_root(node);
 
     let mut services = FakeUiServices;

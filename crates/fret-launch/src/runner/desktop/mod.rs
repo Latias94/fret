@@ -920,6 +920,35 @@ struct RectF64 {
     max_y: f64,
 }
 
+struct StreamingImageUpdateRgba8<'a> {
+    window: Option<fret_core::AppWindowId>,
+    token: fret_core::ImageUpdateToken,
+    image: fret_core::ImageId,
+    stream_generation: u64,
+    width: u32,
+    height: u32,
+    update_rect_px: Option<fret_core::RectPx>,
+    bytes_per_row: u32,
+    bytes: &'a [u8],
+    color_info: fret_core::ImageColorInfo,
+    alpha_mode: fret_core::AlphaMode,
+}
+
+struct StreamingImageUpdateNv12<'a> {
+    window: Option<fret_core::AppWindowId>,
+    token: fret_core::ImageUpdateToken,
+    image: fret_core::ImageId,
+    stream_generation: u64,
+    width: u32,
+    height: u32,
+    update_rect_px: Option<fret_core::RectPx>,
+    y_bytes_per_row: u32,
+    y_plane: &'a [u8],
+    uv_bytes_per_row: u32,
+    uv_plane: &'a [u8],
+    color_info: fret_core::ImageColorInfo,
+}
+
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
@@ -952,18 +981,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     fn apply_streaming_image_update_rgba8(
         &mut self,
         stats: &mut super::streaming_upload::StreamingUploadStats,
-        window: Option<fret_core::AppWindowId>,
-        token: fret_core::ImageUpdateToken,
-        image: fret_core::ImageId,
-        stream_generation: u64,
-        width: u32,
-        height: u32,
-        update_rect_px: Option<fret_core::RectPx>,
-        bytes_per_row: u32,
-        bytes: &[u8],
-        color_info: fret_core::ImageColorInfo,
-        alpha_mode: fret_core::AlphaMode,
+        update: StreamingImageUpdateRgba8<'_>,
     ) {
+        let StreamingImageUpdateRgba8 {
+            window,
+            token,
+            image,
+            stream_generation,
+            width,
+            height,
+            update_rect_px,
+            bytes_per_row,
+            bytes,
+            color_info,
+            alpha_mode,
+        } = update;
+
         let Some(context) = self.context.as_ref() else {
             if self.config.streaming_update_ack_enabled {
                 let target = window
@@ -1337,19 +1370,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     fn try_apply_streaming_image_update_nv12_gpu(
         &mut self,
         stats: &mut super::streaming_upload::StreamingUploadStats,
-        window: Option<fret_core::AppWindowId>,
-        token: fret_core::ImageUpdateToken,
-        image: fret_core::ImageId,
-        stream_generation: u64,
-        width: u32,
-        height: u32,
-        update_rect_px: Option<fret_core::RectPx>,
-        y_bytes_per_row: u32,
-        y_plane: &[u8],
-        uv_bytes_per_row: u32,
-        uv_plane: &[u8],
-        color_info: fret_core::ImageColorInfo,
+        update: StreamingImageUpdateNv12<'_>,
     ) -> bool {
+        let StreamingImageUpdateNv12 {
+            window,
+            token,
+            image,
+            stream_generation,
+            width,
+            height,
+            update_rect_px,
+            y_bytes_per_row,
+            y_plane,
+            uv_bytes_per_row,
+            uv_plane,
+            color_info,
+        } = update;
+
         let requested = self.config.streaming_nv12_gpu_convert_enabled
             || std::env::var_os("FRET_STREAMING_GPU_YUV").is_some_and(|v| !v.is_empty());
         if !requested {
@@ -1637,16 +1674,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         stats.upload_bytes_applied = stats.upload_bytes_applied.saturating_add(uploaded_bytes);
 
-        converter.convert_rect_into(
-            &context.device,
-            &context.queue,
-            &entry.uploaded.view,
+        converter.convert_rect_into(super::yuv_gpu::Nv12ConvertRectIntoArgs {
+            device: &context.device,
+            queue: &context.queue,
+            dst_view: &entry.uploaded.view,
             rect,
-            &planes.y_view,
-            &planes.uv_view,
-            color_info.range,
-            color_info.matrix,
-        );
+            y_view: &planes.y_view,
+            uv_view: &planes.uv_view,
+            range: color_info.range,
+            matrix: color_info.matrix,
+        });
 
         stats.yuv_conversions_applied = stats.yuv_conversions_applied.saturating_add(1);
         stats.yuv_convert_us = stats
@@ -2768,10 +2805,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         }
                     }
                     Effect::ImeAllow { window, enabled } => {
-                        if let Some(state) = self.windows.get_mut(window) {
-                            if state.platform.set_ime_allowed(enabled) {
-                                window_state_dirty.insert(window);
-                            }
+                        if let Some(state) = self.windows.get_mut(window)
+                            && state.platform.set_ime_allowed(enabled)
+                        {
+                            window_state_dirty.insert(window);
                         }
                     }
                     Effect::ImeSetCursorArea { window, rect } => {
@@ -3172,17 +3209,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     } => {
                         self.apply_streaming_image_update_rgba8(
                             &mut stats,
-                            window,
-                            token,
-                            image,
-                            stream_generation,
-                            width,
-                            height,
-                            update_rect_px,
-                            bytes_per_row,
-                            &bytes,
-                            color_info,
-                            alpha_mode,
+                            StreamingImageUpdateRgba8 {
+                                window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                update_rect_px,
+                                bytes_per_row,
+                                bytes: &bytes,
+                                color_info,
+                                alpha_mode,
+                            },
                         );
                     }
                     Effect::ImageUpdateNv12 {
@@ -3204,34 +3243,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             stats.yuv_conversions_attempted.saturating_add(1);
                         if self.try_apply_streaming_image_update_nv12_gpu(
                             &mut stats,
-                            window,
-                            token,
-                            image,
-                            stream_generation,
-                            width,
-                            height,
-                            update_rect_px,
-                            y_bytes_per_row,
-                            &y_plane,
-                            uv_bytes_per_row,
-                            &uv_plane,
-                            color_info,
+                            StreamingImageUpdateNv12 {
+                                window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                update_rect_px,
+                                y_bytes_per_row,
+                                y_plane: &y_plane,
+                                uv_bytes_per_row,
+                                uv_plane: &uv_plane,
+                                color_info,
+                            },
                         ) {
                             continue;
                         }
 
                         let t0 = std::time::Instant::now();
-                        match super::yuv::nv12_to_rgba8_rect(
+                        match super::yuv::nv12_to_rgba8_rect(super::yuv::Nv12ToRgba8RectInput {
                             width,
                             height,
                             update_rect_px,
                             y_bytes_per_row,
-                            &y_plane,
+                            y_plane: &y_plane,
                             uv_bytes_per_row,
-                            &uv_plane,
-                            color_info.range,
-                            color_info.matrix,
-                        ) {
+                            uv_plane: &uv_plane,
+                            range: color_info.range,
+                            matrix: color_info.matrix,
+                        }) {
                             Ok((rect, rgba)) => {
                                 stats.yuv_conversions_applied =
                                     stats.yuv_conversions_applied.saturating_add(1);
@@ -3244,17 +3285,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                                 self.apply_streaming_image_update_rgba8(
                                     &mut stats,
-                                    window,
-                                    token,
-                                    image,
-                                    stream_generation,
-                                    width,
-                                    height,
-                                    Some(rect),
-                                    rect.w.saturating_mul(4),
-                                    &rgba,
-                                    fret_core::ImageColorInfo::srgb_rgba(),
-                                    fret_core::AlphaMode::Opaque,
+                                    StreamingImageUpdateRgba8 {
+                                        window,
+                                        token,
+                                        image,
+                                        stream_generation,
+                                        width,
+                                        height,
+                                        update_rect_px: Some(rect),
+                                        bytes_per_row: rect.w.saturating_mul(4),
+                                        bytes: &rgba,
+                                        color_info: fret_core::ImageColorInfo::srgb_rgba(),
+                                        alpha_mode: fret_core::AlphaMode::Opaque,
+                                    },
                                 );
                             }
                             Err(_message) => {
@@ -3297,19 +3340,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         stats.yuv_conversions_attempted =
                             stats.yuv_conversions_attempted.saturating_add(1);
                         let t0 = std::time::Instant::now();
-                        match super::yuv::i420_to_rgba8_rect(
+                        match super::yuv::i420_to_rgba8_rect(super::yuv::I420ToRgba8RectInput {
                             width,
                             height,
                             update_rect_px,
                             y_bytes_per_row,
-                            &y_plane,
+                            y_plane: &y_plane,
                             u_bytes_per_row,
-                            &u_plane,
+                            u_plane: &u_plane,
                             v_bytes_per_row,
-                            &v_plane,
-                            color_info.range,
-                            color_info.matrix,
-                        ) {
+                            v_plane: &v_plane,
+                            range: color_info.range,
+                            matrix: color_info.matrix,
+                        }) {
                             Ok((rect, rgba)) => {
                                 stats.yuv_conversions_applied =
                                     stats.yuv_conversions_applied.saturating_add(1);
@@ -3322,17 +3365,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                                 self.apply_streaming_image_update_rgba8(
                                     &mut stats,
-                                    window,
-                                    token,
-                                    image,
-                                    stream_generation,
-                                    width,
-                                    height,
-                                    Some(rect),
-                                    rect.w.saturating_mul(4),
-                                    &rgba,
-                                    fret_core::ImageColorInfo::srgb_rgba(),
-                                    fret_core::AlphaMode::Opaque,
+                                    StreamingImageUpdateRgba8 {
+                                        window,
+                                        token,
+                                        image,
+                                        stream_generation,
+                                        width,
+                                        height,
+                                        update_rect_px: Some(rect),
+                                        bytes_per_row: rect.w.saturating_mul(4),
+                                        bytes: &rgba,
+                                        color_info: fret_core::ImageColorInfo::srgb_rgba(),
+                                        alpha_mode: fret_core::AlphaMode::Opaque,
+                                    },
                                 );
                             }
                             Err(_message) => {

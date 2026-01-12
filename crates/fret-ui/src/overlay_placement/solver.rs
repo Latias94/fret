@@ -526,14 +526,16 @@ fn finalize_layout(
     rect = shift_rect_with_sticky(outer, anchor, rect, side, options.sticky, options.shift);
     let arrow = options.arrow.map(|arrow| {
         apply_arrow_layout(
-            outer,
-            anchor,
+            ArrowLayoutArgs {
+                outer,
+                anchor,
+                placement_side: side,
+                align,
+                sticky: options.sticky,
+                shift: options.shift,
+                arrow,
+            },
             &mut rect,
-            side,
-            align,
-            options.sticky,
-            options.shift,
-            arrow,
         )
     });
 
@@ -609,16 +611,27 @@ fn shift_rect_with_sticky(
     rect
 }
 
-fn apply_arrow_layout(
+struct ArrowLayoutArgs {
     outer: Rect,
     anchor: Rect,
-    rect: &mut Rect,
     placement_side: Side,
     align: Align,
     sticky: StickyMode,
     shift: ShiftOptions,
     arrow: ArrowOptions,
-) -> ArrowLayout {
+}
+
+fn apply_arrow_layout(args: ArrowLayoutArgs, rect: &mut Rect) -> ArrowLayout {
+    let ArrowLayoutArgs {
+        outer,
+        anchor,
+        placement_side,
+        align,
+        sticky,
+        shift,
+        arrow,
+    } = args;
+
     let is_vertical = matches!(placement_side, Side::Top | Side::Bottom);
 
     let (anchor_start, anchor_len, rect_start, rect_len, arrow_len, pad_start, pad_end) =

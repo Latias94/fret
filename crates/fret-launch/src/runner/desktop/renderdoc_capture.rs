@@ -102,11 +102,11 @@ impl RenderDocCapture {
 
     pub fn begin_capture_if_requested(&mut self) -> bool {
         self.frame_index = self.frame_index.saturating_add(1);
-        if let Some(after) = self.autocapture_after_frames {
-            if self.frame_index >= after {
-                self.autocapture_after_frames = None;
-                self.pending = true;
-            }
+        if let Some(after) = self.autocapture_after_frames
+            && self.frame_index >= after
+        {
+            self.autocapture_after_frames = None;
+            self.pending = true;
         }
 
         if !std::mem::take(&mut self.pending) {
