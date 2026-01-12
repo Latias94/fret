@@ -180,6 +180,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.badge.line_height".to_string())
         .or_insert(16.0);
 
+    // new-york-v4 `Label` defaults:
+    // - `text-sm` (14px) and `leading-none` (line-height = font-size).
+    metrics
+        .entry("component.label.text_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.label.line_height".to_string())
+        .or_insert(14.0);
+
     // Tooltip defaults in the upstream registry:
     // - `sideOffset={4}`
     // - Arrow uses `h-2 w-2` (8px)
