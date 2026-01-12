@@ -126,23 +126,27 @@ fn op_non_finite_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
         true
     }
 
-    match *op {
-        GraphOp::SetNodePos { from, to, .. } => (!point_is_finite(from))
-            .then_some("SetNodePos.from")
-            .or_else(|| (!point_is_finite(to)).then_some("SetNodePos.to")),
-        GraphOp::SetGroupRect { from, to, .. } => (!rect_is_finite(from))
-            .then_some("SetGroupRect.from")
-            .or_else(|| (!rect_is_finite(to)).then_some("SetGroupRect.to")),
-        GraphOp::SetNodeSize { from, to, .. } => from
-            .and_then(|s| (!size_is_finite(s)).then_some("SetNodeSize.from"))
-            .or_else(|| to.and_then(|s| (!size_is_finite(s)).then_some("SetNodeSize.to"))),
+    match op {
+        GraphOp::AddNode { node, .. } => node
+            .size
+            .and_then(|s| (!size_is_finite(s)).then_some("AddNode.node.size"))
+            .or_else(|| (!point_is_finite(node.pos)).then_some("AddNode.node.pos")),
+        GraphOp::AddGroup { group, .. } => (!rect_is_finite(group.rect)).then_some("AddGroup.rect"),
+        GraphOp::AddStickyNote { note, .. } => {
+            (!rect_is_finite(note.rect)).then_some("AddStickyNote.rect")
+        }
 
-        GraphOp::SetEdgeEndpoints { from, to, .. } => (!endpoints_is_finite(from))
+        GraphOp::SetNodePos { to, .. } => (!point_is_finite(*to)).then_some("SetNodePos.to"),
+        GraphOp::SetGroupRect { to, .. } => (!rect_is_finite(*to)).then_some("SetGroupRect.to"),
+        GraphOp::SetNodeSize { to, .. } => {
+            to.and_then(|s| (!size_is_finite(s)).then_some("SetNodeSize.to"))
+        }
+
+        GraphOp::SetEdgeEndpoints { from, to, .. } => (!endpoints_is_finite(*from))
             .then_some("SetEdgeEndpoints.from")
-            .or_else(|| (!endpoints_is_finite(to)).then_some("SetEdgeEndpoints.to")),
+            .or_else(|| (!endpoints_is_finite(*to)).then_some("SetEdgeEndpoints.to")),
 
-        GraphOp::AddNode { .. }
-        | GraphOp::RemoveNode { .. }
+        GraphOp::RemoveNode { .. }
         | GraphOp::SetNodeParent { .. }
         | GraphOp::SetNodeCollapsed { .. }
         | GraphOp::SetNodePorts { .. }
@@ -155,9 +159,7 @@ fn op_non_finite_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
         | GraphOp::AddSymbol { .. }
         | GraphOp::RemoveSymbol { .. }
         | GraphOp::SetSymbolMeta { .. }
-        | GraphOp::AddGroup { .. }
         | GraphOp::RemoveGroup { .. }
-        | GraphOp::AddStickyNote { .. }
         | GraphOp::RemoveStickyNote { .. } => None,
     }
 }
@@ -231,6 +233,39 @@ mod tests {
         assert!(matches!(
             gate.before_commit(None, &ctx, &mut tx),
             NodeGraphCanvasCommitOutcome::Reject { .. }
+        ));
+    }
+
+    #[test]
+    fn reject_non_finite_tx_allows_healing_from_non_finite() {
+        let graph = Graph::default();
+        let view_state = NodeGraphViewState::default();
+        let style = NodeGraphStyle::default();
+        let ctx = NodeGraphCanvasMiddlewareCx {
+            graph: &graph,
+            view_state: &view_state,
+            style: &style,
+            bounds: None,
+            pan: CanvasPoint::default(),
+            zoom: 1.0,
+        };
+
+        let mut tx = GraphTransaction {
+            label: None,
+            ops: vec![GraphOp::SetNodePos {
+                id: NodeId::new(),
+                from: CanvasPoint {
+                    x: f32::NAN,
+                    y: 0.0,
+                },
+                to: CanvasPoint { x: 10.0, y: 20.0 },
+            }],
+        };
+
+        let mut gate = RejectNonFiniteTx;
+        assert!(matches!(
+            gate.before_commit(None, &ctx, &mut tx),
+            NodeGraphCanvasCommitOutcome::Continue
         ));
     }
 
