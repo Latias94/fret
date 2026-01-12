@@ -7577,36 +7577,29 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             pin_rows,
                             resize_handles,
                         ));
-                    }
 
-                    for (&port_id, handle) in &geom.ports {
-                        out.port_centers.insert(port_id, handle.center);
-                        if cull.is_some() && !visible_nodes.contains(&handle.node) {
-                            continue;
+                        // Only build port labels/pins for visible nodes (but keep edge endpoints
+                        // available via `CanvasGeometry` lookups).
+                        let screen_w = node_geom.rect.size.width.0 * zoom;
+                        let screen_max = (screen_w - label_overhead).max(0.0);
+                        let max_w = Px(screen_max / zoom);
+
+                        for port_id in inputs.iter().chain(outputs.iter()).copied() {
+                            let Some(handle) = geom.ports.get(&port_id) else {
+                                continue;
+                            };
+                            out.port_centers.insert(port_id, handle.center);
+                            out.port_labels.insert(
+                                port_id,
+                                PortLabelRender {
+                                    label: presenter.port_label(graph, port_id),
+                                    dir: handle.dir,
+                                    max_width: max_w,
+                                },
+                            );
+                            let color = presenter.port_color(graph, port_id, &this.style);
+                            out.pins.push((port_id, handle.bounds, color));
                         }
-                        let max_w = graph
-                            .ports
-                            .get(&port_id)
-                            .and_then(|p| geom.nodes.get(&p.node))
-                            .map(|node| {
-                                let screen_w = node.rect.size.width.0 * zoom;
-                                let screen_max = (screen_w - label_overhead).max(0.0);
-                                Px(screen_max / zoom)
-                            })
-                            .unwrap_or_else(|| {
-                                let screen_max = (this.style.node_width - label_overhead).max(0.0);
-                                Px(screen_max / zoom)
-                            });
-                        out.port_labels.insert(
-                            port_id,
-                            PortLabelRender {
-                                label: presenter.port_label(graph, port_id),
-                                dir: handle.dir,
-                                max_width: max_w,
-                            },
-                        );
-                        let color = presenter.port_color(graph, port_id, &this.style);
-                        out.pins.push((port_id, handle.bounds, color));
                     }
 
                     let mut edge_ids: Vec<EdgeId> = Vec::new();
@@ -7628,11 +7621,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         {
                             continue;
                         }
-                        let Some(from) = out.port_centers.get(&edge.from).copied() else {
-                            continue;
+                        use std::collections::hash_map::Entry;
+
+                        let from = match out.port_centers.entry(edge.from) {
+                            Entry::Occupied(v) => *v.get(),
+                            Entry::Vacant(v) => {
+                                let Some(center) = geom.port_center(edge.from) else {
+                                    continue;
+                                };
+                                *v.insert(center)
+                            }
                         };
-                        let Some(to) = out.port_centers.get(&edge.to).copied() else {
-                            continue;
+                        let to = match out.port_centers.entry(edge.to) {
+                            Entry::Occupied(v) => *v.get(),
+                            Entry::Vacant(v) => {
+                                let Some(center) = geom.port_center(edge.to) else {
+                                    continue;
+                                };
+                                *v.insert(center)
+                            }
                         };
                         let hint = this.edge_render_hint(graph, edge_id).normalized();
                         if let Some(c) = cull {
