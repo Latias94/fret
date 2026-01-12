@@ -85,7 +85,7 @@ Suggested pass categories (illustrative, not normative API names):
 - `CompositePass`: a specialized fullscreen pass used to composite intermediate results back into the main target
   with a known blend mode (premul alpha).
 - `MaskPass` (optional): generate an intermediate clip mask (e.g. rounded soft clip coverage) for use by effect passes
-  (ADR 0135).
+  (ADR 0153).
 - `Copy/ResolvePass` (optional): explicit resolves for MSAA or copies for read-after-write safety when required.
 
 #### Upgrade path: make `RenderPlan` DAG-ready without committing to a DAG today
@@ -102,7 +102,7 @@ To make that possible, each pass in the plan should be representable as:
 
 Note:
 
-- Renderer-owned clip masks (ADR 0135) are treated as first-class plan resources with explicit lifetimes and budget
+- Renderer-owned clip masks (ADR 0153) are treated as first-class plan resources with explicit lifetimes and budget
   accounting (ADR 0120). The plan must be able to express dependencies between mask generation and effect/composite passes.
 
 If/when we add an internal DAG:

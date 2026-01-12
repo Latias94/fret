@@ -59,7 +59,7 @@ Use Tier B for:
 Contract:
 
 - component emits `SceneOp::PushEffect/PopEffect` (typically via `fret-ui`’s `EffectLayer` wrapper),
-- effect work is bounded by `bounds` and clip stack semantics (ADR 0119 / ADR 0078 / ADR 0135),
+- effect work is bounded by `bounds` and clip stack semantics (ADR 0119 / ADR 0078 / ADR 0153),
 - budgets and deterministic degradation apply (ADR 0120).
 
 ### 2) We promote "effect recipes" as the primary component authoring pattern

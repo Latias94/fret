@@ -68,7 +68,7 @@ The budget applies only to **renderer-owned intermediates** used for effects and
 - atlas textures (glyph/SVG/image atlases), which have their own budgets/policies.
 
 This includes any renderer-owned **clip mask resources** required to implement soft clipping for effect passes
-(ADR 0135). Clip masks are treated as intermediates for accounting purposes (format-dependent, often `R8Unorm`).
+(ADR 0153). Clip masks are treated as intermediates for accounting purposes (format-dependent, often `R8Unorm`).
 
 ### 3) Quality tiers: effects must declare a bounded-cost "quality ladder"
 
@@ -82,7 +82,7 @@ Minimum v1 ladder requirements:
 - **Dither**: switch to cheaper mode or disable.
 - **ColorAdjust/ColorMatrix**: keep (cheap) unless the effect is entirely disabled.
 - **Clip masks** (renderer-internal): lower mask resolution / disable mask generation (fall back to scissor-only)
-  before disabling the effect group (ADR 0135).
+  before disabling the effect group (ADR 0153).
 
 ### 4) Deterministic degradation: define an ordered set of degradations
 
@@ -90,8 +90,8 @@ When compiling a `RenderPlan`, if the required intermediates would exceed the cu
 must apply degradations in a deterministic order until the plan fits.
 
 Normative degradation order (v1):
-
-0) Prefer reducing clip mask cost first (ADR 0135):
+ 
+0) Prefer reducing clip mask cost first (ADR 0153):
    - generate the mask at a lower resolution (aligned to the effect step’s downsample tier),
    - and if still over budget, disable mask generation (fall back to scissor-only behavior).
 1) Increase downsample factors for the most expensive steps (typically blur).

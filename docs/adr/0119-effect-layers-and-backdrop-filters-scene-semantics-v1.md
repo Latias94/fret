@@ -161,7 +161,7 @@ Budgets themselves (scope, accounting, and deterministic degradation order) are 
 - Whether to add an explicit “effect blend mode” beyond premul over (recommendation: defer; keep premul over v1).
 - Whether `bounds` should be optional for `FilterContent` (recommendation: keep required to enforce predictability).
 - Rounded/soft clipping interaction: effect passes must eventually respect `PushClipRRect` (ADR 0063) via a renderer
-  clip-mask substrate (ADR 0135).
+  clip-mask substrate (ADR 0153).
 
 ## Non-goals (v1)
 

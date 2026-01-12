@@ -52,7 +52,7 @@ pub fn glass_panel<H: UiHost>(
     // Structure:
     //
     // - Outer wrapper provides the rounded clip that the renderer can consume at the effect
-    //   boundary (ADR 0119 + ADR 0135).
+    //   boundary (ADR 0119 + ADR 0153).
     // - Effect layer wraps a tinted/bordered container (tint + border are drawn after the blurred
     //   backdrop inside the group).
     let outer = ContainerProps {
