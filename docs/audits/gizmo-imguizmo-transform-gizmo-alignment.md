@@ -256,10 +256,12 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 2. **Custom gizmo extensibility**
    - Godot-style plugin surface: allow tools to contribute custom handles with explicit picking shapes (segments/capsules/triangles)
       in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
-   - Status: **Partially aligned** — Fret now has a reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`,
-     `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs` and uses it across translate/scale/bounds/rotate picking. Remaining
-     work is to promote this into a stable plugin/registration surface (and likely add 3D primitives / acceleration) rather than
-     keeping it internal to the core gizmo implementation.
+   - Status: **Partially aligned (contract implemented; integration pending)** — Fret now has:
+     - reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`, `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs`
+     - an explicit plugin/handle namespace contract + manager skeleton (`GizmoPlugin`, `GizmoPluginManager`) in
+       `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0149)
+     Remaining work is to route the built-in transform gizmo through the manager, ship at least one real custom gizmo plugin
+     (e.g. light radius), and likely add 3D picking primitives / acceleration for complex plugins.
 
 ### Roadmap (suggested, editor-first)
 
@@ -270,7 +272,8 @@ This is a pragmatic path that keeps core stable while opening extensibility poin
 2. **MVP+: production-feel polish**
    - Precision modifier inputs + richer style controls + more overlap tests for Universal.
 3. **Extensibility milestone**
-   - Introduce a gizmo plugin contract with explicit picking primitives + draw lists, inspired by Godot's `EditorNode3DGizmoPlugin`.
+   - Introduce a gizmo plugin contract with explicit picking primitives + draw lists, inspired by Godot's `EditorNode3DGizmoPlugin`
+     (contract + manager skeleton implemented; integration + 3D picking pending).
 
 ## Notes / open design questions
 
