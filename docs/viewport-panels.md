@@ -39,6 +39,8 @@ Tier A is the recommended choice for:
 - Engine hook + submission coordination:
   - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
   - `crates/fret-launch/src/runner/common.rs` (`WinitAppDriver`, `EngineFrameUpdate`)
+- Helper to allocate/resize `RenderTargetId`-backed textures:
+  - `crates/fret-launch/src/runner/viewport_target.rs` (`ViewportRenderTarget`)
 - Declarative viewport embedding + input forwarding helper:
   - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`
 
@@ -98,4 +100,3 @@ Tier A options:
 - **Be explicit about color space** for render targets (`RenderTargetColorSpace::Srgb` vs `Linear`).
 - **Don’t leak wgpu into components.** Keep engine rendering in the driver/engine subsystem (Tier A),
   keep UI policy in ecosystem components (Tier B).
-
