@@ -17,9 +17,18 @@ impl Gizmo {
         let shaft_len =
             (length_world - head_len).max(length_world * pv.translate_shaft_min_fraction.max(0.0));
         for &(((axis_dir, color), handle), axis_index) in &[
-            (((axes[0], self.config.x_color), HandleId(1)), 0usize),
-            (((axes[1], self.config.y_color), HandleId(2)), 1usize),
-            (((axes[2], self.config.z_color), HandleId(3)), 2usize),
+            (
+                ((axes[0], self.config.x_color), TranslateHandle::AxisX.id()),
+                0usize,
+            ),
+            (
+                ((axes[1], self.config.y_color), TranslateHandle::AxisY.id()),
+                1usize,
+            ),
+            (
+                ((axes[2], self.config.z_color), TranslateHandle::AxisZ.id()),
+                2usize,
+            ),
         ] {
             if self.axis_is_masked(axis_index) {
                 continue;
@@ -245,9 +254,18 @@ impl Gizmo {
 
         if include_axes {
             for &(((axis_dir, color), handle), axis_index) in &[
-                (((axes[0], self.config.x_color), HandleId(1)), 0usize),
-                (((axes[1], self.config.y_color), HandleId(2)), 1usize),
-                (((axes[2], self.config.z_color), HandleId(3)), 2usize),
+                (
+                    ((axes[0], self.config.x_color), TranslateHandle::AxisX.id()),
+                    0usize,
+                ),
+                (
+                    ((axes[1], self.config.y_color), TranslateHandle::AxisY.id()),
+                    1usize,
+                ),
+                (
+                    ((axes[2], self.config.z_color), TranslateHandle::AxisZ.id()),
+                    2usize,
+                ),
             ] {
                 if self.axis_is_masked(axis_index) {
                     continue;

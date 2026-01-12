@@ -16,6 +16,101 @@ pub(super) enum MixedPickBand {
 }
 
 impl Gizmo {
+    pub fn pick_hit(
+        &self,
+        view_projection: Mat4,
+        viewport: ViewportRect,
+        cursor_px: Vec2,
+        active_target: GizmoTargetId,
+        targets: &[GizmoTarget3d],
+    ) -> Option<(HandleId, f32)> {
+        if targets.is_empty() {
+            return None;
+        }
+
+        let active_index = targets
+            .iter()
+            .position(|t| t.id == active_target)
+            .unwrap_or(0);
+        let active_transform = targets
+            .get(active_index)
+            .map(|t| t.transform)
+            .unwrap_or_else(|| targets[0].transform);
+
+        let origin = Self::pivot_origin(active_transform, targets, self.config.pivot_mode);
+        let size_length_world =
+            self.size_length_world_or_one(view_projection, viewport, origin, targets);
+
+        let axes_raw = self.axis_dirs(&active_transform);
+        let axes = self.flip_axes_for_view(
+            view_projection,
+            viewport,
+            origin,
+            axes_raw,
+            size_length_world,
+        );
+
+        let hit: Option<PickHit> = if self.config.operation_mask.is_some() {
+            self.pick_operation_mask_handle(
+                view_projection,
+                viewport,
+                origin,
+                cursor_px,
+                axes,
+                axes_raw,
+                size_length_world,
+                targets,
+            )
+            .map(|(h, _kind)| h)
+        } else {
+            let h = match self.config.mode {
+                GizmoMode::Translate => self.pick_translate_handle(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor_px,
+                    axes,
+                    size_length_world,
+                    true,
+                    true,
+                    true,
+                    true,
+                ),
+                GizmoMode::Rotate => self.pick_rotate_axis(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor_px,
+                    axes,
+                    size_length_world,
+                ),
+                GizmoMode::Scale => self.pick_scale_or_bounds_handle(
+                    view_projection,
+                    viewport,
+                    origin,
+                    cursor_px,
+                    axes,
+                    axes_raw,
+                    size_length_world,
+                    targets,
+                ),
+                GizmoMode::Universal => self
+                    .pick_universal_handle(
+                        view_projection,
+                        viewport,
+                        origin,
+                        cursor_px,
+                        axes,
+                        size_length_world,
+                    )
+                    .map(|(h, _kind)| h),
+            };
+            h
+        };
+
+        hit.map(|h| (h.handle, h.score))
+    }
+
     pub(super) fn pick_translate_handle(
         &self,
         view_projection: Mat4,
@@ -932,9 +1027,9 @@ impl Gizmo {
 
         if include_axis {
             for &((axis_dir, handle), axis_index) in &[
-                ((axes[0], HandleId(1)), 0usize),
-                ((axes[1], HandleId(2)), 1usize),
-                ((axes[2], HandleId(3)), 2usize),
+                ((axes[0], RotateHandle::AxisX.id()), 0usize),
+                ((axes[1], RotateHandle::AxisY.id()), 1usize),
+                ((axes[2], RotateHandle::AxisZ.id()), 2usize),
             ] {
                 if self.axis_is_masked(axis_index) {
                     continue;
@@ -1001,7 +1096,7 @@ impl Gizmo {
                 let axis_dir = view_dir.normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let handle = Self::ROTATE_VIEW_HANDLE;
+                    let handle = RotateHandle::View.id();
                     let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
 
                     let mut prev = match project_point(
@@ -1111,7 +1206,7 @@ impl Gizmo {
             .hit_distance(cursor)
             {
                 return Some(PickHit {
-                    handle: Self::ROTATE_ARCBALL_HANDLE,
+                    handle: RotateHandle::Arcball.id(),
                     score: 10.0 + (d / r.max(1.0)),
                 });
             }

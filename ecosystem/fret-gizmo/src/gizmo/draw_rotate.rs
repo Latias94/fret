@@ -73,9 +73,18 @@ impl Gizmo {
 
         if include_axis {
             for &(((axis_dir, color), handle), axis_index) in &[
-                (((axes[0], self.config.x_color), HandleId(1)), 0usize),
-                (((axes[1], self.config.y_color), HandleId(2)), 1usize),
-                (((axes[2], self.config.z_color), HandleId(3)), 2usize),
+                (
+                    ((axes[0], self.config.x_color), RotateHandle::AxisX.id()),
+                    0usize,
+                ),
+                (
+                    ((axes[1], self.config.y_color), RotateHandle::AxisY.id()),
+                    1usize,
+                ),
+                (
+                    ((axes[2], self.config.z_color), RotateHandle::AxisZ.id()),
+                    2usize,
+                ),
             ] {
                 if self.axis_is_masked(axis_index) {
                     continue;
@@ -115,7 +124,7 @@ impl Gizmo {
                 let axis_dir = view_dir.normalize_or_zero();
                 if axis_dir.length_squared() > 0.0 {
                     let (u, v) = plane_basis(axis_dir);
-                    let handle = Self::ROTATE_VIEW_HANDLE;
+                    let handle = RotateHandle::View.id();
                     let r = (radius_world * self.config.view_axis_ring_radius_scale).max(1e-6);
                     let base = Color {
                         r: 0.9,
@@ -143,7 +152,7 @@ impl Gizmo {
                     let (u, v) = plane_basis(axis_dir);
                     let r = (radius_world * self.config.arcball_radius_scale).max(1e-6);
 
-                    let handle = Self::ROTATE_ARCBALL_HANDLE;
+                    let handle = RotateHandle::Arcball.id();
                     let base = Color {
                         r: 1.0,
                         g: 1.0,

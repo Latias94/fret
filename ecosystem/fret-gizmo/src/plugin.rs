@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use glam::{Mat4, Vec2};
 
 use crate::math::ViewportRect;
@@ -63,11 +65,15 @@ pub struct GizmoPluginContext {
     pub view_projection: Mat4,
     pub viewport: ViewportRect,
     pub input: GizmoInput,
+    /// Cursor position at pointer-down for the current active drag.
+    ///
+    /// When there is no active drag, this equals `input.cursor_px`.
+    pub drag_start_cursor_px: Vec2,
     pub hovered: Option<HandleId>,
     pub active: Option<HandleId>,
 }
 
-pub trait GizmoPlugin {
+pub trait GizmoPlugin: Any {
     fn plugin_id(&self) -> GizmoPluginId;
 
     fn draw(
@@ -138,6 +144,20 @@ impl GizmoPluginManager {
         &mut self.plugins
     }
 
+    pub fn plugin<T: Any>(&self) -> Option<&T> {
+        self.plugins.iter().find_map(|p| {
+            let any = p.as_ref() as &dyn Any;
+            any.downcast_ref::<T>()
+        })
+    }
+
+    pub fn plugin_mut<T: Any>(&mut self) -> Option<&mut T> {
+        self.plugins.iter_mut().find_map(|p| {
+            let any = p.as_mut() as &mut dyn Any;
+            any.downcast_mut::<T>()
+        })
+    }
+
     pub fn register(&mut self, plugin: Box<dyn GizmoPlugin>) {
         self.plugins.push(plugin);
     }
@@ -156,6 +176,11 @@ impl GizmoPluginManager {
             view_projection,
             viewport,
             input,
+            drag_start_cursor_px: if self.state.active.is_some() {
+                self.state.drag_start_cursor_px
+            } else {
+                input.cursor_px
+            },
             hovered: self.state.hovered,
             active: self.state.active,
         };
@@ -198,8 +223,7 @@ impl GizmoPluginManager {
                     self.state.drag_has_started = false;
 
                     if self.config.drag_start_threshold_px <= 0.0 {
-                        self.state.drag_has_started = true;
-                        return self.route_update(
+                        let out = self.route_update(
                             view_projection,
                             viewport,
                             input,
@@ -208,6 +232,10 @@ impl GizmoPluginManager {
                             targets,
                             h,
                         );
+                        if out.is_some() {
+                            self.state.drag_has_started = true;
+                        }
+                        return out;
                     }
                 }
             }
@@ -245,8 +273,7 @@ impl GizmoPluginManager {
                 {
                     return None;
                 }
-                self.state.drag_has_started = true;
-                return self.route_update(
+                let out = self.route_update(
                     view_projection,
                     viewport,
                     input,
@@ -255,6 +282,10 @@ impl GizmoPluginManager {
                     targets,
                     active,
                 );
+                if out.is_some() {
+                    self.state.drag_has_started = true;
+                }
+                return out;
             }
 
             return self.route_update(
@@ -301,6 +332,7 @@ impl GizmoPluginManager {
             view_projection,
             viewport,
             input,
+            drag_start_cursor_px: input.cursor_px,
             hovered: None,
             active: None,
         };
@@ -347,6 +379,7 @@ impl GizmoPluginManager {
             view_projection,
             viewport,
             input,
+            drag_start_cursor_px: self.state.drag_start_cursor_px,
             hovered: self.state.hovered,
             active: self.state.active,
         };

@@ -12,6 +12,7 @@ mod math;
 mod picking;
 mod plugin;
 mod style;
+mod transform_plugin;
 mod view_gizmo;
 mod viewport_input;
 
@@ -37,6 +38,7 @@ pub use plugin::{
 pub use style::{
     GizmoPartVisuals, GizmoVisualPreset, GizmoVisuals, ViewGizmoVisualPreset, ViewGizmoVisuals,
 };
+pub use transform_plugin::TransformGizmoPlugin;
 pub use view_gizmo::{
     ViewGizmo, ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoFace, ViewGizmoInput, ViewGizmoLabel,
     ViewGizmoProjection, ViewGizmoSnap, ViewGizmoState, ViewGizmoUpdate,

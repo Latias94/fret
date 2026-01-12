@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) fn axis_for_handle(handle: HandleId) -> (Vec3, usize) {
-    match handle.0 {
+    match handle_sub_id(handle) as u64 {
         1 => (Vec3::X, 0),
         2 => (Vec3::Y, 1),
         3 => (Vec3::Z, 2),
@@ -323,20 +323,26 @@ pub(super) fn translate_constraint_for_handle(
         axes[1].normalize_or_zero(),
         axes[2].normalize_or_zero(),
     ];
-    match handle.0 {
-        1 => Some(TranslateConstraint::Axis { axis_dir: axes[0] }),
-        2 => Some(TranslateConstraint::Axis { axis_dir: axes[1] }),
-        3 => Some(TranslateConstraint::Axis { axis_dir: axes[2] }),
-        4 => plane_constraint(axes[0], axes[1]),
-        5 => plane_constraint(axes[0], axes[2]),
-        6 => plane_constraint(axes[1], axes[2]),
-        10 => {
+    match handle {
+        h if h == TranslateHandle::AxisX.id() => {
+            Some(TranslateConstraint::Axis { axis_dir: axes[0] })
+        }
+        h if h == TranslateHandle::AxisY.id() => {
+            Some(TranslateConstraint::Axis { axis_dir: axes[1] })
+        }
+        h if h == TranslateHandle::AxisZ.id() => {
+            Some(TranslateConstraint::Axis { axis_dir: axes[2] })
+        }
+        h if h == TranslateHandle::PlaneXY.id() => plane_constraint(axes[0], axes[1]),
+        h if h == TranslateHandle::PlaneXZ.id() => plane_constraint(axes[0], axes[2]),
+        h if h == TranslateHandle::PlaneYZ.id() => plane_constraint(axes[1], axes[2]),
+        h if h == TranslateHandle::Screen.id() => {
             let view_dir = view_dir_at_origin(view_projection, viewport, origin, depth)?;
             let (u, v) = plane_basis(view_dir);
             let n = view_dir.normalize_or_zero();
             (n.length_squared() > 0.0).then_some(TranslateConstraint::Plane { u, v, normal: n })
         }
-        11 => {
+        h if h == TranslateHandle::Depth.id() => {
             let view_dir = view_dir_at_origin(view_projection, viewport, origin, depth)?;
             let n = view_dir.normalize_or_zero();
             (n.length_squared() > 0.0).then_some(TranslateConstraint::Dolly { view_dir: n })

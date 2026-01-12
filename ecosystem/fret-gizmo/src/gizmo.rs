@@ -30,8 +30,8 @@ pub struct Gizmo {
 
 impl Gizmo {
     const UNIVERSAL_TRANSLATE_TIP_SCALE: f32 = 1.25;
-    const ROTATE_VIEW_HANDLE: HandleId = HandleId(8);
-    const ROTATE_ARCBALL_HANDLE: HandleId = HandleId(9);
+    const ROTATE_VIEW_HANDLE: HandleId = pack_handle(HANDLE_GROUP_ROTATE, 8);
+    const ROTATE_ARCBALL_HANDLE: HandleId = pack_handle(HANDLE_GROUP_ROTATE, 9);
     const BOUNDS_CORNER_BASE: u64 = 20;
     const BOUNDS_CORNER_END: u64 = 27;
     const BOUNDS_FACE_BASE: u64 = 30;
@@ -1048,19 +1048,25 @@ impl Gizmo {
 
     fn bounds_corner_id(x_max: bool, y_max: bool, z_max: bool) -> HandleId {
         let bits = (x_max as u64) | ((y_max as u64) << 1) | ((z_max as u64) << 2);
-        HandleId(Self::BOUNDS_CORNER_BASE + bits)
+        pack_handle(HANDLE_GROUP_SCALE, (Self::BOUNDS_CORNER_BASE + bits) as u32)
     }
 
     fn bounds_face_id(axis: usize, max_side: bool) -> HandleId {
         let axis = axis.min(2) as u64;
         let side = if max_side { 1u64 } else { 0u64 };
-        HandleId(Self::BOUNDS_FACE_BASE + axis * 2 + side)
+        pack_handle(
+            HANDLE_GROUP_SCALE,
+            (Self::BOUNDS_FACE_BASE + axis * 2 + side) as u32,
+        )
     }
 
     fn bounds_handle_from_id(handle: HandleId) -> Option<BoundsHandle> {
-        match handle.0 {
+        if handle_group(handle) != HANDLE_GROUP_SCALE {
+            return None;
+        }
+        match handle_sub_id(handle) as u64 {
             Self::BOUNDS_CORNER_BASE..=Self::BOUNDS_CORNER_END => {
-                let bits = handle.0 - Self::BOUNDS_CORNER_BASE;
+                let bits = (handle_sub_id(handle) as u64) - Self::BOUNDS_CORNER_BASE;
                 Some(BoundsHandle::Corner {
                     x_max: (bits & 1) != 0,
                     y_max: (bits & 2) != 0,
@@ -1068,7 +1074,7 @@ impl Gizmo {
                 })
             }
             Self::BOUNDS_FACE_BASE..=Self::BOUNDS_FACE_END => {
-                let v = handle.0 - Self::BOUNDS_FACE_BASE;
+                let v = (handle_sub_id(handle) as u64) - Self::BOUNDS_FACE_BASE;
                 let axis = (v / 2) as usize;
                 let max_side = (v % 2) == 1;
                 Some(BoundsHandle::Face { axis, max_side })

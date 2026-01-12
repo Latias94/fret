@@ -8,8 +8,9 @@ use fret_core::{
 };
 use fret_gizmo::{
     Aabb3, DepthMode, DepthRange, Gizmo, GizmoConfig, GizmoDrawList3d, GizmoInput, GizmoMode,
-    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoResult, GizmoSizePolicy,
-    GizmoTarget3d, GizmoTargetId, GizmoVisualPreset, Grid3d, HandleId, Transform3d, ViewGizmo,
+    GizmoOps, GizmoOrientation, GizmoPhase, GizmoPivotMode, GizmoPluginManager,
+    GizmoPluginManagerConfig, GizmoResult, GizmoSizePolicy, GizmoTarget3d, GizmoTargetId,
+    GizmoVisualPreset, Grid3d, HandleId, Transform3d, TransformGizmoPlugin, ViewGizmo,
     ViewGizmoAnchor, ViewGizmoConfig, ViewGizmoInput, ViewGizmoProjection, ViewGizmoUpdate,
     ViewGizmoVisualPreset, ViewportRect, viewport_input_cursor_target_px,
 };
@@ -482,6 +483,16 @@ fn precision_multiplier(modifiers: &fret_core::Modifiers) -> f32 {
     }
 }
 
+fn transform_gizmo_kind_for_handle(handle: HandleId) -> Option<GizmoMode> {
+    let group = (handle.local() >> 16) as u32;
+    match group {
+        1 => Some(GizmoMode::Translate),
+        2 => Some(GizmoMode::Rotate),
+        3 => Some(GizmoMode::Scale),
+        _ => None,
+    }
+}
+
 fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
     let next = if pixels_per_point.is_finite() {
         pixels_per_point.clamp(0.1, 16.0)
@@ -499,7 +510,8 @@ fn apply_pixels_per_point(model: &mut Gizmo3dDemoModel, pixels_per_point: f32) {
 
     let ratio = (next / prev).clamp(0.1, 16.0);
     model.pixels_per_point = next;
-    model.gizmo.config = model.gizmo.config.scale_for_pixels_per_point(ratio);
+    let next_gizmo_cfg = model.gizmo().config.scale_for_pixels_per_point(ratio);
+    model.gizmo_mut().config = next_gizmo_cfg;
     model.view_gizmo.config = model.view_gizmo.config.scale_for_pixels_per_point(ratio);
 }
 
@@ -874,7 +886,7 @@ struct Gizmo3dDemoModel {
     viewport_target: RenderTargetId,
     viewport_px: (u32, u32),
     pixels_per_point: f32,
-    gizmo: Gizmo,
+    gizmo_mgr: GizmoPluginManager,
     view_gizmo: ViewGizmo,
     gizmo_visual_preset_index: usize,
     view_gizmo_visual_preset_index: usize,
@@ -898,9 +910,29 @@ struct Gizmo3dDemoModel {
 }
 
 impl Gizmo3dDemoModel {
+    fn transform_plugin(&self) -> &TransformGizmoPlugin {
+        self.gizmo_mgr
+            .plugin::<TransformGizmoPlugin>()
+            .expect("TransformGizmoPlugin should be registered")
+    }
+
+    fn transform_plugin_mut(&mut self) -> &mut TransformGizmoPlugin {
+        self.gizmo_mgr
+            .plugin_mut::<TransformGizmoPlugin>()
+            .expect("TransformGizmoPlugin should be registered")
+    }
+
+    fn gizmo(&self) -> &Gizmo {
+        &self.transform_plugin().gizmo
+    }
+
+    fn gizmo_mut(&mut self) -> &mut Gizmo {
+        &mut self.transform_plugin_mut().gizmo
+    }
+
     fn is_busy(&self) -> bool {
         self.input.dragging
-            || self.gizmo.state.active.is_some()
+            || self.gizmo_mgr.state.active.is_some()
             || self.pending_selection.is_some()
             || self.marquee.is_some()
     }
@@ -922,9 +954,9 @@ impl Gizmo3dDemoModel {
     fn apply_op_mask(&mut self) {
         if self.op_mask_enabled {
             let preset = self.op_mask_preset();
-            self.gizmo.config.operation_mask = Some(preset.mask());
+            self.gizmo_mut().config.operation_mask = Some(preset.mask());
         } else {
-            self.gizmo.config.operation_mask = None;
+            self.gizmo_mut().config.operation_mask = None;
         }
     }
 
@@ -949,25 +981,27 @@ impl Gizmo3dDemoModel {
 
         out.push_str(&format!(
             "Mode: {:?}   Orientation: {:?}   Pivot: {:?}\n",
-            self.gizmo.config.mode, self.gizmo.config.orientation, self.gizmo.config.pivot_mode
+            self.gizmo().config.mode,
+            self.gizmo().config.orientation,
+            self.gizmo().config.pivot_mode
         ));
         out.push_str(&format!(
             "Gizmo: size_px={:.0}   thickness_px={:.0}   pick_radius_px={:.0}\n",
-            self.gizmo.config.size_px,
-            self.gizmo.config.line_thickness_px,
-            self.gizmo.config.pick_radius_px
+            self.gizmo().config.size_px,
+            self.gizmo().config.line_thickness_px,
+            self.gizmo().config.pick_radius_px
         ));
         out.push_str(&format!(
             "Gizmo: size_policy={:?}\n",
-            self.gizmo.config.size_policy
+            self.gizmo().config.size_policy
         ));
         out.push_str(&format!(
             "Gizmo: depth_mode={:?}\n",
-            self.gizmo.config.depth_mode
+            self.gizmo().config.depth_mode
         ));
         out.push_str(&format!(
             "Gizmo: universal_includes_translate_depth={}\n",
-            self.gizmo.config.universal_includes_translate_depth
+            self.gizmo().config.universal_includes_translate_depth
         ));
         out.push_str(&format!(
             "Theme preset: {}\n",
@@ -990,7 +1024,7 @@ impl Gizmo3dDemoModel {
             out.push_str(&format!("Op mask: ON   Preset: {}\n", preset.name()));
             out.push_str(&format!(
                 "  mask={:?}\n",
-                self.gizmo
+                self.gizmo()
                     .config
                     .operation_mask
                     .unwrap_or_else(GizmoOps::empty)
@@ -1065,10 +1099,12 @@ impl Default for Gizmo3dDemoModel {
             viewport_target: RenderTargetId::default(),
             viewport_px: (960, 540),
             pixels_per_point: 1.0,
-            gizmo: {
-                let mut gizmo = Gizmo::new(gizmo_cfg);
-                GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_gizmo(&mut gizmo);
-                gizmo
+            gizmo_mgr: {
+                let mut mgr = GizmoPluginManager::new(GizmoPluginManagerConfig::default());
+                let mut plugin = TransformGizmoPlugin::new(Gizmo::new(gizmo_cfg));
+                GizmoVisualPreset::ALL[gizmo_visual_preset_index].apply_to_gizmo(&mut plugin.gizmo);
+                mgr.register(Box::new(plugin));
+                mgr
             },
             view_gizmo,
             gizmo_visual_preset_index,
@@ -1109,15 +1145,16 @@ const DEMO_THEME_PRESETS: [(&str, &str); 3] = [
 ];
 
 fn apply_viewport_gizmo_theme(theme: &Theme, model: &mut Gizmo3dDemoModel) {
-    model.gizmo.config.x_color = theme.color_required("color.viewport.gizmo.x");
-    model.gizmo.config.y_color = theme.color_required("color.viewport.gizmo.y");
-    model.gizmo.config.z_color = theme.color_required("color.viewport.gizmo.z");
-    model.gizmo.config.hover_color = theme.color_required("color.viewport.gizmo.hover");
+    let gizmo_cfg = &mut model.gizmo_mut().config;
+    gizmo_cfg.x_color = theme.color_required("color.viewport.gizmo.x");
+    gizmo_cfg.y_color = theme.color_required("color.viewport.gizmo.y");
+    gizmo_cfg.z_color = theme.color_required("color.viewport.gizmo.z");
+    gizmo_cfg.hover_color = theme.color_required("color.viewport.gizmo.hover");
 
-    model.view_gizmo.config.x_color = model.gizmo.config.x_color;
-    model.view_gizmo.config.y_color = model.gizmo.config.y_color;
-    model.view_gizmo.config.z_color = model.gizmo.config.z_color;
-    model.view_gizmo.config.hover_color = model.gizmo.config.hover_color;
+    model.view_gizmo.config.x_color = gizmo_cfg.x_color;
+    model.view_gizmo.config.y_color = gizmo_cfg.y_color;
+    model.view_gizmo.config.z_color = gizmo_cfg.z_color;
+    model.view_gizmo.config.hover_color = gizmo_cfg.hover_color;
     model.view_gizmo.config.face_color = theme.color_required("color.viewport.view_gizmo.face");
     model.view_gizmo.config.edge_color = theme.color_required("color.viewport.view_gizmo.edge");
 }
@@ -1739,7 +1776,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
 
         // Always cancel any in-progress gizmo interaction before applying undo/redo.
         let _ = state.demo.update(app, |m, _cx| {
-            let is_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+            let is_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
             if is_dragging {
                 let view_projection = camera_view_projection(m.viewport_px, m.camera);
                 let viewport = ViewportRect::new(
@@ -1758,7 +1795,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4f {
                     .filter(|t| m.selection.contains(&t.id))
                     .collect();
                 if let Some(update) =
-                    m.gizmo
+                    m.gizmo_mgr
                         .update(view_projection, viewport, input, m.active_target, &selected)
                 {
                     if update.phase == GizmoPhase::Cancel {
@@ -2100,7 +2137,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             } => {
                 let mut did_cancel = false;
                 let _ = state.demo.update(app, |m, _cx| {
-                    let is_gizmo_dragging = m.input.dragging || m.gizmo.state.active.is_some();
+                    let is_gizmo_dragging = m.input.dragging || m.gizmo_mgr.state.active.is_some();
                     let is_selecting = m.pending_selection.is_some() || m.marquee.is_some();
 
                     if !is_gizmo_dragging && !is_selecting {
@@ -2139,10 +2176,13 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .filter(|t| m.selection.contains(&t.id))
                         .collect();
 
-                    if let Some(update) =
-                        m.gizmo
-                            .update(view_projection, viewport, input, m.active_target, &selected)
-                    {
+                    if let Some(update) = m.gizmo_mgr.update(
+                        view_projection,
+                        viewport,
+                        input,
+                        m.active_target,
+                        &selected,
+                    ) {
                         if update.phase == GizmoPhase::Cancel {
                             if let Some(start) = m.drag_start_targets.take() {
                                 for updated in start {
@@ -2182,7 +2222,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.op_mask_enabled {
                         m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
                     } else {
-                        m.gizmo.config.mode = GizmoMode::Rotate;
+                        m.gizmo_mut().config.mode = GizmoMode::Rotate;
                     }
                 });
                 app.request_redraw(window);
@@ -2199,7 +2239,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.op_mask_enabled {
                         m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
                     } else {
-                        m.gizmo.config.mode = GizmoMode::Scale;
+                        m.gizmo_mut().config.mode = GizmoMode::Scale;
                     }
                 });
                 app.request_redraw(window);
@@ -2216,7 +2256,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.op_mask_enabled {
                         m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
                     } else {
-                        m.gizmo.config.mode = GizmoMode::Translate;
+                        m.gizmo_mut().config.mode = GizmoMode::Translate;
                     }
                 });
                 app.request_redraw(window);
@@ -2233,7 +2273,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.op_mask_enabled {
                         m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
                     } else {
-                        m.gizmo.config.mode = GizmoMode::Universal;
+                        m.gizmo_mut().config.mode = GizmoMode::Universal;
                     }
                 });
                 app.request_redraw(window);
@@ -2260,7 +2300,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.op_mask_enabled = !m.op_mask_enabled;
                     if m.op_mask_enabled {
                         // Pick a reasonable starting preset based on the current coarse mode.
-                        let preset = match m.gizmo.config.mode {
+                        let preset = match m.gizmo().config.mode {
                             GizmoMode::Translate => GizmoOpMaskPreset::Translate,
                             GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
                             GizmoMode::Scale => GizmoOpMaskPreset::Scale,
@@ -2282,7 +2322,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.depth_mode = match m.gizmo.config.depth_mode {
+                    m.gizmo_mut().config.depth_mode = match m.gizmo().config.depth_mode {
                         DepthMode::Test => DepthMode::Always,
                         DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
                     };
@@ -2298,8 +2338,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.universal_includes_translate_depth =
-                        !m.gizmo.config.universal_includes_translate_depth;
+                    m.gizmo_mut().config.universal_includes_translate_depth =
+                        !m.gizmo().config.universal_includes_translate_depth;
                 });
                 app.request_redraw(window);
             }
@@ -2362,11 +2402,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
                         GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
-                            .apply_to_gizmo(&mut m.gizmo);
-                        m.gizmo.config = m
-                            .gizmo
+                            .apply_to_gizmo(m.gizmo_mut());
+                        let cfg = m
+                            .gizmo()
                             .config
                             .scale_for_pixels_per_point(m.pixels_per_point);
+                        m.gizmo_mut().config = cfg;
                     }
                 });
                 app.request_redraw(window);
@@ -2380,7 +2421,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.size_policy = match m.gizmo.config.size_policy {
+                    m.gizmo_mut().config.size_policy = match m.gizmo().config.size_policy {
                         GizmoSizePolicy::ConstantPixels => {
                             GizmoSizePolicy::PixelsClampedBySelectionBounds {
                                 min_fraction_of_max_extent: 0.0,
@@ -2408,7 +2449,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    match m.gizmo.config.size_policy {
+                    match m.gizmo_mut().config.size_policy {
                         GizmoSizePolicy::SelectionBounds {
                             ref mut fraction_of_max_extent,
                         } => {
@@ -2438,7 +2479,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    match m.gizmo.config.size_policy {
+                    match m.gizmo_mut().config.size_policy {
                         GizmoSizePolicy::SelectionBounds {
                             ref mut fraction_of_max_extent,
                         } => {
@@ -2468,7 +2509,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.size_px = (m.gizmo.config.size_px - step).clamp(24.0, 256.0);
+                    m.gizmo_mut().config.size_px =
+                        (m.gizmo().config.size_px - step).clamp(24.0, 256.0);
                 });
                 app.request_redraw(window);
             }
@@ -2483,7 +2525,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.size_px = (m.gizmo.config.size_px + step).clamp(24.0, 256.0);
+                    m.gizmo_mut().config.size_px =
+                        (m.gizmo().config.size_px + step).clamp(24.0, 256.0);
                 });
                 app.request_redraw(window);
             }
@@ -2498,12 +2541,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.line_thickness_px =
-                        (m.gizmo.config.line_thickness_px - step).clamp(1.0, 24.0);
-                    m.gizmo.config.pick_radius_px =
-                        (m.gizmo.config.pick_radius_px - step).clamp(4.0, 32.0);
-                    m.gizmo.config.bounds_handle_size_px =
-                        (m.gizmo.config.bounds_handle_size_px - step).clamp(6.0, 32.0);
+                    m.gizmo_mut().config.line_thickness_px =
+                        (m.gizmo().config.line_thickness_px - step).clamp(1.0, 24.0);
+                    m.gizmo_mut().config.pick_radius_px =
+                        (m.gizmo().config.pick_radius_px - step).clamp(4.0, 32.0);
+                    m.gizmo_mut().config.bounds_handle_size_px =
+                        (m.gizmo().config.bounds_handle_size_px - step).clamp(6.0, 32.0);
                 });
                 app.request_redraw(window);
             }
@@ -2518,12 +2561,12 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     if m.is_busy() {
                         return;
                     }
-                    m.gizmo.config.line_thickness_px =
-                        (m.gizmo.config.line_thickness_px + step).clamp(1.0, 24.0);
-                    m.gizmo.config.pick_radius_px =
-                        (m.gizmo.config.pick_radius_px + step).clamp(4.0, 32.0);
-                    m.gizmo.config.bounds_handle_size_px =
-                        (m.gizmo.config.bounds_handle_size_px + step).clamp(6.0, 32.0);
+                    m.gizmo_mut().config.line_thickness_px =
+                        (m.gizmo().config.line_thickness_px + step).clamp(1.0, 24.0);
+                    m.gizmo_mut().config.pick_radius_px =
+                        (m.gizmo().config.pick_radius_px + step).clamp(4.0, 32.0);
+                    m.gizmo_mut().config.bounds_handle_size_px =
+                        (m.gizmo().config.bounds_handle_size_px + step).clamp(6.0, 32.0);
                 });
                 app.request_redraw(window);
             }
@@ -2563,10 +2606,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
                         return;
                     }
-                    m.gizmo.config.orientation = match m.gizmo.config.orientation {
+                    m.gizmo_mut().config.orientation = match m.gizmo().config.orientation {
                         GizmoOrientation::World => GizmoOrientation::Local,
                         GizmoOrientation::Local => GizmoOrientation::World,
                     };
@@ -2579,10 +2622,10 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
                         return;
                     }
-                    m.gizmo.config.pivot_mode = match m.gizmo.config.pivot_mode {
+                    m.gizmo_mut().config.pivot_mode = match m.gizmo().config.pivot_mode {
                         GizmoPivotMode::Active => GizmoPivotMode::Center,
                         GizmoPivotMode::Center => GizmoPivotMode::Active,
                     };
@@ -2595,7 +2638,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() || m.selection.is_empty()
+                    if m.input.dragging
+                        || m.gizmo_mgr.state.active.is_some()
+                        || m.selection.is_empty()
                     {
                         return;
                     }
@@ -2613,7 +2658,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 ..
             } => {
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() || m.selection.is_empty()
+                    if m.input.dragging
+                        || m.gizmo_mgr.state.active.is_some()
+                        || m.selection.is_empty()
                     {
                         return;
                     }
@@ -2633,7 +2680,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 let frame_all = modifiers.shift;
                 let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
                         return;
                     }
 
@@ -2662,7 +2709,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 let clear = modifiers.shift;
                 let _ = state.demo.update(app, |m, _cx| {
                     let is_busy = m.input.dragging
-                        || m.gizmo.state.active.is_some()
+                        || m.gizmo_mgr.state.active.is_some()
                         || m.pending_selection.is_some()
                         || m.marquee.is_some();
                     if is_busy {
@@ -2715,7 +2762,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 };
                 let op = selection_op(modifiers);
                 let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo.state.active.is_some() {
+                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
                         return;
                     }
                     apply_click_selection_op(&mut m.selection, &mut m.active_target, Some(id), op);
@@ -2958,7 +3005,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     .update(view_projection, viewport, view_gizmo_input);
 
             let clear_other_interactions = |m: &mut Gizmo3dDemoModel| {
-                m.gizmo.state.hovered = None;
+                m.gizmo_mgr.state.hovered = None;
                 m.pending_selection = None;
                 m.marquee = None;
                 m.marquee_preview.clear();
@@ -3124,7 +3171,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             cancel: false,
                             precision,
                         };
-                        let _ = m.gizmo.update(
+                        let _ = m.gizmo_mgr.update(
                             view_projection,
                             viewport,
                             hover_input,
@@ -3132,7 +3179,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             &selected,
                         );
 
-                        let over_handle = m.gizmo.state.hovered.is_some();
+                        let over_handle = m.gizmo_mgr.state.hovered.is_some();
                         if over_handle {
                             m.pending_selection = None;
                             m.marquee = None;
@@ -3184,7 +3231,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 let hits = marquee_hits(
                                     view_projection,
                                     viewport,
-                                    m.gizmo.config.depth_range,
+                                    m.gizmo().config.depth_range,
                                     &m.targets,
                                     rect_min,
                                     rect_max,
@@ -3209,7 +3256,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         click_count: _click_count,
                         ..
                     } => {
-                        let is_gizmo_dragging = m.gizmo.state.active.is_some() || m.input.dragging;
+                        let is_gizmo_dragging =
+                            m.gizmo_mgr.state.active.is_some() || m.input.dragging;
                         if is_gizmo_dragging {
                             m.pending_selection = None;
                             m.marquee = None;
@@ -3224,7 +3272,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                 let hits = marquee_hits(
                                     view_projection,
                                     viewport,
-                                    m.gizmo.config.depth_range,
+                                    m.gizmo().config.depth_range,
                                     &m.targets,
                                     rect_min,
                                     rect_max,
@@ -3252,7 +3300,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                                     view_projection,
                                     viewport,
                                     cursor_px,
-                                    m.gizmo.config.depth_range,
+                                    m.gizmo().config.depth_range,
                                 ) {
                                     let hit = pick_target_id(ray, &m.targets);
                                     apply_click_selection_op(
@@ -3323,7 +3371,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     }
                 };
 
-            if let Some(update) = m.gizmo.update(
+            if let Some(update) = m.gizmo_mgr.update(
                 view_projection,
                 viewport,
                 m.input,
@@ -3386,9 +3434,9 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 }
             }
 
-            m.hud.hovered = m.gizmo.state.hovered;
-            m.hud.hovered_kind = m.gizmo.state.hovered_kind;
-            m.hud.active = m.gizmo.state.active;
+            m.hud.hovered = m.gizmo_mgr.state.hovered;
+            m.hud.hovered_kind = m.hud.hovered.and_then(transform_gizmo_kind_for_handle);
+            m.hud.active = m.gizmo_mgr.state.active;
             m.hud.snap = m.input.snap;
 
             rec_to_record
@@ -3447,7 +3495,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             depth,
         ) = state
             .demo
-            .read(app, |_app, m| {
+            .update(app, |m, _cx| {
                 let view_proj = camera_view_projection(size, m.camera);
 
                 let marquee = m.marquee;
@@ -3473,8 +3521,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         .copied()
                         .filter(|t| selection.contains(&t.id))
                         .collect();
-                    m.gizmo
-                        .draw(view_proj, viewport, active_target, &gizmo_targets)
+                    m.gizmo_mgr
+                        .draw(view_proj, viewport, active_target, &gizmo_targets, m.input)
                 };
                 if marquee.is_none() {
                     let projection = match m.camera.projection {
@@ -3492,8 +3540,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 draw.lines.extend(grid.lines);
                 draw.triangles.extend(grid.triangles);
 
-                let thickness_px = m.gizmo.config.line_thickness_px;
-                let depth = m.gizmo.config.depth_range;
+                let thickness_px = m.gizmo().config.line_thickness_px;
+                let depth = m.gizmo().config.depth_range;
 
                 (
                     m.targets.clone(),
@@ -3834,7 +3882,7 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     m.viewport_px,
                     m.camera,
                     m.view_gizmo.clone(),
-                    m.gizmo.config,
+                    m.gizmo().config,
                     m.hud,
                 )
             })

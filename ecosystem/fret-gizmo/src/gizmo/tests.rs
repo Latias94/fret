@@ -201,7 +201,7 @@ fn rotate_feedback_never_emits_ghost_triangles_even_when_enabled() {
 
     // Put the gizmo into a "mid-drag rotate" state so feedback draws.
     gizmo.state.drag_mode = GizmoMode::Rotate;
-    gizmo.state.active = Some(HandleId(1));
+    gizmo.state.active = Some(RotateHandle::AxisX.id());
     gizmo.state.drag_has_started = true;
     gizmo.state.drag_axis_dir = Vec3::X;
     gizmo.state.drag_basis_u = Vec3::Y;
@@ -392,7 +392,7 @@ fn operation_mask_translate_axis_tip_wins_over_rotate_rings() {
         )
         .unwrap();
     assert_eq!(kind, GizmoMode::Translate);
-    assert_eq!(hit.handle, HandleId(1));
+    assert_eq!(hit.handle, TranslateHandle::AxisX.id());
 }
 
 #[test]
@@ -2056,7 +2056,7 @@ fn rotate_ring_fade_hides_edge_on_axis_ring() {
     let hit = gizmo
         .pick_rotate_axis(view_proj, vp, origin, pz, axes, radius_world)
         .unwrap();
-    assert_eq!(hit.handle, HandleId(3));
+    assert_eq!(hit.handle, RotateHandle::AxisZ.id());
 }
 
 #[test]
@@ -2114,7 +2114,12 @@ fn rotate_view_ring_does_not_steal_axis_ring_when_both_hit() {
         })
         .map(|(idx, _)| idx)
         .unwrap();
-    let axis_handle = HandleId(1 + best_axis_index as u64);
+    let axis_handle = match best_axis_index {
+        0 => RotateHandle::AxisX.id(),
+        1 => RotateHandle::AxisY.id(),
+        2 => RotateHandle::AxisZ.id(),
+        _ => RotateHandle::AxisX.id(),
+    };
 
     let (u, _v) = plane_basis(view_dir_n);
     let cursor = project_point(
@@ -3244,7 +3249,7 @@ fn universal_picks_scale_on_end_box() {
         .pick_universal_handle(view_proj, vp, origin, end.screen, axes, length_world)
         .unwrap();
     assert_eq!(kind, GizmoMode::Scale);
-    assert_eq!(hit.handle, HandleId(1));
+    assert_eq!(hit.handle, ScaleHandle::AxisX.id());
 }
 
 #[test]
@@ -3280,7 +3285,7 @@ fn universal_picks_translate_on_arrow_tip() {
         .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
         .unwrap();
     assert_eq!(kind, GizmoMode::Translate);
-    assert_eq!(hit.handle, HandleId(1));
+    assert_eq!(hit.handle, TranslateHandle::AxisX.id());
 }
 
 #[test]
@@ -3362,7 +3367,7 @@ fn universal_translate_tip_intent_works_in_orthographic() {
         .pick_universal_handle(view_proj, vp, origin, tip.screen, axes, length_world)
         .unwrap();
     assert_eq!(kind, GizmoMode::Translate);
-    assert_eq!(hit.handle, HandleId(1));
+    assert_eq!(hit.handle, TranslateHandle::AxisX.id());
 }
 
 #[test]
