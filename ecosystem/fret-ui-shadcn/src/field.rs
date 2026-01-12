@@ -84,6 +84,13 @@ fn is_radio_group_element(element: &AnyElement) -> bool {
     }
 }
 
+fn is_checkbox_element(element: &AnyElement) -> bool {
+    match &element.kind {
+        ElementKind::Semantics(props) => props.role == SemanticsRole::Checkbox,
+        _ => element.children.iter().any(is_checkbox_element),
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldOrientation {
     #[default]
@@ -114,7 +121,9 @@ impl FieldSet {
         let theme = Theme::global(&*cx.app).clone();
         // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
         // is present via CSS `:has` selectors.
-        let gap = if self.children.iter().any(is_radio_group_element) {
+        let gap = if self.children.iter().any(is_radio_group_element)
+            || self.children.iter().any(is_checkbox_element)
+        {
             MetricRef::space(Space::N3).resolve(&theme)
         } else {
             MetricRef::space(Space::N6).resolve(&theme)
