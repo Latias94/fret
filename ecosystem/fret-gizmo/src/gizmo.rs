@@ -5194,9 +5194,13 @@ impl Gizmo {
             if let Some(p0) =
                 project_point(view_projection, viewport, origin, self.config.depth_range)
             {
-                let d = (cursor - p0.screen).length();
                 let r = self.config.pick_radius_px.max(6.0);
-                if d <= r {
+                if let Some(d) = (PickCircle2d {
+                    center: p0.screen,
+                    radius: r,
+                })
+                .hit_distance(cursor)
+                {
                     return Some(PickHit {
                         handle: ScaleHandle::Uniform.id(),
                         score: d,
@@ -5246,8 +5250,9 @@ impl Gizmo {
                 ) else {
                     continue;
                 };
-                let inside = point_in_convex_quad(cursor, p);
-                let edge_d = quad_edge_distance(cursor, p);
+                let quad = PickConvexQuad2d { points: p };
+                let inside = quad.contains(cursor);
+                let edge_d = quad.edge_distance(cursor);
                 if inside {
                     consider(handle, 0.0);
                 } else {
@@ -5290,8 +5295,9 @@ impl Gizmo {
                     continue;
                 }
 
-                let inside = point_in_convex_quad(cursor, p);
-                let edge_d = quad_edge_distance(cursor, p);
+                let quad = PickConvexQuad2d { points: p };
+                let inside = quad.contains(cursor);
+                let edge_d = quad.edge_distance(cursor);
                 if inside {
                     consider(handle, 0.20 / alpha.max(0.05));
                 } else {
@@ -5835,8 +5841,9 @@ impl Gizmo {
                     ) else {
                         continue;
                     };
-                    let inside = point_in_convex_quad(cursor, p);
-                    let edge_d = quad_edge_distance(cursor, p);
+                    let quad = PickConvexQuad2d { points: p };
+                    let inside = quad.contains(cursor);
+                    let edge_d = quad.edge_distance(cursor);
                     let handle = Self::bounds_corner_id(x_max, y_max, z_max);
                     if inside {
                         consider(handle, 0.0);
@@ -5871,8 +5878,9 @@ impl Gizmo {
                 ) else {
                     continue;
                 };
-                let inside = point_in_convex_quad(cursor, p);
-                let edge_d = quad_edge_distance(cursor, p);
+                let quad = PickConvexQuad2d { points: p };
+                let inside = quad.contains(cursor);
+                let edge_d = quad.edge_distance(cursor);
                 let handle = Self::bounds_face_id(axis, max_side);
                 if inside {
                     consider(handle, 0.25);
@@ -5956,9 +5964,14 @@ impl Gizmo {
                     };
 
                     if prev.inside_clip && p.inside_clip {
-                        let d = distance_point_to_segment_px(cursor, prev.screen, p.screen);
                         let r = self.config.pick_radius_px * alpha.sqrt();
-                        if d <= r {
+                        if let Some(d) = (PickSegmentCapsule2d {
+                            a: prev.screen,
+                            b: p.screen,
+                            radius: r,
+                        })
+                        .hit_distance(cursor)
+                        {
                             match best_axis {
                                 Some(best) if d >= best.score => {}
                                 _ => best_axis = Some(PickHit { handle, score: d }),
@@ -6006,8 +6019,13 @@ impl Gizmo {
                         };
 
                         if prev.inside_clip && p.inside_clip {
-                            let d = distance_point_to_segment_px(cursor, prev.screen, p.screen);
-                            if d <= self.config.pick_radius_px {
+                            if let Some(d) = (PickSegmentCapsule2d {
+                                a: prev.screen,
+                                b: p.screen,
+                                radius: self.config.pick_radius_px,
+                            })
+                            .hit_distance(cursor)
+                            {
                                 match view_hit {
                                     Some(best) if d >= best.score => {}
                                     _ => view_hit = Some(PickHit { handle, score: d }),
@@ -6078,8 +6096,12 @@ impl Gizmo {
                 }
             }
             .max(self.config.pick_radius_px.max(6.0));
-            let d = (cursor - center.screen).length();
-            if d.is_finite() && d <= r {
+            if let Some(d) = (PickCircle2d {
+                center: center.screen,
+                radius: r,
+            })
+            .hit_distance(cursor)
+            {
                 return Some(PickHit {
                     handle: Self::ROTATE_ARCBALL_HANDLE,
                     score: 10.0 + (d / r.max(1.0)),
@@ -6333,38 +6355,6 @@ fn project_quad(
         out[i] = p.screen;
     }
     Some(out)
-}
-
-fn point_in_convex_quad(p: Vec2, q: [Vec2; 4]) -> bool {
-    fn cross(a: Vec2, b: Vec2) -> f32 {
-        a.x * b.y - a.y * b.x
-    }
-
-    let mut sign = 0.0f32;
-    for i in 0..4 {
-        let a = q[i];
-        let b = q[(i + 1) % 4];
-        let c = cross(b - a, p - a);
-        if c.abs() < 1e-6 {
-            continue;
-        }
-        if sign == 0.0 {
-            sign = c;
-        } else if sign.signum() != c.signum() {
-            return false;
-        }
-    }
-    true
-}
-
-fn quad_edge_distance(p: Vec2, q: [Vec2; 4]) -> f32 {
-    let mut best = f32::INFINITY;
-    for i in 0..4 {
-        let a = q[i];
-        let b = q[(i + 1) % 4];
-        best = best.min(distance_point_to_segment_px(p, a, b));
-    }
-    best
 }
 
 fn view_dir_at_origin(
@@ -7759,7 +7749,11 @@ mod tests {
                     + quad_screen[1] * s * (1.0 - t)
                     + quad_screen[3] * (1.0 - s) * t
                     + quad_screen[2] * s * t;
-                if !point_in_convex_quad(candidate, quad_screen) {
+                if !(PickConvexQuad2d {
+                    points: quad_screen,
+                }
+                .contains(candidate))
+                {
                     continue;
                 }
                 let d_center = (candidate - pa.screen).length();
@@ -7917,7 +7911,7 @@ mod tests {
 
         // Cursor is outside the end-box quad but within the default pick radius.
         let cursor = c + dir * (diag_half + 6.0);
-        let edge_d = quad_edge_distance(cursor, p);
+        let edge_d = PickConvexQuad2d { points: p }.edge_distance(cursor);
         assert!(edge_d.is_finite() && edge_d > 0.1);
         assert!(edge_d < no_fade.config.pick_radius_px);
 
