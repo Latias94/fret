@@ -2,10 +2,11 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::super::state::{ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
+use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_edge_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -15,10 +16,8 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
         return false;
     };
 
-    let threshold = (3.0 / zoom).max(0.5 / zoom);
-    let dx = position.x.0 - drag.start_pos.x.0;
-    let dy = position.y.0 - drag.start_pos.y.0;
-    if dx * dx + dy * dy < threshold * threshold {
+    let threshold_screen = snapshot.interaction.connection_drag_threshold;
+    if !exceeds_drag_threshold(drag.start_pos, position, threshold_screen) {
         return false;
     }
 
@@ -41,25 +40,45 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
     let Some((endpoint, fixed)) = reconnect else {
         return false;
     };
+    let endpoint_allowed = canvas
+        .graph
+        .read_ref(cx.app, |graph| {
+            NodeGraphCanvasWith::<M>::edge_endpoint_is_reconnectable(
+                graph,
+                &snapshot.interaction,
+                drag.edge,
+                endpoint,
+            )
+        })
+        .ok()
+        .unwrap_or(false);
+    if !endpoint_allowed {
+        canvas.interaction.edge_drag = None;
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
 
     canvas.interaction.edge_drag = None;
     canvas.interaction.hover_edge = None;
+    let kind = WireDragKind::Reconnect {
+        edge: drag.edge,
+        endpoint,
+        fixed,
+    };
     canvas.interaction.wire_drag = Some(WireDrag {
-        kind: WireDragKind::Reconnect {
-            edge: drag.edge,
-            endpoint,
-            fixed,
-        },
+        kind: kind.clone(),
         pos: position,
     });
+    canvas.emit_connect_start(snapshot, &kind);
 
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true
 }
 
-pub(super) fn handle_edge_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
 ) -> bool {
     if canvas.interaction.edge_drag.take().is_some() {

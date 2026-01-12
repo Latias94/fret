@@ -1,5 +1,7 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
@@ -10,41 +12,68 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
-    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
-    PlatformFilter, WhenExpr, keymap::Binding,
+    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter,
+    WhenExpr,
 };
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::Theme;
+use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
+use serde_json::Value;
+
+use crate::keymap_defaults::install_default_keybindings_into_keymap;
+use crate::node_graph_tuning_overlay::{NodeGraphTuningCommands, NodeGraphTuningOverlay};
 
 use fret_node::Graph;
+use fret_node::GraphId;
 use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
+use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
-use fret_node::ui::canvas::middleware::RejectNonFiniteTx;
+use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::presenter::{
-    InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
+    NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphInternalsStore, RegistryNodeGraphPresenter, register_node_graph_commands,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
+    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel,
+    NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
+    store: fret_runtime::Model<NodeGraphStore>,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
+    overlays: fret_runtime::Model<NodeGraphOverlayState>,
+    group_rename_text: fret_runtime::Model<String>,
+}
+
+#[derive(Clone)]
+struct NodeGraphDemoViewStatePersistence {
+    graph_id: GraphId,
+    path: PathBuf,
 }
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
+const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
+const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
+const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
+const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Clone)]
@@ -148,6 +177,59 @@ impl NodeGraphPresenter for DemoPresenter {
         }
         let value = n.data.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
         Some(Arc::<str>::from(format!("Value: {:.3}", value)))
+    }
+
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        _style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        let Some(e) = graph.edges.get(&edge) else {
+            return EdgeRenderHint {
+                width_mul: 1.0,
+                ..EdgeRenderHint::default()
+            };
+        };
+        let mut hint = EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
+        };
+        match e.kind {
+            fret_node::core::EdgeKind::Exec => {
+                hint.route = EdgeRouteKind::Step;
+                hint.end_marker = Some(EdgeMarker::arrow(12.0));
+            }
+            fret_node::core::EdgeKind::Data => {
+                let ty = graph
+                    .ports
+                    .get(&e.from)
+                    .and_then(|p| p.ty.as_ref())
+                    .or_else(|| graph.ports.get(&e.to).and_then(|p| p.ty.as_ref()));
+                if let Some(ty) = ty {
+                    let s = match ty {
+                        TypeDesc::Any => "any".to_string(),
+                        TypeDesc::Unknown => "unknown".to_string(),
+                        TypeDesc::Never => "never".to_string(),
+                        TypeDesc::Null => "null".to_string(),
+                        TypeDesc::Bool => "bool".to_string(),
+                        TypeDesc::Int => "int".to_string(),
+                        TypeDesc::Float => "float".to_string(),
+                        TypeDesc::String => "string".to_string(),
+                        TypeDesc::Bytes => "bytes".to_string(),
+                        TypeDesc::List { of } => format!("list<{:?}>", of),
+                        TypeDesc::Map { .. } => "map".to_string(),
+                        TypeDesc::Object { .. } => "object".to_string(),
+                        TypeDesc::Union { .. } => "union".to_string(),
+                        TypeDesc::Option { of } => format!("option<{:?}>", of),
+                        TypeDesc::Var { id } => format!("t{}", id.0),
+                        TypeDesc::Opaque { key, .. } => key.clone(),
+                    };
+                    hint.label = Some(Arc::<str>::from(s));
+                }
+            }
+        }
+        hint
     }
 
     fn list_insertable_nodes(&mut self, graph: &Graph) -> Vec<InsertNodeCandidate> {
@@ -372,8 +454,8 @@ fn build_demo_registry() -> NodeRegistry {
     reg
 }
 
-fn build_demo_graph() -> Graph {
-    let mut graph = Graph::default();
+fn build_demo_graph(graph_id: GraphId) -> Graph {
+    let mut graph = Graph::new(graph_id);
 
     let node_value_a = NodeId::new();
     let node_value_b = NodeId::new();
@@ -402,7 +484,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 60.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_value_a_out],
@@ -415,7 +503,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 170.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_value_b_out],
@@ -428,7 +522,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("fret.variadic_merge"),
             kind_version: 1,
             pos: CanvasPoint { x: 300.0, y: 90.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_merge_in0, port_merge_in1, port_merge_out],
@@ -441,7 +541,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.add"),
             kind_version: 1,
             pos: CanvasPoint { x: 560.0, y: 100.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_add_a, port_add_b, port_add_out],
@@ -454,7 +560,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.output"),
             kind_version: 1,
             pos: CanvasPoint { x: 840.0, y: 140.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_out_in],
@@ -467,7 +579,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new(WEIRD_KIND),
             kind_version: 1,
             pos: CanvasPoint { x: 560.0, y: 300.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![
@@ -488,6 +606,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -500,6 +621,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -513,6 +637,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -525,6 +652,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -537,6 +667,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -550,6 +683,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -562,6 +698,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -574,6 +713,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -586,6 +728,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -598,6 +743,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -610,6 +758,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -622,6 +773,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -634,6 +788,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -645,6 +802,9 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_value_a_out,
             to: port_merge_in0,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -653,6 +813,9 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_merge_out,
             to: port_add_a,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -661,6 +824,9 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_merge_out,
             to: port_weird_in_a,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -669,6 +835,9 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_value_b_out,
             to: port_weird_in_b,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -677,6 +846,9 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_weird_out_main,
             to: port_add_b,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
     graph.edges.insert(
@@ -685,8 +857,188 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_add_out,
             to: port_out_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
+
+    graph
+}
+
+fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
+    let mut graph = Graph::new(graph_id);
+
+    // Build a mostly-regular, large graph intended for performance/conformance stress testing.
+    //
+    // Shape:
+    // - A chain of `demo.add` nodes arranged in a grid.
+    // - Each add node gets its `b` input from a nearby `demo.float`.
+    // - The `a` input is chained from the previous add output, starting from a root float.
+    //
+    // This produces both many nodes and many short-ish edges without relying on dynamic ports.
+    let add_nodes = target_nodes.saturating_sub(1) / 2;
+    let float_nodes = add_nodes.saturating_add(1);
+
+    let cols: usize = 64;
+    let x_step = 360.0f32;
+    let y_step = 220.0f32;
+
+    let float_x_offset = -260.0f32;
+    let float_y_offset = 40.0f32;
+
+    let mut float_out_ports: Vec<PortId> = Vec::with_capacity(float_nodes);
+    for i in 0..float_nodes {
+        let node_id = NodeId::new();
+        let port_out = PortId::new();
+
+        let col = i % cols;
+        let row = i / cols;
+        let x = col as f32 * x_step + float_x_offset;
+        let y = row as f32 * y_step + float_y_offset;
+        let value = (i as f64) * 0.001;
+
+        graph.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("demo.float"),
+                kind_version: 1,
+                pos: CanvasPoint { x, y },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![port_out],
+                data: serde_json::json!({ "value": value }),
+            },
+        );
+        graph.ports.insert(
+            port_out,
+            Port {
+                node: node_id,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        float_out_ports.push(port_out);
+    }
+
+    let mut prev_out: Option<PortId> = None;
+    for i in 0..add_nodes {
+        let node_id = NodeId::new();
+        let port_a = PortId::new();
+        let port_b = PortId::new();
+        let port_out = PortId::new();
+
+        let col = i % cols;
+        let row = i / cols;
+        let x = col as f32 * x_step;
+        let y = row as f32 * y_step;
+
+        graph.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("demo.add"),
+                kind_version: 1,
+                pos: CanvasPoint { x, y },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![port_a, port_b, port_out],
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_a,
+            Port {
+                node: node_id,
+                key: PortKey::new("a"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_b,
+            Port {
+                node: node_id,
+                key: PortKey::new("b"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_out,
+            Port {
+                node: node_id,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+
+        let a_source = prev_out.unwrap_or(float_out_ports[0]);
+        graph.edges.insert(
+            EdgeId::new(),
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_source,
+                to: port_a,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        graph.edges.insert(
+            EdgeId::new(),
+            Edge {
+                kind: EdgeKind::Data,
+                from: float_out_ports[i + 1],
+                to: port_b,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        prev_out = Some(port_out);
+    }
 
     graph
 }
@@ -696,10 +1048,130 @@ struct NodeGraphDemoWindowState {
     root: fret_core::NodeId,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct DemoFloatPortalSpec;
+
+impl PortalNumberEditSpec for DemoFloatPortalSpec {
+    fn initial_value(&self, graph: &Graph, node: NodeId) -> Option<f64> {
+        let node = graph.nodes.get(&node)?;
+        if node.kind.0.as_str() != "demo.float" {
+            return None;
+        }
+        Some(
+            node.data
+                .get("value")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0),
+        )
+    }
+
+    fn format_value(&self, value: f64) -> String {
+        format!("{value:.3}")
+    }
+
+    fn submit_value(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
+        _text: &str,
+    ) -> PortalNumberEditSubmit {
+        let from = graph
+            .nodes
+            .get(&node)
+            .map(|n| n.data.clone())
+            .unwrap_or(Value::Null);
+        let to = set_float_value_in_node_data(from.clone(), value);
+        let normalized = Some(format!("{value:.3}"));
+
+        if from == to {
+            return PortalNumberEditSubmit::Handled {
+                normalized_text: normalized,
+            };
+        }
+
+        PortalNumberEditSubmit::Commit {
+            tx: GraphTransaction {
+                label: Some("Set Float Value".to_string()),
+                ops: vec![GraphOp::SetNodeData { id: node, from, to }],
+            },
+            normalized_text: normalized,
+        }
+    }
+
+    fn supports_drag(&self, graph: &Graph, node: NodeId) -> bool {
+        self.initial_value(graph, node).is_some()
+    }
+
+    fn drag_threshold_px(&self, graph: &Graph, node: NodeId) -> f32 {
+        if self.initial_value(graph, node).is_none() {
+            return 1.0;
+        }
+        2.0
+    }
+
+    fn drag_sensitivity_per_px(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        mode: fret_node::ui::PortalTextStepMode,
+    ) -> Option<f64> {
+        if self.initial_value(graph, node).is_none() {
+            return None;
+        }
+
+        Some(match mode {
+            fret_node::ui::PortalTextStepMode::Fine => 0.001,
+            fret_node::ui::PortalTextStepMode::Normal => 0.01,
+            fret_node::ui::PortalTextStepMode::Coarse => 0.1,
+        })
+    }
+
+    fn step_size(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        mode: fret_node::ui::PortalTextStepMode,
+    ) -> Option<f64> {
+        if self.initial_value(graph, node).is_none() {
+            return None;
+        }
+
+        Some(match mode {
+            fret_node::ui::PortalTextStepMode::Fine => 0.025,
+            fret_node::ui::PortalTextStepMode::Normal => 0.25,
+            fret_node::ui::PortalTextStepMode::Coarse => 2.5,
+        })
+    }
+}
+
 #[derive(Default)]
-struct NodeGraphDemoDriver;
+struct NodeGraphDemoDriver {
+    pending_view_state_save: bool,
+    last_view_state_save_at: Option<Instant>,
+}
 
 impl NodeGraphDemoDriver {
+    const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
+
+    fn save_view_state(&mut self, app: &mut App) {
+        let Some(models) = app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>() else {
+            return;
+        };
+
+        let Ok(state) = models.store.read_ref(app, |s| s.view_state().clone()) else {
+            return;
+        };
+
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state);
+        if let Err(err) = file.save_json(&persist.path) {
+            tracing::warn!(?err, "failed to save node graph view state");
+        }
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> NodeGraphDemoWindowState {
         let models = app
             .global::<NodeGraphDemoModels>()
@@ -717,20 +1189,140 @@ impl NodeGraphDemoDriver {
             .global::<Arc<NodeGraphInternalsStore>>()
             .expect("NodeGraphInternalsStore global must exist")
             .clone();
+        let internals_overlay = internals.clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let graph = models.graph.clone();
+        let view = models.view.clone();
+        let edits = models.edits.clone();
+        let overlays = models.overlays.clone();
+        let group_rename_text = models.group_rename_text.clone();
+        let store = models.store.clone();
+        let style = NodeGraphStyle::from_theme(Theme::global(app));
+
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
-        let canvas = NodeGraphCanvas::new(models.graph, models.view)
-            .with_tx_middleware(RejectNonFiniteTx)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view)
+            .with_store(store.clone())
+            .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
-            .with_edit_queue(models.edits)
+            .with_style(style.clone())
+            .with_edit_queue(edits.clone())
+            .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
-        let root = ui.create_node_retained(canvas);
+        let canvas_node = ui.create_node_retained(canvas);
+
+        let a11y_port =
+            ui.create_node_retained(NodeGraphA11yFocusedPort::new(internals_overlay.clone()));
+        let a11y_edge =
+            ui.create_node_retained(NodeGraphA11yFocusedEdge::new(internals_overlay.clone()));
+        let a11y_node =
+            ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals_overlay.clone()));
+        ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
+
+        let overlay_host = NodeGraphOverlayHost::new(
+            graph,
+            edits,
+            overlays,
+            group_rename_text.clone(),
+            canvas_node,
+            style.clone(),
+        );
+        let overlay_node = ui.create_node_retained(overlay_host);
+        let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
+        ui.set_children(overlay_node, vec![rename_input_node]);
+
+        let portal_root = "node_graph_demo.portal";
+        let portal_style = style.clone();
+        let portal_editor = PortalNumberEditor::new(portal_root);
+        let portal_graph_model = models.graph.clone();
+
+        let node_types = NodeGraphNodeTypes::new().register(
+            NodeKindKey::new("demo.float"),
+            move |ecx: &mut fret_ui::elements::ElementContext<'_, App>,
+                  graph: &Graph,
+                  layout: NodeGraphPortalNodeLayout| {
+                portal_editor.render_number_input_for_node(
+                    ecx,
+                    portal_graph_model.clone(),
+                    graph,
+                    layout,
+                    &portal_style,
+                    layout.node,
+                    &DemoFloatPortalSpec,
+                )
+            },
+        );
+
+        let portal = NodeGraphPortalHost::new(
+            models.graph.clone(),
+            models.view.clone(),
+            measured.manual.clone(),
+            style.clone(),
+            portal_root,
+            node_types.into_portal_renderer(),
+        )
+        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_edit_queue(models.edits.clone())
+        .with_canvas_focus_target(canvas_node)
+        .with_command_handler(PortalNumberEditHandler::new(
+            portal_root,
+            DemoFloatPortalSpec,
+        ));
+        let portal_node = ui.create_node_retained(portal);
+
+        let controls_overlay =
+            NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
+                .in_panel_bounds();
+        let controls_overlay_node = ui.create_node_retained(controls_overlay);
+
+        let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
+            .with_margin_px(style.controls_margin);
+        let controls_node = ui.create_node_retained(controls_panel);
+        ui.set_children(controls_node, vec![controls_overlay_node]);
+
+        let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone())
+            .with_store(store.clone())
+            .with_commands(NodeGraphTuningCommands {
+                reset_graph: CommandId::new(CMD_RESET_GRAPH),
+                spawn_stress_1k: CommandId::new(CMD_SPAWN_STRESS_1K),
+                spawn_stress_5k: CommandId::new(CMD_SPAWN_STRESS_5K),
+                spawn_stress_10k: CommandId::new(CMD_SPAWN_STRESS_10K),
+            });
+        let tuning_node = ui.create_node_retained(tuning);
+
+        let minimap_overlay = NodeGraphMiniMapOverlay::new(
+            canvas_node,
+            models.graph.clone(),
+            models.view.clone(),
+            internals_overlay,
+            style.clone(),
+        )
+        .with_store(store)
+        .in_panel_bounds();
+        let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
+
+        let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
+            .with_margin_px(style.minimap_margin);
+        let minimap_node = ui.create_node_retained(minimap_panel);
+        ui.set_children(minimap_node, vec![minimap_overlay_node]);
+
+        let root = ui.create_node_retained(NodeGraphEditor::new());
+        ui.set_children(
+            root,
+            vec![
+                canvas_node,
+                portal_node,
+                controls_node,
+                tuning_node,
+                minimap_node,
+                overlay_node,
+            ],
+        );
         ui.set_root(root);
 
         NodeGraphDemoWindowState { ui, root }
@@ -753,6 +1345,24 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             .state
             .ui
             .propagate_model_changes(context.app, changed);
+
+        let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        if changed.contains(&models.view.id()) {
+            self.pending_view_state_save = true;
+        }
+        if self.pending_view_state_save {
+            let now = Instant::now();
+            let due = self.last_view_state_save_at.map_or(true, |t| {
+                now.duration_since(t) >= Self::VIEW_STATE_SAVE_DEBOUNCE
+            });
+            if due {
+                self.pending_view_state_save = false;
+                self.last_view_state_save_at = Some(now);
+                self.save_view_state(context.app);
+            }
+        }
     }
 
     fn handle_global_changes(
@@ -775,15 +1385,9 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         } = context;
 
         if matches!(event, Event::WindowCloseRequested) {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
-        }
-
-        if let Event::KeyDown { key, .. } = event {
-            if *key == fret_core::KeyCode::Escape {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
         }
 
         state.ui.dispatch_event(app, services, event);
@@ -806,6 +1410,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         }
 
         if command.as_str() == "node_graph_demo.close" {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
@@ -964,6 +1569,58 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let _ = models.edits.update(app, |q, _cx| q.push(tx));
             return;
         }
+
+        if matches!(
+            command.as_str(),
+            CMD_RESET_GRAPH | CMD_SPAWN_STRESS_1K | CMD_SPAWN_STRESS_5K | CMD_SPAWN_STRESS_10K
+        ) {
+            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+                return;
+            };
+            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+                return;
+            };
+            let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>().cloned() else {
+                return;
+            };
+
+            let graph_id = persist.graph_id;
+            let next_graph = match command.as_str() {
+                CMD_RESET_GRAPH => build_demo_graph(graph_id),
+                CMD_SPAWN_STRESS_1K => build_stress_graph(graph_id, 1_000),
+                CMD_SPAWN_STRESS_5K => build_stress_graph(graph_id, 5_000),
+                CMD_SPAWN_STRESS_10K => build_stress_graph(graph_id, 10_000),
+                _ => return,
+            };
+
+            measured.manual.update(|node_sizes, anchors| {
+                node_sizes.clear();
+                anchors.clear();
+            });
+            measured.derived.update(|node_sizes, anchors| {
+                node_sizes.clear();
+                anchors.clear();
+            });
+
+            let _ = models
+                .edits
+                .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
+            let _ = models
+                .overlays
+                .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
+
+            let mut next_view = NodeGraphViewState::default();
+            next_view.sanitize_for_graph(&next_graph);
+
+            let _ = models.store.update(app, |store, _cx| {
+                store.replace_graph(next_graph);
+                store.replace_view_state(next_view);
+                store.clear_history();
+            });
+
+            app.request_redraw(window);
+            return;
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -1003,6 +1660,20 @@ impl WinitAppDriver for NodeGraphDemoDriver {
     }
 }
 
+fn set_float_value_in_node_data(mut data: Value, value: f64) -> Value {
+    match &mut data {
+        Value::Object(map) => {
+            map.insert("value".to_string(), Value::from(value));
+            data
+        }
+        _ => {
+            let mut map = serde_json::Map::new();
+            map.insert("value".to_string(), Value::from(value));
+            Value::Object(map)
+        }
+    }
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -1019,7 +1690,8 @@ pub fn run() -> anyhow::Result<()> {
     register_demo_commands(app.commands_mut());
     install_default_keybindings_into_keymap(&mut app);
 
-    let mut graph_value = build_demo_graph();
+    let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A1);
+    let mut graph_value = build_demo_graph(graph_id);
     // Concretize once at startup so dynamic ports (e.g. `fret.variadic_merge`) don't "surprise"
     // the user on the first unrelated edit.
     let _ = apply_transaction_with_profile(
@@ -1028,10 +1700,39 @@ pub fn run() -> anyhow::Result<()> {
         &GraphTransaction::new(),
     );
 
-    let graph = app.models_mut().insert(graph_value);
-    let view = app.models_mut().insert(NodeGraphViewState::default());
+    let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
+    let mut view_value =
+        match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
+        {
+            Ok(Some(file)) => file.state,
+            Ok(None) => NodeGraphViewState::default(),
+            Err(err) => {
+                tracing::warn!(?err, "failed to load node graph view state; using defaults");
+                NodeGraphViewState::default()
+            }
+        };
+    view_value.sanitize_for_graph(&graph_value);
+
+    let store_value =
+        NodeGraphStore::with_profile(graph_value, view_value, Box::new(DataflowProfile::new()));
+    let graph = app.models_mut().insert(store_value.graph().clone());
+    let view = app.models_mut().insert(store_value.view_state().clone());
+    let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
-    app.set_global(NodeGraphDemoModels { graph, view, edits });
+    let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
+    let group_rename_text = app.models_mut().insert(String::new());
+    app.set_global(NodeGraphDemoModels {
+        store,
+        graph,
+        view,
+        edits,
+        overlays,
+        group_rename_text,
+    });
+    app.set_global(NodeGraphDemoViewStatePersistence {
+        graph_id,
+        path: view_state_path,
+    });
     app.set_global(build_demo_registry());
     app.set_global(NodeGraphDemoMeasuredStores {
         manual: Arc::new(MeasuredGeometryStore::new()),
@@ -1047,31 +1748,6 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     run_app(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
-}
-
-fn install_default_keybindings_into_keymap(app: &mut App) {
-    let mut bindings: Vec<Binding> = Vec::new();
-
-    for (id, meta) in app.commands().iter() {
-        for kb in meta.default_keybindings.iter().cloned() {
-            bindings.push(Binding {
-                platform: kb.platform,
-                sequence: vec![kb.chord],
-                when: kb.when.clone().or_else(|| meta.when.clone()),
-                command: Some(id.clone()),
-            });
-        }
-    }
-
-    if bindings.is_empty() {
-        return;
-    }
-
-    app.with_global_mut(KeymapService::default, |svc, _app| {
-        for b in bindings {
-            svc.keymap.push_binding(b);
-        }
-    });
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
@@ -1182,5 +1858,39 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 linux_ctrl(KeyCode::ArrowUp),
                 web_ctrl(KeyCode::ArrowUp),
             ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_RESET_GRAPH),
+        CommandMeta::new("Reset Demo Graph")
+            .with_category("Demo")
+            .with_keywords(["reset", "graph", "demo"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_1K),
+        CommandMeta::new("Spawn Stress Graph (1k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "1k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_5K),
+        CommandMeta::new("Spawn Stress Graph (5k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "5k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+    );
+    registry.register(
+        CommandId::new(CMD_SPAWN_STRESS_10K),
+        CommandMeta::new("Spawn Stress Graph (10k nodes)")
+            .with_category("Demo")
+            .with_keywords(["stress", "graph", "perf", "10k"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
     );
 }

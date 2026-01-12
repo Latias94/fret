@@ -9,7 +9,13 @@ fn make_node(kind: &str) -> Node {
         kind: NodeKindKey::new(kind),
         kind_version: 0,
         pos: CanvasPoint { x: 0.0, y: 0.0 },
+        selectable: None,
+        draggable: None,
+        connectable: None,
+        deletable: None,
         parent: None,
+        extent: None,
+        expand_parent: None,
         size: None,
         collapsed: false,
         ports: Vec::new(),
@@ -30,6 +36,9 @@ fn make_port(
         dir,
         kind,
         capacity,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
         ty: None,
         data: serde_json::Value::Null,
     }
@@ -73,6 +82,9 @@ fn validate_rejects_edge_with_wrong_direction() {
             kind: EdgeKind::Data,
             from: in_a,
             to: in_b,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
 

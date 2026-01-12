@@ -7,6 +7,8 @@
 //! specializations and may choose to reuse parts of this kit.
 
 pub mod nodes;
+pub mod presets;
 pub mod profiles;
 
+pub use presets::NodeGraphInteractionPreset;
 pub use profiles::DataflowProfile;

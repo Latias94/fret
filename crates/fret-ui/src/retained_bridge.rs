@@ -8,7 +8,10 @@ use fret_core::NodeId;
 
 pub use crate::resizable_panel_group::{ResizablePanelGroupLayout, ResizablePanelGroupStyle};
 pub use crate::resize_handle::ResizeHandle;
-pub use crate::widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget};
+pub use crate::text_input::{BoundTextInput, TextInput};
+pub use crate::widget::{
+    CommandCx, EventCx, Invalidation, LayoutCx, MeasureCx, PaintCx, SemanticsCx, Widget,
+};
 
 /// Extension trait that exposes a feature-gated node creation API for retained widgets.
 pub trait UiTreeRetainedExt<H: UiHost> {

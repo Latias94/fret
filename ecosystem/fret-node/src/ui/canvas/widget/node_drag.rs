@@ -4,11 +4,55 @@ use fret_core::{Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
+use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 
-use super::{NodeGraphCanvas, ViewSnapshot};
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 
-pub(super) fn handle_node_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+fn clamp_point_in_rect_with_size(
+    pos: CanvasPoint,
+    size: CanvasSize,
+    extent: CanvasRect,
+) -> CanvasPoint {
+    let mut out = pos;
+    let node_w = size.width.max(0.0);
+    let node_h = size.height.max(0.0);
+
+    let min_x = extent.origin.x;
+    let min_y = extent.origin.y;
+    let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
+    let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
+    out.x = out.x.clamp(min_x, max_x);
+    out.y = out.y.clamp(min_y, max_y);
+    out
+}
+
+fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
+    let ax0 = a.origin.x;
+    let ay0 = a.origin.y;
+    let ax1 = a.origin.x + a.size.width;
+    let ay1 = a.origin.y + a.size.height;
+
+    let bx0 = b.origin.x;
+    let by0 = b.origin.y;
+    let bx1 = b.origin.x + b.size.width;
+    let by1 = b.origin.y + b.size.height;
+
+    let min_x = ax0.min(bx0);
+    let min_y = ay0.min(by0);
+    let max_x = ax1.max(bx1);
+    let max_y = ay1.max(by1);
+
+    CanvasRect {
+        origin: CanvasPoint { x: min_x, y: min_y },
+        size: CanvasSize {
+            width: (max_x - min_x).max(0.0),
+            height: (max_y - min_y).max(0.0),
+        },
+    }
+}
+
+pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -20,7 +64,7 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
     };
 
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
-        .then(|| NodeGraphCanvas::auto_pan_delta(snapshot, position, cx.bounds))
+        .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
         .unwrap_or_default();
     let snap_to_grid = snapshot.interaction.snap_to_grid;
     let snap_grid = snapshot.interaction.snap_grid;
@@ -51,7 +95,7 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
             x: primary_start.x + delta.x,
             y: primary_start.y + delta.y,
         };
-        let snapped = NodeGraphCanvas::snap_canvas_point(primary_target, snap_grid);
+        let snapped = NodeGraphCanvasWith::<M>::snap_canvas_point(primary_target, snap_grid);
         delta = CanvasPoint {
             x: snapped.x - primary_start.x,
             y: snapped.y - primary_start.y,
@@ -130,20 +174,42 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
                 y: start.y + delta.y,
             };
 
-            if let Some(parent) = node.parent
-                && let Some(group) = g.groups.get(&parent)
-                && let Some(node_geom) = geom_for_extent.nodes.get(id)
-            {
-                let node_w = node_geom.rect.size.width.0;
-                let node_h = node_geom.rect.size.height.0;
-                let min_x = group.rect.origin.x;
-                let min_y = group.rect.origin.y;
-                let max_x = group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
-                let max_y = group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
+            let Some(node_geom) = geom_for_extent.nodes.get(id) else {
+                continue;
+            };
+            let node_size = CanvasSize {
+                width: node_geom.rect.size.width.0,
+                height: node_geom.rect.size.height.0,
+            };
 
-                to.x = to.x.clamp(min_x, max_x);
-                to.y = to.y.clamp(min_y, max_y);
+            if let Some(extent) = snapshot.interaction.node_extent {
+                to = clamp_point_in_rect_with_size(to, node_size, extent);
             }
+
+            if let Some(NodeExtent::Rect { rect }) = node.extent {
+                to = clamp_point_in_rect_with_size(to, node_size, rect);
+            }
+
+            let expand_parent = node.expand_parent.unwrap_or(false);
+            if let Some(parent) = node.parent {
+                let parent_rect = g.groups.get(&parent).map(|gr| gr.rect);
+
+                let clamp_to_parent = !expand_parent
+                    && match node.extent {
+                        Some(NodeExtent::Parent) | None | Some(NodeExtent::Rect { .. }) => true,
+                    };
+
+                if clamp_to_parent && let Some(group_rect) = parent_rect {
+                    to = clamp_point_in_rect_with_size(to, node_size, group_rect);
+                } else if expand_parent && let Some(group) = g.groups.get_mut(&parent) {
+                    let child_rect = CanvasRect {
+                        origin: to,
+                        size: node_size,
+                    };
+                    group.rect = union_rect(group.rect, child_rect);
+                }
+            }
+
             if from != to {
                 if let Some(node) = g.nodes.get_mut(id) {
                     node.pos = to;
@@ -158,6 +224,8 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
             s.pan.y += auto_pan_delta.y;
         });
     }
+
+    canvas.emit_node_drag(drag.primary, &drag.node_ids);
 
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

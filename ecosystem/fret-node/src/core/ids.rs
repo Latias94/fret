@@ -11,6 +11,22 @@ impl GraphId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates a graph id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
+
+    /// Creates a graph id from raw UUID bytes.
+    pub fn from_bytes(bytes: [u8; 16]) -> Self {
+        Self(Uuid::from_bytes(bytes))
+    }
+}
+
+impl std::fmt::Display for GraphId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 /// Stable identifier for a node instance.

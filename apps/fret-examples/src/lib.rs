@@ -2,6 +2,8 @@
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod keymap_defaults;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
@@ -59,6 +61,12 @@ pub mod inf_lines_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod markdown_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod node_graph_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod node_graph_domain_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod node_graph_tuning_overlay;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;

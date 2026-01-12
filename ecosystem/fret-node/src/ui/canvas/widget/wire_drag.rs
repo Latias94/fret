@@ -1,22 +1,82 @@
 use std::sync::Arc;
 
-use fret_core::{Modifiers, Point, Px};
+use fret_core::{AppWindowId, Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
-use crate::core::PortId;
+use crate::core::{EdgeId, PortId};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
+use crate::runtime::callbacks::ConnectEndOutcome;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::conversion;
 use super::super::searcher::SEARCHER_MAX_VISIBLE_ROWS;
 use super::super::state::{
-    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDragKind,
+    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
 };
-use super::NodeGraphCanvas;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_wire_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) trait WireCommitCx<H: UiHost> {
+    fn host(&mut self) -> &mut H;
+    fn window(&self) -> Option<AppWindowId>;
+    fn bounds(&self, last_bounds: Option<Rect>) -> Rect;
+    fn release_pointer_capture(&mut self);
+    fn request_redraw(&mut self);
+    fn invalidate_paint(&mut self);
+}
+
+impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::EventCx<'a, H> {
+    fn host(&mut self) -> &mut H {
+        self.app
+    }
+
+    fn window(&self) -> Option<AppWindowId> {
+        self.window
+    }
+
+    fn bounds(&self, _last_bounds: Option<Rect>) -> Rect {
+        self.bounds
+    }
+
+    fn release_pointer_capture(&mut self) {
+        self.release_pointer_capture();
+    }
+
+    fn request_redraw(&mut self) {
+        self.request_redraw();
+    }
+
+    fn invalidate_paint(&mut self) {
+        self.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    }
+}
+
+impl<'a, H: UiHost> WireCommitCx<H> for fret_ui::retained_bridge::CommandCx<'a, H> {
+    fn host(&mut self) -> &mut H {
+        self.app
+    }
+
+    fn window(&self) -> Option<AppWindowId> {
+        self.window
+    }
+
+    fn bounds(&self, last_bounds: Option<Rect>) -> Rect {
+        last_bounds.unwrap_or_default()
+    }
+
+    fn release_pointer_capture(&mut self) {}
+
+    fn request_redraw(&mut self) {
+        self.request_redraw();
+    }
+
+    fn invalidate_paint(&mut self) {
+        self.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    }
+}
+
+pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
@@ -29,7 +89,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
 
     let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
     let auto_pan_delta = (snapshot.interaction.auto_pan.on_connect)
-        .then(|| NodeGraphCanvas::auto_pan_delta(snapshot, position, cx.bounds))
+        .then(|| NodeGraphCanvasWith::<M>::auto_pan_delta(snapshot, position, cx.bounds))
         .unwrap_or_default();
     w.pos = Point::new(
         Px(position.x.0 - auto_pan_delta.x),
@@ -55,7 +115,16 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     let this = &*canvas;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            NodeGraphCanvas::should_add_bundle_port(graph, *from, bundle, candidate)
+                            if !NodeGraphCanvasWith::<M>::port_is_connectable_start(
+                                graph,
+                                &snapshot.interaction,
+                                candidate,
+                            ) {
+                                return false;
+                            }
+                            NodeGraphCanvasWith::<M>::should_add_bundle_port(
+                                graph, *from, bundle, candidate,
+                            )
                         })
                         .ok()
                         .unwrap_or(false)
@@ -67,10 +136,10 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         }
     }
 
-    let from_port = match &w.kind {
-        WireDragKind::New { from, .. } => Some(*from),
-        WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
-        WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+    let (from_port, require_from_connectable_start) = match &w.kind {
+        WireDragKind::New { from, .. } => (Some(*from), true),
+        WireDragKind::Reconnect { fixed, .. } => (Some(*fixed), false),
+        WireDragKind::ReconnectMany { edges } => (edges.first().map(|e| e.2), false),
     };
 
     let new_hover = if let Some(from_port) = from_port {
@@ -86,9 +155,33 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
                     geom.as_ref(),
                     index.as_ref(),
                     from_port,
+                    require_from_connectable_start,
                     pos,
                     zoom,
                     &mut scratch_ports,
+                )
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    let new_hover_edge = if new_hover.is_none() {
+        let this = &*canvas;
+        let geom = geom.clone();
+        let index = index.clone();
+        this.graph
+            .read_ref(cx.app, |graph| {
+                let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                this.hit_edge(
+                    graph,
+                    snapshot,
+                    geom.as_ref(),
+                    index.as_ref(),
+                    pos,
+                    zoom,
+                    &mut scratch_edges,
                 )
             })
             .ok()
@@ -101,53 +194,58 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         let presenter = &mut *canvas.presenter;
         canvas
             .graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch = graph.clone();
-                match &w.kind {
-                    WireDragKind::New { from, bundle } => {
-                        let sources = if bundle.is_empty() {
-                            std::slice::from_ref(from)
-                        } else {
-                            bundle.as_slice()
-                        };
-                        let mut any_accept = false;
-                        for src in sources {
-                            let plan = presenter.plan_connect(&scratch, *src, target);
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
+            .read_ref(cx.app, |graph| match &w.kind {
+                WireDragKind::New { from, bundle } => {
+                    let sources = if bundle.is_empty() {
+                        std::slice::from_ref(from)
+                    } else {
+                        bundle.as_slice()
+                    };
+                    let mut any_accept = false;
+                    for src in sources {
+                        let plan = presenter.plan_connect(
+                            graph,
+                            *src,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        );
+                        if plan.decision != ConnectDecision::Accept {
+                            continue;
                         }
-                        any_accept
+                        any_accept = true;
+                        break;
                     }
-                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                        presenter
-                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target)
-                            .decision,
-                        ConnectDecision::Accept
-                    ),
-                    WireDragKind::ReconnectMany { edges } => {
-                        let mut any_accept = false;
-                        for (edge, endpoint, _fixed) in edges {
-                            let plan =
-                                presenter.plan_reconnect_edge(&scratch, *edge, *endpoint, target);
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
+                    any_accept
+                }
+                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                    presenter
+                        .plan_reconnect_edge(
+                            graph,
+                            *edge,
+                            *endpoint,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        )
+                        .decision,
+                    ConnectDecision::Accept
+                ),
+                WireDragKind::ReconnectMany { edges } => {
+                    let mut any_accept = false;
+                    for (edge, endpoint, _fixed) in edges {
+                        let plan = presenter.plan_reconnect_edge(
+                            graph,
+                            *edge,
+                            *endpoint,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        );
+                        if plan.decision != ConnectDecision::Accept {
+                            continue;
                         }
-                        any_accept
+                        any_accept = true;
+                        break;
                     }
+                    any_accept
                 }
             })
             .ok()
@@ -187,55 +285,113 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         canvas.interaction.hover_port_convertible = new_hover_convertible;
     }
 
+    canvas.interaction.hover_edge = new_hover_edge;
     canvas.interaction.wire_drag = Some(w);
     cx.request_redraw();
     cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
     true
 }
 
-pub(super) fn handle_wire_left_up<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+pub(super) fn handle_wire_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut impl WireCommitCx<H>,
     snapshot: &ViewSnapshot,
     zoom: f32,
+) -> bool {
+    handle_wire_left_up_with_forced_target(canvas, cx, snapshot, zoom, None)
+}
+
+pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut impl WireCommitCx<H>,
+    snapshot: &ViewSnapshot,
+    zoom: f32,
+    forced_target: Option<PortId>,
 ) -> bool {
     let Some(w) = canvas.interaction.wire_drag.take() else {
         return false;
     };
+    let kind_for_callbacks = w.kind.clone();
 
-    let from_port = match &w.kind {
-        WireDragKind::New { from, .. } => Some(*from),
-        WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
-        WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+    let window = cx.window();
+    let bounds = cx.bounds(canvas.interaction.last_bounds);
+
+    let (from_port, require_from_connectable_start) = match &w.kind {
+        WireDragKind::New { from, .. } => (Some(*from), true),
+        WireDragKind::Reconnect { fixed, .. } => (Some(*fixed), false),
+        WireDragKind::ReconnectMany { edges } => (edges.first().map(|e| e.2), false),
     };
-    let target = from_port.and_then(|from_port| {
-        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
-        let this = &*canvas;
-        let index = index.clone();
-        this.graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch_ports: Vec<PortId> = Vec::new();
-                this.pick_target_port(
+
+    let from_port_connectable = from_port
+        .map(|port| {
+            if !require_from_connectable_start {
+                return true;
+            }
+            canvas
+                .graph
+                .read_ref(cx.host(), |graph| {
+                    NodeGraphCanvasWith::<M>::port_is_connectable_start(
+                        graph,
+                        &snapshot.interaction,
+                        port,
+                    )
+                })
+                .ok()
+                .unwrap_or(false)
+        })
+        .unwrap_or(false);
+    let forced_target = forced_target.filter(|port| {
+        canvas
+            .graph
+            .read_ref(cx.host(), |graph| {
+                NodeGraphCanvasWith::<M>::port_is_connectable_end(
                     graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    from_port,
-                    w.pos,
-                    zoom,
-                    &mut scratch_ports,
+                    &snapshot.interaction,
+                    *port,
                 )
             })
             .ok()
-            .flatten()
+            .unwrap_or(false)
+    });
+    let target = forced_target.or_else(|| {
+        from_port.and_then(|from_port| {
+            if !from_port_connectable {
+                return None;
+            }
+            let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
+            let this = &*canvas;
+            let index = index.clone();
+            this.graph
+                .read_ref(cx.host(), |graph| {
+                    let mut scratch_ports: Vec<PortId> = Vec::new();
+                    this.pick_target_port(
+                        graph,
+                        snapshot,
+                        geom.as_ref(),
+                        index.as_ref(),
+                        from_port,
+                        require_from_connectable_start,
+                        w.pos,
+                        zoom,
+                        &mut scratch_ports,
+                    )
+                })
+                .ok()
+                .flatten()
+        })
     });
     canvas.interaction.hover_port = None;
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
 
+    let mut connect_end_outcome = ConnectEndOutcome::NoOp;
+    let mut connect_end_target = target;
+
     match w.kind {
         WireDragKind::New { from, bundle } => {
+            let suspended_pos = w.pos;
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 enum Outcome {
                     Apply(Vec<GraphOp>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -243,14 +399,16 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                     OpenConversionPicker(Vec<InsertNodeCandidate>),
                 }
 
-                let convert_at =
-                    NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
+                let convert_at = crate::core::CanvasPoint {
+                    x: w.pos.x.0,
+                    y: w.pos.y.0,
+                };
                 let (outcome, toast) = {
                     let presenter = &mut *canvas.presenter;
                     let style = canvas.style.clone();
                     canvas
                         .graph
-                        .read_ref(cx.app, |graph| {
+                        .read_ref(cx.host(), |graph| {
                             let mut scratch = graph.clone();
                             let sources: Vec<PortId> = if bundle.is_empty() {
                                 vec![from]
@@ -263,7 +421,12 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                             let mut toast: Option<(DiagnosticSeverity, Arc<str>)> = None;
 
                             for src in sources {
-                                let plan = presenter.plan_connect(&scratch, src, target);
+                                let plan = presenter.plan_connect(
+                                    &scratch,
+                                    src,
+                                    target,
+                                    snapshot.interaction.connection_mode,
+                                );
                                 match plan.decision {
                                     ConnectDecision::Accept => {
                                         let tx = GraphTransaction {
@@ -316,9 +479,10 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                                             }
                                         }
                                         if toast.is_none() {
-                                            toast = NodeGraphCanvas::toast_from_diagnostics(
-                                                &plan.diagnostics,
-                                            );
+                                            toast =
+                                                NodeGraphCanvasWith::<M>::toast_from_diagnostics(
+                                                    &plan.diagnostics,
+                                                );
                                         }
                                     }
                                 }
@@ -343,12 +507,21 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
 
                 match outcome {
                     Outcome::Apply(ops) => {
-                        canvas.apply_ops(cx.app, cx.window, ops);
+                        canvas.apply_ops(cx.host(), window, ops);
+                        connect_end_outcome = ConnectEndOutcome::Committed;
                         if let Some((sev, msg)) = toast {
-                            canvas.show_toast(cx.app, cx.window, sev, msg);
+                            canvas.show_toast(cx.host(), window, sev, msg);
                         }
                     }
                     Outcome::OpenConversionPicker(candidates) => {
+                        connect_end_outcome = ConnectEndOutcome::OpenConversionPicker;
+                        canvas.interaction.suspended_wire_drag = Some(WireDrag {
+                            kind: WireDragKind::New {
+                                from,
+                                bundle: Vec::new(),
+                            },
+                            pos: suspended_pos,
+                        });
                         canvas.interaction.last_conversion = Some(LastConversionContext {
                             from,
                             to: target,
@@ -361,11 +534,12 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                         let origin = canvas.clamp_searcher_origin(
                             Point::new(Px(convert_at.x), Px(convert_at.y)),
                             visible,
-                            cx.bounds,
+                            bounds,
                             snapshot,
                         );
-                        let active_row = NodeGraphCanvas::searcher_first_selectable_row(&rows)
-                            .min(rows.len().saturating_sub(1));
+                        let active_row =
+                            NodeGraphCanvasWith::<M>::searcher_first_selectable_row(&rows)
+                                .min(rows.len().saturating_sub(1));
 
                         canvas.interaction.context_menu = None;
                         canvas.interaction.searcher = Some(SearcherState {
@@ -386,13 +560,51 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                         });
                     }
                     Outcome::Reject(sev, msg) => {
-                        canvas.show_toast(cx.app, cx.window, sev, msg);
+                        connect_end_outcome = ConnectEndOutcome::Rejected;
+                        canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
                 }
             } else if bundle.is_empty() {
-                let at = NodeGraphCanvas::screen_to_canvas(cx.bounds, w.pos, snapshot.pan, zoom);
-                canvas.open_connection_insert_node_picker(cx.app, from, at);
+                let hit_edge = {
+                    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
+                    let this = &*canvas;
+                    let index = index.clone();
+                    this.graph
+                        .read_ref(cx.host(), |graph| {
+                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                            this.hit_edge(
+                                graph,
+                                snapshot,
+                                geom.as_ref(),
+                                index.as_ref(),
+                                w.pos,
+                                zoom,
+                                &mut scratch_edges,
+                            )
+                        })
+                        .ok()
+                        .flatten()
+                };
+
+                if let Some(edge_id) = hit_edge {
+                    connect_end_outcome = ConnectEndOutcome::OpenInsertNodePicker;
+                    canvas.open_edge_insert_node_picker(cx.host(), window, edge_id, w.pos);
+                } else {
+                    let at = crate::core::CanvasPoint {
+                        x: w.pos.x.0,
+                        y: w.pos.y.0,
+                    };
+                    canvas.interaction.suspended_wire_drag = Some(WireDrag {
+                        kind: WireDragKind::New {
+                            from,
+                            bundle: Vec::new(),
+                        },
+                        pos: suspended_pos,
+                    });
+                    connect_end_outcome = ConnectEndOutcome::OpenInsertNodePicker;
+                    canvas.open_connection_insert_node_picker(cx.host(), from, at);
+                }
             }
         }
         WireDragKind::Reconnect {
@@ -401,6 +613,7 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
             fixed: _fixed,
         } => {
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 enum Outcome {
                     Apply(Vec<GraphOp>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -411,14 +624,22 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                     let presenter = &mut *canvas.presenter;
                     canvas
                         .graph
-                        .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_reconnect_edge(graph, edge, endpoint, target);
+                        .read_ref(cx.host(), |graph| {
+                            let plan = presenter.plan_reconnect_edge(
+                                graph,
+                                edge,
+                                endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
                                 ConnectDecision::Reject => {
-                                    NodeGraphCanvas::toast_from_diagnostics(&plan.diagnostics)
-                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                        .unwrap_or(Outcome::Ignore)
+                                    NodeGraphCanvasWith::<M>::toast_from_diagnostics(
+                                        &plan.diagnostics,
+                                    )
+                                    .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                    .unwrap_or(Outcome::Ignore)
                                 }
                             }
                         })
@@ -426,27 +647,55 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                         .unwrap_or(Outcome::Ignore)
                 };
                 match outcome {
-                    Outcome::Apply(ops) => canvas.apply_ops(cx.app, cx.window, ops),
+                    Outcome::Apply(ops) => {
+                        canvas.apply_ops(cx.host(), window, ops);
+                        connect_end_outcome = ConnectEndOutcome::Committed;
+                    }
                     Outcome::Reject(sev, msg) => {
-                        canvas.show_toast(cx.app, cx.window, sev, msg);
+                        connect_end_outcome = ConnectEndOutcome::Rejected;
+                        canvas.show_toast(cx.host(), window, sev, msg);
                     }
                     Outcome::Ignore => {}
+                }
+            } else if snapshot.interaction.reconnect_on_drop_empty {
+                let ops = canvas
+                    .graph
+                    .read_ref(cx.host(), |graph| {
+                        let Some(edge_value) = graph.edges.get(&edge) else {
+                            return Vec::new();
+                        };
+                        vec![GraphOp::RemoveEdge {
+                            id: edge,
+                            edge: edge_value.clone(),
+                        }]
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                if !ops.is_empty() {
+                    let _ = canvas.commit_ops(cx.host(), window, Some("Disconnect Edge"), ops);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
             }
         }
         WireDragKind::ReconnectMany { edges } => {
             if let Some(target) = target {
+                connect_end_target = Some(target);
                 let presenter = &mut *canvas.presenter;
                 let (ops_all, toast) = canvas
                     .graph
-                    .read_ref(cx.app, |graph| {
+                    .read_ref(cx.host(), |graph| {
                         let mut scratch = graph.clone();
                         let mut ops_all: Vec<GraphOp> = Vec::new();
                         let mut toast: Option<(DiagnosticSeverity, Arc<str>)> = None;
 
                         for (edge, endpoint, _fixed) in edges {
-                            let plan =
-                                presenter.plan_reconnect_edge(&scratch, edge, endpoint, target);
+                            let plan = presenter.plan_reconnect_edge(
+                                &scratch,
+                                edge,
+                                endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
                             match plan.decision {
                                 ConnectDecision::Accept => {
                                     let tx = GraphTransaction {
@@ -458,7 +707,7 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                                 }
                                 ConnectDecision::Reject => {
                                     if toast.is_none() {
-                                        toast = NodeGraphCanvas::toast_from_diagnostics(
+                                        toast = NodeGraphCanvasWith::<M>::toast_from_diagnostics(
                                             &plan.diagnostics,
                                         );
                                     }
@@ -472,17 +721,54 @@ pub(super) fn handle_wire_left_up<H: UiHost>(
                     .unwrap_or_default();
 
                 if !ops_all.is_empty() {
-                    canvas.apply_ops(cx.app, cx.window, ops_all);
+                    canvas.apply_ops(cx.host(), window, ops_all);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
                 if let Some((sev, msg)) = toast {
-                    canvas.show_toast(cx.app, cx.window, sev, msg);
+                    canvas.show_toast(cx.host(), window, sev, msg);
+                }
+            } else if snapshot.interaction.reconnect_on_drop_empty {
+                let ops_all = canvas
+                    .graph
+                    .read_ref(cx.host(), |graph| {
+                        let mut out: Vec<GraphOp> = Vec::new();
+                        out.reserve(edges.len());
+                        for (edge_id, _endpoint, _fixed) in edges {
+                            let Some(edge_value) = graph.edges.get(&edge_id) else {
+                                continue;
+                            };
+                            out.push(GraphOp::RemoveEdge {
+                                id: edge_id,
+                                edge: edge_value.clone(),
+                            });
+                        }
+                        out
+                    })
+                    .ok()
+                    .unwrap_or_default();
+
+                if !ops_all.is_empty() {
+                    let label = if ops_all.len() == 1 {
+                        "Disconnect Edge"
+                    } else {
+                        "Disconnect Edges"
+                    };
+                    let _ = canvas.commit_ops(cx.host(), window, Some(label), ops_all);
+                    connect_end_outcome = ConnectEndOutcome::Committed;
                 }
             }
         }
     }
 
+    canvas.emit_connect_end(
+        snapshot.interaction.connection_mode,
+        &kind_for_callbacks,
+        connect_end_target,
+        connect_end_outcome,
+    );
+
     cx.release_pointer_capture();
     cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    cx.invalidate_paint();
     true
 }

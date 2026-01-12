@@ -1,16 +1,18 @@
-use fret_canvas::drag::DragThreshold;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::state::{NodeDrag, ViewSnapshot};
-use super::NodeGraphCanvas;
+use crate::core::NodeId as GraphNodeId;
 
-pub(super) fn handle_pending_node_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+use super::super::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
+use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+
+pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    zoom: f32,
+    _zoom: f32,
 ) -> bool {
     if canvas.interaction.node_drag.is_some() {
         return false;
@@ -19,18 +21,49 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
         return false;
     };
 
-    let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-    let threshold_graph = DragThreshold {
-        screen_px: threshold_screen,
+    let threshold_screen = snapshot.interaction.node_drag_threshold;
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
+        return true;
     }
-    .to_canvas_units(zoom);
-    let dx = position.x.0 - pending.start_pos.x.0;
-    let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_graph > 0.0 && dx * dx + dy * dy < threshold_graph * threshold_graph {
+
+    if !pending.drag_enabled {
+        canvas.interaction.pending_node_drag = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    let primary_draggable = canvas
+        .graph
+        .read_ref(cx.app, |g| {
+            NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, pending.primary)
+        })
+        .ok()
+        .unwrap_or(false);
+    if !primary_draggable {
+        canvas.interaction.pending_node_drag = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         return true;
     }
 
     canvas.interaction.pending_node_drag = None;
+
+    if pending.select_action != PendingNodeSelectAction::None {
+        let node = pending.primary;
+        canvas.update_view_state(cx.app, |s| {
+            let already_selected = s.selected_nodes.iter().any(|id| *id == node);
+            if !already_selected {
+                s.selected_nodes.push(node);
+            }
+
+            s.draw_order.retain(|id| *id != node);
+            s.draw_order.push(node);
+        });
+    }
+
     let start_nodes = canvas
         .graph
         .read_ref(cx.app, |g| {
@@ -38,17 +71,29 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost>(
                 .nodes
                 .iter()
                 .copied()
+                .filter(|id| {
+                    NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, *id)
+                })
                 .filter_map(|id| g.nodes.get(&id).map(|n| (id, n.pos)))
                 .collect::<Vec<_>>()
         })
         .ok()
         .unwrap_or_default();
+    if start_nodes.is_empty() {
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+    let drag_nodes: Vec<GraphNodeId> = start_nodes.iter().map(|(id, _)| *id).collect();
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: pending.primary,
+        node_ids: drag_nodes.clone(),
         nodes: start_nodes,
         grab_offset: pending.grab_offset,
         start_pos: pending.start_pos,
     });
+    canvas.emit_node_drag_start(pending.primary, &drag_nodes);
 
     false
 }

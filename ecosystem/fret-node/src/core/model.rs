@@ -100,12 +100,50 @@ pub struct Node {
     /// Top-left position in canvas space.
     pub pos: CanvasPoint,
 
+    /// Whether the node can be selected (XyFlow `node.selectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.elements_selectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selectable: Option<bool>,
+
+    /// Whether the node can be dragged with pointer interactions (XyFlow `node.draggable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_draggable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub draggable: Option<bool>,
+
+    /// Whether the node can be used for creating connections via editor interactions (XyFlow
+    /// `node.connectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_connectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable: Option<bool>,
+
+    /// Whether the node can be deleted via editor interactions (XyFlow `node.deletable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.nodes_deletable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletable: Option<bool>,
+
     /// Optional group container id (subflow / parent frame).
     ///
     /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally
-    /// orthogonal to semantic subgraphs (see ADR 0106).
+    /// orthogonal to semantic subgraphs (see ADR 0135).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<GroupId>,
+
+    /// Optional per-node movement/resize extent override.
+    ///
+    /// This mirrors XyFlow's `node.extent` concept. It is an editor-structure constraint (UI-facing),
+    /// not a semantic graph rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<NodeExtent>,
+
+    /// Whether moving/resizing this node can expand its parent container (if any).
+    ///
+    /// This mirrors XyFlow's `node.expandParent` behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expand_parent: Option<bool>,
 
     /// Optional explicit node size in logical px at zoom=1 (semantic sizing).
     ///
@@ -129,6 +167,16 @@ pub struct Node {
     /// This must be preserved for unknown node kinds.
     #[serde(default)]
     pub data: Value,
+}
+
+/// Per-node movement/resize extent.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum NodeExtent {
+    /// Constrain to the node's parent container (if any).
+    Parent,
+    /// Constrain to the given rect in canvas space.
+    Rect { rect: CanvasRect },
 }
 
 /// Port direction.
@@ -175,6 +223,27 @@ pub struct Port {
     /// Capacity rule.
     pub capacity: PortCapacity,
 
+    /// Whether this port can be used for creating/accepting connections via editor interactions.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectable`. When omitted, the owning node's
+    /// `Node.connectable` / global `NodeGraphInteractionState.nodes_connectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable: Option<bool>,
+
+    /// Dictates whether a connection can start from this port.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectableStart`. When omitted, the port is treated as
+    /// start-connectable (subject to `connectable`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable_start: Option<bool>,
+
+    /// Dictates whether a connection can end on this port.
+    ///
+    /// This mirrors XyFlow handle-level `isConnectableEnd`. When omitted, the port is treated as
+    /// end-connectable (subject to `connectable`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connectable_end: Option<bool>,
+
     /// Optional type descriptor.
     ///
     /// Profiles may choose to infer or override this via concretization.
@@ -205,6 +274,43 @@ pub struct Edge {
     pub from: PortId,
     /// Target port.
     pub to: PortId,
+    /// Whether the edge can be selected (XyFlow `edge.selectable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.edges_selectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selectable: Option<bool>,
+
+    /// Whether the edge can be deleted via editor interactions (XyFlow `edge.deletable`).
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.edges_deletable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletable: Option<bool>,
+
+    /// Whether the edge can be reconnected via editor interactions (XyFlow `edge.reconnectable`).
+    ///
+    /// In XyFlow this field is a `boolean | 'source' | 'target'`. `true` enables reconnecting both
+    /// endpoints, `'source'` only enables reconnecting the source endpoint and `'target'` only
+    /// enables reconnecting the target endpoint.
+    ///
+    /// When omitted, the global `NodeGraphInteractionState.edges_reconnectable` decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reconnectable: Option<EdgeReconnectable>,
+}
+
+/// Per-edge reconnect enablement (XyFlow `edge.reconnectable`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EdgeReconnectable {
+    Bool(bool),
+    Endpoint(EdgeReconnectableEndpoint),
+}
+
+/// Which endpoint is reconnectable (`'source' | 'target'`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EdgeReconnectableEndpoint {
+    Source,
+    Target,
 }
 
 /// Graph-scoped symbol.

@@ -139,6 +139,12 @@ pub enum GraphOp {
         from: CanvasRect,
         to: CanvasRect,
     },
+    /// Sets a group's title.
+    SetGroupTitle {
+        id: GroupId,
+        from: String,
+        to: String,
+    },
 
     /// Adds a sticky note.
     AddStickyNote { id: StickyNoteId, note: StickyNote },

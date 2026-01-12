@@ -23,8 +23,43 @@ pub const CMD_NODE_GRAPH_PASTE: &str = "node_graph.paste";
 pub const CMD_NODE_GRAPH_DUPLICATE: &str = "node_graph.duplicate";
 pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
+pub const CMD_NODE_GRAPH_NUDGE_LEFT: &str = "node_graph.nudge_left";
+pub const CMD_NODE_GRAPH_NUDGE_RIGHT: &str = "node_graph.nudge_right";
+pub const CMD_NODE_GRAPH_NUDGE_UP: &str = "node_graph.nudge_up";
+pub const CMD_NODE_GRAPH_NUDGE_DOWN: &str = "node_graph.nudge_down";
+pub const CMD_NODE_GRAPH_NUDGE_LEFT_FAST: &str = "node_graph.nudge_left_fast";
+pub const CMD_NODE_GRAPH_NUDGE_RIGHT_FAST: &str = "node_graph.nudge_right_fast";
+pub const CMD_NODE_GRAPH_NUDGE_UP_FAST: &str = "node_graph.nudge_up_fast";
+pub const CMD_NODE_GRAPH_NUDGE_DOWN_FAST: &str = "node_graph.nudge_down_fast";
+pub const CMD_NODE_GRAPH_ALIGN_LEFT: &str = "node_graph.align_left";
+pub const CMD_NODE_GRAPH_ALIGN_RIGHT: &str = "node_graph.align_right";
+pub const CMD_NODE_GRAPH_ALIGN_TOP: &str = "node_graph.align_top";
+pub const CMD_NODE_GRAPH_ALIGN_BOTTOM: &str = "node_graph.align_bottom";
+pub const CMD_NODE_GRAPH_ALIGN_CENTER_X: &str = "node_graph.align_center_x";
+pub const CMD_NODE_GRAPH_ALIGN_CENTER_Y: &str = "node_graph.align_center_y";
+pub const CMD_NODE_GRAPH_DISTRIBUTE_X: &str = "node_graph.distribute_x";
+pub const CMD_NODE_GRAPH_DISTRIBUTE_Y: &str = "node_graph.distribute_y";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT: &str = "node_graph.focus_next";
+pub const CMD_NODE_GRAPH_FOCUS_PREV: &str = "node_graph.focus_prev";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT_EDGE: &str = "node_graph.focus_next_edge";
+pub const CMD_NODE_GRAPH_FOCUS_PREV_EDGE: &str = "node_graph.focus_prev_edge";
+pub const CMD_NODE_GRAPH_FOCUS_NEXT_PORT: &str = "node_graph.focus_next_port";
+pub const CMD_NODE_GRAPH_FOCUS_PREV_PORT: &str = "node_graph.focus_prev_port";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_LEFT: &str = "node_graph.focus_port_left";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_RIGHT: &str = "node_graph.focus_port_right";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_UP: &str = "node_graph.focus_port_up";
+pub const CMD_NODE_GRAPH_FOCUS_PORT_DOWN: &str = "node_graph.focus_port_down";
+pub const CMD_NODE_GRAPH_ACTIVATE: &str = "node_graph.activate";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
+pub const CMD_NODE_GRAPH_FRAME_ALL: &str = "node_graph.frame_all";
+pub const CMD_NODE_GRAPH_RESET_VIEW: &str = "node_graph.reset_view";
+pub const CMD_NODE_GRAPH_ZOOM_IN: &str = "node_graph.zoom_in";
+pub const CMD_NODE_GRAPH_ZOOM_OUT: &str = "node_graph.zoom_out";
+pub const CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE: &str = "node_graph.toggle_connection_mode";
 pub const CMD_NODE_GRAPH_CREATE_GROUP: &str = "node_graph.create_group";
+pub const CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT: &str = "node_graph.group.bring_to_front";
+pub const CMD_NODE_GRAPH_GROUP_SEND_TO_BACK: &str = "node_graph.group.send_to_back";
+pub const CMD_NODE_GRAPH_GROUP_RENAME: &str = "node_graph.group.rename";
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
@@ -133,7 +168,26 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["insert", "node", "create", "add"])
             .with_scope(widget)
-            .with_when(when_node_graph_editing()),
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::KeyN,
+                Modifiers::default(),
+            )]),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ACTIVATE),
+        CommandMeta::new("Activate")
+            .with_category("Node Graph")
+            .with_keywords(["activate", "confirm", "connect"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::Enter,
+                Modifiers::default(),
+            )]),
     );
 
     registry.register(
@@ -141,6 +195,33 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Create Group")
             .with_category("Node Graph")
             .with_keywords(["group", "frame", "container"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT),
+        CommandMeta::new("Bring Group to Front")
+            .with_category("Node Graph")
+            .with_keywords(["group", "bring", "front", "z", "order"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_SEND_TO_BACK),
+        CommandMeta::new("Send Group to Back")
+            .with_category("Node Graph")
+            .with_keywords(["group", "send", "back", "z", "order"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_RENAME),
+        CommandMeta::new("Rename Group…")
+            .with_category("Node Graph")
+            .with_keywords(["group", "rename", "title"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );
@@ -161,6 +242,91 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_keywords(["reroute", "edge", "wire"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_PORT),
+        CommandMeta::new("Focus Next Port")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "handle"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::BracketRight,
+                Modifiers::default(),
+            )])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV_PORT),
+        CommandMeta::new("Focus Previous Port")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "handle"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::BracketLeft,
+                Modifiers::default(),
+            )])
+            .repeatable(),
+    );
+
+    let alt_arrow = |key: KeyCode| {
+        kb(
+            PlatformFilter::All,
+            key,
+            Modifiers {
+                alt: true,
+                ..Default::default()
+            },
+        )
+    };
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_LEFT),
+        CommandMeta::new("Focus Port Left")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowLeft)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_RIGHT),
+        CommandMeta::new("Focus Port Right")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowRight)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_UP),
+        CommandMeta::new("Focus Port Up")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "up"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowUp)])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PORT_DOWN),
+        CommandMeta::new("Focus Port Down")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "port", "pin", "down"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([alt_arrow(KeyCode::ArrowDown)])
+            .repeatable(),
     );
 
     registry.register(
@@ -292,10 +458,243 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_LEFT),
+        CommandMeta::new("Nudge Left")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT),
+        CommandMeta::new("Nudge Right")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_UP),
+        CommandMeta::new("Nudge Up")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "up"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_DOWN),
+        CommandMeta::new("Nudge Down")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "down"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_LEFT_FAST),
+        CommandMeta::new("Nudge Left (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "left", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_RIGHT_FAST),
+        CommandMeta::new("Nudge Right (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "right", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_UP_FAST),
+        CommandMeta::new("Nudge Up (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "up", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_NUDGE_DOWN_FAST),
+        CommandMeta::new("Nudge Down (Fast)")
+            .with_category("Node Graph")
+            .with_keywords(["nudge", "move", "down", "fast"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_LEFT),
+        CommandMeta::new("Align Left")
+            .with_category("Node Graph")
+            .with_keywords(["align", "left"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_RIGHT),
+        CommandMeta::new("Align Right")
+            .with_category("Node Graph")
+            .with_keywords(["align", "right"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_TOP),
+        CommandMeta::new("Align Top")
+            .with_category("Node Graph")
+            .with_keywords(["align", "top"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_BOTTOM),
+        CommandMeta::new("Align Bottom")
+            .with_category("Node Graph")
+            .with_keywords(["align", "bottom"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_X),
+        CommandMeta::new("Align Center X")
+            .with_category("Node Graph")
+            .with_keywords(["align", "center", "x"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ALIGN_CENTER_Y),
+        CommandMeta::new("Align Center Y")
+            .with_category("Node Graph")
+            .with_keywords(["align", "center", "y"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_X),
+        CommandMeta::new("Distribute X")
+            .with_category("Node Graph")
+            .with_keywords(["distribute", "x", "horizontal"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_DISTRIBUTE_Y),
+        CommandMeta::new("Distribute Y")
+            .with_category("Node Graph")
+            .with_keywords(["distribute", "y", "vertical"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT),
+        CommandMeta::new("Focus Next Node")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "next", "node", "tab"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(PlatformFilter::All, KeyCode::Tab, Modifiers::default())])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV),
+        CommandMeta::new("Focus Previous Node")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "previous", "node", "tab"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .with_default_keybindings([kb(
+                PlatformFilter::All,
+                KeyCode::Tab,
+                Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+            )])
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_NEXT_EDGE),
+        CommandMeta::new("Focus Next Edge")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "next", "edge"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FOCUS_PREV_EDGE),
+        CommandMeta::new("Focus Previous Edge")
+            .with_category("Node Graph")
+            .with_keywords(["focus", "previous", "edge"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing())
+            .repeatable(),
+    );
+
+    registry.register(
         CommandId::from(CMD_NODE_GRAPH_FRAME_SELECTION),
         CommandMeta::new("Frame Selection")
             .with_category("Node Graph")
             .with_keywords(["frame", "focus", "fit", "view"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
+        CommandMeta::new("Frame All")
+            .with_category("Node Graph")
+            .with_keywords(["frame", "focus", "fit", "view", "all"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_RESET_VIEW),
+        CommandMeta::new("Reset View")
+            .with_category("Node Graph")
+            .with_keywords(["reset", "view", "pan", "zoom"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
+        CommandMeta::new("Zoom In")
+            .with_category("Node Graph")
+            .with_keywords(["zoom", "in"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
+        CommandMeta::new("Zoom Out")
+            .with_category("Node Graph")
+            .with_keywords(["zoom", "out"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE),
+        CommandMeta::new("Toggle Connection Mode")
+            .with_category("Node Graph")
+            .with_keywords(["connection", "mode", "strict", "loose"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );

@@ -7,8 +7,9 @@ mod context_menu;
 mod conversion;
 mod event;
 mod geometry;
-pub mod middleware;
+mod middleware;
 mod paint;
+mod route_math;
 mod searcher;
 mod snaplines;
 mod spatial;
@@ -16,4 +17,14 @@ mod state;
 mod widget;
 mod workflow;
 
+pub use state::NodeResizeHandle;
 pub use widget::NodeGraphCanvas;
+pub use widget::NodeGraphCanvasWith;
+
+pub(crate) use geometry::{node_order, node_ports, node_size_default_px};
+
+pub use middleware::{
+    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareChain, NodeGraphCanvasMiddlewareCx,
+    NoopNodeGraphCanvasMiddleware, RejectInvalidSizeTx, RejectNonFiniteTx,
+};

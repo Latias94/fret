@@ -7,18 +7,20 @@ use crate::core::{
     CanvasPoint, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
+use crate::interaction::NodeGraphConnectionMode;
 #[cfg(feature = "kit")]
 use crate::kit::profiles::DataflowProfile;
 use crate::ops::GraphOp;
 use crate::profile::GraphProfile;
 use crate::rules::{
-    ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
-    plan_reconnect_edge, plan_split_edge_by_inserting_node,
+    ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect_with_mode,
+    plan_reconnect_edge_with_mode, plan_split_edge_by_inserting_node,
 };
 use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
 use fret_runtime::CommandId;
 
+use super::canvas::NodeResizeHandle;
 use super::style::NodeGraphStyle;
 use fret_core::{Point, Rect};
 
@@ -65,6 +67,174 @@ pub struct PortAnchorHint {
     pub bounds: Rect,
 }
 
+/// A bitset defining which resize handles are enabled for a node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeResizeHandleSet {
+    bits: u16,
+}
+
+impl NodeResizeHandleSet {
+    const fn mask(handle: NodeResizeHandle) -> u16 {
+        match handle {
+            NodeResizeHandle::TopLeft => 1 << 0,
+            NodeResizeHandle::Top => 1 << 1,
+            NodeResizeHandle::TopRight => 1 << 2,
+            NodeResizeHandle::Right => 1 << 3,
+            NodeResizeHandle::BottomRight => 1 << 4,
+            NodeResizeHandle::Bottom => 1 << 5,
+            NodeResizeHandle::BottomLeft => 1 << 6,
+            NodeResizeHandle::Left => 1 << 7,
+        }
+    }
+
+    pub const NONE: Self = Self { bits: 0 };
+    pub const ALL: Self = Self { bits: (1 << 8) - 1 };
+
+    pub const fn none() -> Self {
+        Self::NONE
+    }
+
+    pub const fn all() -> Self {
+        Self::ALL
+    }
+
+    pub const fn from_bits(bits: u16) -> Self {
+        Self { bits }
+    }
+
+    pub const fn bits(self) -> u16 {
+        self.bits
+    }
+
+    pub const fn contains(self, handle: NodeResizeHandle) -> bool {
+        (self.bits & Self::mask(handle)) != 0
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.bits == 0
+    }
+
+    pub fn insert(&mut self, handle: NodeResizeHandle) {
+        self.bits |= Self::mask(handle);
+    }
+
+    pub fn remove(&mut self, handle: NodeResizeHandle) {
+        self.bits &= !Self::mask(handle);
+    }
+}
+
+impl Default for NodeResizeHandleSet {
+    fn default() -> Self {
+        Self::all()
+    }
+}
+
+/// Optional per-node resize constraints expressed in screen-space pixels (logical px).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NodeResizeConstraintsPx {
+    /// Minimum node size override (width, height) in logical px.
+    pub min_size_px: Option<(f32, f32)>,
+    /// Maximum node size override (width, height) in logical px.
+    pub max_size_px: Option<(f32, f32)>,
+}
+
+impl NodeResizeConstraintsPx {
+    pub fn normalized(mut self) -> Self {
+        let normalize = |v: &mut Option<(f32, f32)>| {
+            if let Some((w, h)) = *v {
+                if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
+                    *v = None;
+                }
+            }
+        };
+        normalize(&mut self.min_size_px);
+        normalize(&mut self.max_size_px);
+
+        if let (Some(min), Some(max)) = (self.min_size_px, self.max_size_px) {
+            self.max_size_px = Some((max.0.max(min.0), max.1.max(min.1)));
+        }
+
+        self
+    }
+}
+
+/// Edge routing kind for the canvas renderer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EdgeRouteKind {
+    /// Smooth cubic Bezier.
+    Bezier,
+    /// Straight line.
+    Straight,
+    /// Orthogonal "step" routing with right-angle segments.
+    Step,
+}
+
+impl Default for EdgeRouteKind {
+    fn default() -> Self {
+        Self::Bezier
+    }
+}
+
+/// Marker kind for edge endpoints.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EdgeMarkerKind {
+    /// Filled triangle arrow head.
+    Arrow,
+}
+
+/// Optional marker rendered at an edge endpoint.
+#[derive(Debug, Clone)]
+pub struct EdgeMarker {
+    pub kind: EdgeMarkerKind,
+    /// Marker size in screen-space pixels (logical px).
+    pub size: f32,
+}
+
+impl EdgeMarker {
+    pub fn arrow(size: f32) -> Self {
+        Self {
+            kind: EdgeMarkerKind::Arrow,
+            size,
+        }
+    }
+}
+
+/// Optional per-edge rendering hints.
+#[derive(Debug, Clone, Default)]
+pub struct EdgeRenderHint {
+    /// Optional label rendered near the edge center.
+    pub label: Option<Arc<str>>,
+    /// Optional color override (falls back to `edge_color(...)`).
+    pub color: Option<Color>,
+    /// Width multiplier applied before selection/hover multipliers.
+    pub width_mul: f32,
+    /// Edge routing kind.
+    pub route: EdgeRouteKind,
+    /// Optional marker rendered at the edge start.
+    pub start_marker: Option<EdgeMarker>,
+    /// Optional marker rendered at the edge end.
+    pub end_marker: Option<EdgeMarker>,
+}
+
+impl EdgeRenderHint {
+    pub fn normalized(mut self) -> Self {
+        if !self.width_mul.is_finite() || self.width_mul <= 0.0 {
+            self.width_mul = 1.0;
+        }
+        if let Some(m) = self.start_marker.as_mut() {
+            if !m.size.is_finite() || m.size <= 0.0 {
+                self.start_marker = None;
+            }
+        }
+        if let Some(m) = self.end_marker.as_mut() {
+            if !m.size.is_finite() || m.size <= 0.0 {
+                self.end_marker = None;
+            }
+        }
+        self
+    }
+}
+
 /// Viewer/presenter surface for the node graph UI.
 ///
 /// This is the primary extensibility point: domain code can define titles, styles, and connection
@@ -81,13 +251,46 @@ pub trait NodeGraphPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str>;
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str>;
 
+    /// Accessible label for the node graph canvas root.
+    ///
+    /// This is used by `NodeGraphCanvas::semantics` as a baseline for assistive technologies.
+    fn a11y_canvas_label(&self) -> Arc<str> {
+        Arc::<str>::from("Node Graph Canvas")
+    }
+
+    /// Accessible label for a node.
+    ///
+    /// Defaults to `node_title(...)`.
+    fn a11y_node_label(&self, graph: &Graph, node: NodeId) -> Option<Arc<str>> {
+        Some(self.node_title(graph, node))
+    }
+
+    /// Accessible label for a port.
+    ///
+    /// Defaults to `port_label(...)`.
+    fn a11y_port_label(&self, graph: &Graph, port: PortId) -> Option<Arc<str>> {
+        Some(self.port_label(graph, port))
+    }
+
+    /// Accessible label for an edge.
+    ///
+    /// Defaults to `edge_render_hint(...).label` (when present).
+    fn a11y_edge_label(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+    ) -> Option<Arc<str>> {
+        self.edge_render_hint(graph, edge, style).label
+    }
+
     /// Optional node body label.
     ///
     /// This is a low-friction extensibility point for MVP editor UIs that want to show simple,
     /// domain-derived content (e.g. constant values) without embedding an entire UI subtree.
     ///
     /// More advanced node content should eventually be modeled as a dedicated "node view" layer
-    /// (see ADR 0106), but this hook is useful for early demos and diagnostics.
+    /// (see ADR 0135), but this hook is useful for early demos and diagnostics.
     fn node_body_label(&self, _graph: &Graph, _node: NodeId) -> Option<Arc<str>> {
         None
     }
@@ -109,6 +312,19 @@ pub trait NodeGraphPresenter {
         match e.kind {
             crate::core::EdgeKind::Data => style.wire_color_data,
             crate::core::EdgeKind::Exec => style.wire_color_exec,
+        }
+    }
+
+    /// Optional edge rendering hints (label/style/routing).
+    fn edge_render_hint(
+        &self,
+        _graph: &Graph,
+        _edge: EdgeId,
+        _style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
         }
     }
 
@@ -137,11 +353,49 @@ pub trait NodeGraphPresenter {
         None
     }
 
+    /// Enabled resize handles for a node.
+    ///
+    /// Returning `NodeResizeHandleSet::none()` disables resizing for the node.
+    fn node_resize_handles(
+        &self,
+        _graph: &Graph,
+        _node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> NodeResizeHandleSet {
+        NodeResizeHandleSet::all()
+    }
+
+    /// Optional per-node resize constraints in screen-space pixels (logical px).
+    ///
+    /// These are combined with style- and port-driven minimum size, and with `node_extent` / group
+    /// bounds used as maximum bounds. Returning `None` values keeps the defaults.
+    fn node_resize_constraints_px(
+        &self,
+        _graph: &Graph,
+        _node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> NodeResizeConstraintsPx {
+        NodeResizeConstraintsPx::default()
+    }
+
     /// Lists nodes that can be inserted into the graph from a palette (background insert).
     ///
     /// Returning an empty list disables the insert-node picker by default.
     fn list_insertable_nodes(&mut self, _graph: &Graph) -> Vec<InsertNodeCandidate> {
         Vec::new()
+    }
+
+    /// Lists nodes that can be inserted as part of a connection workflow.
+    ///
+    /// This is used when a user drops a connection onto empty space and the editor opens a node
+    /// picker. Default behavior reuses `list_insertable_nodes`.
+    fn list_insertable_nodes_for_connection(
+        &mut self,
+        graph: &Graph,
+        from: PortId,
+    ) -> Vec<InsertNodeCandidate> {
+        let _ = from;
+        self.list_insertable_nodes(graph)
     }
 
     /// Plans inserting a node into the graph (background insert).
@@ -209,7 +463,13 @@ pub trait NodeGraphPresenter {
             kind: node_kind.clone(),
             kind_version: 1,
             pos: at,
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: Vec::new(),
@@ -222,6 +482,9 @@ pub trait NodeGraphPresenter {
             dir: PortDirection::In,
             kind: port_kind,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: ty.clone(),
             data: Value::default(),
         };
@@ -232,6 +495,9 @@ pub trait NodeGraphPresenter {
             dir: PortDirection::Out,
             kind: port_kind,
             capacity: PortCapacity::Multi,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty,
             data: Value::default(),
         };
@@ -303,11 +569,17 @@ pub trait NodeGraphPresenter {
     /// - rejects the connection (diagnostics only),
     /// - accepts it with direct edge changes,
     /// - accepts it with additional ops (e.g. insert conversion nodes).
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         if let Some(profile) = self.profile_mut() {
-            profile.plan_connect(graph, a, b)
+            profile.plan_connect(graph, a, b, mode)
         } else {
-            plan_connect(graph, a, b)
+            plan_connect_with_mode(graph, a, b, mode)
         }
     }
 
@@ -318,8 +590,9 @@ pub trait NodeGraphPresenter {
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: NodeGraphConnectionMode,
     ) -> ConnectPlan {
-        plan_reconnect_edge(graph, edge, endpoint, new_port)
+        plan_reconnect_edge_with_mode(graph, edge, endpoint, new_port, mode)
     }
 
     /// Optional profile hook for typed graphs and edit pipelines.
@@ -341,8 +614,14 @@ pub trait NodeGraphPresenter {
     /// Fast (UI-friendly) connectivity check for previews and hover states.
     ///
     /// Default implementation delegates to `plan_connect` but strips ops.
-    fn can_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        let mut plan = self.plan_connect(graph, a, b);
+    fn can_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        mode: NodeGraphConnectionMode,
+    ) -> ConnectPlan {
+        let mut plan = self.plan_connect(graph, a, b, mode);
         plan.ops.clear();
         plan
     }
@@ -356,8 +635,9 @@ pub trait NodeGraphPresenter {
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         new_port: PortId,
+        mode: NodeGraphConnectionMode,
     ) -> ConnectPlan {
-        let mut plan = self.plan_reconnect_edge(graph, edge, endpoint, new_port);
+        let mut plan = self.plan_reconnect_edge(graph, edge, endpoint, new_port, mode);
         plan.ops.clear();
         plan
     }
@@ -548,7 +828,13 @@ impl NodeGraphPresenter for RegistryNodeGraphPresenter {
             kind: schema.kind,
             kind_version: schema.latest_kind_version,
             pos: at,
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: Vec::new(),
@@ -569,6 +855,9 @@ impl NodeGraphPresenter for RegistryNodeGraphPresenter {
                     dir: decl.dir,
                     kind: decl.kind,
                     capacity: decl.capacity,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
                     ty: decl.ty,
                     data: Value::Null,
                 },

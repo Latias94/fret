@@ -1,35 +1,120 @@
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event};
+use fret_core::{AppWindowId, Color, Event};
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext, run_app,
 };
 use fret_node::Graph;
+use fret_node::GraphId;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
-use fret_node::ops::GraphOp;
+use fret_node::io::NodeGraphViewStateFileV1;
+use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
     PortTemplate,
 };
+use fret_node::runtime::callbacks::NodeGraphCallbacks;
+use fret_node::runtime::changes::NodeGraphChanges;
+use fret_node::runtime::events::ViewChange;
+use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
-use fret_node::ui::canvas::middleware::RejectNonFiniteTx;
-use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
+use fret_node::ui::canvas::RejectNonFiniteTx;
+use fret_node::ui::style::NodeGraphStyle;
+use fret_node::ui::{
+    EdgeMarker, EdgeRenderHint, EdgeRouteKind, EdgeTypeKey, InsertNodeCandidate,
+    MeasuredGeometryStore, NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode,
+    NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresenter,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    register_node_graph_commands,
+};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::Theme;
+use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
 use fret_ui::{UiFrameCx, UiTree};
+
+use crate::keymap_defaults::install_default_keybindings_into_keymap;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
+    store: fret_runtime::Model<NodeGraphStore>,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+    edits: fret_runtime::Model<NodeGraphEditQueue>,
+    overlays: fret_runtime::Model<NodeGraphOverlayState>,
+    group_rename_text: fret_runtime::Model<String>,
 }
 
-fn build_demo_graph() -> Graph {
-    let mut graph = Graph::default();
+#[derive(Clone)]
+struct NodeGraphDemoViewStatePersistence {
+    graph_id: GraphId,
+    path: PathBuf,
+}
+
+#[derive(Default)]
+struct DomainDemoCallbacks {
+    commit_count: u64,
+    last_viewport_log_at: Option<Instant>,
+}
+
+impl NodeGraphCallbacks for DomainDemoCallbacks {
+    fn on_graph_commit(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
+        self.commit_count += 1;
+        tracing::info!(
+            commit = self.commit_count,
+            label = committed.label.as_deref().unwrap_or(""),
+            ops = committed.ops.len(),
+            node_changes = changes.nodes.len(),
+            edge_changes = changes.edges.len(),
+            "node graph committed"
+        );
+    }
+
+    fn on_view_change(&mut self, changes: &[ViewChange]) {
+        for change in changes {
+            match change {
+                ViewChange::Viewport { pan, zoom } => {
+                    let now = Instant::now();
+                    let should_log = match self.last_viewport_log_at {
+                        Some(prev) => now.duration_since(prev) >= Duration::from_millis(200),
+                        None => true,
+                    };
+                    if should_log {
+                        self.last_viewport_log_at = Some(now);
+                        tracing::info!(
+                            pan_x = pan.x,
+                            pan_y = pan.y,
+                            zoom = *zoom,
+                            "viewport changed"
+                        );
+                    }
+                }
+                ViewChange::Selection {
+                    nodes,
+                    edges,
+                    groups,
+                } => {
+                    tracing::info!(
+                        nodes = nodes.len(),
+                        edges = edges.len(),
+                        groups = groups.len(),
+                        "selection changed"
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn build_demo_graph(graph_id: GraphId) -> Graph {
+    let mut graph = Graph::new(graph_id);
 
     let node_int = NodeId::new();
     let node_float = NodeId::new();
@@ -45,7 +130,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.const_int"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 80.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_int_out],
@@ -58,7 +149,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.const_float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 240.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_float_out],
@@ -71,7 +168,13 @@ fn build_demo_graph() -> Graph {
             kind: NodeKindKey::new("demo.sink_float"),
             kind_version: 1,
             pos: CanvasPoint { x: 520.0, y: 160.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
             parent: None,
+            extent: None,
+            expand_parent: None,
             size: None,
             collapsed: false,
             ports: vec![port_sink_in],
@@ -87,6 +190,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Int),
             data: serde_json::Value::Null,
         },
@@ -99,6 +205,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -111,6 +220,9 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
             ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
@@ -123,10 +235,97 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_int_out,
             to: port_sink_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
         },
     );
 
     graph
+}
+
+fn set_value_in_node_data(
+    mut data: serde_json::Value,
+    value: serde_json::Value,
+) -> serde_json::Value {
+    match &mut data {
+        serde_json::Value::Object(map) => {
+            map.insert("value".to_string(), value);
+            data
+        }
+        _ => {
+            let mut map = serde_json::Map::new();
+            map.insert("value".to_string(), value);
+            serde_json::Value::Object(map)
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct DomainConstNumberSpec;
+
+impl PortalNumberEditSpec for DomainConstNumberSpec {
+    fn initial_value(&self, graph: &Graph, node: NodeId) -> Option<f64> {
+        let node = graph.nodes.get(&node)?;
+        match node.kind.0.as_str() {
+            "demo.const_int" => node.data.get("value")?.as_i64().map(|v| v as f64),
+            "demo.const_float" => node.data.get("value")?.as_f64(),
+            _ => None,
+        }
+    }
+
+    fn round_value(&self, graph: &Graph, node: NodeId, value: f64) -> f64 {
+        let Some(node) = graph.nodes.get(&node) else {
+            return value;
+        };
+        match node.kind.0.as_str() {
+            "demo.const_int" => value.round(),
+            _ => value,
+        }
+    }
+
+    fn submit_value(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        value: f64,
+        _text: &str,
+    ) -> PortalNumberEditSubmit {
+        let Some(node_data) = graph.nodes.get(&node) else {
+            return PortalNumberEditSubmit::NotHandled;
+        };
+
+        let (to_value, normalized) = match node_data.kind.0.as_str() {
+            "demo.const_int" => {
+                let v = value.round() as i64;
+                (serde_json::Value::from(v), Some(v.to_string()))
+            }
+            "demo.const_float" => (serde_json::Value::from(value), Some(format!("{value}"))),
+            _ => return PortalNumberEditSubmit::NotHandled,
+        };
+
+        let from = node_data.data.clone();
+        let to = set_value_in_node_data(from.clone(), to_value);
+
+        PortalNumberEditSubmit::Commit {
+            tx: fret_node::ops::GraphTransaction {
+                label: Some("Set Const Value".to_string()),
+                ops: vec![GraphOp::SetNodeData { id: node, from, to }],
+            },
+            normalized_text: normalized,
+        }
+    }
+
+    fn supports_drag(&self, graph: &Graph, node: NodeId) -> bool {
+        graph
+            .nodes
+            .get(&node)
+            .is_some_and(|n| matches!(n.kind.0.as_str(), "demo.const_int" | "demo.const_float"))
+    }
+
+    fn drag_threshold_px(&self, _graph: &Graph, _node: NodeId) -> f32 {
+        2.0
+    }
 }
 
 fn is_int(t: &TypeDesc) -> bool {
@@ -253,6 +452,45 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             .unwrap_or_else(|| Arc::<str>::from("<missing port>"))
     }
 
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        _style: &fret_node::ui::NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        let Some(e) = graph.edges.get(&edge) else {
+            return EdgeRenderHint {
+                width_mul: 1.0,
+                ..EdgeRenderHint::default()
+            };
+        };
+
+        let mut hint = EdgeRenderHint {
+            width_mul: 1.0,
+            ..EdgeRenderHint::default()
+        };
+
+        if e.kind == EdgeKind::Exec {
+            hint.route = EdgeRouteKind::Step;
+            hint.end_marker = Some(EdgeMarker::arrow(12.0));
+            return hint;
+        }
+
+        let from_ty = graph.ports.get(&e.from).and_then(|p| p.ty.as_ref());
+        let to_ty = graph.ports.get(&e.to).and_then(|p| p.ty.as_ref());
+        if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+            let from_name = type_name(from_ty);
+            let to_name = type_name(to_ty);
+            if from_name != to_name {
+                hint.label = Some(Arc::<str>::from(format!("{from_name}→{to_name}")));
+            } else {
+                hint.label = Some(Arc::<str>::from(from_name.to_string()));
+            }
+        }
+
+        hint
+    }
+
     fn list_insertable_nodes_for_edge(
         &mut self,
         graph: &Graph,
@@ -288,7 +526,13 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         out
     }
 
-    fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    fn plan_connect(
+        &mut self,
+        graph: &Graph,
+        a: PortId,
+        b: PortId,
+        _mode: fret_node::interaction::NodeGraphConnectionMode,
+    ) -> ConnectPlan {
         let Some(port_a) = graph.ports.get(&a) else {
             return ConnectPlan::reject("missing port");
         };
@@ -387,6 +631,9 @@ impl NodeGraphPresenter for DemoTypedPresenter {
                 kind: EdgeKind::Data,
                 from,
                 to,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
             },
         });
 
@@ -465,24 +712,189 @@ struct NodeGraphDomainDemoWindowState {
 }
 
 #[derive(Default)]
-struct NodeGraphDomainDemoDriver;
+struct NodeGraphDomainDemoDriver {
+    pending_view_state_save: bool,
+    last_view_state_save_at: Option<Instant>,
+}
 
 impl NodeGraphDomainDemoDriver {
+    const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
+
+    fn save_view_state(&mut self, app: &mut App) {
+        let Some(models) = app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>() else {
+            return;
+        };
+
+        let Ok(state) = models.store.read_ref(app, |s| s.view_state().clone()) else {
+            return;
+        };
+
+        let file = NodeGraphViewStateFileV1::new(persist.graph_id, state);
+        if let Err(err) = file.save_json(&persist.path) {
+            tracing::warn!(?err, "failed to save node graph view state");
+        }
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> NodeGraphDomainDemoWindowState {
         let models = app
             .global::<NodeGraphDemoModels>()
             .expect("NodeGraphDemoModels global must exist")
             .clone();
+        let internals = app
+            .global::<Arc<NodeGraphInternalsStore>>()
+            .expect("NodeGraphInternalsStore global must exist")
+            .clone();
+        let measured = app
+            .global::<Arc<MeasuredGeometryStore>>()
+            .expect("MeasuredGeometryStore global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let graph = models.graph.clone();
+        let view = models.view.clone();
+        let edits = models.edits.clone();
+        let overlays = models.overlays.clone();
+        let group_rename_text = models.group_rename_text.clone();
+        let store = models.store.clone();
+        let style = NodeGraphStyle::from_theme(Theme::global(app));
+
+        let edge_types = NodeGraphEdgeTypes::new()
+            .with_resolver(|graph, edge_id| {
+                let Some(edge) = graph.edges.get(&edge_id) else {
+                    return EdgeTypeKey::new("data");
+                };
+                if edge.kind == EdgeKind::Exec {
+                    return EdgeTypeKey::new("exec");
+                }
+
+                let from_ty = graph.ports.get(&edge.from).and_then(|p| p.ty.as_ref());
+                let to_ty = graph.ports.get(&edge.to).and_then(|p| p.ty.as_ref());
+                if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+                    if from_ty != to_ty {
+                        return EdgeTypeKey::new("incompatible");
+                    }
+                }
+
+                EdgeTypeKey::new("data")
+            })
+            .register(
+                EdgeTypeKey::new("incompatible"),
+                |_graph, _edge, _style, mut hint| {
+                    hint.color = Some(Color {
+                        r: 0.92,
+                        g: 0.25,
+                        b: 0.25,
+                        a: 1.0,
+                    });
+                    hint.label = Some(Arc::<str>::from("Type mismatch"));
+                    hint.width_mul = 1.25;
+                    hint.end_marker = Some(EdgeMarker::arrow(12.0));
+                    hint.route = EdgeRouteKind::Step;
+                    hint
+                },
+            )
+            .register(
+                EdgeTypeKey::new("exec"),
+                |_graph, _edge, _style, mut hint| {
+                    hint.width_mul = 1.1;
+                    hint.end_marker = Some(EdgeMarker::arrow(12.0));
+                    hint.route = EdgeRouteKind::Step;
+                    hint
+                },
+            );
+
         let presenter = DemoTypedPresenter::default();
-        let canvas = NodeGraphCanvas::new(models.graph, models.view)
-            .with_tx_middleware(RejectNonFiniteTx)
+        let canvas = NodeGraphCanvas::new(graph.clone(), view)
+            .with_store(store)
+            .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
+            .with_style(style.clone())
+            .with_edge_types(edge_types)
+            .with_callbacks(DomainDemoCallbacks::default())
+            .with_edit_queue(edits.clone())
+            .with_overlay_state(overlays.clone())
+            .with_internals_store(internals.clone())
             .with_close_command(CommandId::new("node_graph_domain_demo.close"));
-        let root = ui.create_node_retained(canvas);
+        let canvas_node = ui.create_node_retained(canvas);
+
+        let a11y_port = ui.create_node_retained(NodeGraphA11yFocusedPort::new(internals.clone()));
+        let a11y_edge = ui.create_node_retained(NodeGraphA11yFocusedEdge::new(internals.clone()));
+        let a11y_node = ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals));
+        ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
+
+        let overlay_host = NodeGraphOverlayHost::new(
+            graph,
+            edits,
+            overlays,
+            group_rename_text.clone(),
+            canvas_node,
+            style.clone(),
+        );
+        let overlay_node = ui.create_node_retained(overlay_host);
+        let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
+        ui.set_children(overlay_node, vec![rename_input_node]);
+
+        let portal_root = "node_graph_domain_demo.portal";
+        let portal_editor = PortalNumberEditor::new(portal_root);
+
+        let node_types = NodeGraphNodeTypes::new()
+            .register(NodeKindKey::new("demo.const_int"), {
+                let portal_editor = portal_editor.clone();
+                let portal_graph_model = models.graph.clone();
+                let style = style.clone();
+                move |ecx, graph, layout: NodeGraphPortalNodeLayout| {
+                    portal_editor.render_number_input_for_node(
+                        ecx,
+                        portal_graph_model.clone(),
+                        graph,
+                        layout,
+                        &style,
+                        layout.node,
+                        &DomainConstNumberSpec,
+                    )
+                }
+            })
+            .register(NodeKindKey::new("demo.const_float"), {
+                let portal_editor = portal_editor.clone();
+                let portal_graph_model = models.graph.clone();
+                let style = style.clone();
+                move |ecx, graph, layout: NodeGraphPortalNodeLayout| {
+                    portal_editor.render_number_input_for_node(
+                        ecx,
+                        portal_graph_model.clone(),
+                        graph,
+                        layout,
+                        &style,
+                        layout.node,
+                        &DomainConstNumberSpec,
+                    )
+                }
+            });
+
+        let portal = NodeGraphPortalHost::new(
+            models.graph.clone(),
+            models.view.clone(),
+            measured,
+            style.clone(),
+            portal_root,
+            node_types.into_portal_renderer(),
+        )
+        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_edit_queue(models.edits.clone())
+        .with_canvas_focus_target(canvas_node)
+        .with_command_handler(PortalNumberEditHandler::new(
+            portal_root,
+            DomainConstNumberSpec,
+        ));
+        let portal_node = ui.create_node_retained(portal);
+
+        let root = ui.create_node_retained(NodeGraphEditor::new());
+        ui.set_children(root, vec![canvas_node, portal_node, overlay_node]);
         ui.set_root(root);
 
         NodeGraphDomainDemoWindowState { ui, root }
@@ -505,6 +917,24 @@ impl WinitAppDriver for NodeGraphDomainDemoDriver {
             .state
             .ui
             .propagate_model_changes(context.app, changed);
+
+        let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
+            return;
+        };
+        if changed.contains(&models.view.id()) {
+            self.pending_view_state_save = true;
+        }
+        if self.pending_view_state_save {
+            let now = Instant::now();
+            let due = self.last_view_state_save_at.map_or(true, |t| {
+                now.duration_since(t) >= Self::VIEW_STATE_SAVE_DEBOUNCE
+            });
+            if due {
+                self.pending_view_state_save = false;
+                self.last_view_state_save_at = Some(now);
+                self.save_view_state(context.app);
+            }
+        }
     }
 
     fn handle_global_changes(
@@ -527,12 +957,14 @@ impl WinitAppDriver for NodeGraphDomainDemoDriver {
         } = context;
 
         if matches!(event, Event::WindowCloseRequested) {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
 
         if let Event::KeyDown { key, .. } = event {
             if *key == fret_core::KeyCode::Escape {
+                self.save_view_state(app);
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 return;
             }
@@ -558,6 +990,7 @@ impl WinitAppDriver for NodeGraphDomainDemoDriver {
         }
 
         if command.as_str() == "node_graph_domain_demo.close" {
+            self.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
         }
     }
@@ -611,10 +1044,45 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    register_node_graph_commands(app.commands_mut());
+    install_default_keybindings_into_keymap(&mut app);
 
-    let graph = app.models_mut().insert(build_demo_graph());
-    let view = app.models_mut().insert(NodeGraphViewState::default());
-    app.set_global(NodeGraphDemoModels { graph, view });
+    let graph_id = GraphId::from_u128(0x1350_0000_0000_0000_0000_0000_0000_00A2);
+    let graph_value = build_demo_graph(graph_id);
+    let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
+    let mut view_value =
+        match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
+        {
+            Ok(Some(file)) => file.state,
+            Ok(None) => NodeGraphViewState::default(),
+            Err(err) => {
+                tracing::warn!(?err, "failed to load node graph view state; using defaults");
+                NodeGraphViewState::default()
+            }
+        };
+    view_value.sanitize_for_graph(&graph_value);
+
+    let store_value = NodeGraphStore::new(graph_value, view_value);
+    let graph = app.models_mut().insert(store_value.graph().clone());
+    let view = app.models_mut().insert(store_value.view_state().clone());
+    let store = app.models_mut().insert(store_value);
+    let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
+    let group_rename_text = app.models_mut().insert(String::new());
+    app.set_global(NodeGraphDemoModels {
+        store,
+        graph,
+        view,
+        edits,
+        overlays,
+        group_rename_text,
+    });
+    app.set_global(NodeGraphDemoViewStatePersistence {
+        graph_id,
+        path: view_state_path,
+    });
+    app.set_global(Arc::new(NodeGraphInternalsStore::new()));
+    app.set_global(Arc::new(MeasuredGeometryStore::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_domain_demo".to_string(),

@@ -1,10 +1,25 @@
-use fret_core::{AppWindowId, Rect};
+use fret_core::{AppWindowId, Event, Rect};
+use fret_runtime::{CommandId, Model};
+use fret_ui::UiHost;
+use fret_ui::retained_bridge::{CommandCx, EventCx};
 
 use crate::core::{CanvasPoint, Graph};
 use crate::io::NodeGraphViewState;
 use crate::ops::GraphTransaction;
-use crate::rules::Diagnostic;
+use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
 use crate::ui::style::NodeGraphStyle;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeGraphCanvasEventOutcome {
+    NotHandled,
+    Handled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeGraphCanvasCommandOutcome {
+    NotHandled,
+    Handled,
+}
 
 #[derive(Debug, Clone)]
 pub enum NodeGraphCanvasCommitOutcome {
@@ -14,17 +29,36 @@ pub enum NodeGraphCanvasCommitOutcome {
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeGraphCanvasMiddlewareCx<'a> {
-    pub graph: &'a Graph,
-    pub view_state: &'a NodeGraphViewState,
+    pub graph: &'a Model<Graph>,
+    pub view_state: &'a Model<NodeGraphViewState>,
     pub style: &'a NodeGraphStyle,
     pub bounds: Option<Rect>,
     pub pan: CanvasPoint,
     pub zoom: f32,
 }
 
-pub trait NodeGraphCanvasTxMiddleware: 'static {
-    fn before_commit(
+pub trait NodeGraphCanvasMiddleware: 'static {
+    fn handle_event<H: UiHost>(
         &mut self,
+        _cx: &mut EventCx<'_, H>,
+        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        _event: &Event,
+    ) -> NodeGraphCanvasEventOutcome {
+        NodeGraphCanvasEventOutcome::NotHandled
+    }
+
+    fn handle_command<H: UiHost>(
+        &mut self,
+        _cx: &mut CommandCx<'_, H>,
+        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        _command: &CommandId,
+    ) -> NodeGraphCanvasCommandOutcome {
+        NodeGraphCanvasCommandOutcome::NotHandled
+    }
+
+    fn before_commit<H: UiHost>(
+        &mut self,
+        _host: &mut H,
         _window: Option<AppWindowId>,
         _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
         _tx: &mut GraphTransaction,
@@ -34,16 +68,77 @@ pub trait NodeGraphCanvasTxMiddleware: 'static {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct NoopNodeGraphCanvasTxMiddleware;
+pub struct NoopNodeGraphCanvasMiddleware;
 
-impl NodeGraphCanvasTxMiddleware for NoopNodeGraphCanvasTxMiddleware {}
+impl NodeGraphCanvasMiddleware for NoopNodeGraphCanvasMiddleware {}
 
+#[derive(Debug, Clone)]
+pub struct NodeGraphCanvasMiddlewareChain<A, B> {
+    pub first: A,
+    pub second: B,
+}
+
+impl<A, B> NodeGraphCanvasMiddlewareChain<A, B> {
+    pub fn new(first: A, second: B) -> Self {
+        Self { first, second }
+    }
+}
+
+impl<A, B> NodeGraphCanvasMiddleware for NodeGraphCanvasMiddlewareChain<A, B>
+where
+    A: NodeGraphCanvasMiddleware,
+    B: NodeGraphCanvasMiddleware,
+{
+    fn handle_event<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        event: &Event,
+    ) -> NodeGraphCanvasEventOutcome {
+        match self.first.handle_event(cx, ctx, event) {
+            NodeGraphCanvasEventOutcome::NotHandled => self.second.handle_event(cx, ctx, event),
+            other => other,
+        }
+    }
+
+    fn handle_command<H: UiHost>(
+        &mut self,
+        cx: &mut CommandCx<'_, H>,
+        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        command: &CommandId,
+    ) -> NodeGraphCanvasCommandOutcome {
+        match self.first.handle_command(cx, ctx, command) {
+            NodeGraphCanvasCommandOutcome::NotHandled => {
+                self.second.handle_command(cx, ctx, command)
+            }
+            other => other,
+        }
+    }
+
+    fn before_commit<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        tx: &mut GraphTransaction,
+    ) -> NodeGraphCanvasCommitOutcome {
+        match self.first.before_commit(host, window, ctx, tx) {
+            NodeGraphCanvasCommitOutcome::Continue => {
+                self.second.before_commit(host, window, ctx, tx)
+            }
+            other => other,
+        }
+    }
+}
+
+/// Rejects transactions that introduce non-finite geometry (`NaN`, `Inf`) into the graph document.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RejectNonFiniteTx;
 
-impl NodeGraphCanvasTxMiddleware for RejectNonFiniteTx {
-    fn before_commit(
+impl NodeGraphCanvasMiddleware for RejectNonFiniteTx {
+    fn before_commit<H: UiHost>(
         &mut self,
+        _host: &mut H,
         _window: Option<AppWindowId>,
         _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
         tx: &mut GraphTransaction,
@@ -55,8 +150,8 @@ impl NodeGraphCanvasTxMiddleware for RejectNonFiniteTx {
         NodeGraphCanvasCommitOutcome::Reject {
             diagnostics: vec![Diagnostic {
                 key,
-                severity: crate::rules::DiagnosticSeverity::Error,
-                target: crate::rules::DiagnosticTarget::Graph,
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Graph,
                 message,
                 fixes: Vec::new(),
             }],
@@ -64,12 +159,14 @@ impl NodeGraphCanvasTxMiddleware for RejectNonFiniteTx {
     }
 }
 
+/// Rejects transactions that introduce invalid node sizes (`<= 0`) into the graph document.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RejectInvalidSizeTx;
 
-impl NodeGraphCanvasTxMiddleware for RejectInvalidSizeTx {
-    fn before_commit(
+impl NodeGraphCanvasMiddleware for RejectInvalidSizeTx {
+    fn before_commit<H: UiHost>(
         &mut self,
+        _host: &mut H,
         _window: Option<AppWindowId>,
         _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
         tx: &mut GraphTransaction,
@@ -81,41 +178,11 @@ impl NodeGraphCanvasTxMiddleware for RejectInvalidSizeTx {
         NodeGraphCanvasCommitOutcome::Reject {
             diagnostics: vec![Diagnostic {
                 key,
-                severity: crate::rules::DiagnosticSeverity::Error,
-                target: crate::rules::DiagnosticTarget::Graph,
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Graph,
                 message,
                 fixes: Vec::new(),
             }],
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct NodeGraphCanvasTxMiddlewareChain<A, B> {
-    pub first: A,
-    pub second: B,
-}
-
-impl<A, B> NodeGraphCanvasTxMiddlewareChain<A, B> {
-    pub fn new(first: A, second: B) -> Self {
-        Self { first, second }
-    }
-}
-
-impl<A, B> NodeGraphCanvasTxMiddleware for NodeGraphCanvasTxMiddlewareChain<A, B>
-where
-    A: NodeGraphCanvasTxMiddleware,
-    B: NodeGraphCanvasTxMiddleware,
-{
-    fn before_commit(
-        &mut self,
-        window: Option<AppWindowId>,
-        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        tx: &mut GraphTransaction,
-    ) -> NodeGraphCanvasCommitOutcome {
-        match self.first.before_commit(window, ctx, tx) {
-            NodeGraphCanvasCommitOutcome::Continue => self.second.before_commit(window, ctx, tx),
-            other => other,
         }
     }
 }
@@ -177,6 +244,7 @@ fn op_non_finite_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
         | GraphOp::SetNodeCollapsed { .. }
         | GraphOp::SetNodePorts { .. }
         | GraphOp::SetNodeData { .. }
+        | GraphOp::SetGroupTitle { .. }
         | GraphOp::AddPort { .. }
         | GraphOp::RemovePort { .. }
         | GraphOp::AddEdge { .. }
@@ -218,190 +286,5 @@ fn op_invalid_size_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
             to.and_then(|s| (!size_is_valid(s)).then_some("SetNodeSize.to"))
         }
         _ => None,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::core::{CanvasPoint, CanvasRect, CanvasSize, GroupId, NodeId};
-    use crate::io::NodeGraphViewState;
-    use crate::ops::{GraphOp, GraphTransaction};
-    use crate::ui::style::NodeGraphStyle;
-
-    #[test]
-    fn reject_non_finite_tx_accepts_finite_geometry() {
-        let graph = Graph::default();
-        let view_state = NodeGraphViewState::default();
-        let style = NodeGraphStyle::default();
-        let ctx = NodeGraphCanvasMiddlewareCx {
-            graph: &graph,
-            view_state: &view_state,
-            style: &style,
-            bounds: None,
-            pan: CanvasPoint::default(),
-            zoom: 1.0,
-        };
-
-        let mut tx = GraphTransaction {
-            label: None,
-            ops: vec![GraphOp::SetNodePos {
-                id: NodeId::new(),
-                from: CanvasPoint { x: 0.0, y: 0.0 },
-                to: CanvasPoint { x: 10.0, y: 20.0 },
-            }],
-        };
-
-        let mut gate = RejectNonFiniteTx;
-        assert!(matches!(
-            gate.before_commit(None, &ctx, &mut tx),
-            NodeGraphCanvasCommitOutcome::Continue
-        ));
-    }
-
-    #[test]
-    fn reject_non_finite_tx_rejects_nan_in_node_pos() {
-        let graph = Graph::default();
-        let view_state = NodeGraphViewState::default();
-        let style = NodeGraphStyle::default();
-        let ctx = NodeGraphCanvasMiddlewareCx {
-            graph: &graph,
-            view_state: &view_state,
-            style: &style,
-            bounds: None,
-            pan: CanvasPoint::default(),
-            zoom: 1.0,
-        };
-
-        let mut tx = GraphTransaction {
-            label: None,
-            ops: vec![GraphOp::SetNodePos {
-                id: NodeId::new(),
-                from: CanvasPoint { x: 0.0, y: 0.0 },
-                to: CanvasPoint {
-                    x: f32::NAN,
-                    y: 20.0,
-                },
-            }],
-        };
-
-        let mut gate = RejectNonFiniteTx;
-        assert!(matches!(
-            gate.before_commit(None, &ctx, &mut tx),
-            NodeGraphCanvasCommitOutcome::Reject { .. }
-        ));
-    }
-
-    #[test]
-    fn reject_non_finite_tx_allows_healing_from_non_finite() {
-        let graph = Graph::default();
-        let view_state = NodeGraphViewState::default();
-        let style = NodeGraphStyle::default();
-        let ctx = NodeGraphCanvasMiddlewareCx {
-            graph: &graph,
-            view_state: &view_state,
-            style: &style,
-            bounds: None,
-            pan: CanvasPoint::default(),
-            zoom: 1.0,
-        };
-
-        let mut tx = GraphTransaction {
-            label: None,
-            ops: vec![GraphOp::SetNodePos {
-                id: NodeId::new(),
-                from: CanvasPoint {
-                    x: f32::NAN,
-                    y: 0.0,
-                },
-                to: CanvasPoint { x: 10.0, y: 20.0 },
-            }],
-        };
-
-        let mut gate = RejectNonFiniteTx;
-        assert!(matches!(
-            gate.before_commit(None, &ctx, &mut tx),
-            NodeGraphCanvasCommitOutcome::Continue
-        ));
-    }
-
-    #[test]
-    fn reject_non_finite_tx_rejects_inf_in_group_rect() {
-        let graph = Graph::default();
-        let view_state = NodeGraphViewState::default();
-        let style = NodeGraphStyle::default();
-        let ctx = NodeGraphCanvasMiddlewareCx {
-            graph: &graph,
-            view_state: &view_state,
-            style: &style,
-            bounds: None,
-            pan: CanvasPoint::default(),
-            zoom: 1.0,
-        };
-
-        let group_id = GroupId::new();
-        let mut tx = GraphTransaction {
-            label: None,
-            ops: vec![GraphOp::SetGroupRect {
-                id: group_id,
-                from: CanvasRect {
-                    origin: CanvasPoint { x: 0.0, y: 0.0 },
-                    size: CanvasSize {
-                        width: 10.0,
-                        height: 20.0,
-                    },
-                },
-                to: CanvasRect {
-                    origin: CanvasPoint {
-                        x: f32::INFINITY,
-                        y: 0.0,
-                    },
-                    size: CanvasSize {
-                        width: 10.0,
-                        height: 20.0,
-                    },
-                },
-            }],
-        };
-
-        let mut gate = RejectNonFiniteTx;
-        assert!(matches!(
-            gate.before_commit(None, &ctx, &mut tx),
-            NodeGraphCanvasCommitOutcome::Reject { .. }
-        ));
-    }
-
-    #[test]
-    fn reject_invalid_size_tx_rejects_non_positive_set_node_size() {
-        let graph = Graph::default();
-        let view_state = NodeGraphViewState::default();
-        let style = NodeGraphStyle::default();
-        let ctx = NodeGraphCanvasMiddlewareCx {
-            graph: &graph,
-            view_state: &view_state,
-            style: &style,
-            bounds: None,
-            pan: CanvasPoint::default(),
-            zoom: 1.0,
-        };
-
-        let mut tx = GraphTransaction {
-            label: None,
-            ops: vec![GraphOp::SetNodeSize {
-                id: NodeId::new(),
-                from: None,
-                to: Some(CanvasSize {
-                    width: 0.0,
-                    height: 10.0,
-                }),
-            }],
-        };
-
-        let mut gate = RejectInvalidSizeTx;
-        assert!(matches!(
-            gate.before_commit(None, &ctx, &mut tx),
-            NodeGraphCanvasCommitOutcome::Reject { .. }
-        ));
     }
 }

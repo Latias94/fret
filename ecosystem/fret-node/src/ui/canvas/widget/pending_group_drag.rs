@@ -1,16 +1,16 @@
-use fret_canvas::drag::DragThreshold;
 use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::super::state::{GroupDrag, ViewSnapshot};
-use super::NodeGraphCanvas;
+use super::threshold::exceeds_drag_threshold;
+use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
-pub(super) fn handle_pending_group_drag_move<H: UiHost>(
-    canvas: &mut NodeGraphCanvas,
+pub(super) fn handle_pending_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
-    zoom: f32,
+    _zoom: f32,
 ) -> bool {
     if canvas.interaction.group_drag.is_some() {
         return false;
@@ -19,14 +19,8 @@ pub(super) fn handle_pending_group_drag_move<H: UiHost>(
         return false;
     };
 
-    let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-    let threshold_graph = DragThreshold {
-        screen_px: threshold_screen,
-    }
-    .to_canvas_units(zoom);
-    let dx = position.x.0 - pending.start_pos.x.0;
-    let dy = position.y.0 - pending.start_pos.y.0;
-    if threshold_graph > 0.0 && dx * dx + dy * dy < threshold_graph * threshold_graph {
+    let threshold_screen = snapshot.interaction.node_drag_threshold;
+    if !exceeds_drag_threshold(pending.start_pos, position, threshold_screen) {
         return true;
     }
 

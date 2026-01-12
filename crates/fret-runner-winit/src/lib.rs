@@ -1,13 +1,14 @@
 use fret_core::time::Instant;
 use fret_core::{
     CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
-    MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
+    MouseButton, MouseButtons, Point, PointerCancelEvent, PointerCancelReason, PointerEvent,
+    PointerType, Px, Rect,
 };
 use std::time::Duration;
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
     ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
-    WindowEvent,
+    PointerKind, WindowEvent,
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::Window;
@@ -529,6 +530,41 @@ impl WinitInputState {
                     pointer_type: self.last_pointer_type,
                 }));
             }
+            WindowEvent::PointerLeft {
+                position,
+                primary,
+                kind,
+                ..
+            } => {
+                if !primary {
+                    return;
+                }
+
+                let pos = position.map(|position| {
+                    let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
+                    Point::new(Px(logical.x), Px(logical.y))
+                });
+                if let Some(pos) = pos {
+                    self.cursor_pos = pos;
+                }
+
+                let pointer_type = map_pointer_kind(*kind);
+                self.last_pointer_type = pointer_type;
+
+                let buttons = self.pressed_buttons;
+                out.push(Event::PointerCancel(PointerCancelEvent {
+                    position: pos,
+                    buttons,
+                    modifiers: self.modifiers,
+                    pointer_type,
+                    reason: PointerCancelReason::LeftWindow,
+                }));
+
+                // `PointerLeft` may arrive without a matching button release (e.g. touch tracking
+                // canceled by the OS). Reset runner-side state to avoid stuck buttons/click counts.
+                self.pressed_buttons = MouseButtons::default();
+                self.click = ClickTracker::default();
+            }
             WindowEvent::PointerButton {
                 state,
                 position,
@@ -576,6 +612,17 @@ impl WinitInputState {
                 out.push(Event::Pointer(PointerEvent::Wheel {
                     position: self.cursor_pos,
                     delta: scroll,
+                    modifiers: self.modifiers,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }));
+            }
+            WindowEvent::PinchGesture { delta, .. } => {
+                if delta.is_nan() {
+                    return;
+                }
+                out.push(Event::Pointer(PointerEvent::PinchGesture {
+                    position: self.cursor_pos,
+                    delta: *delta as f32,
                     modifiers: self.modifiers,
                     pointer_type: fret_core::PointerType::Mouse,
                 }));
@@ -734,6 +781,15 @@ pub fn map_pointer_type(button: &ButtonSource) -> fret_core::PointerType {
         ButtonSource::Touch { .. } => fret_core::PointerType::Touch,
         ButtonSource::TabletTool { .. } => fret_core::PointerType::Pen,
         ButtonSource::Unknown(_) => fret_core::PointerType::Unknown,
+    }
+}
+
+pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
+    match kind {
+        PointerKind::Mouse => PointerType::Mouse,
+        PointerKind::Touch(_) => PointerType::Touch,
+        PointerKind::TabletTool(_) => PointerType::Pen,
+        PointerKind::Unknown => PointerType::Unknown,
     }
 }
 

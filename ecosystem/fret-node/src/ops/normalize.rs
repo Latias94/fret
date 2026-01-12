@@ -130,6 +130,7 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetSymbolMeta { from, to, .. } => from == to,
 
         GraphOp::SetGroupRect { from, to, .. } => from == to,
+        GraphOp::SetGroupTitle { from, to, .. } => from == to,
 
         GraphOp::AddNode { .. }
         | GraphOp::RemoveNode { .. }
