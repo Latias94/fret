@@ -76,6 +76,7 @@ patterns:
 - `select-scrollable` (available-height clamping + scrolling)
 - `scroll-area-demo`
 - `slider-demo`
+- `avatar-demo`
 - `separator-demo`
 - `textarea-demo`
 
