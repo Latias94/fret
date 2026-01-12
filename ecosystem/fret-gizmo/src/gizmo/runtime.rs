@@ -1,8 +1,8 @@
-use glam::{Quat, Vec2, Vec3};
+use glam::{Mat4, Quat, Vec2, Vec3};
 
 use crate::style::GizmoPartVisuals;
 
-use super::{GizmoMode, GizmoTarget3d, HandleId};
+use super::{GizmoMode, GizmoTarget3d, HandleId, delta_matrix_trs};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmoInput {
@@ -210,4 +210,63 @@ pub struct GizmoUpdate {
     /// plus the current total delta, so hosts do not need to feed back intermediate transforms to
     /// keep motion stable.
     pub updated_targets: Vec<GizmoTarget3d>,
+}
+
+impl GizmoUpdate {
+    /// Computes an ImGuizmo-style `deltaMatrix` for a target, using the host's start transform.
+    ///
+    /// The returned matrix satisfies `delta * start == end` in world space (for TRS matrices),
+    /// and includes any pivot-induced translation compensation that happened in the gizmo update.
+    pub fn delta_matrix_for(&self, start: &GizmoTarget3d) -> Option<Mat4> {
+        let end = self.updated_targets.iter().find(|t| t.id == start.id)?;
+        delta_matrix_trs(start.transform, end.transform)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delta_matrix_for_matches_delta_matrix_trs() {
+        let start = GizmoTarget3d {
+            id: super::super::GizmoTargetId(1),
+            transform: super::super::Transform3d {
+                translation: Vec3::new(1.0, 2.0, 3.0),
+                rotation: Quat::from_rotation_z(0.25),
+                scale: Vec3::new(1.0, 2.0, 0.5),
+            },
+            local_bounds: None,
+        };
+        let end = GizmoTarget3d {
+            id: start.id,
+            transform: super::super::Transform3d {
+                translation: Vec3::new(4.0, 1.0, 0.0),
+                rotation: Quat::from_rotation_z(0.75),
+                scale: Vec3::new(2.0, 1.0, 1.25),
+            },
+            local_bounds: None,
+        };
+
+        let update = GizmoUpdate {
+            phase: GizmoPhase::Update,
+            active: HandleId(123),
+            result: GizmoResult::Translation {
+                delta: Vec3::ZERO,
+                total: Vec3::ZERO,
+            },
+            updated_targets: vec![end],
+        };
+
+        let a = update
+            .delta_matrix_for(&start)
+            .expect("expected delta matrix");
+        let b = delta_matrix_trs(start.transform, update.updated_targets[0].transform)
+            .expect("expected delta matrix");
+
+        for (x, y) in a.to_cols_array().into_iter().zip(b.to_cols_array()) {
+            let d = (x - y).abs();
+            assert!(d < 1e-6, "expected same delta matrices, got |x-y|={d}");
+        }
+    }
 }
