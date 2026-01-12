@@ -65,6 +65,10 @@ mod wire_drag;
 
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
+use super::middleware::{
+    NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddlewareCx, NodeGraphCanvasTxMiddleware,
+    NoopNodeGraphCanvasTxMiddleware,
+};
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
@@ -86,6 +90,7 @@ pub struct NodeGraphCanvas {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
     presenter: Box<dyn NodeGraphPresenter>,
+    tx_middleware: Box<dyn NodeGraphCanvasTxMiddleware>,
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
 
@@ -218,6 +223,7 @@ impl NodeGraphCanvas {
                 DefaultNodeGraphPresenter::default(),
                 auto_measured.clone(),
             )),
+            tx_middleware: Box::new(NoopNodeGraphCanvasTxMiddleware),
             style: NodeGraphStyle::default(),
             close_command: None,
             auto_measured,
@@ -236,6 +242,11 @@ impl NodeGraphCanvas {
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
+    }
+
+    pub fn with_tx_middleware(mut self, middleware: impl NodeGraphCanvasTxMiddleware) -> Self {
+        self.tx_middleware = Box::new(middleware);
+        self
     }
 
     pub fn with_presenter(mut self, presenter: impl NodeGraphPresenter + 'static) -> Self {
@@ -774,7 +785,47 @@ impl NodeGraphCanvas {
         window: Option<AppWindowId>,
         tx: &GraphTransaction,
     ) -> bool {
-        match self.apply_transaction_result(host, tx) {
+        let mut tx = tx.clone();
+        let bounds = self.interaction.last_bounds;
+        let pan = self.cached_pan;
+        let zoom = self.cached_zoom;
+        let style = &self.style;
+
+        let outcome = self.graph.read(host, |host, graph| {
+            self.view_state.read(host, |_host, view_state| {
+                let ctx = NodeGraphCanvasMiddlewareCx {
+                    graph,
+                    view_state,
+                    style,
+                    bounds,
+                    pan,
+                    zoom,
+                };
+                self.tx_middleware.before_commit(window, &ctx, &mut tx)
+            })
+        });
+
+        let outcome = outcome
+            .ok()
+            .and_then(|inner| inner.ok())
+            .unwrap_or(NodeGraphCanvasCommitOutcome::Continue);
+
+        match outcome {
+            NodeGraphCanvasCommitOutcome::Continue => {}
+            NodeGraphCanvasCommitOutcome::Reject { diagnostics } => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diagnostics) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                return false;
+            }
+        }
+
+        tx = crate::ops::normalize_transaction(tx);
+        if tx.is_empty() {
+            return true;
+        }
+
+        match self.apply_transaction_result(host, &tx) {
             Ok(committed) => {
                 self.history.record(committed);
                 true

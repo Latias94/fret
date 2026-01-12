@@ -7,6 +7,7 @@ mod context_menu;
 mod conversion;
 mod event;
 mod geometry;
+pub mod middleware;
 mod paint;
 mod searcher;
 mod snaplines;
