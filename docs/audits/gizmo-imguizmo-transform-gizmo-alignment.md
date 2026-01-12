@@ -242,8 +242,9 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 4. **Styling API parity**
    - ImGuizmo offers per-part thickness/sizes (translation arrow size, center circle size, ring thickness, etc).
    - transform-gizmo offers a compact visuals struct (stroke width + gizmo size + highlight alpha).
-   - Suggested work: add a `GizmoStyle`/`GizmoVisuals`-like struct in Fret (still in ecosystem) that controls per-part metrics
-     while keeping `GizmoConfig` backwards compatible.
+   - Implemented (baseline): reusable visuals structs exist (`GizmoVisuals`, `ViewGizmoVisuals`) in `ecosystem/fret-gizmo/src/style.rs`.
+   - Remaining: expand the visuals surface to cover per-part metrics (arrowhead size, ring thickness, center handle size, etc) while
+     keeping `GizmoConfig` backwards compatible.
 
 ### Feature breadth beyond the core (P1)
 
@@ -251,7 +252,11 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
    - Optional helpers for `TRS <-> Mat4` (decompose/recompose, delta matrix output) if we want easier ImGuizmo-style integrations.
 2. **Custom gizmo extensibility**
    - Godot-style plugin surface: allow tools to contribute custom handles with explicit picking shapes (segments/capsules/triangles)
-     in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
+      in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
+   - Status: **Partially aligned** — Fret now has a reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`,
+     `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs` and uses it across translate/scale/bounds/rotate picking. Remaining
+     work is to promote this into a stable plugin/registration surface (and likely add 3D primitives / acceleration) rather than
+     keeping it internal to the core gizmo implementation.
 
 ### Roadmap (suggested, editor-first)
 
