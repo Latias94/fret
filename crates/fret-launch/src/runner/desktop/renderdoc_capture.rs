@@ -28,7 +28,7 @@ impl RenderDocCapture {
     //   $env:FRET_RENDERDOC_DLL="C:\\Users\\Frankorz\\scoop\\apps\\renderdoc\\current\\renderdoc.dll"
     //   $env:FRET_RENDERDOC_AUTOCAPTURE=1
     //   $env:FRET_WGPU_BACKEND="vulkan"
-    //   cargo run -p fret-demo --bin fret-demo -- effects_demo
+    //   cargo run -p fret-demo --bin fret-demo -- linked_cursor_demo
     pub fn try_init() -> Option<Self> {
         #[cfg(windows)]
         {
