@@ -2523,13 +2523,15 @@ impl Gizmo {
             }
 
             if rotate_any {
-                out.lines.extend(self.draw_rotate_rings(
+                let rings = self.draw_rotate_rings(
                     view_projection,
                     viewport,
                     origin,
                     axes,
                     size_length_world,
-                ));
+                );
+                out.lines.extend(rings.lines);
+                out.triangles.extend(rings.triangles);
             }
 
             if scale_axes || scale_planes || scale_uniform {
@@ -2633,13 +2635,15 @@ impl Gizmo {
             }
             GizmoMode::Rotate => {
                 let mut out = GizmoDrawList3d::default();
-                out.lines.extend(self.draw_rotate_rings(
+                let rings = self.draw_rotate_rings(
                     view_projection,
                     viewport,
                     origin,
                     axes,
                     size_length_world,
-                ));
+                );
+                out.lines.extend(rings.lines);
+                out.triangles.extend(rings.triangles);
                 let feedback =
                     self.draw_rotate_feedback(view_projection, viewport, origin, size_length_world);
                 out.lines.extend(feedback.lines);
@@ -2720,13 +2724,15 @@ impl Gizmo {
                         size_length_world,
                     ));
                 }
-                out.lines.extend(self.draw_rotate_rings(
+                let rings = self.draw_rotate_rings(
                     view_projection,
                     viewport,
                     origin,
                     axes,
                     size_length_world,
-                ));
+                );
+                out.lines.extend(rings.lines);
+                out.triangles.extend(rings.triangles);
                 if self.config.universal_includes_scale {
                     out.lines.extend(self.draw_scale_handles(
                         view_projection,
@@ -4025,7 +4031,7 @@ impl Gizmo {
         origin: Vec3,
         axes: [Vec3; 3],
         size_length_world: f32,
-    ) -> Vec<Line3d> {
+    ) -> GizmoDrawList3d {
         let (include_axis, include_view, include_arcball) =
             if let Some(mask) = self.config.operation_mask {
                 (
@@ -4042,9 +4048,68 @@ impl Gizmo {
             };
 
         let radius_world = size_length_world;
+        let pv = self.state.part_visuals;
 
         let segments: usize = 64;
-        let mut out = Vec::with_capacity(segments * 3);
+        let mut out = GizmoDrawList3d {
+            lines: Vec::with_capacity(segments * 3),
+            triangles: Vec::with_capacity(segments * 3 * 2),
+        };
+
+        let thickness_world = axis_length_world(
+            view_projection,
+            viewport,
+            origin,
+            self.config.depth_range,
+            (self.config.line_thickness_px * pv.rotate_ring_thickness_scale).max(0.0),
+        )
+        .unwrap_or(radius_world * 0.04);
+
+        let mut push_ring_band = |u: Vec3,
+                                  v: Vec3,
+                                  radius_world: f32,
+                                  color: Color,
+                                  depth: DepthMode| {
+            let half = (thickness_world * 0.55)
+                .clamp(radius_world * 0.010, radius_world * 0.075)
+                .max(1e-6);
+            let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
+            let outer_r = radius_world + half;
+
+            let fill = mix_alpha(color, 0.22);
+            let edge = mix_alpha(color, 0.95);
+
+            let point =
+                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
+
+            let step = std::f32::consts::TAU / (segments as f32);
+            let mut prev_outer = point(0.0, outer_r);
+            for i in 0..segments {
+                let t0 = step * (i as f32);
+                let t1 = step * ((i + 1) as f32);
+                let o0 = point(t0, outer_r);
+                let i0 = point(t0, inner_r);
+                let o1 = point(t1, outer_r);
+                let i1 = point(t1, inner_r);
+
+                match (depth, self.config.show_occluded) {
+                    (DepthMode::Test, true) => {
+                        let ghost_fill = mix_alpha(fill, self.config.occluded_alpha);
+                        self.push_tri(&mut out.triangles, o0, i0, i1, ghost_fill, DepthMode::Ghost);
+                        self.push_tri(&mut out.triangles, o0, i1, o1, ghost_fill, DepthMode::Ghost);
+                        self.push_tri(&mut out.triangles, o0, i0, i1, fill, DepthMode::Test);
+                        self.push_tri(&mut out.triangles, o0, i1, o1, fill, DepthMode::Test);
+                    }
+                    _ => {
+                        self.push_tri(&mut out.triangles, o0, i0, i1, fill, depth);
+                        self.push_tri(&mut out.triangles, o0, i1, o1, fill, depth);
+                    }
+                }
+
+                self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
+                prev_outer = o1;
+            }
+        };
 
         if include_axis {
             for &(((axis_dir, color), handle), axis_index) in &[
@@ -4072,13 +4137,7 @@ impl Gizmo {
                 };
                 let c = mix_alpha(c, alpha);
 
-                let mut prev = origin + u * radius_world;
-                for i in 1..=segments {
-                    let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
-                    let p = origin + (u * t.cos() + v * t.sin()) * radius_world;
-                    self.push_line(&mut out, prev, p, c, self.config.depth_mode);
-                    prev = p;
-                }
+                push_ring_band(u, v, radius_world, c, self.config.depth_mode);
             }
         }
 
@@ -4103,13 +4162,7 @@ impl Gizmo {
                         base
                     };
 
-                    let mut prev = origin + u * r;
-                    for i in 1..=segments {
-                        let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
-                        let p = origin + (u * t.cos() + v * t.sin()) * r;
-                        self.push_line(&mut out, prev, p, c, DepthMode::Always);
-                        prev = p;
-                    }
+                    push_ring_band(u, v, r, c, DepthMode::Always);
                 }
             }
         }
@@ -4140,7 +4193,7 @@ impl Gizmo {
                     for i in 1..=segments {
                         let t = (i as f32) / (segments as f32) * std::f32::consts::TAU;
                         let p = origin + (u * t.cos() + v * t.sin()) * r;
-                        self.push_line(&mut out, prev, p, c, DepthMode::Always);
+                        self.push_line(&mut out.lines, prev, p, c, DepthMode::Always);
                         prev = p;
                     }
                 }

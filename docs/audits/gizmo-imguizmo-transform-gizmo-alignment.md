@@ -126,7 +126,7 @@ Fret's current contract:
 | Translate plane XY/XZ/YZ | Yes | Yes | **Aligned** | Plane quads + picking. `pick_translate_handle` + `translate_plane_quad_world`. |
 | Translate "screen-plane" (center handle) | Yes (center screen-plane) | No (not in core modes) | **Aligned** | Fret's center handle (`TranslateHandle::Screen`) constrains motion to the camera-facing plane at the gizmo origin. `translate_constraint_for_handle` handle id `10`. |
 | Translate "depth" (move toward/away camera) | No (not explicit) | Yes (`TranslateView`, along view forward axis) | **Aligned (transform-gizmo) / Fret extension (ImGuizmo)** | View-direction "dolly" handle (`TranslateHandle::Depth`, id `11`) with screen-delta mapping for stability: `translate_constraint_for_handle`, `begin_translate_drag`, and the Translate update path in `ecosystem/fret-gizmo/src/gizmo.rs`. |
-| Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Ring drawing + pick based on distance-to-segment. `draw_rotate_rings`, `pick_rotate_axis`. |
+| Rotate axis X/Y/Z rings | Yes | Yes | **Aligned** | Rendered as a thick ring band (triangles) + edge stroke, with per-part thickness via `GizmoPartVisuals::rotate_ring_thickness_scale`; picking uses screen-space primitives (`PickSegmentCapsule2d`) over the projected ring polyline: `draw_rotate_rings`, `pick_rotate_axis`, `ecosystem/fret-gizmo/src/picking.rs`. |
 | Rotate around view axis (screen ring) | Yes (`ROTATE_SCREEN`) | Yes (`RotateView`) | **Aligned** | `show_view_axis_ring` + handle id 8, rendered as an outer ring (`view_axis_ring_radius_scale`). `pick_rotate_axis` view ring path, `begin_rotate_drag` view-axis mode. |
 | Arcball rotation | No | Yes (`Arcball`) | **Aligned (basic)** | Fret supports arcball free-rotation in `GizmoMode::Rotate` via `GizmoConfig::show_arcball` and emits `GizmoResult::Arcball { delta, total }` (quat-based), matching transform-gizmo’s contract shape. |
 | Scale axis X/Y/Z | Yes | Yes | **Aligned** | Axis scaling is supported and axis picking matches the rendered end boxes (not the whole shaft). `pick_scale_handle`, `begin_scale_drag`. |
@@ -210,6 +210,7 @@ These are the editor-feel invariants that the audit treats as P0 correctness req
 | --- | --- | --- | --- | --- |
 | Constant pixel size | Yes | Yes | **Aligned** | `axis_length_world(...)` maps desired pixel size to world length. |
 | Configurable line thickness | Yes (`Style`) | Yes (`stroke_width`) | **Aligned** | `line_thickness_px` used by demo shader. |
+| Per-part visuals (sizes/thickness/alphas) | Yes (`Style`) | Partial | **Aligned (basic)** | `GizmoPartVisuals` + `GizmoVisualPreset::apply_to_gizmo` (`ecosystem/fret-gizmo/src/style.rs`), consumed by draw/picking via `state.part_visuals` (e.g. rotate ring thickness scaling in `draw_rotate_rings`). |
 | Per-axis colors + hover color | Yes | Yes | **Aligned** | `GizmoConfig::{x_color,y_color,z_color,hover_color}`. |
 | Occluded feedback | N/A (overlay) | N/A (overlay) | **Aligned (Fret enhancement)** | `DepthMode::Ghost` + `show_occluded` and `occluded_alpha`. |
 | Depth-tested gizmo geometry | No | No | **Intentional divergence / enhancement** | Fret expects engine-pass depth testing (ADR 0139). |
@@ -242,9 +243,10 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
 4. **Styling API parity**
    - ImGuizmo offers per-part thickness/sizes (translation arrow size, center circle size, ring thickness, etc).
    - transform-gizmo offers a compact visuals struct (stroke width + gizmo size + highlight alpha).
-   - Implemented (baseline): reusable visuals structs exist (`GizmoVisuals`, `ViewGizmoVisuals`) in `ecosystem/fret-gizmo/src/style.rs`.
-   - Remaining: expand the visuals surface to cover per-part metrics (arrowhead size, ring thickness, center handle size, etc) while
-     keeping `GizmoConfig` backwards compatible.
+   - Implemented: reusable visuals structs (`GizmoVisuals`, `ViewGizmoVisuals`) and per-part metrics (`GizmoPartVisuals`) in
+     `ecosystem/fret-gizmo/src/style.rs`, applied via `GizmoVisualPreset::apply_to_gizmo`.
+   - Remaining: keep expanding per-part visuals (view ring + arcball styling, per-part alpha policies, label/overlay styling) while
+     keeping `GizmoConfig` backwards compatible and documenting which fields are "semantic" vs purely visual.
 
 ### Feature breadth beyond the core (P1)
 

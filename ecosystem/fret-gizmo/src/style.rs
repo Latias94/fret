@@ -38,6 +38,7 @@ pub struct GizmoPartVisuals {
     pub scale_plane_fill_hover_alpha: f32,
     pub scale_uniform_half_fraction: f32,
     pub rotate_feedback_thickness_scale: f32,
+    pub rotate_ring_thickness_scale: f32,
 }
 
 impl Default for GizmoPartVisuals {
@@ -66,6 +67,7 @@ impl GizmoPartVisuals {
             scale_plane_fill_hover_alpha: 0.45,
             scale_uniform_half_fraction: 0.08,
             rotate_feedback_thickness_scale: 1.0,
+            rotate_ring_thickness_scale: 1.0,
         }
     }
 }
@@ -240,6 +242,7 @@ impl GizmoVisualPreset {
                 scale_plane_fill_alpha: 0.25,
                 scale_plane_fill_hover_alpha: 0.50,
                 rotate_feedback_thickness_scale: 1.10,
+                rotate_ring_thickness_scale: 1.10,
                 ..GizmoPartVisuals::classic()
             },
             Self::HighContrast => GizmoPartVisuals {
@@ -251,6 +254,7 @@ impl GizmoVisualPreset {
                 scale_plane_fill_alpha: 0.30,
                 scale_plane_fill_hover_alpha: 0.60,
                 rotate_feedback_thickness_scale: 1.25,
+                rotate_ring_thickness_scale: 1.35,
                 ..GizmoPartVisuals::classic()
             },
         }

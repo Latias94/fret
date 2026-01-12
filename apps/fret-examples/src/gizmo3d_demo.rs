@@ -2354,11 +2354,19 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                             % ViewGizmoVisualPreset::ALL.len();
                         ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index]
                             .apply_to_config(&mut m.view_gizmo.config);
+                        m.view_gizmo.config = m
+                            .view_gizmo
+                            .config
+                            .scale_for_pixels_per_point(m.pixels_per_point);
                     } else {
                         m.gizmo_visual_preset_index =
                             (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
                         GizmoVisualPreset::ALL[m.gizmo_visual_preset_index]
                             .apply_to_gizmo(&mut m.gizmo);
+                        m.gizmo.config = m
+                            .gizmo
+                            .config
+                            .scale_for_pixels_per_point(m.pixels_per_point);
                     }
                 });
                 app.request_redraw(window);
