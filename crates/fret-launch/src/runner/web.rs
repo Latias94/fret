@@ -1,12 +1,13 @@
 //! Web launcher implementation (winit + wgpu via WebGPU).
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, Event, Point, Px, Rect, Scene, Size};
-use fret_render::{RenderSceneParams, Renderer, SurfaceState, WgpuContext};
+use fret_render::{RenderSceneParams, Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
 use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowRequest, apply_window_metrics_event,
 };
@@ -22,6 +23,7 @@ use winit::platform::web::{WindowAttributesWeb, WindowExtWeb};
 
 use fret_platform_web::WebPlatformServices;
 
+use super::streaming_upload::StreamingUploadQueue;
 use super::{
     RenderTargetUpdate, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -55,12 +57,24 @@ pub struct WinitRunner<D: WinitAppDriver> {
     tick_id: TickId,
     frame_id: FrameId,
 
+    uploaded_images: HashMap<fret_core::ImageId, UploadedImageEntry>,
+    streaming_uploads: StreamingUploadQueue,
+    nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
+    renderer_caps: Option<fret_render::RendererCapabilities>,
+
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
     web_services: WebPlatformServices,
     gpu_ready_called: bool,
     exiting: bool,
     exit_requested: Rc<Cell<bool>>,
+}
+
+struct UploadedImageEntry {
+    uploaded: UploadedRgba8Image,
+    stream_generation: u64,
+    alpha_mode: fret_core::AlphaMode,
+    nv12_planes: Option<super::yuv_gpu::Nv12Planes>,
 }
 
 #[derive(Clone)]
@@ -149,6 +163,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             pending_events: Vec::new(),
             tick_id: TickId::default(),
             frame_id: FrameId::default(),
+            uploaded_images: HashMap::new(),
+            streaming_uploads: StreamingUploadQueue::default(),
+            nv12_gpu: None,
+            renderer_caps: None,
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
@@ -246,6 +264,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         };
 
+        let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&gfx.ctx);
+        self.app
+            .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
+        self.renderer_caps = Some(renderer_caps);
+
         let prev_rev = self
             .app
             .global::<fret_runtime::FontCatalog>()
@@ -304,6 +327,529 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         Some(physical)
     }
 
+    fn apply_streaming_image_update_rgba8(
+        &mut self,
+        window: &dyn Window,
+        gfx: &mut GfxState,
+        stats: &mut super::streaming_upload::StreamingUploadStats,
+        target_window: Option<AppWindowId>,
+        token: fret_core::ImageUpdateToken,
+        image: fret_core::ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<fret_core::RectPx>,
+        bytes_per_row: u32,
+        bytes: &[u8],
+        color_info: fret_core::ImageColorInfo,
+        alpha_mode: fret_core::AlphaMode,
+    ) {
+        if let Some(target_window) = target_window
+            && target_window != self.app_window
+        {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::Unsupported,
+                });
+            }
+            return;
+        }
+
+        if width == 0 || height == 0 {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return;
+        }
+
+        let Some(entry) = self.uploaded_images.get_mut(&image) else {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                });
+            }
+            return;
+        };
+
+        if stream_generation < entry.stream_generation {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::Coalesced,
+                });
+            }
+            return;
+        }
+        entry.stream_generation = stream_generation;
+
+        let rect = update_rect_px.unwrap_or_else(|| fret_core::RectPx::full(width, height));
+        if rect.is_empty() {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return;
+        }
+
+        if rect.x > width
+            || rect.y > height
+            || rect.x.saturating_add(rect.w) > width
+            || rect.y.saturating_add(rect.h) > height
+        {
+            tracing::warn!(
+                image = ?image,
+                width,
+                height,
+                rect = ?rect,
+                "ignoring ImageUpdateRgba8 with out-of-bounds update rect"
+            );
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return;
+        }
+
+        let color_space = match color_info.encoding {
+            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+            fret_core::ImageEncoding::Linear => fret_render::ImageColorSpace::Linear,
+        };
+
+        let row_bytes = rect.w.saturating_mul(4);
+        if bytes_per_row < row_bytes {
+            tracing::warn!(
+                image = ?image,
+                bytes_per_row,
+                row_bytes,
+                "ignoring ImageUpdateRgba8 with undersized bytes_per_row"
+            );
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return;
+        }
+
+        let expected_len = (bytes_per_row as usize).saturating_mul(rect.h as usize);
+        if bytes.len() != expected_len {
+            tracing::warn!(
+                image = ?image,
+                got = bytes.len(),
+                expected = expected_len,
+                "ignoring ImageUpdateRgba8 with invalid byte length"
+            );
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return;
+        }
+
+        if entry.alpha_mode != alpha_mode {
+            if !gfx.renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view: entry.uploaded.view.clone(),
+                    size: entry.uploaded.size,
+                    format: entry.uploaded.format,
+                    color_space: entry.uploaded.color_space,
+                    alpha_mode,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                    });
+                }
+                return;
+            }
+            entry.alpha_mode = alpha_mode;
+        }
+
+        let needs_replace =
+            entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
+        let mut applied_upload_bytes: Option<u64> = None;
+        if needs_replace {
+            let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
+            if !is_full_update {
+                tracing::warn!(
+                    image = ?image,
+                    old_size = ?entry.uploaded.size,
+                    new_size = ?(width, height),
+                    "ignoring partial ImageUpdateRgba8 while image storage needs replace"
+                );
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::Unsupported,
+                    });
+                }
+                return;
+            }
+
+            let uploaded = if bytes_per_row == width.saturating_mul(4)
+                && bytes.len()
+                    == (width as usize)
+                        .saturating_mul(height as usize)
+                        .saturating_mul(4)
+            {
+                applied_upload_bytes = Some(
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        width.saturating_mul(4),
+                    ),
+                );
+                fret_render::upload_rgba8_image(
+                    &gfx.ctx.device,
+                    &gfx.ctx.queue,
+                    (width, height),
+                    bytes,
+                    color_space,
+                )
+            } else {
+                applied_upload_bytes = Some(
+                    super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(
+                        fret_core::RectPx::full(width, height),
+                        bytes_per_row,
+                    ),
+                );
+                let uploaded = fret_render::create_rgba8_image_storage(
+                    &gfx.ctx.device,
+                    (width, height),
+                    color_space,
+                );
+                uploaded.write_region(
+                    &gfx.ctx.queue,
+                    (0, 0),
+                    (width, height),
+                    bytes_per_row,
+                    bytes,
+                );
+                uploaded
+            };
+
+            let view = uploaded
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            if !gfx.renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view,
+                    size: uploaded.size,
+                    format: uploaded.format,
+                    color_space: uploaded.color_space,
+                    alpha_mode,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                    });
+                }
+                return;
+            }
+            entry.uploaded = uploaded;
+            entry.alpha_mode = alpha_mode;
+            entry.nv12_planes = None;
+        } else {
+            entry.uploaded.write_region(
+                &gfx.ctx.queue,
+                (rect.x, rect.y),
+                (rect.w, rect.h),
+                bytes_per_row,
+                bytes,
+            );
+            applied_upload_bytes = Some(
+                super::streaming_upload::estimate_rgba8_upload_bytes_for_rect(rect, bytes_per_row),
+            );
+        }
+
+        let applied_upload_bytes = applied_upload_bytes.unwrap_or(0);
+        stats.upload_bytes_applied = stats
+            .upload_bytes_applied
+            .saturating_add(applied_upload_bytes);
+
+        if self.config.streaming_update_ack_enabled {
+            self.pending_events
+                .push(Event::ImageUpdateApplied { token, image });
+        }
+
+        window.request_redraw();
+    }
+
+    fn try_apply_streaming_image_update_nv12_gpu(
+        &mut self,
+        window: &dyn Window,
+        gfx: &mut GfxState,
+        stats: &mut super::streaming_upload::StreamingUploadStats,
+        target_window: Option<AppWindowId>,
+        token: fret_core::ImageUpdateToken,
+        image: fret_core::ImageId,
+        stream_generation: u64,
+        width: u32,
+        height: u32,
+        update_rect_px: Option<fret_core::RectPx>,
+        y_bytes_per_row: u32,
+        y_plane: &[u8],
+        uv_bytes_per_row: u32,
+        uv_plane: &[u8],
+        color_info: fret_core::ImageColorInfo,
+    ) -> bool {
+        let requested = self.config.streaming_nv12_gpu_convert_enabled
+            || std::env::var_os("FRET_STREAMING_GPU_YUV").is_some_and(|v| !v.is_empty());
+        if !requested {
+            return false;
+        }
+
+        let supported = self
+            .renderer_caps
+            .as_ref()
+            .is_some_and(|c| c.streaming_images.nv12_gpu_convert);
+        if !supported {
+            return false;
+        }
+
+        if let Some(target_window) = target_window
+            && target_window != self.app_window
+        {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::Unsupported,
+                });
+            }
+            return true;
+        }
+
+        if width == 0 || height == 0 {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return true;
+        }
+
+        let Some(entry) = self.uploaded_images.get_mut(&image) else {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                });
+            }
+            return true;
+        };
+
+        if stream_generation < entry.stream_generation {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::Coalesced,
+                });
+            }
+            return true;
+        }
+        entry.stream_generation = stream_generation;
+
+        let Ok(rect) = super::yuv::normalize_update_rect_420(width, height, update_rect_px) else {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return true;
+        };
+
+        let color_space = match color_info.encoding {
+            fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+            fret_core::ImageEncoding::Linear => fret_render::ImageColorSpace::Linear,
+        };
+
+        if entry.uploaded.format != wgpu::TextureFormat::Rgba8UnormSrgb {
+            return false;
+        }
+        if color_space != fret_render::ImageColorSpace::Srgb {
+            return false;
+        }
+
+        let is_full_update = rect.x == 0 && rect.y == 0 && rect.w == width && rect.h == height;
+        let needs_replace =
+            entry.uploaded.size != (width, height) || entry.uploaded.color_space != color_space;
+        if needs_replace {
+            if !is_full_update {
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::Unsupported,
+                    });
+                }
+                return true;
+            }
+
+            let uploaded = fret_render::create_rgba8_image_storage(
+                &gfx.ctx.device,
+                (width, height),
+                color_space,
+            );
+            let view = uploaded
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            if !gfx.renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view,
+                    size: uploaded.size,
+                    format: uploaded.format,
+                    color_space: uploaded.color_space,
+                    alpha_mode: fret_core::AlphaMode::Opaque,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                    });
+                }
+                return true;
+            }
+            entry.uploaded = uploaded;
+            entry.alpha_mode = fret_core::AlphaMode::Opaque;
+            entry.nv12_planes = None;
+        }
+
+        if entry.alpha_mode != fret_core::AlphaMode::Opaque {
+            if !gfx.renderer.update_image(
+                image,
+                fret_render::ImageDescriptor {
+                    view: entry.uploaded.view.clone(),
+                    size: entry.uploaded.size,
+                    format: entry.uploaded.format,
+                    color_space: entry.uploaded.color_space,
+                    alpha_mode: fret_core::AlphaMode::Opaque,
+                },
+            ) {
+                self.uploaded_images.remove(&image);
+                if self.config.streaming_update_ack_enabled {
+                    self.pending_events.push(Event::ImageUpdateDropped {
+                        token,
+                        image,
+                        reason: fret_core::ImageUpdateDropReason::UnknownImage,
+                    });
+                }
+                return true;
+            }
+            entry.alpha_mode = fret_core::AlphaMode::Opaque;
+        }
+
+        if entry
+            .nv12_planes
+            .as_ref()
+            .is_none_or(|p| p.size != (width, height))
+        {
+            entry.nv12_planes = Some(super::yuv_gpu::Nv12Planes::new(
+                &gfx.ctx.device,
+                (width, height),
+            ));
+        }
+        if self.nv12_gpu.is_none() {
+            self.nv12_gpu = Some(super::yuv_gpu::Nv12GpuConverter::new(&gfx.ctx.device));
+        }
+
+        let Some(planes) = entry.nv12_planes.as_ref() else {
+            return false;
+        };
+        let Some(converter) = self.nv12_gpu.as_ref() else {
+            return false;
+        };
+
+        let t0 = std::time::Instant::now();
+        let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
+            &gfx.ctx.queue,
+            planes,
+            rect,
+            y_bytes_per_row,
+            y_plane,
+            uv_bytes_per_row,
+            uv_plane,
+        ) else {
+            if self.config.streaming_update_ack_enabled {
+                self.pending_events.push(Event::ImageUpdateDropped {
+                    token,
+                    image,
+                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                });
+            }
+            return true;
+        };
+
+        stats.upload_bytes_applied = stats.upload_bytes_applied.saturating_add(uploaded_bytes);
+
+        converter.convert_rect_into(
+            &gfx.ctx.device,
+            &gfx.ctx.queue,
+            &entry.uploaded.view,
+            rect,
+            &planes.y_view,
+            &planes.uv_view,
+            color_info.range,
+            color_info.matrix,
+        );
+
+        stats.yuv_conversions_applied = stats.yuv_conversions_applied.saturating_add(1);
+        stats.yuv_convert_us = stats
+            .yuv_convert_us
+            .saturating_add(t0.elapsed().as_micros() as u64);
+        stats.yuv_convert_output_bytes = stats
+            .yuv_convert_output_bytes
+            .saturating_add(rect.w.saturating_mul(rect.h).saturating_mul(4) as u64);
+
+        if self.config.streaming_update_ack_enabled {
+            self.pending_events
+                .push(Event::ImageUpdateApplied { token, image });
+        }
+
+        window.request_redraw();
+        true
+    }
+
     fn drain_effects(
         &mut self,
         event_loop: &dyn ActiveEventLoop,
@@ -312,12 +858,99 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         state: &mut D::WindowState,
     ) -> bool {
         let effects = self.app.flush_effects();
-        if effects.is_empty() {
-            return false;
-        }
-
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
+
+        let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
+            self.frame_id,
+            effects,
+            self.config.streaming_upload_budget_bytes_per_frame,
+            self.config.streaming_staging_budget_bytes,
+            self.config.streaming_update_ack_enabled,
+        );
+        if self.config.streaming_update_ack_enabled {
+            for ack in acks {
+                match ack.kind {
+                    super::streaming_upload::StreamingUploadAckKind::Dropped(reason) => {
+                        self.pending_events.push(Event::ImageUpdateDropped {
+                            token: ack.token,
+                            image: ack.image,
+                            reason,
+                        });
+                    }
+                }
+            }
+        }
+        let had_effects = !effects.is_empty();
+        if !had_effects {
+            if self.streaming_uploads.has_pending() {
+                window.request_redraw();
+            }
+
+            let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
+                || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
+            let streaming_stats_have_activity = stats.update_effects_seen > 0
+                || stats.update_effects_enqueued > 0
+                || stats.update_effects_replaced > 0
+                || stats.update_effects_applied > 0
+                || stats.update_effects_delayed_budget > 0
+                || stats.update_effects_dropped_staging > 0
+                || stats.upload_bytes_budgeted > 0
+                || stats.upload_bytes_applied > 0
+                || stats.pending_updates > 0
+                || stats.pending_staging_bytes > 0
+                || stats.yuv_conversions_attempted > 0
+                || stats.yuv_convert_us > 0;
+            if streaming_snapshot_enabled && streaming_stats_have_activity {
+                self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
+                    frame_id: self.frame_id,
+                    upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
+                    staging_budget_bytes: stats.staging_budget_bytes,
+                    update_effects_seen: u64::from(stats.update_effects_seen),
+                    update_effects_enqueued: u64::from(stats.update_effects_enqueued),
+                    update_effects_replaced: u64::from(stats.update_effects_replaced),
+                    update_effects_applied: u64::from(stats.update_effects_applied),
+                    update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
+                    update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                    upload_bytes_budgeted: stats.upload_bytes_budgeted,
+                    upload_bytes_applied: stats.upload_bytes_applied,
+                    pending_updates: u64::from(stats.pending_updates),
+                    pending_staging_bytes: stats.pending_staging_bytes,
+                    yuv_convert_us: stats.yuv_convert_us,
+                    yuv_convert_output_bytes: stats.yuv_convert_output_bytes,
+                    yuv_conversions_attempted: u64::from(stats.yuv_conversions_attempted),
+                    yuv_conversions_applied: u64::from(stats.yuv_conversions_applied),
+                });
+            }
+
+            if std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+                && (stats.update_effects_delayed_budget > 0
+                    || stats.update_effects_dropped_staging > 0
+                    || stats.update_effects_replaced > 0
+                    || stats.yuv_conversions_attempted > 0)
+            {
+                tracing::debug!(
+                    seen = stats.update_effects_seen,
+                    enqueued = stats.update_effects_enqueued,
+                    replaced = stats.update_effects_replaced,
+                    applied = stats.update_effects_applied,
+                    delayed_budget = stats.update_effects_delayed_budget,
+                    dropped_staging = stats.update_effects_dropped_staging,
+                    upload_bytes_budgeted = stats.upload_bytes_budgeted,
+                    upload_bytes_applied = stats.upload_bytes_applied,
+                    upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
+                    staging_budget_bytes = stats.staging_budget_bytes,
+                    pending_updates = stats.pending_updates,
+                    pending_staging_bytes = stats.pending_staging_bytes,
+                    yuv_attempted = stats.yuv_conversions_attempted,
+                    yuv_applied = stats.yuv_conversions_applied,
+                    yuv_convert_us = stats.yuv_convert_us,
+                    yuv_output_bytes = stats.yuv_convert_output_bytes,
+                    "streaming image updates queued/budgeted"
+                );
+            }
+            return false;
+        }
 
         for effect in effects {
             match effect {
@@ -355,7 +988,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     width,
                     height,
                     bytes,
-                    color_space,
+                    color_info,
+                    alpha_mode,
                 } => {
                     if target_window != self.app_window {
                         continue;
@@ -384,20 +1018,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         continue;
                     }
 
-                    let color_space = match color_space {
-                        fret_runtime::ImageColorSpace::Srgb => fret_render::ImageColorSpace::Srgb,
-                        fret_runtime::ImageColorSpace::Linear => {
-                            fret_render::ImageColorSpace::Linear
-                        }
+                    let color_space = match color_info.encoding {
+                        fret_core::ImageEncoding::Srgb => fret_render::ImageColorSpace::Srgb,
+                        fret_core::ImageEncoding::Linear => fret_render::ImageColorSpace::Linear,
                     };
 
-                    let fret_render::UploadedRgba8Image {
-                        view,
-                        size,
-                        format,
-                        color_space,
-                        ..
-                    } = fret_render::upload_rgba8_image(
+                    let uploaded = fret_render::upload_rgba8_image(
                         &gfx.ctx.device,
                         &gfx.ctx.queue,
                         (width, height),
@@ -405,12 +1031,25 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         color_space,
                     );
 
+                    let view = uploaded
+                        .texture
+                        .create_view(&wgpu::TextureViewDescriptor::default());
                     let image = gfx.renderer.register_image(fret_render::ImageDescriptor {
                         view,
-                        size,
-                        format,
-                        color_space,
+                        size: uploaded.size,
+                        format: uploaded.format,
+                        color_space: uploaded.color_space,
+                        alpha_mode,
                     });
+                    self.uploaded_images.insert(
+                        image,
+                        UploadedImageEntry {
+                            uploaded,
+                            stream_generation: 0,
+                            alpha_mode,
+                            nv12_planes: None,
+                        },
+                    );
 
                     self.pending_events.push(Event::ImageRegistered {
                         token,
@@ -420,7 +1059,195 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     });
                     window.request_redraw();
                 }
+                Effect::ImageUpdateRgba8 {
+                    window: target_window,
+                    token,
+                    image,
+                    stream_generation,
+                    width,
+                    height,
+                    update_rect_px,
+                    bytes_per_row,
+                    bytes,
+                    color_info,
+                    alpha_mode,
+                } => {
+                    self.apply_streaming_image_update_rgba8(
+                        window,
+                        gfx,
+                        &mut stats,
+                        target_window,
+                        token,
+                        image,
+                        stream_generation,
+                        width,
+                        height,
+                        update_rect_px,
+                        bytes_per_row,
+                        &bytes,
+                        color_info,
+                        alpha_mode,
+                    );
+                }
+                Effect::ImageUpdateNv12 {
+                    window: target_window,
+                    token,
+                    image,
+                    stream_generation,
+                    width,
+                    height,
+                    update_rect_px,
+                    y_bytes_per_row,
+                    y_plane,
+                    uv_bytes_per_row,
+                    uv_plane,
+                    color_info,
+                    alpha_mode: _,
+                } => {
+                    stats.yuv_conversions_attempted =
+                        stats.yuv_conversions_attempted.saturating_add(1);
+                    if self.try_apply_streaming_image_update_nv12_gpu(
+                        window,
+                        gfx,
+                        &mut stats,
+                        target_window,
+                        token,
+                        image,
+                        stream_generation,
+                        width,
+                        height,
+                        update_rect_px,
+                        y_bytes_per_row,
+                        &y_plane,
+                        uv_bytes_per_row,
+                        &uv_plane,
+                        color_info,
+                    ) {
+                        continue;
+                    }
+                    let t0 = std::time::Instant::now();
+                    match super::yuv::nv12_to_rgba8_rect(
+                        width,
+                        height,
+                        update_rect_px,
+                        y_bytes_per_row,
+                        &y_plane,
+                        uv_bytes_per_row,
+                        &uv_plane,
+                        color_info.range,
+                        color_info.matrix,
+                    ) {
+                        Ok((rect, rgba)) => {
+                            stats.yuv_conversions_applied =
+                                stats.yuv_conversions_applied.saturating_add(1);
+                            stats.yuv_convert_us = stats
+                                .yuv_convert_us
+                                .saturating_add(t0.elapsed().as_micros() as u64);
+                            stats.yuv_convert_output_bytes = stats
+                                .yuv_convert_output_bytes
+                                .saturating_add(rgba.len() as u64);
+
+                            self.apply_streaming_image_update_rgba8(
+                                window,
+                                gfx,
+                                &mut stats,
+                                target_window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                Some(rect),
+                                rect.w.saturating_mul(4),
+                                &rgba,
+                                fret_core::ImageColorInfo::srgb_rgba(),
+                                fret_core::AlphaMode::Opaque,
+                            );
+                        }
+                        Err(_message) => {
+                            if self.config.streaming_update_ack_enabled {
+                                self.pending_events.push(Event::ImageUpdateDropped {
+                                    token,
+                                    image,
+                                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                                });
+                            }
+                        }
+                    }
+                }
+                Effect::ImageUpdateI420 {
+                    window: target_window,
+                    token,
+                    image,
+                    stream_generation,
+                    width,
+                    height,
+                    update_rect_px,
+                    y_bytes_per_row,
+                    y_plane,
+                    u_bytes_per_row,
+                    u_plane,
+                    v_bytes_per_row,
+                    v_plane,
+                    color_info,
+                    alpha_mode: _,
+                } => {
+                    stats.yuv_conversions_attempted =
+                        stats.yuv_conversions_attempted.saturating_add(1);
+                    let t0 = std::time::Instant::now();
+                    match super::yuv::i420_to_rgba8_rect(
+                        width,
+                        height,
+                        update_rect_px,
+                        y_bytes_per_row,
+                        &y_plane,
+                        u_bytes_per_row,
+                        &u_plane,
+                        v_bytes_per_row,
+                        &v_plane,
+                        color_info.range,
+                        color_info.matrix,
+                    ) {
+                        Ok((rect, rgba)) => {
+                            stats.yuv_conversions_applied =
+                                stats.yuv_conversions_applied.saturating_add(1);
+                            stats.yuv_convert_us = stats
+                                .yuv_convert_us
+                                .saturating_add(t0.elapsed().as_micros() as u64);
+                            stats.yuv_convert_output_bytes = stats
+                                .yuv_convert_output_bytes
+                                .saturating_add(rgba.len() as u64);
+
+                            self.apply_streaming_image_update_rgba8(
+                                window,
+                                gfx,
+                                &mut stats,
+                                target_window,
+                                token,
+                                image,
+                                stream_generation,
+                                width,
+                                height,
+                                Some(rect),
+                                rect.w.saturating_mul(4),
+                                &rgba,
+                                fret_core::ImageColorInfo::srgb_rgba(),
+                                fret_core::AlphaMode::Opaque,
+                            );
+                        }
+                        Err(_message) => {
+                            if self.config.streaming_update_ack_enabled {
+                                self.pending_events.push(Event::ImageUpdateDropped {
+                                    token,
+                                    image,
+                                    reason: fret_core::ImageUpdateDropReason::InvalidPayload,
+                                });
+                            }
+                        }
+                    }
+                }
                 Effect::ImageUnregister { image } => {
+                    self.uploaded_images.remove(&image);
                     if gfx.renderer.unregister_image(image) {
                         window.request_redraw();
                     }
@@ -476,6 +1303,69 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
                 _ => {}
             }
+        }
+
+        let streaming_snapshot_enabled = self.config.streaming_perf_snapshot_enabled
+            || std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty());
+        let streaming_stats_have_activity = stats.update_effects_seen > 0
+            || stats.update_effects_enqueued > 0
+            || stats.update_effects_replaced > 0
+            || stats.update_effects_applied > 0
+            || stats.update_effects_delayed_budget > 0
+            || stats.update_effects_dropped_staging > 0
+            || stats.upload_bytes_budgeted > 0
+            || stats.upload_bytes_applied > 0
+            || stats.pending_updates > 0
+            || stats.pending_staging_bytes > 0
+            || stats.yuv_conversions_attempted > 0
+            || stats.yuv_convert_us > 0;
+        if streaming_snapshot_enabled && streaming_stats_have_activity {
+            self.app.set_global(fret_core::StreamingUploadPerfSnapshot {
+                frame_id: self.frame_id,
+                upload_budget_bytes_per_frame: stats.upload_budget_bytes_per_frame,
+                staging_budget_bytes: stats.staging_budget_bytes,
+                update_effects_seen: u64::from(stats.update_effects_seen),
+                update_effects_enqueued: u64::from(stats.update_effects_enqueued),
+                update_effects_replaced: u64::from(stats.update_effects_replaced),
+                update_effects_applied: u64::from(stats.update_effects_applied),
+                update_effects_delayed_budget: u64::from(stats.update_effects_delayed_budget),
+                update_effects_dropped_staging: u64::from(stats.update_effects_dropped_staging),
+                upload_bytes_budgeted: stats.upload_bytes_budgeted,
+                upload_bytes_applied: stats.upload_bytes_applied,
+                pending_updates: u64::from(stats.pending_updates),
+                pending_staging_bytes: stats.pending_staging_bytes,
+                yuv_convert_us: stats.yuv_convert_us,
+                yuv_convert_output_bytes: stats.yuv_convert_output_bytes,
+                yuv_conversions_attempted: u64::from(stats.yuv_conversions_attempted),
+                yuv_conversions_applied: u64::from(stats.yuv_conversions_applied),
+            });
+        }
+
+        if std::env::var_os("FRET_STREAMING_DEBUG").is_some_and(|v| !v.is_empty())
+            && (stats.update_effects_delayed_budget > 0
+                || stats.update_effects_dropped_staging > 0
+                || stats.update_effects_replaced > 0
+                || stats.yuv_conversions_attempted > 0)
+        {
+            tracing::debug!(
+                seen = stats.update_effects_seen,
+                enqueued = stats.update_effects_enqueued,
+                replaced = stats.update_effects_replaced,
+                applied = stats.update_effects_applied,
+                delayed_budget = stats.update_effects_delayed_budget,
+                dropped_staging = stats.update_effects_dropped_staging,
+                upload_bytes_budgeted = stats.upload_bytes_budgeted,
+                upload_bytes_applied = stats.upload_bytes_applied,
+                upload_budget_bytes_per_frame = stats.upload_budget_bytes_per_frame,
+                staging_budget_bytes = stats.staging_budget_bytes,
+                pending_updates = stats.pending_updates,
+                pending_staging_bytes = stats.pending_staging_bytes,
+                yuv_attempted = stats.yuv_conversions_attempted,
+                yuv_applied = stats.yuv_conversions_applied,
+                yuv_convert_us = stats.yuv_convert_us,
+                yuv_output_bytes = stats.yuv_convert_output_bytes,
+                "streaming image updates queued/budgeted"
+            );
         }
 
         true
@@ -740,6 +1630,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             let gfx_slot = self.pending_gfx.clone();
             let proxy = self.event_loop_proxy.clone();
             let svg_budget = self.config.svg_raster_budget_bytes;
+            let intermediate_budget = self.config.renderer_intermediate_budget_bytes;
             let msaa = self.config.path_msaa_samples;
             let font_config = self.config.text_font_families.clone();
             spawn_local(async move {
@@ -775,6 +1666,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
                 renderer.set_svg_raster_budget_bytes(svg_budget);
+                renderer.set_intermediate_budget_bytes(intermediate_budget);
                 renderer.set_path_msaa_samples(msaa);
                 let _ = renderer.set_text_font_families(&font_config);
 

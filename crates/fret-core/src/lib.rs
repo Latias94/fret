@@ -11,6 +11,7 @@ pub mod panels;
 pub mod scene;
 pub mod semantics;
 pub mod services;
+pub mod streaming;
 pub mod svg;
 pub mod text;
 pub mod time;
@@ -31,17 +32,22 @@ pub use dock_op::{DockOp, SplitFractionsUpdate};
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
 };
-pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
+pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,
+    ImageId, ImageUpdateToken, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId,
+    TimerToken,
 };
-pub use image::ImageColorSpace;
+pub use image::{
+    AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
+    ImageEncoding, TransferFunction, YuvMatrix,
+};
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
-    ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers, MouseButton,
-    PointerCancelEvent, PointerCancelReason, PointerEvent, PointerType, keycode_to_ascii_lowercase,
+    ImageUpdateDropReason, ImeEvent, InternalDragEvent, InternalDragKind, KeyCode, Modifiers,
+    MouseButton, PointerCancelEvent, PointerCancelReason, PointerEvent, PointerType,
+    keycode_to_ascii_lowercase,
 };
 pub use input::{
     MouseButtons, ViewportInputEvent, ViewportInputEventLegacy, ViewportInputGeometry,
@@ -57,6 +63,7 @@ pub use semantics::{
     SemanticsSnapshot,
 };
 pub use services::UiServices;
+pub use streaming::StreamingUploadPerfSnapshot;
 pub use svg::{SvgFit, SvgService};
 pub use text::{
     CaretAffinity, FontWeight, HitTestResult, RichText, TextConstraints, TextFontFamilyConfig,

@@ -49,8 +49,14 @@ pub enum DismissReason {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerDownCx {
     pub position: Point,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    ///
+    /// This is required for DPI-stable interactions (e.g. viewport tools, gizmos).
+    pub pixels_per_point: f32,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+    pub click_count: u8,
     pub pointer_type: PointerType,
 }
 
@@ -58,17 +64,33 @@ pub struct PointerDownCx {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerMoveCx {
     pub position: Point,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
     pub buttons: fret_core::MouseButtons,
     pub modifiers: Modifiers,
     pub pointer_type: PointerType,
+}
+
+/// Wheel payload for component-owned wheel handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WheelCx {
+    pub position: Point,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
+    pub delta: Point,
+    pub modifiers: Modifiers,
 }
 
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
     pub position: Point,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+    pub click_count: u8,
     pub pointer_type: PointerType,
 }
 
@@ -206,6 +228,8 @@ pub type OnPointerDown =
 pub type OnPointerMove =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerMoveCx) -> bool + 'static>;
 
+pub type OnWheel = Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, WheelCx) -> bool + 'static>;
+
 pub type OnPointerUp =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
@@ -213,6 +237,7 @@ pub type OnPointerUp =
 pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
     pub on_pointer_move: Option<OnPointerMove>,
+    pub on_wheel: Option<OnWheel>,
     pub on_pointer_up: Option<OnPointerUp>,
 }
 

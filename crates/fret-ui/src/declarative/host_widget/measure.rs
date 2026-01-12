@@ -213,6 +213,11 @@ impl ElementHostWidget {
                 props.layout,
                 cx.constraints,
             ),
+            ElementInstance::ViewportSurface(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
             ElementInstance::SvgIcon(props) => clamp_to_constraints_in_measure(
                 Size::new(Px(0.0), Px(0.0)),
                 props.layout,

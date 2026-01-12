@@ -26,43 +26,44 @@ pub(in super::super) fn encode_viewport_surface(
 
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
+    let premul_flag = 1.0;
 
     state.viewport_vertices.extend_from_slice(&[
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
             uv: [0.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[1].0, quad[1].1],
             uv: [1.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [1.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
             uv: [0.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [1.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[3].0, quad[3].1],
             uv: [0.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
     ]);
 

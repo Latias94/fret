@@ -87,6 +87,28 @@ impl Rect {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct RectPx {
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+}
+
+impl RectPx {
+    pub const fn new(x: u32, y: u32, w: u32, h: u32) -> Self {
+        Self { x, y, w, h }
+    }
+
+    pub const fn full(w: u32, h: u32) -> Self {
+        Self { x: 0, y: 0, w, h }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.w == 0 || self.h == 0
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Corners {
     pub top_left: Px,

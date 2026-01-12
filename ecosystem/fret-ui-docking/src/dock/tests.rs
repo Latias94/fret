@@ -160,6 +160,10 @@ impl DockViewportHarness {
     }
 
     fn layout(&mut self) {
+        let _ = self.paint_scene();
+    }
+
+    fn paint_scene(&mut self) -> Scene {
         let size = Size::new(Px(800.0), Px(600.0));
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
         let _ = self
@@ -174,14 +178,16 @@ impl DockViewportHarness {
             &mut scene,
             1.0,
         );
+        scene
     }
 
     fn viewport_point(&self) -> Point {
-        let rect = self
+        let layout = self
             .app
             .global::<DockManager>()
-            .and_then(|dock| dock.viewport_content_rect(self.window, self.target))
-            .expect("expected viewport content rect to be recorded during paint");
+            .and_then(|dock| dock.viewport_layout(self.window, self.target))
+            .expect("expected viewport layout to be recorded during paint");
+        let rect = layout.content_rect;
         Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
     }
 }
@@ -1941,6 +1947,65 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
         input.target_px,
         (0, 0),
         "expected clamped target_px at top-left"
+    );
+}
+
+#[test]
+fn viewport_overlay_hooks_can_implement_layout_api_only() {
+    use fret_core::DrawOrder;
+
+    #[derive(Debug)]
+    struct LayoutOnlyHooks;
+
+    impl DockViewportOverlayHooks for LayoutOnlyHooks {
+        fn paint_with_layout(
+            &self,
+            _theme: fret_ui::ThemeSnapshot,
+            _window: AppWindowId,
+            _panel: &fret_core::PanelKey,
+            _viewport: super::ViewportPanel,
+            layout: super::DockViewportLayout,
+            scene: &mut Scene,
+        ) {
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(9999),
+                rect: layout.draw_rect,
+                background: Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.35,
+                },
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.app.with_global_mut(
+        super::DockViewportOverlayHooksService::default,
+        |svc, _app| {
+            svc.set(Arc::new(LayoutOnlyHooks));
+        },
+    );
+
+    let scene = harness.paint_scene();
+    let layout = harness
+        .app
+        .global::<DockManager>()
+        .and_then(|dock| dock.viewport_layout(harness.window, harness.target))
+        .expect("expected viewport layout to be recorded during paint");
+
+    assert!(
+        scene.ops().iter().any(|op| match op {
+            SceneOp::Quad { order, rect, .. } => {
+                *order == DrawOrder(9999) && *rect == layout.draw_rect
+            }
+            _ => false,
+        }),
+        "expected overlay hook quad to be painted using layout.draw_rect"
     );
 }
 

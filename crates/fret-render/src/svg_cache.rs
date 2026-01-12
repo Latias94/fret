@@ -9,6 +9,7 @@ use crate::svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, upload_alpha_mask,
     upload_rgba_image,
 };
+use fret_core::AlphaMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SvgRasterKind {
@@ -188,6 +189,7 @@ impl SvgImageCache {
             size: uploaded.size_px,
             format: wgpu::TextureFormat::R8Unorm,
             color_space: ImageColorSpace::Linear,
+            alpha_mode: AlphaMode::Straight,
         });
 
         self.entries.insert(
@@ -258,6 +260,7 @@ impl SvgImageCache {
             size: uploaded.size_px,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             color_space: ImageColorSpace::Srgb,
+            alpha_mode: AlphaMode::Straight,
         });
 
         self.entries.insert(

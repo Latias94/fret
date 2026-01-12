@@ -78,6 +78,8 @@ Implementation note:
 
 - v1 may implement only `ImageUpdateRgba8` initially, but the API surface should include these variants to avoid
   future breaking changes.
+- YUV variants are explicitly designed to allow capability-gated “fast paths” (ADR 0124), such as GPU-assisted
+  NV12 conversion or future zero-copy imports, without changing the update contract.
 
 ### 2) Define `ImageColorInfo` (minimum metadata for correctness)
 

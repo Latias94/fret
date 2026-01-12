@@ -34,6 +34,10 @@ ADR or adding a new ADR) before scaling feature surface area.
     `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
 
+- **User-facing effect recipes and tier selection (Tier A vs Tier B)**
+  - Proposed: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
+  - Decide: recommended user story for postprocessing, and the stable recipe authoring pattern for `fret-ui-kit`.
+
 - **Renderer budgets (intermediates + streaming uploads)**
   - Proposed: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
     `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`

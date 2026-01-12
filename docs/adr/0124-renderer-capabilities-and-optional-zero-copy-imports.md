@@ -34,6 +34,15 @@ Expose a renderer capability snapshot to the app/runner layer (not `fret-core`):
 
 Exact API surface and placement are implementation-defined (likely `crates/fret-render` + runner glue).
 
+#### 1.2) Capability-gated GPU fast paths (non-zero-copy)
+
+Some “fast paths” are not zero-copy but still reduce CPU work and/or upload bytes (e.g. GPU-assisted YUV conversion).
+These paths must also be capability-gated and observable.
+
+Example (informative):
+
+- `streaming_images.nv12_gpu_convert`: upload NV12 planes and run a small GPU conversion pass into RGBA storage.
+
 ### 1.1) Capabilities must be observable and stable for a session
 
 - Capabilities should be captured once per renderer initialization and treated as stable for the session.
@@ -60,6 +69,12 @@ Capabilities must be used only to select between:
 - and “unsupported” (explicit error).
 
 Fallback selection must be deterministic for a given platform/backend configuration.
+
+Implementation note (informative):
+
+- Runners may expose a config switch to enable an experimental capability-gated fast path, but the fast path must
+  still be conditioned on the capability snapshot. Debug env overrides may exist, but should not be required for
+  normal operation.
 
 ## Crate Placement and Implementation Sketch (Non-normative)
 

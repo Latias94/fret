@@ -1076,6 +1076,7 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "cocoa",
  "fret-app",
  "fret-core",
@@ -1195,6 +1196,8 @@ dependencies = [
  "naga",
  "pollster",
  "resvg",
+ "serde",
+ "serde_json",
  "slotmap",
  "thiserror 2.0.17",
  "unicode-script",

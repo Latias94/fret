@@ -1,5 +1,6 @@
 use super::super::state::{EncodeState, transform_quad_points_px};
 use super::super::*;
+use crate::images::AlphaMode;
 
 pub(in super::super) fn encode_image(
     renderer: &Renderer,
@@ -26,43 +27,48 @@ pub(in super::super) fn encode_image(
 
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
+    let premul = matches!(
+        renderer.images.alpha_mode(image),
+        Some(AlphaMode::Premultiplied)
+    );
+    let premul_flag = if premul { 1.0 } else { 0.0 };
 
     state.viewport_vertices.extend_from_slice(&[
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
             uv: [0.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[1].0, quad[1].1],
             uv: [1.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [1.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
             uv: [0.0, 0.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [1.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[3].0, quad[3].1],
             uv: [0.0, 1.0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
     ]);
 
@@ -101,6 +107,11 @@ pub(in super::super) fn encode_image_region(
 
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
+    let premul = matches!(
+        renderer.images.alpha_mode(image),
+        Some(AlphaMode::Premultiplied)
+    );
+    let premul_flag = if premul { 1.0 } else { 0.0 };
 
     let (u0, v0, u1, v1) = (uv.u0, uv.v0, uv.u1, uv.v1);
     state.viewport_vertices.extend_from_slice(&[
@@ -108,37 +119,37 @@ pub(in super::super) fn encode_image_region(
             pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[1].0, quad[1].1],
             uv: [u1, v0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[0].0, quad[0].1],
             uv: [u0, v0],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[2].0, quad[2].1],
             uv: [u1, v1],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
         ViewportVertex {
             pos_px: [quad[3].0, quad[3].1],
             uv: [u0, v1],
             opacity: o,
-            _pad: [0.0; 3],
+            _pad: [premul_flag, 0.0, 0.0],
         },
     ]);
 

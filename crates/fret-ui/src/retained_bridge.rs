@@ -100,3 +100,211 @@ pub mod resizable_panel_group {
         Some(fractions_from_sizes(&sizes, layout.avail))
     }
 }
+
+/// Unstable retained helpers for viewport surfaces (Tier A embedding).
+pub mod viewport_surface {
+    use fret_core::{
+        AppWindowId, Event, MouseButton, PointerEvent, RenderTargetId, ViewportInputEvent,
+        ViewportInputKind, ViewportMapping, WindowMetricsService,
+    };
+    use fret_runtime::Effect;
+
+    use crate::widget::EventCx;
+    use crate::{UiHost, widget::Invalidation};
+
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub struct ViewportInputCapture {
+        pub window: AppWindowId,
+        pub target: RenderTargetId,
+        pub mapping: ViewportMapping,
+        pub button: MouseButton,
+    }
+
+    /// Forwards pointer + wheel events into a viewport surface using `ViewportMapping`.
+    ///
+    /// This helper mirrors the "capture on pointer down, then clamp moves/up while captured"
+    /// pattern used by viewport panels (game views, editor canvases).
+    pub fn handle_viewport_surface_input<H: UiHost>(
+        cx: &mut EventCx<'_, H>,
+        event: &Event,
+        target: RenderTargetId,
+        mapping: ViewportMapping,
+        capture: &mut Option<ViewportInputCapture>,
+        focus_on_down: bool,
+    ) -> bool {
+        let Some(window) = cx.window else {
+            return false;
+        };
+        let pixels_per_point = cx
+            .app
+            .global::<WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(window))
+            .unwrap_or(1.0);
+
+        match event {
+            Event::Pointer(PointerEvent::Down {
+                position,
+                button,
+                modifiers,
+                click_count,
+                ..
+            }) => {
+                let kind = ViewportInputKind::PointerDown {
+                    button: *button,
+                    modifiers: *modifiers,
+                    click_count: *click_count,
+                };
+                let Some(evt) = ViewportInputEvent::from_mapping_window_point(
+                    window,
+                    target,
+                    &mapping,
+                    pixels_per_point,
+                    *position,
+                    kind,
+                ) else {
+                    return false;
+                };
+
+                cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
+                if focus_on_down {
+                    cx.request_focus(cx.node);
+                }
+                *capture = Some(ViewportInputCapture {
+                    window,
+                    target,
+                    mapping,
+                    button: *button,
+                });
+                cx.capture_pointer(cx.node);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+                true
+            }
+            Event::Pointer(PointerEvent::Move {
+                position,
+                buttons,
+                modifiers,
+                ..
+            }) => {
+                if let Some(c) = capture
+                    && c.window == window
+                    && cx.captured == Some(cx.node)
+                {
+                    let pixels_per_point = cx
+                        .app
+                        .global::<WindowMetricsService>()
+                        .and_then(|svc| svc.scale_factor(c.window))
+                        .unwrap_or(1.0);
+                    let evt = ViewportInputEvent::from_mapping_window_point_clamped(
+                        c.window,
+                        c.target,
+                        &c.mapping,
+                        pixels_per_point,
+                        *position,
+                        ViewportInputKind::PointerMove {
+                            buttons: *buttons,
+                            modifiers: *modifiers,
+                        },
+                    );
+                    cx.app.push_effect(Effect::ViewportInput(evt));
+                    cx.app
+                        .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
+                    cx.stop_propagation();
+                    return true;
+                }
+
+                let Some(evt) = ViewportInputEvent::from_mapping_window_point(
+                    window,
+                    target,
+                    &mapping,
+                    pixels_per_point,
+                    *position,
+                    ViewportInputKind::PointerMove {
+                        buttons: *buttons,
+                        modifiers: *modifiers,
+                    },
+                ) else {
+                    return false;
+                };
+                cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
+                cx.stop_propagation();
+                true
+            }
+            Event::Pointer(PointerEvent::Up {
+                position,
+                button,
+                modifiers,
+                click_count,
+                ..
+            }) => {
+                let Some(c) = *capture else {
+                    return false;
+                };
+                if c.window != window || c.button != *button {
+                    return false;
+                }
+
+                let pixels_per_point = cx
+                    .app
+                    .global::<WindowMetricsService>()
+                    .and_then(|svc| svc.scale_factor(c.window))
+                    .unwrap_or(1.0);
+                let evt = ViewportInputEvent::from_mapping_window_point_clamped(
+                    c.window,
+                    c.target,
+                    &c.mapping,
+                    pixels_per_point,
+                    *position,
+                    ViewportInputKind::PointerUp {
+                        button: *button,
+                        modifiers: *modifiers,
+                        click_count: *click_count,
+                    },
+                );
+                cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
+
+                *capture = None;
+                if cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+                true
+            }
+            Event::Pointer(PointerEvent::Wheel {
+                position,
+                delta,
+                modifiers,
+                ..
+            }) => {
+                let Some(evt) = ViewportInputEvent::from_mapping_window_point(
+                    window,
+                    target,
+                    &mapping,
+                    pixels_per_point,
+                    *position,
+                    ViewportInputKind::Wheel {
+                        delta: *delta,
+                        modifiers: *modifiers,
+                    },
+                ) else {
+                    return false;
+                };
+                cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.app
+                    .push_effect(Effect::ViewportInputLegacy(evt.legacy()));
+                cx.stop_propagation();
+                true
+            }
+            _ => false,
+        }
+    }
+}

@@ -184,12 +184,22 @@ pub(super) fn paint_dock(
         let active_panel = tabs.get(*active);
         if let Some(panel) = active_panel.and_then(|p| dock.panel(p)) {
             if let Some(vp) = panel.viewport {
-                let mapping = ViewportMapping {
-                    content_rect: content,
-                    target_px_size: vp.target_px_size,
-                    fit: vp.fit,
-                };
-                let draw_rect = mapping.map().draw_rect;
+                let layout = dock
+                    .viewport_layout(window, vp.target)
+                    .filter(|layout| layout.content_rect == content)
+                    .unwrap_or_else(|| {
+                        let mapping = ViewportMapping {
+                            content_rect: content,
+                            target_px_size: vp.target_px_size,
+                            fit: vp.fit,
+                        };
+                        super::DockViewportLayout {
+                            content_rect: content,
+                            mapping,
+                            draw_rect: mapping.map().draw_rect,
+                        }
+                    });
+                let draw_rect = layout.draw_rect;
 
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
@@ -210,7 +220,7 @@ pub(super) fn paint_dock(
                 if let Some(hooks) = overlay_hooks
                     && let Some(panel_key) = active_panel
                 {
-                    hooks.paint(theme, window, panel_key, vp, mapping, draw_rect, scene);
+                    hooks.paint_with_layout(theme, window, panel_key, vp, layout, scene);
                 }
                 scene.push(SceneOp::PopClip);
             } else {

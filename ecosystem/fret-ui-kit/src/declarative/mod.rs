@@ -27,6 +27,7 @@ pub mod table;
 pub mod text;
 pub mod transition;
 pub mod tree;
+pub mod viewport_surface;
 pub mod visually_hidden;
 
 pub use model_watch::ModelWatchExt;

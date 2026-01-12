@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use fret_core::{AppWindowId, Event, ImageColorSpace, ImageId, ImageUploadToken};
+use fret_core::{AlphaMode, AppWindowId, Event, ImageColorSpace, ImageId, ImageUploadToken};
 use fret_runtime::{Effect, EffectSink, GlobalsHost, TimeHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,7 +41,8 @@ impl ImageUploadService {
                     width,
                     height,
                     bytes,
-                    color_space,
+                    color_info: color_space.to_color_info(),
+                    alpha_mode: AlphaMode::Straight,
                 });
                 host.request_redraw(window);
             }

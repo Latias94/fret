@@ -237,7 +237,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             "wgpu adapter selected"
         );
 
+        let renderer_caps = fret_render::RendererCapabilities::from_wgpu_context(&context);
+        self.app
+            .set_global::<fret_render::RendererCapabilities>(renderer_caps.clone());
+
         renderer.set_svg_raster_budget_bytes(self.config.svg_raster_budget_bytes);
+        renderer.set_intermediate_budget_bytes(self.config.renderer_intermediate_budget_bytes);
         renderer.set_path_msaa_samples(self.config.path_msaa_samples);
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
         self.app
@@ -264,6 +269,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         self.context = Some(context);
         self.renderer = Some(renderer);
+        self.renderer_caps = Some(renderer_caps);
         if let (Some(context), Some(renderer)) = (self.context.as_ref(), self.renderer.as_mut()) {
             self.driver.gpu_ready(&mut self.app, context, renderer);
         }

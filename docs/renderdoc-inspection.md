@@ -27,6 +27,32 @@ cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_captu
 
 The command prints the path to `fret_dump_pass_state_json.response.json`.
 
+## Frame health summary (pass breakdown)
+
+For a quick sanity-check of pass breakdowns (without digging into uniform dumps), run with an empty marker
+and a high match limit:
+
+```bash
+cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "" --max-results 200000 --no-uniform-bytes --no-outputs-png
+```
+
+To also print a top-N table to stdout, pass `--print-summary`:
+
+```bash
+cargo run -p fret-renderdoc -- dump --capture .fret/renderdoc-autocap/fret_capture.rdc --marker "" --max-results 200000 --no-uniform-bytes --no-outputs-png --print-summary md 30
+```
+
+Then inspect:
+
+- `result.summary.matches_count`: total matched draw/dispatch events (bounded by `--max-results`).
+- `result.summary.top_marker_paths`: top marker paths by drawcall count (useful to confirm expected pass mix).
+- `result.summary.top_leaf_markers`: top leaf marker names (useful when paths are too noisy).
+
+Tip: if you only care about `fret-*` passes, search for `"fret"` inside `top_marker_paths` entries.
+
+If `matches_count` is unexpectedly low, also check `result.action_tree.flags.drawcall`: that value counts
+drawcalls across the *entire* action tree and helps diagnose captures that only expose pass-level nodes.
+
 ## What to look for (examples)
 
 ### Clip mask generation (`fret clip mask pass`)
@@ -49,6 +75,11 @@ Validate:
   - Downsample into effect-local target: `src_origin = effect_rect.xy`, `dst_origin = (0, 0)`.
   - Upscale back into full-size target: `src_origin = (0, 0)`, `dst_origin = effect_rect.xy`.
 - `raster_state.scissors[0]` matches the expected effect region (for scissored passes).
+
+Note: on some Vulkan captures, RenderDoc's python API does not reliably surface dynamic uniform buffer
+offsets for WGSL pipelines. In that case, `tools/renderdoc/fret_dump_pass_state_json.py` falls back to
+inferring the correct `ScaleParams` slot by counting earlier `"nearest"` drawcalls in the frame. The
+JSON response includes `offset_source` to make this explicit.
 
 If the output looks "anchored to the window origin", this usually indicates a missing origin adjustment in
 the fullscreen shader when scissoring is used.

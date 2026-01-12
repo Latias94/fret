@@ -16,9 +16,9 @@ use fret_gizmo::{
     ViewportRect, viewport_input_cursor_target_px,
 };
 use fret_launch::{
-    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService, WinitAppDriver,
-    WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext, record_viewport_overlay_3d,
+    EngineFrameUpdate, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
+    ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext, record_viewport_overlay_3d,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::viewport_overlay::{
@@ -26,7 +26,7 @@ use fret_render::viewport_overlay::{
     Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext, push_thick_line_quad,
     push_triangle,
 };
-use fret_render::{RenderTargetColorSpace, RenderTargetDescriptor, Renderer, WgpuContext};
+use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
@@ -464,13 +464,6 @@ fn ortho_half_height_to_distance(ortho_half_height: f32) -> f32 {
 }
 
 type Uniforms = Overlay3dUniforms;
-
-struct Gizmo3dDemoTarget {
-    id: RenderTargetId,
-    size: (u32, u32),
-    color: wgpu::Texture,
-    depth: wgpu::Texture,
-}
 
 #[derive(Debug, Clone, Copy)]
 enum SelectionOp {
@@ -1416,7 +1409,7 @@ struct Gizmo3dDemoWindowState {
     view_gizmo_labels: ViewGizmoLabelCache,
     hud: GizmoHudCache,
     overlay_cpu: Overlay3dCpuBuilder,
-    target: Option<Gizmo3dDemoTarget>,
+    target: ViewportRenderTargetWithDepth,
     doc: DocumentId,
     warmup_frames_remaining: u8,
 }
@@ -1471,7 +1464,11 @@ impl Gizmo3dDemoDriver {
             view_gizmo_labels: ViewGizmoLabelCache::default(),
             hud: GizmoHudCache::default(),
             overlay_cpu: Overlay3dCpuBuilder::default(),
-            target: None,
+            target: ViewportRenderTargetWithDepth::new(
+                wgpu::TextureFormat::Bgra8UnormSrgb,
+                RenderTargetColorSpace::Srgb,
+                wgpu::TextureFormat::Depth24Plus,
+            ),
             doc,
             warmup_frames_remaining: 3,
         }
@@ -1494,73 +1491,21 @@ impl Gizmo3dDemoDriver {
             .read(app, |_app, m| m.viewport.target_px_size)
             .unwrap_or((960, 540));
 
-        let needs_new = state.target.as_ref().is_none_or(|t| t.size != desired_size);
+        let prev_id = state.target.id();
+        let prev_size = state.target.size();
+        let (id, color_view, depth_view) = {
+            let (id, color_view_ref, depth_view_ref) = state.target.ensure_size(
+                context,
+                renderer,
+                desired_size,
+                Some("gizmo3d demo color target"),
+                Some("gizmo3d demo depth target"),
+            );
+            (id, color_view_ref.clone(), depth_view_ref.clone())
+        };
+        let size = state.target.size();
 
-        if needs_new {
-            let (w, h) = desired_size;
-            let w = w.max(1);
-            let h = h.max(1);
-            let size = (w, h);
-
-            let color = context.device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("gizmo3d demo color target"),
-                size: wgpu::Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::TEXTURE_BINDING,
-                view_formats: &[],
-            });
-            let depth = context.device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("gizmo3d demo depth target"),
-                size: wgpu::Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Depth24Plus,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                view_formats: &[],
-            });
-
-            let view_for_registry = color.create_view(&wgpu::TextureViewDescriptor::default());
-
-            let id = if let Some(prev) = state.target.take() {
-                renderer.update_render_target(
-                    prev.id,
-                    RenderTargetDescriptor {
-                        view: view_for_registry,
-                        size,
-                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                        color_space: RenderTargetColorSpace::Srgb,
-                    },
-                );
-                prev.id
-            } else {
-                renderer.register_render_target(RenderTargetDescriptor {
-                    view: view_for_registry,
-                    size,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                    color_space: RenderTargetColorSpace::Srgb,
-                })
-            };
-
-            state.target = Some(Gizmo3dDemoTarget {
-                id,
-                size,
-                color,
-                depth,
-            });
-
+        if prev_id != id || prev_size != size {
             let _ = state.plot.update(app, |m, _cx| {
                 m.viewport.target = id;
                 m.viewport.target_px_size = size;
@@ -1569,18 +1514,10 @@ impl Gizmo3dDemoDriver {
                 m.viewport_target = id;
                 m.viewport_px = size;
             });
-
             app.request_redraw(window);
         }
 
-        let target = state.target.as_ref().expect("target ensured");
-        let color_view = target
-            .color
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let depth_view = target
-            .depth
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        (target.id, color_view, depth_view, target.size)
+        (id, color_view, depth_view, size)
     }
 
     #[cfg(any())]

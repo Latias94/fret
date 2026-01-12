@@ -9,6 +9,9 @@ impl Renderer {
         queue: &wgpu::Queue,
         params: RenderSceneParams<'_>,
     ) -> wgpu::CommandBuffer {
+        self.render_scene_frame_index = self.render_scene_frame_index.saturating_add(1);
+        let frame_index = self.render_scene_frame_index;
+
         let RenderSceneParams {
             format,
             target_view,
@@ -17,6 +20,12 @@ impl Renderer {
             scale_factor,
             viewport_size,
         } = params;
+
+        let perf_enabled = self.perf_enabled;
+        let mut frame_perf = RenderPerfStats::default();
+        if perf_enabled {
+            frame_perf.frames = 1;
+        }
 
         #[cfg(debug_assertions)]
         if let Err(e) = scene.validate() {
@@ -36,7 +45,11 @@ impl Renderer {
             self.ensure_path_intermediate(device, viewport_size, format, path_samples);
         }
 
+        let text_prepare_start = perf_enabled.then(Instant::now);
         self.text_system.flush_uploads(queue);
+        if let Some(text_prepare_start) = text_prepare_start {
+            frame_perf.prepare_text += text_prepare_start.elapsed();
+        }
         if self.svg_perf_enabled {
             self.svg_perf.frames = self.svg_perf.frames.saturating_add(1);
         }
@@ -45,9 +58,13 @@ impl Renderer {
         }
         self.bump_svg_raster_epoch();
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
+        let perf_svg_prepare_start = perf_enabled.then(Instant::now);
         self.prepare_svg_ops(device, queue, scene, scale_factor);
         if let Some(svg_prepare_start) = svg_prepare_start {
             self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
+        }
+        if let Some(perf_svg_prepare_start) = perf_svg_prepare_start {
+            frame_perf.prepare_svg += perf_svg_prepare_start.elapsed();
         }
 
         let key = SceneEncodingCacheKey {
@@ -61,11 +78,21 @@ impl Renderer {
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);
+        if perf_enabled {
+            if cache_hit {
+                frame_perf.scene_encoding_cache_hits =
+                    frame_perf.scene_encoding_cache_hits.saturating_add(1);
+            } else {
+                frame_perf.scene_encoding_cache_misses =
+                    frame_perf.scene_encoding_cache_misses.saturating_add(1);
+            }
+        }
         let encoding = if cache_hit {
             std::mem::take(&mut self.scene_encoding_cache)
         } else {
             let mut encoding = std::mem::take(&mut self.scene_encoding_scratch);
             encoding.clear();
+            let encode_start = perf_enabled.then(Instant::now);
             self.encode_scene_ops_into(
                 scene,
                 scale_factor,
@@ -73,6 +100,9 @@ impl Renderer {
                 format.is_srgb(),
                 &mut encoding,
             );
+            if let Some(encode_start) = encode_start {
+                frame_perf.encode_scene += encode_start.elapsed();
+            }
 
             // Preserve the old cache's allocations for reuse.
             self.scene_encoding_scratch = std::mem::take(&mut self.scene_encoding_cache);
@@ -134,6 +164,15 @@ impl Renderer {
             path_samples,
             postprocess,
             self.intermediate_budget_bytes,
+        );
+        render_plan_dump::maybe_dump_render_plan_json(
+            &plan,
+            viewport_size,
+            format,
+            frame_index,
+            postprocess,
+            encoding.ordered_draws.len(),
+            &encoding.effect_markers,
         );
 
         let needs_scale = plan
@@ -204,10 +243,20 @@ impl Renderer {
                 .copy_from_slice(bytemuck::bytes_of(u));
         }
         queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
+        if perf_enabled {
+            frame_perf.uniform_bytes = frame_perf
+                .uniform_bytes
+                .saturating_add(uniform_bytes.len() as u64);
+        }
 
         self.ensure_clip_capacity(device, encoding.clips.len().max(1));
         if !encoding.clips.is_empty() {
             queue.write_buffer(&self.clip_buffer, 0, bytemuck::cast_slice(&encoding.clips));
+            if perf_enabled {
+                frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(
+                    (std::mem::size_of::<ClipRRectUniform>() * encoding.clips.len()) as u64,
+                );
+            }
         }
 
         self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
@@ -228,6 +277,11 @@ impl Renderer {
         let instance_buffer = self.instance_buffers[instance_buffer_index].clone();
         if !instances.is_empty() {
             queue.write_buffer(&instance_buffer, 0, bytemuck::cast_slice(instances));
+            if perf_enabled {
+                frame_perf.instance_bytes = frame_perf
+                    .instance_bytes
+                    .saturating_add((std::mem::size_of::<QuadInstance>() * instances.len()) as u64);
+            }
         }
 
         let viewport_vertex_buffer_index = self.viewport_vertex_buffer_index;
@@ -241,6 +295,11 @@ impl Renderer {
                 0,
                 bytemuck::cast_slice(viewport_vertices),
             );
+            if perf_enabled {
+                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
+                    (std::mem::size_of::<ViewportVertex>() * viewport_vertices.len()) as u64,
+                );
+            }
         }
 
         let text_vertex_buffer_index = self.text_vertex_buffer_index;
@@ -249,6 +308,11 @@ impl Renderer {
         let text_vertex_buffer = self.text_vertex_buffers[text_vertex_buffer_index].clone();
         if !text_vertices.is_empty() {
             queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
+            if perf_enabled {
+                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
+                    (std::mem::size_of::<TextVertex>() * text_vertices.len()) as u64,
+                );
+            }
         }
 
         let path_vertex_buffer_index = self.path_vertex_buffer_index;
@@ -257,6 +321,11 @@ impl Renderer {
         let path_vertex_buffer = self.path_vertex_buffers[path_vertex_buffer_index].clone();
         if !path_vertices.is_empty() {
             queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
+            if perf_enabled {
+                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
+                    (std::mem::size_of::<PathVertex>() * path_vertices.len()) as u64,
+                );
+            }
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -500,6 +569,7 @@ impl Renderer {
 
                         let mut pass = begin_main_pass(&mut encoder, pass_target_view, load);
                         let mut active_uniform_offset: Option<u32> = None;
+                        let mut active_scissor: Option<ScissorRect> = None;
 
                         let mut i = scene_pass.draw_range.start;
                         while i < scene_pass.draw_range.end {
@@ -514,6 +584,12 @@ impl Renderer {
 
                                     if !matches!(active_pipeline, ActivePipeline::Quad) {
                                         pass.set_pipeline(quad_pipeline);
+                                        if perf_enabled {
+                                            frame_perf.pipeline_switches =
+                                                frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_quad =
+                                                frame_perf.pipeline_switches_quad.saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, instance_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Quad;
                                     }
@@ -527,19 +603,39 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         0..6,
                                         draw.first_instance
                                             ..(draw.first_instance + draw.instance_count),
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.quad_draw_calls =
+                                            frame_perf.quad_draw_calls.saturating_add(1);
+                                    }
                                 }
                                 OrderedDraw::Viewport(draw) => {
                                     if draw.scissor.w == 0 || draw.scissor.h == 0 {
@@ -549,6 +645,13 @@ impl Renderer {
 
                                     if !matches!(active_pipeline, ActivePipeline::Viewport) {
                                         pass.set_pipeline(viewport_pipeline);
+                                        if perf_enabled {
+                                            frame_perf.pipeline_switches =
+                                                frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_viewport = frame_perf
+                                                .pipeline_switches_viewport
+                                                .saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Viewport;
                                     }
@@ -562,6 +665,13 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     let Some((_, bind_group)) =
@@ -573,16 +683,36 @@ impl Renderer {
                                         continue;
                                     };
                                     pass.set_bind_group(1, bind_group, &[]);
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if perf_enabled {
+                                        frame_perf.bind_group_switches =
+                                            frame_perf.bind_group_switches.saturating_add(1);
+                                        frame_perf.texture_bind_group_switches = frame_perf
+                                            .texture_bind_group_switches
+                                            .saturating_add(1);
+                                    }
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                         0..1,
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.viewport_draw_calls =
+                                            frame_perf.viewport_draw_calls.saturating_add(1);
+                                    }
                                 }
                                 OrderedDraw::Image(draw) => {
                                     if draw.scissor.w == 0 || draw.scissor.h == 0 {
@@ -592,6 +722,13 @@ impl Renderer {
 
                                     if !matches!(active_pipeline, ActivePipeline::Viewport) {
                                         pass.set_pipeline(viewport_pipeline);
+                                        if perf_enabled {
+                                            frame_perf.pipeline_switches =
+                                                frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_viewport = frame_perf
+                                                .pipeline_switches_viewport
+                                                .saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Viewport;
                                     }
@@ -605,6 +742,13 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     let Some((_, bind_group)) =
@@ -614,16 +758,36 @@ impl Renderer {
                                         continue;
                                     };
                                     pass.set_bind_group(1, bind_group, &[]);
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if perf_enabled {
+                                        frame_perf.bind_group_switches =
+                                            frame_perf.bind_group_switches.saturating_add(1);
+                                        frame_perf.texture_bind_group_switches = frame_perf
+                                            .texture_bind_group_switches
+                                            .saturating_add(1);
+                                    }
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                         0..1,
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.image_draw_calls =
+                                            frame_perf.image_draw_calls.saturating_add(1);
+                                    }
                                 }
                                 OrderedDraw::Mask(draw) => {
                                     if draw.scissor.w == 0 || draw.scissor.h == 0 {
@@ -633,6 +797,12 @@ impl Renderer {
 
                                     if !matches!(active_pipeline, ActivePipeline::Mask) {
                                         pass.set_pipeline(mask_pipeline);
+                                        if perf_enabled {
+                                            frame_perf.pipeline_switches =
+                                                frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_mask =
+                                                frame_perf.pipeline_switches_mask.saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Mask;
                                     }
@@ -646,6 +816,13 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
                                     let Some((_, bind_group)) =
@@ -655,16 +832,36 @@ impl Renderer {
                                         continue;
                                     };
                                     pass.set_bind_group(1, bind_group, &[]);
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if perf_enabled {
+                                        frame_perf.bind_group_switches =
+                                            frame_perf.bind_group_switches.saturating_add(1);
+                                        frame_perf.texture_bind_group_switches = frame_perf
+                                            .texture_bind_group_switches
+                                            .saturating_add(1);
+                                    }
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                         0..1,
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.mask_draw_calls =
+                                            frame_perf.mask_draw_calls.saturating_add(1);
+                                    }
                                 }
                                 OrderedDraw::Text(draw) => {
                                     if draw.scissor.w == 0 || draw.scissor.h == 0 {
@@ -677,6 +874,15 @@ impl Renderer {
                                             if !matches!(active_pipeline, ActivePipeline::TextMask)
                                             {
                                                 pass.set_pipeline(text_pipeline);
+                                                if perf_enabled {
+                                                    frame_perf.pipeline_switches = frame_perf
+                                                        .pipeline_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.pipeline_switches_text_mask =
+                                                        frame_perf
+                                                            .pipeline_switches_text_mask
+                                                            .saturating_add(1);
+                                                }
                                                 pass.set_vertex_buffer(
                                                     0,
                                                     text_vertex_buffer.slice(..),
@@ -686,6 +892,15 @@ impl Renderer {
                                                     self.text_system.mask_atlas_bind_group(),
                                                     &[],
                                                 );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
                                                 active_pipeline = ActivePipeline::TextMask;
                                             }
                                         }
@@ -693,6 +908,15 @@ impl Renderer {
                                             if !matches!(active_pipeline, ActivePipeline::TextColor)
                                             {
                                                 pass.set_pipeline(text_color_pipeline);
+                                                if perf_enabled {
+                                                    frame_perf.pipeline_switches = frame_perf
+                                                        .pipeline_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.pipeline_switches_text_color =
+                                                        frame_perf
+                                                            .pipeline_switches_text_color
+                                                            .saturating_add(1);
+                                                }
                                                 pass.set_vertex_buffer(
                                                     0,
                                                     text_vertex_buffer.slice(..),
@@ -702,6 +926,15 @@ impl Renderer {
                                                     self.text_system.color_atlas_bind_group(),
                                                     &[],
                                                 );
+                                                if perf_enabled {
+                                                    frame_perf.bind_group_switches = frame_perf
+                                                        .bind_group_switches
+                                                        .saturating_add(1);
+                                                    frame_perf.texture_bind_group_switches =
+                                                        frame_perf
+                                                            .texture_bind_group_switches
+                                                            .saturating_add(1);
+                                                }
                                                 active_pipeline = ActivePipeline::TextColor;
                                             }
                                         }
@@ -716,18 +949,38 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                         0..1,
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.text_draw_calls =
+                                            frame_perf.text_draw_calls.saturating_add(1);
+                                    }
                                 }
                                 OrderedDraw::Path(draw) => {
                                     if draw.scissor.w == 0 || draw.scissor.h == 0 {
@@ -737,6 +990,12 @@ impl Renderer {
 
                                     if !matches!(active_pipeline, ActivePipeline::Path) {
                                         pass.set_pipeline(path_pipeline);
+                                        if perf_enabled {
+                                            frame_perf.pipeline_switches =
+                                                frame_perf.pipeline_switches.saturating_add(1);
+                                            frame_perf.pipeline_switches_path =
+                                                frame_perf.pipeline_switches_path.saturating_add(1);
+                                        }
                                         pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
                                         active_pipeline = ActivePipeline::Path;
                                     }
@@ -750,18 +1009,38 @@ impl Renderer {
                                             &self.uniform_bind_group,
                                             &[uniform_offset],
                                         );
+                                        if perf_enabled {
+                                            frame_perf.bind_group_switches =
+                                                frame_perf.bind_group_switches.saturating_add(1);
+                                            frame_perf.uniform_bind_group_switches = frame_perf
+                                                .uniform_bind_group_switches
+                                                .saturating_add(1);
+                                        }
                                         active_uniform_offset = Some(uniform_offset);
                                     }
-                                    pass.set_scissor_rect(
-                                        draw.scissor.x,
-                                        draw.scissor.y,
-                                        draw.scissor.w,
-                                        draw.scissor.h,
-                                    );
+                                    if active_scissor != Some(draw.scissor) {
+                                        pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        if perf_enabled {
+                                            frame_perf.scissor_sets =
+                                                frame_perf.scissor_sets.saturating_add(1);
+                                        }
+                                        active_scissor = Some(draw.scissor);
+                                    }
                                     pass.draw(
                                         draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                         0..1,
                                     );
+                                    if perf_enabled {
+                                        frame_perf.draw_calls =
+                                            frame_perf.draw_calls.saturating_add(1);
+                                        frame_perf.path_draw_calls =
+                                            frame_perf.path_draw_calls.saturating_add(1);
+                                    }
                                 }
                             }
 
@@ -854,9 +1133,16 @@ impl Renderer {
                             });
 
                         path_pass_rp.set_pipeline(path_msaa_pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_path_msaa =
+                                frame_perf.pipeline_switches_path_msaa.saturating_add(1);
+                        }
                         path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
 
                         let mut active_uniform_offset: Option<u32> = None;
+                        let mut active_scissor: Option<ScissorRect> = None;
                         for j in start..end {
                             let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
                                 unreachable!("PathMsaaBatch pass must reference only Path draws");
@@ -864,12 +1150,19 @@ impl Renderer {
                             if draw.scissor.w == 0 || draw.scissor.h == 0 {
                                 continue;
                             }
-                            path_pass_rp.set_scissor_rect(
-                                draw.scissor.x,
-                                draw.scissor.y,
-                                draw.scissor.w,
-                                draw.scissor.h,
-                            );
+                            if active_scissor != Some(draw.scissor) {
+                                path_pass_rp.set_scissor_rect(
+                                    draw.scissor.x,
+                                    draw.scissor.y,
+                                    draw.scissor.w,
+                                    draw.scissor.h,
+                                );
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
+                                active_scissor = Some(draw.scissor);
+                            }
                             let uniform_offset =
                                 (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
                             if active_uniform_offset != Some(uniform_offset) {
@@ -878,12 +1171,23 @@ impl Renderer {
                                     &self.uniform_bind_group,
                                     &[uniform_offset],
                                 );
+                                if perf_enabled {
+                                    frame_perf.bind_group_switches =
+                                        frame_perf.bind_group_switches.saturating_add(1);
+                                    frame_perf.uniform_bind_group_switches =
+                                        frame_perf.uniform_bind_group_switches.saturating_add(1);
+                                }
                                 active_uniform_offset = Some(uniform_offset);
                             }
                             path_pass_rp.draw(
                                 draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                                 0..1,
                             );
+                            if perf_enabled {
+                                frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                                frame_perf.path_draw_calls =
+                                    frame_perf.path_draw_calls.saturating_add(1);
+                            }
                         }
                     }
 
@@ -913,15 +1217,41 @@ impl Renderer {
                     });
 
                     pass.set_pipeline(composite_pipeline);
+                    if perf_enabled {
+                        frame_perf.pipeline_switches =
+                            frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_composite =
+                            frame_perf.pipeline_switches_composite.saturating_add(1);
+                    }
                     let uniform_offset =
                         (u64::from(path_pass.batch_uniform_index) * self.uniform_stride) as u32;
                     pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    if perf_enabled {
+                        frame_perf.bind_group_switches =
+                            frame_perf.bind_group_switches.saturating_add(1);
+                        frame_perf.uniform_bind_group_switches =
+                            frame_perf.uniform_bind_group_switches.saturating_add(1);
+                    }
                     pass.set_bind_group(1, &intermediate.bind_group, &[]);
+                    if perf_enabled {
+                        frame_perf.bind_group_switches =
+                            frame_perf.bind_group_switches.saturating_add(1);
+                        frame_perf.texture_bind_group_switches =
+                            frame_perf.texture_bind_group_switches.saturating_add(1);
+                    }
                     let base = u64::from(base) * quad_vertex_size;
                     let len = 6 * quad_vertex_size;
                     pass.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
                     pass.set_scissor_rect(union.x, union.y, union.w, union.h);
+                    if perf_enabled {
+                        frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                    }
                     pass.draw(0..6, 0..1);
+                    if perf_enabled {
+                        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                        frame_perf.fullscreen_draw_calls =
+                            frame_perf.fullscreen_draw_calls.saturating_add(1);
+                    }
                 }
                 RenderPlanPass::ScaleNearest(pass) => {
                     let scale = pass.scale.max(1);
@@ -942,6 +1272,11 @@ impl Renderer {
                         scale_param_offset,
                         bytemuck::bytes_of(&params),
                     );
+                    if perf_enabled {
+                        frame_perf.uniform_bytes = frame_perf
+                            .uniform_bytes
+                            .saturating_add(std::mem::size_of::<ScaleParamsUniform>() as u64);
+                    }
                     let scale_param_size_nz =
                         std::num::NonZeroU64::new(scale_param_size).expect("scale params size");
                     let scale_param_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
@@ -1047,14 +1382,37 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         debug_assert!(matches!(pass.mode, ScaleMode::Upscale));
                         let pipeline = self
@@ -1093,14 +1451,41 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[scale_param_offset_u32]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else {
                         let layout = self
                             .scale_bind_group_layout
@@ -1136,6 +1521,7 @@ impl Renderer {
                             &bind_group,
                             &[scale_param_offset_u32],
                             pass.dst_scissor,
+                            perf_enabled.then_some(&mut frame_perf),
                         );
                     }
                 }
@@ -1243,14 +1629,41 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let layout = self
                             .blit_bind_group_layout
@@ -1296,14 +1709,41 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else {
                         let layout = self
                             .blit_bind_group_layout
@@ -1338,6 +1778,7 @@ impl Renderer {
                             &bind_group,
                             &[],
                             pass.dst_scissor,
+                            perf_enabled.then_some(&mut frame_perf),
                         );
                     }
                 }
@@ -1404,6 +1845,7 @@ impl Renderer {
                         &blit_bind_group,
                         &[],
                         pass.dst_scissor,
+                        perf_enabled.then_some(&mut frame_perf),
                     );
                 }
                 RenderPlanPass::ColorAdjust(pass) => {
@@ -1417,6 +1859,11 @@ impl Renderer {
                             0.0,
                         ]),
                     );
+                    if perf_enabled {
+                        frame_perf.uniform_bytes = frame_perf
+                            .uniform_bytes
+                            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+                    }
 
                     let src_view = match pass.src {
                         PlanTarget::Output
@@ -1515,14 +1962,41 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let layout = self
                             .color_adjust_bind_group_layout
@@ -1559,14 +2033,41 @@ impl Renderer {
                             multiview_mask: None,
                         });
                         rp.set_pipeline(pipeline);
+                        if perf_enabled {
+                            frame_perf.pipeline_switches =
+                                frame_perf.pipeline_switches.saturating_add(1);
+                            frame_perf.pipeline_switches_fullscreen =
+                                frame_perf.pipeline_switches_fullscreen.saturating_add(1);
+                        }
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.uniform_bind_group_switches =
+                                frame_perf.uniform_bind_group_switches.saturating_add(1);
+                        }
                         rp.set_bind_group(1, &bind_group, &[]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                            frame_perf.texture_bind_group_switches =
+                                frame_perf.texture_bind_group_switches.saturating_add(1);
+                        }
                         if let Some(scissor) = pass.dst_scissor {
                             if scissor.w != 0 && scissor.h != 0 {
                                 rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                                if perf_enabled {
+                                    frame_perf.scissor_sets =
+                                        frame_perf.scissor_sets.saturating_add(1);
+                                }
                             }
                         }
                         rp.draw(0..3, 0..1);
+                        if perf_enabled {
+                            frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                            frame_perf.fullscreen_draw_calls =
+                                frame_perf.fullscreen_draw_calls.saturating_add(1);
+                        }
                     } else {
                         let layout = self
                             .color_adjust_bind_group_layout
@@ -1592,6 +2093,7 @@ impl Renderer {
                             &bind_group,
                             &[],
                             pass.dst_scissor,
+                            perf_enabled.then_some(&mut frame_perf),
                         );
                     }
                 }
@@ -1721,14 +2223,34 @@ impl Renderer {
                         multiview_mask: None,
                     });
                     rp.set_pipeline(composite_pipeline);
+                    if perf_enabled {
+                        frame_perf.pipeline_switches =
+                            frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_composite =
+                            frame_perf.pipeline_switches_composite.saturating_add(1);
+                    }
                     if let Some(mask_uniform_index) = pass.mask_uniform_index {
                         let uniform_offset =
                             (u64::from(mask_uniform_index) * self.uniform_stride) as u32;
                         rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                     } else {
                         rp.set_bind_group(0, &self.uniform_bind_group, &[0]);
+                        if perf_enabled {
+                            frame_perf.bind_group_switches =
+                                frame_perf.bind_group_switches.saturating_add(1);
+                        }
                     }
                     rp.set_bind_group(1, &bind_group, &[]);
+                    if perf_enabled {
+                        frame_perf.bind_group_switches =
+                            frame_perf.bind_group_switches.saturating_add(1);
+                        frame_perf.texture_bind_group_switches =
+                            frame_perf.texture_bind_group_switches.saturating_add(1);
+                    }
                     let base = u64::from(base) * quad_vertex_size;
                     let len = 6 * quad_vertex_size;
                     rp.set_vertex_buffer(0, self.path_composite_vertices.slice(base..base + len));
@@ -1738,6 +2260,9 @@ impl Renderer {
                         }
                     }
                     rp.draw(0..6, 0..1);
+                    if perf_enabled {
+                        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                    }
                 }
                 RenderPlanPass::ClipMask(pass) => {
                     debug_assert!(matches!(
@@ -1754,6 +2279,11 @@ impl Renderer {
                             0.0,
                         ]),
                     );
+                    if perf_enabled {
+                        frame_perf.uniform_bytes = frame_perf
+                            .uniform_bytes
+                            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+                    }
                     let dst_view = frame_targets.ensure_target(
                         &mut self.intermediate_pool,
                         device,
@@ -1788,14 +2318,40 @@ impl Renderer {
                         multiview_mask: None,
                     });
                     rp.set_pipeline(pipeline);
+                    if perf_enabled {
+                        frame_perf.pipeline_switches =
+                            frame_perf.pipeline_switches.saturating_add(1);
+                        frame_perf.pipeline_switches_clip_mask =
+                            frame_perf.pipeline_switches_clip_mask.saturating_add(1);
+                    }
                     rp.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    if perf_enabled {
+                        frame_perf.bind_group_switches =
+                            frame_perf.bind_group_switches.saturating_add(1);
+                        frame_perf.uniform_bind_group_switches =
+                            frame_perf.uniform_bind_group_switches.saturating_add(1);
+                    }
                     rp.set_bind_group(1, &self.clip_mask_param_bind_group, &[]);
+                    if perf_enabled {
+                        frame_perf.bind_group_switches =
+                            frame_perf.bind_group_switches.saturating_add(1);
+                        frame_perf.texture_bind_group_switches =
+                            frame_perf.texture_bind_group_switches.saturating_add(1);
+                    }
                     if let Some(scissor) = pass.dst_scissor {
                         if scissor.w != 0 && scissor.h != 0 {
                             rp.set_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h);
+                            if perf_enabled {
+                                frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            }
                         }
                     }
                     rp.draw(0..3, 0..1);
+                    if perf_enabled {
+                        frame_perf.draw_calls = frame_perf.draw_calls.saturating_add(1);
+                        frame_perf.clip_mask_draw_calls =
+                            frame_perf.clip_mask_draw_calls.saturating_add(1);
+                    }
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
                     frame_targets.release_target(
@@ -1805,6 +2361,126 @@ impl Renderer {
                     );
                 }
             }
+        }
+
+        if perf_enabled {
+            self.perf.frames = self.perf.frames.saturating_add(frame_perf.frames);
+            self.perf.encode_scene += frame_perf.encode_scene;
+            self.perf.prepare_svg += frame_perf.prepare_svg;
+            self.perf.prepare_text += frame_perf.prepare_text;
+            self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
+            self.perf.quad_draw_calls = self
+                .perf
+                .quad_draw_calls
+                .saturating_add(frame_perf.quad_draw_calls);
+            self.perf.viewport_draw_calls = self
+                .perf
+                .viewport_draw_calls
+                .saturating_add(frame_perf.viewport_draw_calls);
+            self.perf.image_draw_calls = self
+                .perf
+                .image_draw_calls
+                .saturating_add(frame_perf.image_draw_calls);
+            self.perf.text_draw_calls = self
+                .perf
+                .text_draw_calls
+                .saturating_add(frame_perf.text_draw_calls);
+            self.perf.path_draw_calls = self
+                .perf
+                .path_draw_calls
+                .saturating_add(frame_perf.path_draw_calls);
+            self.perf.mask_draw_calls = self
+                .perf
+                .mask_draw_calls
+                .saturating_add(frame_perf.mask_draw_calls);
+            self.perf.fullscreen_draw_calls = self
+                .perf
+                .fullscreen_draw_calls
+                .saturating_add(frame_perf.fullscreen_draw_calls);
+            self.perf.clip_mask_draw_calls = self
+                .perf
+                .clip_mask_draw_calls
+                .saturating_add(frame_perf.clip_mask_draw_calls);
+            self.perf.pipeline_switches = self
+                .perf
+                .pipeline_switches
+                .saturating_add(frame_perf.pipeline_switches);
+            self.perf.pipeline_switches_quad = self
+                .perf
+                .pipeline_switches_quad
+                .saturating_add(frame_perf.pipeline_switches_quad);
+            self.perf.pipeline_switches_viewport = self
+                .perf
+                .pipeline_switches_viewport
+                .saturating_add(frame_perf.pipeline_switches_viewport);
+            self.perf.pipeline_switches_mask = self
+                .perf
+                .pipeline_switches_mask
+                .saturating_add(frame_perf.pipeline_switches_mask);
+            self.perf.pipeline_switches_text_mask = self
+                .perf
+                .pipeline_switches_text_mask
+                .saturating_add(frame_perf.pipeline_switches_text_mask);
+            self.perf.pipeline_switches_text_color = self
+                .perf
+                .pipeline_switches_text_color
+                .saturating_add(frame_perf.pipeline_switches_text_color);
+            self.perf.pipeline_switches_path = self
+                .perf
+                .pipeline_switches_path
+                .saturating_add(frame_perf.pipeline_switches_path);
+            self.perf.pipeline_switches_path_msaa = self
+                .perf
+                .pipeline_switches_path_msaa
+                .saturating_add(frame_perf.pipeline_switches_path_msaa);
+            self.perf.pipeline_switches_composite = self
+                .perf
+                .pipeline_switches_composite
+                .saturating_add(frame_perf.pipeline_switches_composite);
+            self.perf.pipeline_switches_fullscreen = self
+                .perf
+                .pipeline_switches_fullscreen
+                .saturating_add(frame_perf.pipeline_switches_fullscreen);
+            self.perf.pipeline_switches_clip_mask = self
+                .perf
+                .pipeline_switches_clip_mask
+                .saturating_add(frame_perf.pipeline_switches_clip_mask);
+            self.perf.bind_group_switches = self
+                .perf
+                .bind_group_switches
+                .saturating_add(frame_perf.bind_group_switches);
+            self.perf.uniform_bind_group_switches = self
+                .perf
+                .uniform_bind_group_switches
+                .saturating_add(frame_perf.uniform_bind_group_switches);
+            self.perf.texture_bind_group_switches = self
+                .perf
+                .texture_bind_group_switches
+                .saturating_add(frame_perf.texture_bind_group_switches);
+            self.perf.scissor_sets = self
+                .perf
+                .scissor_sets
+                .saturating_add(frame_perf.scissor_sets);
+            self.perf.uniform_bytes = self
+                .perf
+                .uniform_bytes
+                .saturating_add(frame_perf.uniform_bytes);
+            self.perf.instance_bytes = self
+                .perf
+                .instance_bytes
+                .saturating_add(frame_perf.instance_bytes);
+            self.perf.vertex_bytes = self
+                .perf
+                .vertex_bytes
+                .saturating_add(frame_perf.vertex_bytes);
+            self.perf.scene_encoding_cache_hits = self
+                .perf
+                .scene_encoding_cache_hits
+                .saturating_add(frame_perf.scene_encoding_cache_hits);
+            self.perf.scene_encoding_cache_misses = self
+                .perf
+                .scene_encoding_cache_misses
+                .saturating_add(frame_perf.scene_encoding_cache_misses);
         }
 
         let cmd = encoder.finish();

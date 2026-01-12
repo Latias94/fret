@@ -2,6 +2,7 @@ use super::super::*;
 use super::SvgMaskAtlasInsert;
 use crate::images::{ImageColorSpace, ImageDescriptor};
 use crate::svg::SvgAlphaMask;
+use fret_core::AlphaMode;
 
 impl Renderer {
     pub(in crate::renderer) fn ensure_svg_mask_atlas_page(
@@ -30,6 +31,7 @@ impl Renderer {
             size: size_px,
             format: wgpu::TextureFormat::R8Unorm,
             color_space: ImageColorSpace::Linear,
+            alpha_mode: AlphaMode::Straight,
         });
 
         let zeros = vec![0u8; (size_px.0 as usize) * (size_px.1 as usize)];

@@ -10,6 +10,7 @@ Primary ADR:
 
 - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - Effect semantics ADR: `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+- User-facing recipes + tier selection ADR: `docs/adr/0149-effect-recipes-and-tier-selection-v1.md`
 - Budgets + degradation ADR: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Streaming image/video ingestion ADR: `docs/adr/0121-streaming-images-and-video-surfaces.md`
 - Offscreen capture/readback ADR: `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
@@ -198,6 +199,54 @@ accepted as ADRs, but they help keep early implementation aligned with long-term
 
 This section is intentionally lightweight and should be updated as work lands.
 
+- Tier A embedding is available in declarative trees via `ViewportSurfaceProps` and `cx.viewport_surface(...)`
+  (`crates/fret-ui/src/elements/cx.rs`). `fret-ui-kit` also provides a reusable `viewport_surface_panel` wrapper that
+  forwards pointer + wheel as `Effect::ViewportInput` using `ViewportMapping`
+  (`ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`).
+- Streaming images/video ingestion is wired through a cross-frame latest-wins queue with per-window budgets
+  (ADR 0123 / ADR 0126): `crates/fret-launch/src/runner/streaming_upload.rs`.
+- YUV updates are applied in the runner at drain time (queue coalescing stays separate from apply), keeping a clean
+  extension point for future zero-copy imports/capability gates (ADR 0124).
+- An experimental NV12 GPU conversion path exists behind capability gating (ADR 0124) and an enable switch
+  (`WinitRunnerConfig.streaming_nv12_gpu_convert_enabled` or `FRET_STREAMING_GPU_YUV=1`): NV12 planes + a tiny conversion
+  pass into RGBA8 sRGB image storage in `crates/fret-launch/src/runner/yuv_gpu.rs`.
+- A unified renderer-wide perf snapshot exists (ADR 0096): `Renderer::{set_perf_enabled,take_perf_snapshot}` reports
+  P0 counters (draw calls, pipeline/bind group sets, upload bytes, encode/prepare timing) and is printed by
+  `apps/fret-svg-atlas-stress/src/main.rs` and stress demos in `apps/fret-examples/src/` (e.g. `plot_stress_demo.rs`, `table_stress_demo.rs`, `virtual_list_stress_demo.rs`) (`renderer_perf:`).
+  Set `FRET_RENDERER_PERF_PIPELINES=1` to emit `renderer_perf_pipelines:` lines that break down pipeline switches by
+  pipeline class (quad/text_mask/etc).
+- `fret-ui-kit` tables have an opt-in paint-order optimization (`TableViewProps.optimize_paint_order`) that layers
+  cell chrome (borders/backgrounds) separately from cell content, improving quad/text batching in text-heavy workloads.
+  `apps/fret-examples/src/table_stress_demo.rs` enables it for baseline capture.
+
+## Perf Baseline Capture (Local)
+
+To capture a local baseline, run a deterministic stress demo for ~10s and record the periodic `renderer_perf:` lines.
+Recommended entry points:
+
+- `cargo run -p fret-svg-atlas-stress -- --headless --frames 600`
+- `cargo run -p fret-demo --bin plot_stress_demo -- --frames 600`
+- `FRET_TABLE_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin table_stress_demo`
+- `FRET_VLIST_STRESS_AUTO_SCROLL=1 FRET_VLIST_STRESS_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin virtual_list_stress_demo`
+- `FRET_EFFECTS_DEMO_PROFILE=1 FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES=600 cargo run -p fret-demo --bin effects_demo`
+
+Effects-specific notes:
+
+- Set `FRET_RENDERER_PERF_PIPELINES=1` to also print `renderer_perf_pipelines:` so you can see whether cost is dominated
+  by `fullscreen` postprocess passes and/or `clip_mask` generation.
+- `effects_demo` supports env-driven presets for reproducible captures:
+  - `FRET_EFFECTS_PANEL0` / `FRET_EFFECTS_PANEL1` / `FRET_EFFECTS_PANEL2` (`0|1`)
+  - `FRET_EFFECTS_QUALITY` (`Auto|Low|Medium|High`)
+  - `FRET_EFFECTS_BLUR_RADIUS_PX`, `FRET_EFFECTS_BLUR_DOWNSAMPLE`
+  - `FRET_EFFECTS_P1_PIXELATE_SCALE`, `FRET_EFFECTS_P2_PIXELATE_SCALE`
+
+Example pipeline breakdowns (typical, from `effects_demo`):
+
+- All panels enabled: `quad≈300 text_mask≈60 composite≈60 fullscreen≈660 clip_mask≈120`
+- Only panel0 (backdrop blur): `quad≈180 text_mask≈60 fullscreen≈420 clip_mask≈60`
+- Only panel1 (backdrop pixelate): `quad≈180 text_mask≈60 fullscreen≈180 clip_mask≈60`
+- Only panel2 (filter-content pixelate): `quad≈180 text_mask≈60 composite≈60 fullscreen≈120 clip_mask≈0`
+
 - **ADRs (Accepted / implemented as MVP):**
   - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
@@ -218,6 +267,11 @@ This section is intentionally lightweight and should be updated as work lands.
     - MVP effect chain includes `ColorAdjust` (saturation/brightness/contrast) as a bounded scissored step.
     - MVP effect chain includes `Pixelate` as a bounded scissored step for both `Backdrop` and `FilterContent`.
     - `ScaleNearest` is origin-aware (per-pass params via dynamic offsets), so pixelation is anchored to the effect bounds (not the window origin).
+
+- **In flight (worktree branches; not merged):**
+  - `refactor/render-plan-effects`:
+    - Extracts effect-chain compilation helpers out of `render_plan.rs` into `render_plan_effects.rs` (no semantic changes).
+    - Hardens `fret-renderdoc` pass inspection on Vulkan captures by dumping `ScaleParams` using a drawcall-order inference fallback when dynamic offsets are unavailable.
     - GPU conformance tests cover scissored pixelate for both effect modes.
     - `FilterContent` composite now binds the effect-boundary clip stack (rounded clips do not leak on composite).
     - GPU conformance tests cover rounded-clip pixelate for both effect modes.
@@ -226,6 +280,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Mask tier selection is driven by `EffectQuality` (ADR 0135) and may be further capped when an effect is already
       forced into a cheaper downsample path under budgets (e.g. quarter-resolution blur caps the mask to `Mask2`).
     - Quad rendering and clip-mask generation share a single analytic SDF + coverage foundation (ADR 0030).
+    - Streaming image v1 (RGBA8 dirty-rect updates): runner holds uploaded textures and applies `Effect::ImageUpdateRgba8` via dirty-rect `queue.write_texture` writes (desktop + web), with deterministic latest-wins coalescing + cross-frame queueing + per-window upload/staging budgets (ADR 0123). Metadata is plumbed through `ImageColorInfo` / `AlphaMode` (ADR 0126): `encoding` selects sRGB vs linear formats, and `AlphaMode` controls whether the viewport/image blit shader premultiplies sampled RGB or treats it as already premultiplied. NV12/I420 update variants are supported via a CPU fallback conversion to RGBA8 at the runner apply stage (no zero-copy imports yet). Optional counters are exposed via `fret_core::StreamingUploadPerfSnapshot` when enabled (`WinitRunnerConfig.streaming_perf_snapshot_enabled`). Visual smoke demo: `cargo run -p fret-demo --bin streaming_image_demo` (RGBA8) and `cargo run -p fret-demo --bin streaming_nv12_demo` (NV12).
     - Next: consider region/tiled masks to reduce peak bytes, and lock down any future clip-path expansion strategy (ADR-gated).
     - Visual smoke demo: `cargo run -p fret-demo --bin fret-demo -- effects_demo`
   - M3: In progress:

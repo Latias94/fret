@@ -1,4 +1,8 @@
 mod common;
+mod streaming_upload;
+mod viewport_target;
+mod yuv;
+mod yuv_gpu;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod desktop;
@@ -6,6 +10,7 @@ pub mod desktop;
 mod web;
 
 pub use common::*;
+pub use viewport_target::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use desktop::{

@@ -11,6 +11,12 @@ pub(super) fn handle_pressable<H: UiHost>(
     if !props.enabled {
         return;
     }
+
+    let pixels_per_point = cx
+        .app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.scale_factor(window))
+        .unwrap_or(1.0);
     match event {
         Event::Pointer(pe) => match pe {
             fret_core::PointerEvent::Move { .. } => {
@@ -21,7 +27,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 button,
                 modifiers,
                 pointer_type,
-                ..
+                click_count,
             } => {
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -120,8 +126,10 @@ pub(super) fn handle_pressable<H: UiHost>(
 
                     let down = action::PointerDownCx {
                         position: *position,
+                        pixels_per_point,
                         button: *button,
                         modifiers: *modifiers,
+                        click_count: *click_count,
                         pointer_type: *pointer_type,
                     };
 

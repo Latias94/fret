@@ -1,7 +1,7 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    ImageId, ImageUploadToken, Rect, RenderTargetId, TimerToken, ViewportFit,
-    WindowLogicalPosition,
+    ImageId, ImageUpdateToken, ImageUploadToken, Rect, RenderTargetId, TimerToken, ViewportFit,
+    ViewportMapping, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -300,6 +300,22 @@ pub enum Event {
         token: ImageUploadToken,
         message: String,
     },
+    /// Optional acknowledgement that a streaming image update was applied.
+    ///
+    /// This is intended for debugging/telemetry surfaces and must be capability-gated by the
+    /// runner to avoid flooding the event loop during video playback (ADR 0126).
+    ImageUpdateApplied {
+        token: ImageUpdateToken,
+        image: ImageId,
+    },
+    /// Optional acknowledgement that a streaming image update was dropped.
+    ///
+    /// See `ImageUpdateApplied` for rationale (ADR 0126).
+    ImageUpdateDropped {
+        token: ImageUpdateToken,
+        image: ImageId,
+        reason: ImageUpdateDropReason,
+    },
     /// Window close button / OS close request was triggered.
     ///
     /// The runner must not close the window immediately; the app/driver may intercept the request
@@ -313,6 +329,16 @@ pub enum Event {
         width: Px,
         height: Px,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ImageUpdateDropReason {
+    Coalesced,
+    StagingBudgetExceeded,
+    UnknownImage,
+    InvalidPayload,
+    RendererNotReady,
+    Unsupported,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -347,6 +373,74 @@ pub struct ViewportInputEvent {
     pub uv: (f32, f32),
     pub target_px: (u32, u32),
     pub kind: ViewportInputKind,
+}
+
+impl ViewportInputEvent {
+    pub fn from_mapping_window_point(
+        window: AppWindowId,
+        target: RenderTargetId,
+        mapping: &ViewportMapping,
+        pixels_per_point: f32,
+        position: Point,
+        kind: ViewportInputKind,
+    ) -> Option<Self> {
+        let mapped = mapping.map();
+        let uv = mapping.window_point_to_uv(position)?;
+        let target_px = mapping.window_point_to_target_px(position)?;
+        Some(Self {
+            window,
+            target,
+            geometry: ViewportInputGeometry {
+                content_rect_px: mapping.content_rect,
+                draw_rect_px: mapped.draw_rect,
+                target_px_size: mapping.target_px_size,
+                fit: mapping.fit,
+                pixels_per_point,
+            },
+            cursor_px: position,
+            uv,
+            target_px,
+            kind,
+        })
+    }
+
+    pub fn from_mapping_window_point_clamped(
+        window: AppWindowId,
+        target: RenderTargetId,
+        mapping: &ViewportMapping,
+        pixels_per_point: f32,
+        position: Point,
+        kind: ViewportInputKind,
+    ) -> Self {
+        let mapped = mapping.map();
+        let uv = mapping.window_point_to_uv_clamped(position);
+        let target_px = mapping.window_point_to_target_px_clamped(position);
+        Self {
+            window,
+            target,
+            geometry: ViewportInputGeometry {
+                content_rect_px: mapping.content_rect,
+                draw_rect_px: mapped.draw_rect,
+                target_px_size: mapping.target_px_size,
+                fit: mapping.fit,
+                pixels_per_point,
+            },
+            cursor_px: position,
+            uv,
+            target_px,
+            kind,
+        }
+    }
+
+    pub fn legacy(&self) -> ViewportInputEventLegacy {
+        ViewportInputEventLegacy {
+            window: self.window,
+            target: self.target,
+            uv: self.uv,
+            target_px: self.target_px,
+            kind: self.kind,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

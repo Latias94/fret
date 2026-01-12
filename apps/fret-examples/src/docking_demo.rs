@@ -68,20 +68,20 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
 struct DemoViewportOverlayHooks;
 
 impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
-    fn paint(
+    fn paint_with_layout(
         &self,
         theme: fret_ui::ThemeSnapshot,
         _window: AppWindowId,
         _panel: &fret_core::PanelKey,
         _viewport: fret_ui_docking::ViewportPanel,
-        _mapping: fret_core::ViewportMapping,
-        draw_rect: Rect,
+        layout: fret_ui_docking::DockViewportLayout,
         scene: &mut Scene,
     ) {
         let border_color = Color {
             a: 0.65,
             ..theme.color_required("primary")
         };
+        let draw_rect = layout.draw_rect;
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),
             rect: draw_rect,

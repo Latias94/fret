@@ -9,7 +9,7 @@ use super::prelude_core::*;
 pub(super) struct ViewportHit {
     pub(super) panel: PanelKey,
     pub(super) viewport: ViewportPanel,
-    pub(super) content: Rect,
+    pub(super) mapping: ViewportMapping,
     pub(super) draw_rect: Rect,
 }
 
@@ -28,29 +28,14 @@ pub(super) fn viewport_input_from_hit(
     position: Point,
     kind: ViewportInputKind,
 ) -> Option<ViewportInputEvent> {
-    let mapping = ViewportMapping {
-        content_rect: hit.content,
-        target_px_size: hit.viewport.target_px_size,
-        fit: hit.viewport.fit,
-    };
-    let mapped = mapping.map();
-    let uv = mapping.window_point_to_uv(position)?;
-    let target_px = mapping.window_point_to_target_px(position)?;
-    Some(ViewportInputEvent {
+    ViewportInputEvent::from_mapping_window_point(
         window,
-        target: hit.viewport.target,
-        geometry: fret_core::ViewportInputGeometry {
-            content_rect_px: hit.content,
-            draw_rect_px: mapped.draw_rect,
-            target_px_size: hit.viewport.target_px_size,
-            fit: hit.viewport.fit,
-            pixels_per_point,
-        },
-        cursor_px: position,
-        uv,
-        target_px,
+        hit.viewport.target,
+        &hit.mapping,
+        pixels_per_point,
+        position,
         kind,
-    })
+    )
 }
 
 pub(super) fn viewport_input_from_hit_clamped(
@@ -60,29 +45,14 @@ pub(super) fn viewport_input_from_hit_clamped(
     position: Point,
     kind: ViewportInputKind,
 ) -> ViewportInputEvent {
-    let mapping = ViewportMapping {
-        content_rect: hit.content,
-        target_px_size: hit.viewport.target_px_size,
-        fit: hit.viewport.fit,
-    };
-    let mapped = mapping.map();
-    let uv = mapping.window_point_to_uv_clamped(position);
-    let target_px = mapping.window_point_to_target_px_clamped(position);
-    ViewportInputEvent {
+    ViewportInputEvent::from_mapping_window_point_clamped(
         window,
-        target: hit.viewport.target,
-        geometry: fret_core::ViewportInputGeometry {
-            content_rect_px: hit.content,
-            draw_rect_px: mapped.draw_rect,
-            target_px_size: hit.viewport.target_px_size,
-            fit: hit.viewport.fit,
-            pixels_per_point,
-        },
-        cursor_px: position,
-        uv,
-        target_px,
+        hit.viewport.target,
+        &hit.mapping,
+        pixels_per_point,
+        position,
         kind,
-    }
+    )
 }
 
 pub(super) fn hit_test_active_viewport_panel(
@@ -116,7 +86,7 @@ pub(super) fn hit_test_active_viewport_panel(
             return Some(ViewportHit {
                 panel: panel_key,
                 viewport,
-                content,
+                mapping,
                 draw_rect,
             });
         }

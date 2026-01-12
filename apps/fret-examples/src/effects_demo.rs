@@ -5,6 +5,43 @@ use fret_core::scene::{
 };
 use fret_core::text::{FontWeight, TextConstraints, TextOverflow, TextStyle, TextWrap};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+use fret_render::{Renderer, WgpuContext};
+use std::time::{Duration, Instant};
+
+fn try_println(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let _ = out.write_fmt(args);
+    let _ = out.write_all(b"\n");
+}
+
+macro_rules! try_println {
+    ($($tt:tt)*) => {
+        try_println(format_args!($($tt)*))
+    };
+}
+
+fn parse_env_bool(key: &str) -> Option<bool> {
+    std::env::var_os(key).and_then(|v| match v.to_string_lossy().trim() {
+        "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON" => Some(true),
+        "0" | "false" | "FALSE" | "no" | "NO" | "off" | "OFF" => Some(false),
+        _ => None,
+    })
+}
+
+fn parse_env_u32(key: &str) -> Option<u32> {
+    std::env::var_os(key).and_then(|v| v.to_string_lossy().trim().parse::<u32>().ok())
+}
+
+fn parse_env_quality(key: &str) -> Option<EffectQuality> {
+    std::env::var_os(key).and_then(|v| match v.to_string_lossy().trim() {
+        "auto" | "Auto" | "AUTO" => Some(EffectQuality::Auto),
+        "low" | "Low" | "LOW" => Some(EffectQuality::Low),
+        "medium" | "Medium" | "MEDIUM" => Some(EffectQuality::Medium),
+        "high" | "High" | "HIGH" => Some(EffectQuality::High),
+        _ => None,
+    })
+}
 
 #[derive(Default)]
 struct EffectsDemoDriver;
@@ -45,26 +82,39 @@ struct EffectsDemoState {
     show_help: bool,
     overlay_dirty: bool,
     overlay: OverlayTextCache,
+
+    frame: u64,
+    exit_after_frames: Option<u64>,
+    last_renderer_report: Option<Instant>,
 }
 
 impl Default for EffectsDemoState {
     fn default() -> Self {
+        let exit_after_frames = std::env::var("FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .filter(|&v| v > 0);
+
         Self {
-            panel0_enabled: true,
-            panel1_enabled: true,
-            panel2_enabled: true,
+            panel0_enabled: parse_env_bool("FRET_EFFECTS_PANEL0").unwrap_or(true),
+            panel1_enabled: parse_env_bool("FRET_EFFECTS_PANEL1").unwrap_or(true),
+            panel2_enabled: parse_env_bool("FRET_EFFECTS_PANEL2").unwrap_or(true),
 
-            quality: EffectQuality::Auto,
+            quality: parse_env_quality("FRET_EFFECTS_QUALITY").unwrap_or(EffectQuality::Auto),
 
-            panel0_blur_radius_px: 6,
-            panel0_blur_downsample: 2,
+            panel0_blur_radius_px: parse_env_u32("FRET_EFFECTS_BLUR_RADIUS_PX").unwrap_or(6),
+            panel0_blur_downsample: parse_env_u32("FRET_EFFECTS_BLUR_DOWNSAMPLE").unwrap_or(2),
 
-            panel1_pixelate_scale: 8,
-            panel2_pixelate_scale: 6,
+            panel1_pixelate_scale: parse_env_u32("FRET_EFFECTS_P1_PIXELATE_SCALE").unwrap_or(8),
+            panel2_pixelate_scale: parse_env_u32("FRET_EFFECTS_P2_PIXELATE_SCALE").unwrap_or(6),
 
             show_help: true,
             overlay_dirty: true,
             overlay: OverlayTextCache::default(),
+
+            frame: 0,
+            exit_after_frames,
+            last_renderer_report: None,
         }
     }
 }
@@ -120,6 +170,98 @@ impl EffectsDemoState {
 
 impl WinitAppDriver for EffectsDemoDriver {
     type WindowState = EffectsDemoState;
+
+    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
+        let perf_enabled = std::env::var_os("FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES").is_some()
+            || std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
+            || std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+        if perf_enabled {
+            renderer.set_perf_enabled(true);
+        }
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        _context: &WgpuContext,
+        renderer: &mut Renderer,
+        _scale_factor: f32,
+    ) {
+        let profiling = std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
+            || state.exit_after_frames.is_some();
+        if !profiling {
+            return;
+        }
+
+        state.frame = state.frame.saturating_add(1);
+
+        let now = Instant::now();
+        let should_report = match state.last_renderer_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if should_report {
+            if let Some(snap) = renderer.take_perf_snapshot() {
+                if snap.frames != 0 {
+                    let pipeline_breakdown =
+                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                    try_println!(
+                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                        snap.frames,
+                        snap.encode_scene_us as f64 / 1000.0,
+                        snap.prepare_svg_us as f64 / 1000.0,
+                        snap.prepare_text_us as f64 / 1000.0,
+                        snap.draw_calls,
+                        snap.quad_draw_calls,
+                        snap.viewport_draw_calls,
+                        snap.image_draw_calls,
+                        snap.text_draw_calls,
+                        snap.path_draw_calls,
+                        snap.mask_draw_calls,
+                        snap.fullscreen_draw_calls,
+                        snap.clip_mask_draw_calls,
+                        snap.pipeline_switches,
+                        snap.bind_group_switches,
+                        snap.uniform_bind_group_switches,
+                        snap.texture_bind_group_switches,
+                        snap.scissor_sets,
+                        snap.uniform_bytes / 1024,
+                        snap.instance_bytes / 1024,
+                        snap.vertex_bytes / 1024,
+                        snap.scene_encoding_cache_hits,
+                        snap.scene_encoding_cache_misses
+                    );
+                    if pipeline_breakdown {
+                        try_println!(
+                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                            snap.pipeline_switches_quad,
+                            snap.pipeline_switches_viewport,
+                            snap.pipeline_switches_mask,
+                            snap.pipeline_switches_text_mask,
+                            snap.pipeline_switches_text_color,
+                            snap.pipeline_switches_path,
+                            snap.pipeline_switches_path_msaa,
+                            snap.pipeline_switches_composite,
+                            snap.pipeline_switches_fullscreen,
+                            snap.pipeline_switches_clip_mask,
+                        );
+                    }
+                }
+            }
+            state.last_renderer_report = Some(now);
+        }
+
+        if let Some(limit) = state.exit_after_frames {
+            if state.frame >= limit {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+        }
+
+        app.request_redraw(window);
+    }
 
     fn create_window_state(
         &mut self,

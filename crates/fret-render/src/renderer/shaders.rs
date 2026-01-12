@@ -268,6 +268,7 @@ struct VsIn {
   @location(0) pos_px: vec2<f32>,
   @location(1) uv: vec2<f32>,
   @location(2) opacity: f32,
+  @location(3) premul: f32,
 };
 
 struct VsOut {
@@ -275,6 +276,7 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   @location(1) opacity: f32,
   @location(2) pixel_pos: vec2<f32>,
+  @location(3) premul: f32,
 };
 
 fn to_clip_space(pixel_pos: vec2<f32>) -> vec2<f32> {
@@ -367,6 +369,7 @@ fn vs_main(input: VsIn) -> VsOut {
   out.uv = input.uv;
   out.opacity = input.opacity;
   out.pixel_pos = input.pos_px;
+  out.premul = input.premul;
   return out;
 }
 
@@ -374,8 +377,11 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(viewport_texture, viewport_sampler, input.uv);
-  let a = tex.a * input.opacity * clip;
-  let out = vec4<f32>(tex.rgb * a, a);
+  let factor = input.opacity * clip;
+  let a = tex.a * factor;
+  let premul = input.premul >= 0.5;
+  let rgb = select(tex.rgb * a, tex.rgb * factor, premul);
+  let out = vec4<f32>(rgb, a);
   return encode_output_premul(out);
 }
 "#;
