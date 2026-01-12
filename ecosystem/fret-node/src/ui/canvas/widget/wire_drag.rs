@@ -192,69 +192,58 @@ pub(super) fn handle_wire_drag_move<H: UiHost>(
         let presenter = &mut *canvas.presenter;
         canvas
             .graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch = graph.clone();
-                match &w.kind {
-                    WireDragKind::New { from, bundle } => {
-                        let sources = if bundle.is_empty() {
-                            std::slice::from_ref(from)
-                        } else {
-                            bundle.as_slice()
-                        };
-                        let mut any_accept = false;
-                        for src in sources {
-                            let plan = presenter.plan_connect(
-                                &scratch,
-                                *src,
-                                target,
-                                snapshot.interaction.connection_mode,
-                            );
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
+            .read_ref(cx.app, |graph| match &w.kind {
+                WireDragKind::New { from, bundle } => {
+                    let sources = if bundle.is_empty() {
+                        std::slice::from_ref(from)
+                    } else {
+                        bundle.as_slice()
+                    };
+                    let mut any_accept = false;
+                    for src in sources {
+                        let plan = presenter.plan_connect(
+                            graph,
+                            *src,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        );
+                        if plan.decision != ConnectDecision::Accept {
+                            continue;
                         }
-                        any_accept
+                        any_accept = true;
+                        break;
                     }
-                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                        presenter
-                            .plan_reconnect_edge(
-                                &scratch,
-                                *edge,
-                                *endpoint,
-                                target,
-                                snapshot.interaction.connection_mode,
-                            )
-                            .decision,
-                        ConnectDecision::Accept
-                    ),
-                    WireDragKind::ReconnectMany { edges } => {
-                        let mut any_accept = false;
-                        for (edge, endpoint, _fixed) in edges {
-                            let plan = presenter.plan_reconnect_edge(
-                                &scratch,
-                                *edge,
-                                *endpoint,
-                                target,
-                                snapshot.interaction.connection_mode,
-                            );
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
+                    any_accept
+                }
+                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                    presenter
+                        .plan_reconnect_edge(
+                            graph,
+                            *edge,
+                            *endpoint,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        )
+                        .decision,
+                    ConnectDecision::Accept
+                ),
+                WireDragKind::ReconnectMany { edges } => {
+                    let mut any_accept = false;
+                    for (edge, endpoint, _fixed) in edges {
+                        let plan = presenter.plan_reconnect_edge(
+                            graph,
+                            *edge,
+                            *endpoint,
+                            target,
+                            snapshot.interaction.connection_mode,
+                        );
+                        if plan.decision != ConnectDecision::Accept {
+                            continue;
                         }
-                        any_accept
+                        any_accept = true;
+                        break;
                     }
+                    any_accept
                 }
             })
             .ok()
