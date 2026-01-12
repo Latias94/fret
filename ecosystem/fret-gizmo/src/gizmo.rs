@@ -4076,8 +4076,8 @@ impl Gizmo {
             let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
             let outer_r = radius_world + half;
 
-            let fill = mix_alpha(color, 0.22);
-            let edge = mix_alpha(color, 0.95);
+            let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
+            let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
 
             let point =
                 |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
