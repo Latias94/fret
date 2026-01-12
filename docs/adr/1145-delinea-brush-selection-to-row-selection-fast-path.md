@@ -1,4 +1,4 @@
-# ADR 0145: `delinea` Brush Selection -> Row Selection Fast Path (P0)
+# ADR 1145: `delinea` Brush Selection -> Row Selection Fast Path (P0)
 
 Status: Accepted (P0)
 
@@ -10,7 +10,7 @@ ECharts-style brush selection ultimately selects *data items* (indices), but `de
 - predictable memory usage (avoid per-drag allocations),
 - deterministic stepping under `WorkBudget`.
 
-ADR 0144 defines brush selection as a headless **selection output** (not a view-window write), exposed as a
+ADR 1144 defines brush selection as a headless **selection output** (not a view-window write), exposed as a
 data-space 2D rectangle (`BrushSelection2D`).
 
 However, many downstream use-cases (linking, external selection consumers, basic highlight policies) need a
@@ -22,9 +22,9 @@ row-level selection view. We want a minimal v1 mapping that is:
 
 ## Relationship to Other ADRs
 
-- ADR 0137: `RowSelection` and filtering contract (contiguous fast path).
-- ADR 0140: dataset storage and index identity.
-- ADR 0144: brush selection output contract.
+- ADR 1137: `RowSelection` and filtering contract (contiguous fast path).
+- ADR 1140: dataset storage and index identity.
+- ADR 1144: brush selection output contract.
 
 ## Decision
 
@@ -46,9 +46,9 @@ This derived range is:
 The derived output is intentionally **X-only** in v1:
 
 - Applying a 2D rectangle to points generally requires sparse indices (`RowSelection::Indices`) or value masking.
-- Those features are deferred and must be introduced as explicit, budget-aware contracts (ADR 0137 follow-ups).
+- Those features are deferred and must be introduced as explicit, budget-aware contracts (ADR 1137 follow-ups).
 
-The authoritative selection rectangle remains available via `ChartOutput.brush_selection_2d` (ADR 0144), so a UI
+The authoritative selection rectangle remains available via `ChartOutput.brush_selection_2d` (ADR 1144), so a UI
 adapter may still render a 2D brush overlay.
 
 ### 3) Brush actions do not bump the view revision
@@ -62,4 +62,3 @@ consumers to observe the current selection.
 - We can support “commercial-grade” interactive brushing with no per-drag allocations in v1.
 - We gain a minimal selection output usable for linking and basic highlight policies.
 - Full ECharts-class 2D item selection remains a P1+ extension (indices/masking).
-

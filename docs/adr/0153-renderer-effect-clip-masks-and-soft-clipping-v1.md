@@ -1,4 +1,4 @@
-# ADR 0135: Renderer Effect Clip Masks and Soft Clipping (v1)
+# ADR 0153: Renderer Effect Clip Masks and Soft Clipping (v1)
 
 Status: Accepted (v1 substrate landed)
 

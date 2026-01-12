@@ -1,4 +1,4 @@
-# ADR 0147: `delinea` VisualMap + Data-Driven Styling Contract (ECharts-Inspired)
+# ADR 1147: `delinea` VisualMap + Data-Driven Styling Contract (ECharts-Inspired)
 
 Status: Proposed (P0 decision gate)
 
@@ -13,10 +13,10 @@ Apache ECharts exposes `visualMap` as the primary mechanism for **data-driven vi
 
 `delinea` already has:
 
-- a headless data model (`ChartSpec` + `DatasetSpec` + `FieldSpec`) (ADR 0128 / ADR 0140),
-- a staged transform pipeline with large/progressive budgets (ADR 0129 / ADR 0132),
-- a mark output contract with stable data indices per emitted primitive (ADR 0131),
-- a UI adapter layer (`fret-chart`) with token-driven styling (ADR 0142).
+- a headless data model (`ChartSpec` + `DatasetSpec` + `FieldSpec`) (ADR 1128 / ADR 1140),
+- a staged transform pipeline with large/progressive budgets (ADR 1129 / ADR 1132),
+- a mark output contract with stable data indices per emitted primitive (ADR 1131),
+- a UI adapter layer (`fret-chart`) with token-driven styling (ADR 1142).
 
 However, without a locked VisualMap contract, we risk:
 
@@ -29,11 +29,11 @@ without forcing `delinea` to depend on UI/theme systems.
 
 ## Relationship to Other ADRs
 
-- ADR 0128: headless engine vs UI adapter boundary.
-- ADR 0131: marks identity and renderer contract (data indices in the mark arena).
-- ADR 0132: large data + progressive stepping budgets.
-- ADR 0140: dataset storage and stable raw index identity.
-- ADR 0142: `fret-chart` theme tokens and style resolution.
+- ADR 1128: headless engine vs UI adapter boundary.
+- ADR 1131: marks identity and renderer contract (data indices in the mark arena).
+- ADR 1132: large data + progressive stepping budgets.
+- ADR 1140: dataset storage and stable raw index identity.
+- ADR 1142: `fret-chart` theme tokens and style resolution.
 
 ## Decision
 
@@ -112,7 +112,7 @@ This design:
 
 `fret-chart` maps `VisualStyleKey` to actual colors using:
 
-- theme tokens (`chart.palette.*`, `chart.visualmap.*`) (ADR 0142),
+- theme tokens (`chart.palette.*`, `chart.visualmap.*`) (ADR 1142),
 - and explicit user-provided colors when the spec includes them.
 
 ### 6) Interactive updates: VisualMap controller writes actions

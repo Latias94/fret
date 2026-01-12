@@ -1,4 +1,4 @@
-# ADR 0135: Deli nea Axis Interaction Locks and Shortcut Contract (P0)
+# ADR 1135: `delinea` Axis Interaction Locks and Shortcut Contract (P0)
 
 Status: Accepted (P0)
 
@@ -21,7 +21,7 @@ data model aligned with ECharts (`dataZoom` state, filter modes, and axis constr
 - Make axis locks explicit and deterministic (no hidden side effects).
 - Ensure `AxisRange` constraints are consistently applied whenever view windows are written.
 - Provide a single reference for default `fret-chart` gestures/shortcuts and their mapping.
-- Keep the contract compatible with multi-axis layouts (ADR 0134).
+- Keep the contract compatible with multi-axis layouts (ADR 1134).
 
 ## Non-Goals
 
@@ -121,7 +121,7 @@ Defaults (see `ecosystem/fret-chart/src/input_map.rs`):
 
 Notes:
 - `AxisRange::Fixed` prevents panning/zooming regardless of interaction locks.
-- Multi-axis layouts route interactions based on the axis band under the pointer (ADR 0134).
+- Multi-axis layouts route interactions based on the axis band under the pointer (ADR 1134).
 
 ## Implementation Notes (Current)
 
@@ -139,4 +139,3 @@ P0 tests should cover:
 - Pan/zoom actions are no-ops when the corresponding lock is enabled.
 - `SetDataWindow*` and `SetViewWindow2D` apply `AxisRange` constraints.
 - `DataWindow::apply_constraints` preserves span for partial locks.
-

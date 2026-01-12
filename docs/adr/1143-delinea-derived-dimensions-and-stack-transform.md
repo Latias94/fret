@@ -1,4 +1,4 @@
-# ADR 0143: `delinea` Derived Dimensions (Calculated Columns) and Stack Transform (ECharts-Inspired)
+# ADR 1143: `delinea` Derived Dimensions (Calculated Columns) and Stack Transform (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -12,7 +12,7 @@ Status: Accepted (P0)
 - deterministic headless interaction (hit testing, axis pointer, tooltips).
 
 Today we already support stacking (`SeriesSpec.stack`) for `Line`/`Area`, but the implementation lives in
-the marks/hit-test stage. This is a deliberate P0 shortcut (ADR 0129), but it creates long-term risks:
+the marks/hit-test stage. This is a deliberate P0 shortcut (ADR 1129), but it creates long-term risks:
 
 - **duplication**: marks, hit testing, tooltip sampling, and bounds can each re-implement stacking logic.
 - **caching pain**: stacking becomes “render-time work”, hard to reuse and hard to budget.
@@ -30,12 +30,12 @@ We want to lock a similar direction early so future chart features do not requir
 
 ## Relationship to Other ADRs
 
-- ADR 0128: headless engine + `WorkBudget`.
-- ADR 0129: transform pipeline ordering and `dataZoom` semantics (notes current stacking shortcut).
-- ADR 0132: large-data strategy and progressive work.
-- ADR 0137: row selection and indices contract.
-- ADR 0140: dataset storage + index-based views.
-- ADR 0141: missing values and segment policy (`connectNulls` direction).
+- ADR 1128: headless engine + `WorkBudget`.
+- ADR 1129: transform pipeline ordering and `dataZoom` semantics (notes current stacking shortcut).
+- ADR 1132: large-data strategy and progressive work.
+- ADR 1137: row selection and indices contract.
+- ADR 1140: dataset storage + index-based views.
+- ADR 1141: missing values and segment policy (`connectNulls` direction).
 
 ## Decision
 
@@ -76,7 +76,7 @@ We define a stack transform that produces, per stacked series:
 
 Consumers must use:
 
-- `stacked_y` for coordinate mapping, hit testing, and axis-trigger tooltip sampling (match ADR 0133).
+- `stacked_y` for coordinate mapping, hit testing, and axis-trigger tooltip sampling (match ADR 1133).
 - `stack_base_y` for area fills and bands (filled region between base and top).
 
 The original raw `y` value remains accessible via the raw dataset column.
@@ -151,7 +151,7 @@ P1:
   - monotonic X fast path (`lower_bound`),
   - hash map index (`x_value -> raw_index`) where appropriate,
   - sorted indices view (`RowSelection::Indices` that is monotonic in X),
-  - and how it interacts with missing values (ADR 0141).
+  - and how it interacts with missing values (ADR 1141).
 - Add derived dimensions for:
   - bar layout (category offsets),
   - error bars / candlesticks (OHLC), and
@@ -161,5 +161,5 @@ P1:
 
 - ECharts stack processor (calculation dimensions and `modify`): `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\processor\\dataStack.ts`
 - ECharts `DataStore.ensureCalculationDimension(...)`: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\data\\DataStore.ts`
-- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ADR 0137: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
+- ADR 1129: `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 1137: `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`

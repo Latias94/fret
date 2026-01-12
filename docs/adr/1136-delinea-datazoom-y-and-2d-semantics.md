@@ -1,4 +1,4 @@
-# ADR 0136: `delinea` DataZoom Y + 2D Semantics (ECharts-Inspired)
+# ADR 1136: `delinea` DataZoom Y + 2D Semantics (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -6,10 +6,10 @@ Status: Accepted (P0)
 
 `delinea` already supports:
 
-- X dataZoom semantics with `FilterMode` (ADR 0129),
+- X dataZoom semantics with `FilterMode` (ADR 1129),
 - per-axis view windows (`DataWindowX` / `DataWindowY`) and durable constraints (`AxisRange`) with clear precedence,
-- multi-axis layout and interaction targeting via `fret-chart` (ADR 0134),
-- pan/zoom locks (ADR 0135).
+- multi-axis layout and interaction targeting via `fret-chart` (ADR 1134),
+- pan/zoom locks (ADR 1135).
 
 The remaining high-impact gap for ECharts-class cartesian charts is zooming beyond “X-only”:
 
@@ -27,11 +27,11 @@ of our transform pipeline or selection representation.
 
 ## Relationship to Other ADRs
 
-- ADR 0129: transform pipeline and X `FilterMode` semantics.
-- ADR 0130: axis scales + coordinate mapping.
-- ADR 0132: large data + progressive rendering strategy.
-- ADR 0134: multi-axis + UI layout contract (active axis routing).
-- ADR 0135: axis locks and shortcut policy.
+- ADR 1129: transform pipeline and X `FilterMode` semantics.
+- ADR 1130: axis scales + coordinate mapping.
+- ADR 1132: large data + progressive rendering strategy.
+- ADR 1134: multi-axis + UI layout contract (active axis routing).
+- ADR 1135: axis locks and shortcut policy.
 - `ecosystem/delinea/docs/axis-range-and-window-policy.md`: current precedence rules and window math.
 
 ## Decision
@@ -45,7 +45,7 @@ Concretely:
 
 - Y zoom updates `ChartState.data_window_y[axis]` (or clears it).
 - The transform pipeline continues to derive row selection **only from X** (dataset row ranges + X window),
-  as described in ADR 0129 and `axis-range-and-window-policy.md`.
+  as described in ADR 1129 and `axis-range-and-window-policy.md`.
 
 This keeps v1 allocation-free and avoids introducing a sparse selection type prematurely.
 
@@ -76,7 +76,7 @@ Semantics:
 
 - Both windows are updated in the same revision, so the engine produces marks based on a coherent 2D view.
 - `AxisRange` constraints are applied to both windows (and may override/lock bounds).
-- Pan/zoom locks gate whether the action is applied per axis (ADR 0135).
+- Pan/zoom locks gate whether the action is applied per axis (ADR 1135).
 
 Row selection behavior:
 
@@ -87,7 +87,7 @@ Row selection behavior:
 
 When multiple X and/or Y axes exist in a grid:
 
-- UI adapters (notably `fret-chart`) choose an “active axis pair” as defined in ADR 0134.
+- UI adapters (notably `fret-chart`) choose an “active axis pair” as defined in ADR 1134.
 - Plot-region 2D interactions (box zoom / reset) apply to the active pair.
 - Axis-band interactions apply to the hovered axis for that dimension and the active other axis when
   an interaction requires both.

@@ -1,4 +1,4 @@
-# ADR 0144: `delinea` Brush Selection + Interaction Output Contract (ECharts-Inspired)
+# ADR 1144: `delinea` Brush Selection + Interaction Output Contract (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -12,10 +12,10 @@ Apache ECharts distinguishes between:
 
 `delinea` already has durable, headless view/window semantics via:
 
-- X `dataZoom` filtering/windowing (ADR 0129),
-- Y view windows (mapping-only in v1; ADR 0136),
-- 2D box zoom as paired view-window writes (ADR 0136),
-- selection/filtering contracts for large data (ADR 0137).
+- X `dataZoom` filtering/windowing (ADR 1129),
+- Y view windows (mapping-only in v1; ADR 1136),
+- 2D box zoom as paired view-window writes (ADR 1136),
+- selection/filtering contracts for large data (ADR 1137).
 
 However, `fret-chart` currently implements a **UI-local** 2D brush rectangle that is not surfaced to the headless
 engine. Without an explicit headless contract, future requirements (linking, external consumers, cross-chart brush,
@@ -26,10 +26,10 @@ extension path to ECharts-class behavior (per-series selection, sparse indices, 
 
 ## Relationship to Other ADRs
 
-- ADR 0129: X `dataZoom` filtering semantics.
-- ADR 0133: interaction/hit testing contract.
-- ADR 0136: Y + 2D view semantics.
-- ADR 0137: `RowSelection` and filtering contract (contiguous fast path).
+- ADR 1129: X `dataZoom` filtering semantics.
+- ADR 1133: interaction/hit testing contract.
+- ADR 1136: Y + 2D view semantics.
+- ADR 1137: `RowSelection` and filtering contract (contiguous fast path).
 
 ## Decision
 
@@ -63,9 +63,9 @@ Brush selection updates are expressed as actions:
 
 Notes:
 
-- Brush actions are not gated by axis pan/zoom locks (ADR 0135); locks only gate view-window mutations.
+- Brush actions are not gated by axis pan/zoom locks (ADR 1135); locks only gate view-window mutations.
 - The UI adapter is responsible for gesture mapping (e.g. `Alt + RMB drag`) and for deciding which axis pair the
-  selection targets (usually the active axis pair; ADR 0134).
+  selection targets (usually the active axis pair; ADR 1134).
 
 ### 4) State + output surface
 
@@ -85,9 +85,9 @@ This makes brush selection observable for:
 This ADR explicitly leaves space for ECharts-class behaviors:
 
 - Conversion to `RowSelection` (range/indices) when the preconditions are satisfied
-  (e.g. monotonic X for fast slicing; ADR 0137).
+  (e.g. monotonic X for fast slicing; ADR 1137).
 - Per-series or per-dataset brush selections (multiple selection groups).
-- Value masking / "empty" semantics (line breaks without filtering) as a separate concept (ADR 0137).
+- Value masking / "empty" semantics (line breaks without filtering) as a separate concept (ADR 1137).
 
 ## Consequences
 
@@ -99,4 +99,4 @@ This ADR explicitly leaves space for ECharts-class behaviors:
 
 - Apache ECharts brush component and selection output:
   - `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\component\\brush\\*`
-- Selection/filter contract baseline: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
+- Selection/filter contract baseline: `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`

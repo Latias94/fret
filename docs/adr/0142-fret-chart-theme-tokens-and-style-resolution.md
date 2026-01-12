@@ -26,8 +26,8 @@ ECharts separates a stable option model from theme packs; we want a similar “t
 
 - ADR 0050: theme config schema and baseline tokens.
 - ADR 0102: semantic theme keys and extensible token registry.
-- ADR 0128: delinea headless chart engine.
-- ADR 0140: dataset storage and indices (for performance; style must not interfere).
+- ADR 1128: delinea headless chart engine.
+- ADR 1140: dataset storage and indices (for performance; style must not interfere).
 
 ## Decision
 
@@ -132,7 +132,7 @@ P0:
 P1:
 
 - Add per-series palette support (theme-driven color cycles aligned with ECharts palettes).
-- Add formatter hooks for tooltip/axis labels (locale/time zone; see ADR 0139).
+- Add formatter hooks for tooltip/axis labels (locale/time zone; see ADR 1139).
 
 ## References
 

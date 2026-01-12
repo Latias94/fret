@@ -1,4 +1,4 @@
-# ADR 0149: `delinea` AppendData Semantics + Incremental Caches (P0 Baseline)
+# ADR 1149: `delinea` AppendData Semantics + Incremental Caches (P0 Baseline)
 
 Status: Proposed
 
@@ -13,9 +13,9 @@ must handle:
 
 `delinea` already has a strong baseline:
 
-- dataset revisioning (`DataTable.revision`, ADR 0140),
-- budgeted stepping (`WorkBudget`, ADR 0128),
-- pixel-bounded LOD for large series (ADR 0132).
+- dataset revisioning (`DataTable.revision`, ADR 1140),
+- budgeted stepping (`WorkBudget`, ADR 1128),
+- pixel-bounded LOD for large series (ADR 1132).
 
 However, several internal caches currently treat *any* dataset `revision` change as a “replace”
 and reset work to the beginning of the selection range. This is correct but not scalable for
@@ -86,7 +86,6 @@ Follow-ups (P1) may extend the same pattern to:
 ## References
 
 - ECharts incremental update: `repo-ref/echarts/src/data/SeriesData.ts` (`appendData`)
-- Dataset identity and raw index contract: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
-- Budgeted stepping: `docs/adr/0128-delinea-headless-chart-engine.md`
-- Large data + progressive: `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
-
+- Dataset identity and raw index contract: `docs/adr/1140-delinea-dataset-storage-and-indices.md`
+- Budgeted stepping: `docs/adr/1128-delinea-headless-chart-engine.md`
+- Large data + progressive: `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`

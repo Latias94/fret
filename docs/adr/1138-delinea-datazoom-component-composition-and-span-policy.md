@@ -1,4 +1,4 @@
-# ADR 0138: `delinea` DataZoom Component Composition + Span Policy (ECharts-Inspired)
+# ADR 1138: `delinea` DataZoom Component Composition + Span Policy (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -7,11 +7,11 @@ Status: Accepted (P0)
 We already have a working v1 zoom/pan surface:
 
 - Durable X dataZoom defaults (`DataZoomXSpec.filter_mode`) and X window state (`ChartState.data_zoom_x[axis]`).
-- Y view windows (`ChartState.data_window_y[axis]`) and 2D view updates (`Action::SetViewWindow2D`) (ADR 0136).
+- Y view windows (`ChartState.data_window_y[axis]`) and 2D view updates (`Action::SetViewWindow2D`) (ADR 1136).
 - Interaction-derived 2D box zoom uses `Action::SetViewWindow2DFromZoom` so span limits can be applied
-  without changing programmatic writes (ADR 0136).
-- Interaction gating via locks (`AxisInteractionLocks`) (ADR 0135).
-- A transform/view pipeline that currently supports contiguous selection and X slicing (ADR 0129, ADR 0137).
+  without changing programmatic writes (ADR 1136).
+- Interaction gating via locks (`AxisInteractionLocks`) (ADR 1135).
+- A transform/view pipeline that currently supports contiguous selection and X slicing (ADR 1129, ADR 1137).
 
 The next “hard-to-change” decisions that will impact slider UI, brush zoom, and multi-axis charts are:
 
@@ -34,12 +34,12 @@ This ADR locks down a Fret-native subset that stays compatible with our headless
 
 ## Relationship to Other ADRs
 
-- ADR 0129: dataZoom/filter semantics and transform pipeline shape.
-- ADR 0132: large data and progressive work budgets.
-- ADR 0134: multi-axis targeting rules in `fret-chart`.
-- ADR 0135: axis locks as interaction gating.
-- ADR 0136: Y + 2D zoom semantics.
-- ADR 0137: row selection vs masking split (future `weakFilter/empty`).
+- ADR 1129: dataZoom/filter semantics and transform pipeline shape.
+- ADR 1132: large data and progressive work budgets.
+- ADR 1134: multi-axis targeting rules in `fret-chart`.
+- ADR 1135: axis locks as interaction gating.
+- ADR 1136: Y + 2D zoom semantics.
+- ADR 1137: row selection vs masking split (future `weakFilter/empty`).
 
 ## Decision
 
@@ -68,7 +68,7 @@ Rationale:
 
 ### 2) v1 supports at most one dataZoom component per axis
 
-We keep the v1 restriction introduced in ADR 0129:
+We keep the v1 restriction introduced in ADR 1129:
 
 - In `ChartSpec`, at most one `DataZoomXSpec` may reference a given X axis.
 
@@ -100,7 +100,7 @@ We define two categories of window updates:
 - `Action::SetDataWindowY`
 - `Action::SetViewWindow2D`
 
-In both cases, `AxisRange` constraints (Fixed/LockMin/LockMax) still apply (ADR 0136).
+In both cases, `AxisRange` constraints (Fixed/LockMin/LockMax) still apply (ADR 1136).
 
 Rationale:
 
@@ -156,7 +156,7 @@ To preserve determinism and keep headless scheduling simple:
 Headless side expectations:
 
 - given the same sequence of actions, the engine produces the same results.
-- performance is governed by `WorkBudget` and incremental `step()` scheduling (ADR 0132), not by time-based drops.
+- performance is governed by `WorkBudget` and incremental `step()` scheduling (ADR 1132), not by time-based drops.
 
 ## Consequences
 
@@ -175,4 +175,4 @@ P0:
 P1:
 
 - Add multiple dataZoom components per axis with intersection composition.
-- Introduce `rangeMode` in spec once streaming/append data is designed (see ADR 0137 backlog).
+- Introduce `rangeMode` in spec once streaming/append data is designed (see ADR 1137 backlog).

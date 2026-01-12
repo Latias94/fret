@@ -1,4 +1,4 @@
-# ADR 0148: `delinea` Tooltip Formatting Contract (Structured Payload + UI Formatter v1)
+# ADR 1148: `delinea` Tooltip Formatting Contract (Structured Payload + UI Formatter v1)
 
 Status: Proposed
 
@@ -20,10 +20,10 @@ That makes it hard to:
 
 ## Relationship to Other ADRs
 
-- ADR 0128: `delinea` headless engine boundary.
-- ADR 0130: axis mapping and scale contracts (required for axis-trigger tooltip).
-- ADR 0133: interaction + hit testing contract (axisPointer/tooltip baseline semantics).
-- ADR 0142: token-driven chart styling (UI-side theme integration for chart components).
+- ADR 1128: `delinea` headless engine boundary.
+- ADR 1130: axis mapping and scale contracts (required for axis-trigger tooltip).
+- ADR 1133: interaction + hit testing contract (axisPointer/tooltip baseline semantics).
+- ADR 1142: token-driven chart styling (UI-side theme integration for chart components).
 
 ## Decision
 

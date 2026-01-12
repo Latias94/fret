@@ -887,7 +887,7 @@ impl ChartEngine {
                 });
         }
 
-        // Brush selection is an output-only interaction (ADR 0144). We compute the derived X-only
+        // Brush selection is an output-only interaction (ADR 1144). We compute the derived X-only
         // row range output after the view has been updated so the selection is scoped to the
         // effective series view (base range + X dataZoom).
         if let Some(brush) = self.state.brush_selection_2d {

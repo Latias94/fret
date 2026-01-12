@@ -258,7 +258,7 @@ This is a suggested sequence for reaching "mature editor" parity without over-de
       in addition to draw geometry, so editor tools can build domain gizmos (lights, cameras, physics, nav, etc).
    - Status: **Aligned (with known gaps)** — Fret now has:
      - reusable pick-primitive layer (`PickCircle2d`, `PickSegmentCapsule2d`, `PickConvexQuad2d`) in `ecosystem/fret-gizmo/src/picking.rs`
-     - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0149)
+     - an explicit plugin/handle namespace contract + manager (`GizmoPlugin`, `GizmoPluginManager`) in `ecosystem/fret-gizmo/src/plugin.rs` (see ADR 0155)
      - built-in transform gizmo routed through the manager (`TransformGizmoPlugin` in `ecosystem/fret-gizmo/src/transform_plugin.rs`)
      - custom property edit payloads for non-transform gizmos (`GizmoUpdate.custom_edits`, `GizmoCustomEdit`, `GizmoPropertyKey`) in `ecosystem/fret-gizmo/src/gizmo/runtime.rs`
      - real custom plugins shipped:

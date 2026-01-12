@@ -1,4 +1,4 @@
-# ADR 0137: `delinea` RowSelection + Filtering Contract (ECharts-Inspired)
+# ADR 1137: `delinea` RowSelection + Filtering Contract (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -15,8 +15,8 @@ Today, our pipeline already relies on a selection abstraction:
 
 - `RowRange` (continuous slice of a dataset table),
 - `RowSelection` (`All`, `Range(RowRange)`, or `Indices(...)`),
-- X windowing via `DataZoomXSpec` + `FilterMode::{Filter,None}` (ADR 0129),
-- Y and 2D view windows (mapping-only; ADR 0136).
+- X windowing via `DataZoomXSpec` + `FilterMode::{Filter,None}` (ADR 1129),
+- Y and 2D view windows (mapping-only; ADR 1136).
 
 This is sufficient for X-only slicing on monotonic columns, but we also need an explicit path for:
 
@@ -34,11 +34,11 @@ to ECharts-class behaviors.
 
 ## Relationship to Other ADRs
 
-- ADR 0128: headless engine boundary.
-- ADR 0129: transform pipeline + X `FilterMode` semantics.
-- ADR 0132: large data + progressive rendering strategy.
-- ADR 0133: interaction + hit testing contract.
-- ADR 0136: Y + 2D zoom semantics (mapping-only Y in v1).
+- ADR 1128: headless engine boundary.
+- ADR 1129: transform pipeline + X `FilterMode` semantics.
+- ADR 1132: large data + progressive rendering strategy.
+- ADR 1133: interaction + hit testing contract.
+- ADR 1136: Y + 2D zoom semantics (mapping-only Y in v1).
 
 ## Decision
 
@@ -81,7 +81,7 @@ To align with ECharts `DataStore` (`_indices` + `getRawIndex`) and to keep futur
 v1 constraints:
 
 - Indices are **raw row indices** (view index -> raw index mapping).
-- Indices may be produced by budgeted engine stages (ADR 0128) and cached by revision keys.
+- Indices may be produced by budgeted engine stages (ADR 1128) and cached by revision keys.
 - Consumers (marks/LOD/bounds/hit testing) must iterate selection via `get_raw_index(...)` rather than
   assuming contiguity.
 
@@ -135,7 +135,7 @@ To avoid future drift, we adopt a stable transform ordering for cartesian grids:
 4. Derived-column transforms (stacking/aggregates) that are defined over the effective selection.
 5. LOD transforms (min/max per pixel, sampling) over the selected (and/or masked) view.
 
-This is consistent with the forward-compatibility rule in ADR 0129 (“apply X filters before Y filters”).
+This is consistent with the forward-compatibility rule in ADR 1129 (“apply X filters before Y filters”).
 
 ### 8) “Decide early” ECharts-inspired capabilities (backlog)
 
@@ -159,14 +159,14 @@ Transforms:
 Interaction and output:
 
 - Brush selection: decide whether brush produces a durable selection output (indices/mask) or only writes view windows.
-  - v1 baseline: brush selection is a headless output (does not write view windows); see ADR 0144.
+  - v1 baseline: brush selection is a headless output (does not write view windows); see ADR 1144.
 - Tooltip formatting contract: decide headless formatter surfaces (typed values + series meta) vs UI-only formatting.
 - Visual mapping: decide whether “visualMap”-like encodings (color/size/opacity) are a first-class contract or UI-only.
 
 Large data and streaming:
 
 - Progressive thresholds: ECharts-style `progressive` / `progressiveThreshold` and `large` / `largeThreshold`
-  (and how they map onto ADR 0132 `WorkBudget` + LOD stages).
+  (and how they map onto ADR 1132 `WorkBudget` + LOD stages).
 - Data updates: `setOption` merge semantics and `appendData`-like streaming (whether we support incremental
   dataset appends without re-tessellating everything, and what invalidates cached selections/LOD).
   This should remain a headless contract expressed via revisions and budgeted work, not UI-only behavior.
@@ -181,7 +181,7 @@ Large data and streaming:
 
 P0:
 
-- Keep v1 behaviors aligned with ADR 0129 and ADR 0136 (contiguous fast path remains primary).
+- Keep v1 behaviors aligned with ADR 1129 and ADR 1136 (contiguous fast path remains primary).
 - Add conformance demos that stress multi-axis + 2D box zoom + large datasets.
 
 P1:

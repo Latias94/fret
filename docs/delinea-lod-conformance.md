@@ -10,7 +10,7 @@ ECharts-class features.
 
 - **Pixel-bounded**: emitted geometry is bounded by plot pixel width, not dataset length.
 - **Monotonic X**: input X values are non-decreasing in raw row order.
-- **Raw index**: the dataset row index, preserved through transforms as `data_indices` (ADR 0140).
+- **Raw index**: the dataset row index, preserved through transforms as `data_indices` (ADR 1140).
 
 ## Current v1 strategies
 
@@ -80,4 +80,3 @@ Environment knobs:
 - Expose spec knobs aligned with ECharts (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`).
 - Add optional higher-fidelity sampling (e.g. LTTB) for moderate sizes.
 - Add a benchmark harness that can gate frame-time regressions on CI.
-

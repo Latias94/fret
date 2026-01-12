@@ -1,4 +1,4 @@
-# ADR 0100: Pointer Click Count and Double-Click Semantics
+# ADR 0151: Pointer Click Count and Double-Click Semantics
 
 Status: Proposed
 

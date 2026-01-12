@@ -1,4 +1,4 @@
-# ADR 0129: `delinea` Transform Pipeline + DataZoom Semantics (ECharts-Inspired)
+# ADR 1129: `delinea` Transform Pipeline + DataZoom Semantics (ECharts-Inspired)
 
 Status: Proposed
 
@@ -27,7 +27,7 @@ features without destabilizing core contracts.
 
 ## Relationship to Other ADRs
 
-- ADR 0128 introduces `delinea` as the headless chart engine and sets scope boundaries.
+- ADR 1128 introduces `delinea` as the headless chart engine and sets scope boundaries.
 - ADR 0097 / ADR 0099 cover the ImPlot-like retained plot surface (`fret-plot`), which is not replaced by `delinea`.
 - ADR 0080 defines `SceneOp::Path` and `PathService` caching; this ADR lists chart-driven “must-have” semantics
   that may require future contract extensions.
@@ -150,10 +150,10 @@ If we later need richer paint semantics (dashes, joins/caps control, gradients, 
 
 ## Follow-ups
 
-- ADR 0130: axis scales + coordinate mapping (Value/Category v1).
-- ADR 0131: marks output + stable identity + renderer contract.
-- ADR 0132: large data + progressive rendering baseline.
-- ADR 0133: interaction + hit testing contract (axis lock / zoom lock path).
+- ADR 1130: axis scales + coordinate mapping (Value/Category v1).
+- ADR 1131: marks output + stable identity + renderer contract.
+- ADR 1132: large data + progressive rendering baseline.
+- ADR 1133: interaction + hit testing contract (axis lock / zoom lock path).
 
 - Implement `DataZoomX` as a transform node rather than ad-hoc view policy (internal-only first).
 - Add `minSpan/maxSpan` and `zoomLock`-like constraints (spec-level) once we have multi-axis + slider UI.

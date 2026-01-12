@@ -1,11 +1,11 @@
-# ADR 0139: `delinea` Time Axis Contract (Ticks + Default Labels)
+# ADR 1139: `delinea` Time Axis Contract (Ticks + Default Labels)
 
 Status: Proposed
 
 ## Context
 
-`delinea` is an ECharts-inspired, headless chart engine (ADR 0128). Our v1 scale contract started
-with `Value` and `Category` axes (ADR 0130). To align with real-world charting needs (timeseries,
+`delinea` is an ECharts-inspired, headless chart engine (ADR 1128). Our v1 scale contract started
+with `Value` and `Category` axes (ADR 1130). To align with real-world charting needs (timeseries,
 finance, dashboards), we need a first-class **time axis** with deterministic tick generation and
 reasonable default labels.
 
@@ -21,9 +21,9 @@ trying to replicate ECharts’ full locale/time-zone formatting stack in v1.
 
 ## Relationship to Other ADRs
 
-- ADR 0128: `delinea` headless chart engine.
-- ADR 0130: axis scales + mapping contract (now extended by this ADR).
-- ADR 0132: large-data + progressive work scheduling (tick generation must be bounded).
+- ADR 1128: `delinea` headless chart engine.
+- ADR 1130: axis scales + mapping contract (now extended by this ADR).
+- ADR 1132: large-data + progressive work scheduling (tick generation must be bounded).
 
 ## Decision
 
@@ -110,4 +110,3 @@ Those will be addressed in a follow-up ADR once the component/theming surface is
 1. Add `Log` scale (`type: 'log'`) with correct mapping semantics and tick/label policy.
 2. Add locale + time-zone policies (ECharts `useUTC`-like behavior).
 3. Add user-provided formatter hooks (headless contract; UI just renders strings).
-

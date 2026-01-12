@@ -1,4 +1,4 @@
-# ADR 0146: `delinea` Link Events for Brush Selection (P0)
+# ADR 1146: `delinea` Link Events for Brush Selection (P0)
 
 Status: Accepted (P0)
 
@@ -13,8 +13,8 @@ commercial-grade dashboards and editor tools.
 
 ## Relationship to Other ADRs
 
-- ADR 0144: brush selection as a headless output.
-- ADR 0145: derived X-only row range fast path.
+- ADR 1144: brush selection as a headless output.
+- ADR 1145: derived X-only row range fast path.
 
 ## Decision
 
@@ -41,7 +41,7 @@ the consumer.
 
 ### 3) Link events are a propagation mechanism, not the source of truth
 
-Brush selection remains available as stable output fields (ADR 0144/0145). Link events are:
+Brush selection remains available as stable output fields (ADR 1144/0145). Link events are:
 
 - intended for cross-chart propagation by the host app,
 - optional and gated by link configuration,

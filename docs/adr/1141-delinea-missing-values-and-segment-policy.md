@@ -1,4 +1,4 @@
-# ADR 0141: `delinea` Missing Values, Gaps, and Segment Policy (ECharts-Aligned)
+# ADR 1141: `delinea` Missing Values, Gaps, and Segment Policy (ECharts-Aligned)
 
 Status: Proposed
 
@@ -24,10 +24,10 @@ We want to lock this down early to avoid later rewrites of marks, hit-testing, a
 
 ## Relationship to Other ADRs
 
-- ADR 0129: transform pipeline and dataZoom semantics.
-- ADR 0132: large data + progressive rendering strategy.
-- ADR 0133: interaction and hit-testing contract.
-- ADR 0140: dataset storage + indices (raw store + views).
+- ADR 1129: transform pipeline and dataZoom semantics.
+- ADR 1132: large data + progressive rendering strategy.
+- ADR 1133: interaction and hit-testing contract.
+- ADR 1140: dataset storage + indices (raw store + views).
 
 This ADR focuses specifically on **missing values and geometry segmentation**.
 
@@ -89,7 +89,7 @@ No implicit interpolation is performed.
 
 ### 4) Stacking and missing values
 
-For stacked line/area (ADR 0132, `SeriesSpec.stack`):
+For stacked line/area (ADR 1132, `SeriesSpec.stack`):
 
 - missing values do not contribute to the stack baseline for that row,
 - stacked output at that row is considered missing for that series,
@@ -113,7 +113,7 @@ absence is represented by missing entries.
 
 ### 6) LOD / progressive rendering must preserve gaps
 
-Downsampling (ADR 0132) must not erase gaps:
+Downsampling (ADR 1132) must not erase gaps:
 
 - if a bucket contains only missing values, it produces no output for that bucket,
 - if valid values exist on both sides of a gap, the output must still encode a segment break unless
@@ -146,8 +146,7 @@ P0/P1:
 
 - ECharts `connectNulls` option: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\chart\\line\\LineSeries.ts`
 - ECharts polyline handling with gaps: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\chart\\line\\poly.ts`
-- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ADR 0132: `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
-- ADR 0133: `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
-- ADR 0140: `docs/adr/0140-delinea-dataset-storage-and-indices.md`
-
+- ADR 1129: `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 1132: `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
+- ADR 1133: `docs/adr/1133-delinea-interaction-and-hit-testing-contract.md`
+- ADR 1140: `docs/adr/1140-delinea-dataset-storage-and-indices.md`

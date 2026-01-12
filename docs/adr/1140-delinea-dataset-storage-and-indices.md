@@ -1,4 +1,4 @@
-# ADR 0140: `delinea` Dataset Storage, Indices, and Zero-Copy Strategy (ECharts-Inspired)
+# ADR 1140: `delinea` Dataset Storage, Indices, and Zero-Copy Strategy (ECharts-Inspired)
 
 Status: Accepted (P0)
 
@@ -13,8 +13,8 @@ Status: Accepted (P0)
 Today, `delinea` uses `DataTable` as a minimal, owned, columnar store:
 
 - columns are `Vec<T>` (`Column::{F64,I64,U64,Bool,String}`),
-- filtering/windowing is primarily expressed as a row range (ADR 0129),
-- some large-data behavior is handled in marks/LOD stages (ADR 0132).
+- filtering/windowing is primarily expressed as a row range (ADR 1129),
+- some large-data behavior is handled in marks/LOD stages (ADR 1132).
 
 This works for P0, but it leaves a key gap compared to ECharts: **a shared, index-addressable data store**
 that can represent filtered/selected/downsampled views without copying columns.
@@ -31,10 +31,10 @@ selection, progressive rendering, streaming) do not require a large rewrite of o
 
 ## Relationship to Other ADRs
 
-- ADR 0128: overall headless engine architecture and `WorkBudget`.
-- ADR 0129: transform pipeline + dataZoom semantics.
-- ADR 0132: large data + progressive rendering strategy.
-- ADR 0137: row selection and filtering contract.
+- ADR 1128: overall headless engine architecture and `WorkBudget`.
+- ADR 1129: transform pipeline + dataZoom semantics.
+- ADR 1132: large data + progressive rendering strategy.
+- ADR 1137: row selection and filtering contract.
 
 This ADR focuses specifically on **dataset storage** and **index-based views**.
 
@@ -61,9 +61,9 @@ Key concepts (terminology, not necessarily public API):
 
 This model is the required substrate for:
 
-- selection/brush (ADR 0137),
+- selection/brush (ADR 1137),
 - transform outputs that should not materialize new columns,
-- progressive rendering and chunking (ADR 0132),
+- progressive rendering and chunking (ADR 1132),
 - fast `indexOfRawIndex`-style operations (hover, linking).
 
 ### 3) Prefer index-based transforms over column materialization
@@ -86,7 +86,7 @@ We adopt the same spirit as ECharts (“append on raw storage”), but the concr
 
 - In `delinea`, `DataTable` is always the raw store.
 - Indexed views are **ephemeral**, engine-owned caches (e.g. `RowSelection::Indices`) keyed by dataset
-  revision + transform parameters (ADR 0128 / ADR 0129 / ADR 0137).
+  revision + transform parameters (ADR 1128 / ADR 1129 / ADR 1137).
 
 Therefore:
 
@@ -174,7 +174,7 @@ P0/P1:
   `repo-ref/echarts/src/data/SeriesData.ts`
 - ECharts `Source` (source formats and dimension discovery):
   `repo-ref/echarts/src/data/Source.ts`
-- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
-- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ADR 0132: `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
-- ADR 0137: `docs/adr/0137-delinea-row-selection-and-filtering-contract.md`
+- ADR 1128: `docs/adr/1128-delinea-headless-chart-engine.md`
+- ADR 1129: `docs/adr/1129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 1132: `docs/adr/1132-delinea-large-data-and-progressive-rendering.md`
+- ADR 1137: `docs/adr/1137-delinea-row-selection-and-filtering-contract.md`

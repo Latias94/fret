@@ -1,4 +1,4 @@
-# ADR 0149: Custom Gizmo Plugins and Handle Contract
+# ADR 0155: Custom Gizmo Plugins and Handle Contract
 
 Status: Proposed
 
@@ -246,4 +246,3 @@ Cons:
 - Do we need a shared “style tokens for gizmos” vocabulary across plugins (beyond `GizmoVisuals`)?
 - How should plugin-provided pick items be scored consistently against transform gizmo items when
   both are present (cross-tool overlap policy)?
-
