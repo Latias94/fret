@@ -121,7 +121,6 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::RovingFlex(props) => Some(props.flex.layout.flex.grow),
         ElementKind::VirtualList(props) => Some(props.layout.flex.grow),
         ElementKind::ResizablePanelGroup(props) => Some(props.layout.flex.grow),
-        _ => None,
     }
 }
 
