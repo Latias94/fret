@@ -115,8 +115,14 @@ fn shadcn_web_goldens_smoke_parse_and_rects_valid() {
             .or_else(|| golden.themes.get("dark"))
             .unwrap_or_else(|| panic!("missing light/dark theme in {name}"));
 
-        assert!(theme.viewport.w.is_finite() && theme.viewport.w > 0.0, "{name} viewport.w");
-        assert!(theme.viewport.h.is_finite() && theme.viewport.h > 0.0, "{name} viewport.h");
+        assert!(
+            theme.viewport.w.is_finite() && theme.viewport.w > 0.0,
+            "{name} viewport.w"
+        );
+        assert!(
+            theme.viewport.h.is_finite() && theme.viewport.h > 0.0,
+            "{name} viewport.h"
+        );
 
         validate_rects_in_dom_tree(name, &theme.root);
 
@@ -129,4 +135,3 @@ fn shadcn_web_goldens_smoke_parse_and_rects_valid() {
         dir.display()
     );
 }
-
