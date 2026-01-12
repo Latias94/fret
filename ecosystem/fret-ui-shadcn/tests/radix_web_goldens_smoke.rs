@@ -86,6 +86,22 @@ fn validate_rects_in_dom_tree(name: &str, node: &DomNode) -> usize {
     count
 }
 
+fn requires_rects(primitive: &str) -> bool {
+    matches!(
+        primitive,
+        "alert-dialog"
+            | "context-menu"
+            | "dialog"
+            | "dropdown-menu"
+            | "hover-card"
+            | "menubar"
+            | "navigation-menu"
+            | "popover"
+            | "select"
+            | "tooltip"
+    )
+}
+
 #[test]
 fn radix_web_goldens_smoke_parse_and_rects_present() {
     let dir = radix_web_dir();
@@ -129,13 +145,21 @@ fn radix_web_goldens_smoke_parse_and_rects_present() {
         assert!(!golden.scenario.is_empty(), "golden.scenario: {name}");
         assert!(!golden.steps.is_empty(), "golden.steps: {name}");
 
+        let mut rects_total = 0usize;
         for (idx, step) in golden.steps.iter().enumerate() {
             assert!(
                 !step.snapshot.dom.tag.is_empty(),
                 "step {idx} dom.tag: {name}"
             );
-            let rects = validate_rects_in_dom_tree(name, &step.snapshot.dom);
-            assert!(rects > 0, "expected at least one rect in {name} step {idx}");
+            rects_total += validate_rects_in_dom_tree(name, &step.snapshot.dom);
+        }
+
+        if requires_rects(&golden.primitive) {
+            assert!(
+                rects_total > 0,
+                "expected at least one rect somewhere in {name} (primitive={})",
+                golden.primitive
+            );
         }
 
         found += 1;

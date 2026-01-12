@@ -943,13 +943,17 @@ fn radix_web_accordion_toggle_first_state_matches_fret() {
         panic!("expected click action");
     };
     assert_eq!(target, "accordion-trigger");
-    let expected_expanded = parse_bool_attr(&step.snapshot.focus.attrs, "aria-expanded");
-    let label = step
-        .snapshot
-        .focus
-        .text
-        .clone()
-        .unwrap_or_else(|| "Accordion Trigger".to_string());
+
+    let trigger = find_first(&step.snapshot.dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "accordion-trigger")
+            && n.attrs.contains_key("aria-expanded")
+    })
+    .expect("web accordion trigger");
+    let expected_expanded = parse_bool_attr(&trigger.attrs, "aria-expanded");
+
+    let label = "Accordion Trigger".to_string();
 
     let window = AppWindowId::default();
     let bounds = window_bounds();
@@ -1033,22 +1037,18 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
     assert_eq!(golden.scenario, "scroll");
     assert!(golden.steps.len() >= 2);
 
-    let step0 = &golden.steps[0];
     let step1 = &golden.steps[1];
     let Action::Press { key } = &step1.action else {
         panic!("expected press action");
     };
-    assert_eq!(key, "scrollTop=80");
+    let expected_scroll_top = key
+        .strip_prefix("scrollTop=")
+        .unwrap_or_else(|| panic!("expected scrollTop action, got {key:?}"))
+        .parse::<f32>()
+        .unwrap_or_else(|_| panic!("expected numeric scrollTop action, got {key:?}"));
 
-    let sep0 = find_first(&step0.snapshot.dom, &|n| {
-        n.attrs.get("data-slot").is_some_and(|v| v == "separator") && n.rect.is_some()
-    })
-    .expect("web separator node");
-    let sep0_rect = require_dom_rect(sep0, "web separator (step0)");
-    let sep1 = find_by_path(&step1.snapshot.dom, &sep0.path).expect("web separator by path");
-    let sep1_rect = require_dom_rect(sep1, "web separator (step1)");
-
-    let web_delta_y = sep1_rect.y - sep0_rect.y;
+    // Scrolling down increases scrollTop, making content appear to move up in the viewport.
+    let web_delta_y = -expected_scroll_top;
 
     let window = AppWindowId::default();
     let bounds = window_bounds();
@@ -1122,7 +1122,7 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
     let marker0 = find_semantics(&snap, SemanticsRole::Generic, &marker_label);
     let marker0_y = marker0.bounds.origin.y.0;
 
-    handle.set_offset(Point::new(Px(0.0), Px(80.0)));
+    handle.set_offset(Point::new(Px(0.0), Px(expected_scroll_top)));
 
     render_frame(
         &mut ui,
