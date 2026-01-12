@@ -2993,13 +2993,33 @@ impl Gizmo {
         color: Color,
         depth: DepthMode,
     ) {
-        out.push(Triangle3d {
-            a,
-            b,
-            c,
-            color,
-            depth,
-        });
+        match (depth, self.config.show_occluded) {
+            (DepthMode::Test, true) => {
+                out.push(Triangle3d {
+                    a,
+                    b,
+                    c,
+                    color: mix_alpha(color, self.config.occluded_alpha),
+                    depth: DepthMode::Ghost,
+                });
+                out.push(Triangle3d {
+                    a,
+                    b,
+                    c,
+                    color,
+                    depth: DepthMode::Test,
+                });
+            }
+            _ => {
+                out.push(Triangle3d {
+                    a,
+                    b,
+                    c,
+                    color,
+                    depth,
+                });
+            }
+        }
     }
 
     fn axis_dirs(&self, target: &Transform3d) -> [Vec3; 3] {
@@ -4065,51 +4085,38 @@ impl Gizmo {
         )
         .unwrap_or(radius_world * 0.04);
 
-        let mut push_ring_band = |u: Vec3,
-                                  v: Vec3,
-                                  radius_world: f32,
-                                  color: Color,
-                                  depth: DepthMode| {
-            let half = (thickness_world * 0.55)
-                .clamp(radius_world * 0.010, radius_world * 0.075)
-                .max(1e-6);
-            let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
-            let outer_r = radius_world + half;
+        let mut push_ring_band =
+            |u: Vec3, v: Vec3, radius_world: f32, color: Color, depth: DepthMode| {
+                let half = (thickness_world * 0.55)
+                    .clamp(radius_world * 0.010, radius_world * 0.075)
+                    .max(1e-6);
+                let inner_r = (radius_world - half).max(radius_world * 0.2).max(1e-6);
+                let outer_r = radius_world + half;
 
-            let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
-            let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
+                let fill = mix_alpha(color, pv.rotate_ring_fill_alpha.clamp(0.0, 1.0));
+                let edge = mix_alpha(color, pv.rotate_ring_edge_alpha.clamp(0.0, 1.0));
 
-            let point =
-                |theta: f32, r: f32| -> Vec3 { origin + (u * theta.cos() + v * theta.sin()) * r };
+                let point = |theta: f32, r: f32| -> Vec3 {
+                    origin + (u * theta.cos() + v * theta.sin()) * r
+                };
 
-            let step = std::f32::consts::TAU / (segments as f32);
-            let mut prev_outer = point(0.0, outer_r);
-            for i in 0..segments {
-                let t0 = step * (i as f32);
-                let t1 = step * ((i + 1) as f32);
-                let o0 = point(t0, outer_r);
-                let i0 = point(t0, inner_r);
-                let o1 = point(t1, outer_r);
-                let i1 = point(t1, inner_r);
+                let step = std::f32::consts::TAU / (segments as f32);
+                let mut prev_outer = point(0.0, outer_r);
+                for i in 0..segments {
+                    let t0 = step * (i as f32);
+                    let t1 = step * ((i + 1) as f32);
+                    let o0 = point(t0, outer_r);
+                    let i0 = point(t0, inner_r);
+                    let o1 = point(t1, outer_r);
+                    let i1 = point(t1, inner_r);
 
-                match (depth, self.config.show_occluded) {
-                    (DepthMode::Test, true) => {
-                        let ghost_fill = mix_alpha(fill, self.config.occluded_alpha);
-                        self.push_tri(&mut out.triangles, o0, i0, i1, ghost_fill, DepthMode::Ghost);
-                        self.push_tri(&mut out.triangles, o0, i1, o1, ghost_fill, DepthMode::Ghost);
-                        self.push_tri(&mut out.triangles, o0, i0, i1, fill, DepthMode::Test);
-                        self.push_tri(&mut out.triangles, o0, i1, o1, fill, DepthMode::Test);
-                    }
-                    _ => {
-                        self.push_tri(&mut out.triangles, o0, i0, i1, fill, depth);
-                        self.push_tri(&mut out.triangles, o0, i1, o1, fill, depth);
-                    }
+                    self.push_tri(&mut out.triangles, o0, i0, i1, fill, depth);
+                    self.push_tri(&mut out.triangles, o0, i1, o1, fill, depth);
+
+                    self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
+                    prev_outer = o1;
                 }
-
-                self.push_line(&mut out.lines, prev_outer, o1, edge, depth);
-                prev_outer = o1;
-            }
-        };
+            };
 
         if include_axis {
             for &(((axis_dir, color), handle), axis_index) in &[
