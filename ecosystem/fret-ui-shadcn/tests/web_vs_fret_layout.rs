@@ -6,9 +6,11 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextProps,
+    ContainerProps, CrossAlign, FlexProps, GridProps, LayoutStyle, Length, MainAlign,
+    PressableProps, RovingFlexProps, SizeStyle, TextProps,
 };
 use fret_ui::tree::UiTree;
+use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -45,6 +47,8 @@ struct WebRect {
 #[derive(Debug, Clone, Deserialize)]
 struct WebNode {
     tag: String,
+    #[serde(default)]
+    id: Option<String>,
     #[serde(default)]
     #[serde(rename = "className")]
     class_name: Option<String>,
@@ -117,6 +121,18 @@ fn contains_text(node: &WebNode, needle: &str) -> bool {
         return true;
     }
     node.children.iter().any(|c| contains_text(c, needle))
+}
+
+fn contains_id(node: &WebNode, needle: &str) -> bool {
+    if node
+        .id
+        .as_deref()
+        .or_else(|| node.attrs.get("id").map(String::as_str))
+        .is_some_and(|id| id == needle)
+    {
+        return true;
+    }
+    node.children.iter().any(|c| contains_id(c, needle))
 }
 
 fn web_find_by_tag_and_text<'a>(root: &'a WebNode, tag: &str, text: &str) -> Option<&'a WebNode> {
@@ -3464,6 +3480,885 @@ fn web_vs_fret_layout_field_textarea_geometry() {
         "field-textarea desc y",
         desc.bounds.origin.y,
         web_desc.rect.y,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_field_group_geometry() {
+    let web = read_web_golden("field-group");
+    let theme = web_theme(&web);
+
+    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+    let web_responses_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Responses").expect("web responses label");
+    let web_responses_desc =
+        web_find_by_tag_and_text(&theme.root, "p", "Get notified when ChatGPT")
+            .expect("web responses desc");
+    let web_tasks_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Tasks").expect("web tasks label");
+
+    let web_responses_row = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "horizontal")
+            && contains_text(n, "Push notifications")
+            && contains_id(n, "push")
+    })
+    .expect("web responses row");
+    let web_push_tasks_row = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "horizontal")
+            && contains_text(n, "Push notifications")
+            && contains_id(n, "push-tasks")
+    })
+    .expect("web push tasks row");
+    let web_email_tasks_row = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "horizontal")
+            && contains_text(n, "Email notifications")
+            && contains_id(n, "email-tasks")
+    })
+    .expect("web email tasks row");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let responses_push: Model<bool> = cx.app.models_mut().insert(true);
+        let tasks_push: Model<bool> = cx.app.models_mut().insert(false);
+        let tasks_email: Model<bool> = cx.app.models_mut().insert(false);
+
+        let responses_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:responses:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Responses").into_element(cx)],
+        );
+        let responses_desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:responses:desc")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![fret_ui_shadcn::FieldDescription::new(
+                    "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
+                )
+                .into_element(cx)]
+            },
+        );
+        let responses_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:responses:row")),
+                ..Default::default()
+            },
+            move |cx| {
+                let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
+                    .disabled(true)
+                    .a11y_label("push")
+                    .into_element(cx);
+                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+                vec![
+                    fret_ui_shadcn::Field::new(vec![checkbox, label])
+                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                        .into_element(cx),
+                ]
+            },
+        );
+        let responses_checkbox_group = fret_ui_shadcn::FieldGroup::new(vec![responses_row])
+            .checkbox_group()
+            .into_element(cx);
+        let responses_fieldset = fret_ui_shadcn::FieldSet::new(vec![
+            responses_label,
+            responses_desc,
+            responses_checkbox_group,
+        ])
+        .into_element(cx);
+
+        let tasks_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:tasks:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Tasks").into_element(cx)],
+        );
+        let tasks_desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:tasks:desc")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::FieldDescription::new(
+                        "Get notified when tasks you've created have updates. Manage tasks",
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+        let tasks_row_push = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:tasks:push-row")),
+                ..Default::default()
+            },
+            move |cx| {
+                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
+                    .a11y_label("push-tasks")
+                    .into_element(cx);
+                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+                vec![
+                    fret_ui_shadcn::Field::new(vec![checkbox, label])
+                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                        .into_element(cx),
+                ]
+            },
+        );
+        let tasks_row_email = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:tasks:email-row")),
+                ..Default::default()
+            },
+            move |cx| {
+                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
+                    .a11y_label("email-tasks")
+                    .into_element(cx);
+                let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
+                vec![
+                    fret_ui_shadcn::Field::new(vec![checkbox, label])
+                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                        .into_element(cx),
+                ]
+            },
+        );
+        let tasks_checkbox_group =
+            fret_ui_shadcn::FieldGroup::new(vec![tasks_row_push, tasks_row_email])
+                .checkbox_group()
+                .into_element(cx);
+        let tasks_fieldset =
+            fret_ui_shadcn::FieldSet::new(vec![tasks_label, tasks_desc, tasks_checkbox_group])
+                .into_element(cx);
+
+        let separator = fret_ui_shadcn::FieldSeparator::new().into_element(cx);
+
+        let group =
+            fret_ui_shadcn::FieldGroup::new(vec![responses_fieldset, separator, tasks_fieldset])
+                .into_element(cx);
+
+        let root = cx.container(
+            ContainerProps {
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &Theme::global(&*cx.app),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![group],
+        );
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-group:root")),
+                ..Default::default()
+            },
+            move |_cx| vec![root],
+        )]
+    });
+
+    let root = find_semantics(&snap, SemanticsRole::Panel, Some("Golden:field-group:root"))
+        .expect("fret root");
+    let responses_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:responses:label"),
+    )
+    .expect("fret responses label");
+    let responses_desc = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:responses:desc"),
+    )
+    .expect("fret responses desc");
+    let responses_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:responses:row"),
+    )
+    .expect("fret responses row");
+    let tasks_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:tasks:label"),
+    )
+    .expect("fret tasks label");
+
+    let tasks_row_push = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:tasks:push-row"),
+    )
+    .expect("fret tasks push row");
+    let tasks_row_email = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-group:tasks:email-row"),
+    )
+    .expect("fret tasks email row");
+
+    assert_close_px(
+        "field-group root width",
+        root.bounds.size.width,
+        web_root.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "field-group responses label y",
+        responses_label.bounds.origin.y,
+        web_responses_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-group responses desc y",
+        responses_desc.bounds.origin.y,
+        web_responses_desc.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-group responses desc h",
+        responses_desc.bounds.size.height,
+        web_responses_desc.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "field-group responses row y",
+        responses_row.bounds.origin.y,
+        web_responses_row.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-group responses row h",
+        responses_row.bounds.size.height,
+        web_responses_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "field-group tasks label y",
+        tasks_label.bounds.origin.y,
+        web_tasks_label.rect.y,
+        1.0,
+    );
+
+    let fret_first_fieldset_to_tasks_label = tasks_label.bounds.origin.y.0
+        - (responses_row.bounds.origin.y.0 + responses_row.bounds.size.height.0);
+    let web_first_fieldset_to_tasks_label =
+        web_tasks_label.rect.y - (web_responses_row.rect.y + web_responses_row.rect.h);
+    assert!(
+        (fret_first_fieldset_to_tasks_label - web_first_fieldset_to_tasks_label).abs() <= 1.0,
+        "field-group responses row -> tasks label: expected≈{web_first_fieldset_to_tasks_label} got={fret_first_fieldset_to_tasks_label}"
+    );
+
+    let tasks_gap = tasks_row_email.bounds.origin.y.0
+        - (tasks_row_push.bounds.origin.y.0 + tasks_row_push.bounds.size.height.0);
+    assert!(
+        (tasks_gap - 12.0).abs() <= 1.0,
+        "field-group checkbox-group gap: expected ~12 got={tasks_gap}"
+    );
+
+    assert_close_px(
+        "field-group tasks push row h",
+        tasks_row_push.bounds.size.height,
+        web_push_tasks_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "field-group tasks email row h",
+        tasks_row_email.bounds.size.height,
+        web_email_tasks_row.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_field_fieldset_geometry() {
+    let web = read_web_golden("field-fieldset");
+    let theme = web_theme(&web);
+
+    let web_root =
+        web_find_by_class_contains(&theme.root, "w-full max-w-md space-y-6").expect("web root");
+    let web_legend =
+        web_find_by_tag_and_text(&theme.root, "legend", "Address Information").expect("web legend");
+    let web_desc = web_find_by_tag_and_text(&theme.root, "p", "We need your address")
+        .expect("web description");
+
+    let web_street_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Street Address").expect("web street label");
+    let web_city_label =
+        web_find_by_tag_and_text(&theme.root, "label", "City").expect("web city label");
+    let web_zip_label =
+        web_find_by_tag_and_text(&theme.root, "label", "Postal Code").expect("web zip label");
+
+    let web_street_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.id.as_deref().is_some_and(|id| id == "street")
+    })
+    .expect("web street input");
+    let web_city_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.id.as_deref().is_some_and(|id| id == "city")
+    })
+    .expect("web city input");
+    let web_zip_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.id.as_deref().is_some_and(|id| id == "zip")
+    })
+    .expect("web zip input");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let street: Model<String> = cx.app.models_mut().insert(String::new());
+        let city: Model<String> = cx.app.models_mut().insert(String::new());
+        let zip: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let legend = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:legend")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![fret_ui_shadcn::FieldLegend::new("Address Information").into_element(cx)]
+            },
+        );
+        let desc = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:desc")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::FieldDescription::new(
+                        "We need your address to deliver your order.",
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let street_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:street:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Street Address").into_element(cx)],
+        );
+        let street_input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from("Golden:field-fieldset:street:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(street)
+                        .a11y_label("Street Address")
+                        .placeholder("123 Main St")
+                        .into_element(cx),
+                ]
+            },
+        );
+        let street_field =
+            fret_ui_shadcn::Field::new(vec![street_label, street_input]).into_element(cx);
+
+        let city_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:city:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("City").into_element(cx)],
+        );
+        let city_input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from("Golden:field-fieldset:city:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(city)
+                        .a11y_label("City")
+                        .placeholder("New York")
+                        .into_element(cx),
+                ]
+            },
+        );
+        let city_field = fret_ui_shadcn::Field::new(vec![city_label, city_input]).into_element(cx);
+
+        let zip_label = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:zip:label")),
+                ..Default::default()
+            },
+            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Postal Code").into_element(cx)],
+        );
+        let zip_input = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from("Golden:field-fieldset:zip:input")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Input::new(zip)
+                        .a11y_label("Postal Code")
+                        .placeholder("90502")
+                        .into_element(cx),
+                ]
+            },
+        );
+        let zip_field = fret_ui_shadcn::Field::new(vec![zip_label, zip_input]).into_element(cx);
+
+        let grid = cx.grid(
+            GridProps {
+                cols: 2,
+                gap: Px(16.0),
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &Theme::global(&*cx.app),
+                    fret_ui_kit::LayoutRefinement::default().w_full(),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![city_field, zip_field],
+        );
+
+        let group = fret_ui_shadcn::FieldGroup::new(vec![street_field, grid]).into_element(cx);
+        let set = fret_ui_shadcn::FieldSet::new(vec![legend, desc, group]).into_element(cx);
+
+        let root = cx.container(
+            ContainerProps {
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &Theme::global(&*cx.app),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![set],
+        );
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-fieldset:root")),
+                ..Default::default()
+            },
+            move |_cx| vec![root],
+        )]
+    });
+
+    let root = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:root"),
+    )
+    .expect("fret root");
+    let legend = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:legend"),
+    )
+    .expect("fret legend");
+    let desc = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:desc"),
+    )
+    .expect("fret desc");
+
+    let street_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:street:label"),
+    )
+    .expect("fret street label");
+    let street_input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:field-fieldset:street:input"),
+    )
+    .expect("fret street input");
+
+    let city_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:city:label"),
+    )
+    .expect("fret city label");
+    let city_input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:field-fieldset:city:input"),
+    )
+    .expect("fret city input");
+
+    let zip_label = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-fieldset:zip:label"),
+    )
+    .expect("fret zip label");
+    let zip_input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:field-fieldset:zip:input"),
+    )
+    .expect("fret zip input");
+
+    assert_close_px(
+        "field-fieldset root width",
+        root.bounds.size.width,
+        web_root.rect.w,
+        1.0,
+    );
+
+    assert_close_px(
+        "field-fieldset legend y",
+        legend.bounds.origin.y,
+        web_legend.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-fieldset desc y",
+        desc.bounds.origin.y,
+        web_desc.rect.y,
+        1.0,
+    );
+
+    assert_close_px(
+        "field-fieldset street label y",
+        street_label.bounds.origin.y,
+        web_street_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-fieldset street input y",
+        street_input.bounds.origin.y,
+        web_street_input.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-fieldset city label y",
+        city_label.bounds.origin.y,
+        web_city_label.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "field-fieldset zip label y",
+        zip_label.bounds.origin.y,
+        web_zip_label.rect.y,
+        1.0,
+    );
+
+    let fret_city_x = city_input.bounds.origin.x.0 - root.bounds.origin.x.0;
+    let web_city_x = web_city_input.rect.x - web_root.rect.x;
+    assert!(
+        (fret_city_x - web_city_x).abs() <= 1.0,
+        "field-fieldset city input x: expected≈{web_city_x} got={fret_city_x}"
+    );
+
+    let fret_zip_x = zip_input.bounds.origin.x.0 - root.bounds.origin.x.0;
+    let web_zip_x = web_zip_input.rect.x - web_root.rect.x;
+    assert!(
+        (fret_zip_x - web_zip_x).abs() <= 1.0,
+        "field-fieldset zip input x: expected≈{web_zip_x} got={fret_zip_x}"
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_field_choice_card_geometry() {
+    let web = read_web_golden("field-choice-card");
+    let theme = web_theme(&web);
+
+    let web_root = web_find_by_class_contains(&theme.root, "w-full max-w-md").expect("web root");
+
+    let web_radio_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "radiogroup")
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("grid gap-3"))
+    })
+    .expect("web radio group");
+
+    let web_card_kubernetes = find_first(&theme.root, &|n| {
+        n.tag == "label"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("has-[>[data-slot=field]]:w-full"))
+            && contains_text(n, "Kubernetes")
+    })
+    .expect("web kubernetes card");
+
+    let web_card_vm = find_first(&theme.root, &|n| {
+        n.tag == "label"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("has-[>[data-slot=field]]:w-full"))
+            && contains_text(n, "Virtual Machine")
+    })
+    .expect("web vm card");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+        let border = theme.color_required("border");
+
+        let selected: Model<Option<Arc<str>>> =
+            cx.app.models_mut().insert(Some(Arc::from("kubernetes")));
+
+        let root =
+            radio_group_prim::RadioGroupRoot::new(selected).a11y_label("Compute Environment");
+        let values: Arc<[Arc<str>]> = Arc::from([Arc::from("kubernetes"), Arc::from("vm")]);
+        let disabled: Arc<[bool]> = Arc::from([false, false]);
+
+        let mut list_props = RovingFlexProps::default();
+        list_props.flex.layout = fret_ui_kit::declarative::style::layout_style(
+            &theme,
+            fret_ui_kit::LayoutRefinement::default().w_full(),
+        );
+        list_props.flex.gap = MetricRef::space(Space::N3).resolve(&theme);
+
+        let pressable_layout = fret_ui_kit::declarative::style::layout_style(
+            &theme,
+            fret_ui_kit::LayoutRefinement::default().w_full(),
+        );
+
+        let chrome = ChromeRefinement::default()
+            .rounded_md()
+            .border_1()
+            .border_color(fret_ui_kit::ColorRef::Color(border))
+            .p_4();
+
+        let make_card = |cx: &mut fret_ui::ElementContext<'_, App>,
+                         title: &'static str,
+                         desc: &'static str,
+                         checked: bool| {
+            let content = fret_ui_shadcn::FieldContent::new(vec![
+                fret_ui_shadcn::FieldTitle::new(title).into_element(cx),
+                fret_ui_shadcn::FieldDescription::new(desc).into_element(cx),
+            ])
+            .into_element(cx);
+
+            let radio_stub_layout = fret_ui_kit::declarative::style::layout_style(
+                &Theme::global(&*cx.app),
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(16.0)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(16.0)))
+                    .flex_shrink_0(),
+            );
+            let radio_stub = cx.container(
+                ContainerProps {
+                    layout: radio_stub_layout,
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let field = fret_ui_shadcn::Field::new(vec![content, radio_stub])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx);
+
+            let mut props = fret_ui_kit::declarative::style::container_props(
+                &theme,
+                chrome.clone(),
+                fret_ui_kit::LayoutRefinement::default().w_full(),
+            );
+            if checked {
+                // Matches upstream `has-data-[state=checked]:bg-primary/5` (visual-only).
+                if let Some(primary) = theme.color_by_key("primary/5") {
+                    props.background = Some(primary);
+                }
+            }
+
+            cx.container(props, move |_cx| vec![field])
+        };
+
+        let list = root
+            .clone()
+            .list(values.clone(), disabled.clone())
+            .into_element(cx, list_props, move |cx| {
+                let kubernetes = root
+                    .item("kubernetes")
+                    .label("Kubernetes")
+                    .index(0)
+                    .set_size(Some(2))
+                    .tab_stop(true)
+                    .into_element(
+                        cx,
+                        &root,
+                        PressableProps {
+                            layout: pressable_layout,
+                            ..Default::default()
+                        },
+                        move |cx, _st, checked| {
+                            vec![make_card(
+                                cx,
+                                "Kubernetes",
+                                "Run GPU workloads on a K8s configured cluster.",
+                                checked,
+                            )]
+                        },
+                    );
+
+                let vm = root
+                    .item("vm")
+                    .label("Virtual Machine")
+                    .index(1)
+                    .set_size(Some(2))
+                    .into_element(
+                        cx,
+                        &root,
+                        PressableProps {
+                            layout: pressable_layout,
+                            ..Default::default()
+                        },
+                        move |cx, _st, checked| {
+                            vec![make_card(
+                                cx,
+                                "Virtual Machine",
+                                "Access a VM configured cluster to run GPU workloads.",
+                                checked,
+                            )]
+                        },
+                    );
+
+                vec![kubernetes, vm]
+            });
+
+        let set = fret_ui_shadcn::FieldSet::new(vec![
+            fret_ui_shadcn::FieldLabel::new("Compute Environment").into_element(cx),
+            fret_ui_shadcn::FieldDescription::new(
+                "Select the compute environment for your cluster.",
+            )
+            .into_element(cx),
+            list,
+        ])
+        .into_element(cx);
+
+        let root = cx.container(
+            ContainerProps {
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &Theme::global(&*cx.app),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![set],
+        );
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-choice-card:root")),
+                ..Default::default()
+            },
+            move |_cx| vec![root],
+        )]
+    });
+
+    let root = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-choice-card:root"),
+    )
+    .expect("fret root");
+    let radio_group = find_semantics(
+        &snap,
+        SemanticsRole::RadioGroup,
+        Some("Compute Environment"),
+    )
+    .or_else(|| find_semantics(&snap, SemanticsRole::RadioGroup, None))
+    .expect("fret radio group");
+    let kubernetes =
+        find_semantics(&snap, SemanticsRole::RadioButton, Some("Kubernetes")).expect("fret k8s");
+    let vm = find_semantics(&snap, SemanticsRole::RadioButton, Some("Virtual Machine"))
+        .expect("fret vm");
+
+    assert_close_px(
+        "field-choice-card root width",
+        root.bounds.size.width,
+        web_root.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "field-choice-card kubernetes y",
+        kubernetes.bounds.origin.y,
+        web_card_kubernetes.rect.y,
+        2.0,
+    );
+    assert_close_px(
+        "field-choice-card kubernetes w",
+        kubernetes.bounds.size.width,
+        web_card_kubernetes.rect.w,
+        2.0,
+    );
+    assert_close_px(
+        "field-choice-card vm y",
+        vm.bounds.origin.y,
+        web_card_vm.rect.y,
+        2.0,
+    );
+    assert_close_px(
+        "field-choice-card vm w",
+        vm.bounds.size.width,
+        web_card_vm.rect.w,
+        2.0,
+    );
+    assert_close_px(
+        "field-choice-card radiogroup y",
+        radio_group.bounds.origin.y,
+        web_radio_group.rect.y,
+        1.0,
+    );
+    let fret_card_delta_y = vm.bounds.origin.y.0 - kubernetes.bounds.origin.y.0;
+    let web_card_delta_y = web_card_vm.rect.y - web_card_kubernetes.rect.y;
+    assert!(
+        (fret_card_delta_y - web_card_delta_y).abs() <= 2.0,
+        "field-choice-card card delta y: expected≈{web_card_delta_y} got={fret_card_delta_y}"
+    );
+
+    assert_close_px(
+        "field-choice-card radiogroup-to-root gap",
+        Px(radio_group.bounds.origin.y.0 - root.bounds.origin.y.0),
+        web_radio_group.rect.y - web_root.rect.y,
         1.0,
     );
 }
