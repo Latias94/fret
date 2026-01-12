@@ -64,6 +64,32 @@ impl NodeGraphCanvasTxMiddleware for RejectNonFiniteTx {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct RejectInvalidSizeTx;
+
+impl NodeGraphCanvasTxMiddleware for RejectInvalidSizeTx {
+    fn before_commit(
+        &mut self,
+        _window: Option<AppWindowId>,
+        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
+        tx: &mut GraphTransaction,
+    ) -> NodeGraphCanvasCommitOutcome {
+        let Some((key, message)) = find_invalid_size_in_tx(tx) else {
+            return NodeGraphCanvasCommitOutcome::Continue;
+        };
+
+        NodeGraphCanvasCommitOutcome::Reject {
+            diagnostics: vec![Diagnostic {
+                key,
+                severity: crate::rules::DiagnosticSeverity::Error,
+                target: crate::rules::DiagnosticTarget::Graph,
+                message,
+                fixes: Vec::new(),
+            }],
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NodeGraphCanvasTxMiddlewareChain<A, B> {
     pub first: A,
@@ -161,6 +187,37 @@ fn op_non_finite_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
         | GraphOp::SetSymbolMeta { .. }
         | GraphOp::RemoveGroup { .. }
         | GraphOp::RemoveStickyNote { .. } => None,
+    }
+}
+
+fn find_invalid_size_in_tx(tx: &GraphTransaction) -> Option<(String, String)> {
+    for (ix, op) in tx.ops.iter().enumerate() {
+        if let Some(field) = op_invalid_size_field(op) {
+            return Some((
+                "tx.invalid_size".to_string(),
+                format!("transaction contains invalid size at op[{ix}] ({field})"),
+            ));
+        }
+    }
+    None
+}
+
+fn op_invalid_size_field(op: &crate::ops::GraphOp) -> Option<&'static str> {
+    use crate::core::CanvasSize;
+    use crate::ops::GraphOp;
+
+    fn size_is_valid(s: CanvasSize) -> bool {
+        s.width.is_finite() && s.height.is_finite() && s.width > 0.0 && s.height > 0.0
+    }
+
+    match op {
+        GraphOp::AddNode { node, .. } => node
+            .size
+            .and_then(|s| (!size_is_valid(s)).then_some("AddNode.node.size")),
+        GraphOp::SetNodeSize { to, .. } => {
+            to.and_then(|s| (!size_is_valid(s)).then_some("SetNodeSize.to"))
+        }
+        _ => None,
     }
 }
 
@@ -309,6 +366,39 @@ mod tests {
         };
 
         let mut gate = RejectNonFiniteTx;
+        assert!(matches!(
+            gate.before_commit(None, &ctx, &mut tx),
+            NodeGraphCanvasCommitOutcome::Reject { .. }
+        ));
+    }
+
+    #[test]
+    fn reject_invalid_size_tx_rejects_non_positive_set_node_size() {
+        let graph = Graph::default();
+        let view_state = NodeGraphViewState::default();
+        let style = NodeGraphStyle::default();
+        let ctx = NodeGraphCanvasMiddlewareCx {
+            graph: &graph,
+            view_state: &view_state,
+            style: &style,
+            bounds: None,
+            pan: CanvasPoint::default(),
+            zoom: 1.0,
+        };
+
+        let mut tx = GraphTransaction {
+            label: None,
+            ops: vec![GraphOp::SetNodeSize {
+                id: NodeId::new(),
+                from: None,
+                to: Some(CanvasSize {
+                    width: 0.0,
+                    height: 10.0,
+                }),
+            }],
+        };
+
+        let mut gate = RejectInvalidSizeTx;
         assert!(matches!(
             gate.before_commit(None, &ctx, &mut tx),
             NodeGraphCanvasCommitOutcome::Reject { .. }
