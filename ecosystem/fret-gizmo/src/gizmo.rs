@@ -4,6 +4,7 @@ use glam::{Mat4, Quat, Vec2, Vec3};
 use crate::math::{
     DepthRange, Ray3d, ViewportRect, project_point, ray_from_screen, unproject_point,
 };
+use crate::picking::{PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GizmoMode {
@@ -4945,9 +4946,13 @@ impl Gizmo {
             if let Some(p0) =
                 project_point(view_projection, viewport, origin, self.config.depth_range)
             {
-                let d = (cursor - p0.screen).length();
                 let r = self.config.pick_radius_px.max(6.0);
-                if d.is_finite() && d <= r {
+                if let Some(d) = (PickCircle2d {
+                    center: p0.screen,
+                    radius: r,
+                })
+                .hit_distance(cursor)
+                {
                     return Some(PickHit {
                         handle: TranslateHandle::Screen.id(),
                         score: d,
@@ -5037,8 +5042,9 @@ impl Gizmo {
                     continue;
                 }
 
-                let inside = point_in_convex_quad(cursor, p);
-                let edge_d = quad_edge_distance(cursor, p);
+                let quad = PickConvexQuad2d { points: p };
+                let inside = quad.contains(cursor);
+                let edge_d = quad.edge_distance(cursor);
                 if inside {
                     // When the cursor is actually inside the plane handle quad, always prefer plane
                     // drags over axis segments (common editor expectation).
@@ -5101,9 +5107,14 @@ impl Gizmo {
                 if alpha <= 0.01 {
                     continue;
                 }
-                let d = distance_point_to_segment_px(cursor, pa.screen, pb.screen);
                 let r = self.config.pick_radius_px * alpha.sqrt();
-                if d <= r {
+                if let Some(d) = (PickSegmentCapsule2d {
+                    a: pa.screen,
+                    b: pb.screen,
+                    radius: r,
+                })
+                .hit_distance(cursor)
+                {
                     consider(handle, d / alpha.max(0.05));
                 }
             }
@@ -5139,7 +5150,7 @@ impl Gizmo {
                     continue;
                 }
 
-                let edge_d = quad_edge_distance(cursor, p);
+                let edge_d = PickConvexQuad2d { points: p }.edge_distance(cursor);
                 let r = self.config.pick_radius_px * alpha.sqrt();
                 if edge_d <= r {
                     consider(handle, (edge_d + 0.9) / alpha.max(0.05));

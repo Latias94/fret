@@ -9,6 +9,7 @@
 mod gizmo;
 mod grid;
 mod math;
+mod picking;
 mod style;
 mod view_gizmo;
 mod viewport_input;
@@ -23,6 +24,10 @@ pub use grid::{Grid3d, Grid3dConfig};
 pub use math::{
     DepthRange, ProjectedPoint, Ray3d, ScreenPoint, ViewportRect, project_point, ray_from_screen,
     unproject_point,
+};
+pub use picking::{
+    PickCircle2d, PickConvexQuad2d, PickSegmentCapsule2d, distance_point_to_segment_px,
+    point_in_convex_quad, quad_edge_distance,
 };
 pub use style::{GizmoVisualPreset, GizmoVisuals, ViewGizmoVisualPreset, ViewGizmoVisuals};
 pub use view_gizmo::{
