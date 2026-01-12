@@ -1,3 +1,4 @@
+use fret_canvas::drag::DragThreshold;
 use fret_core::Point;
 use fret_ui::UiHost;
 
@@ -19,7 +20,10 @@ pub(super) fn handle_pending_node_resize_move<H: UiHost>(
     };
 
     let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-    let threshold_graph = threshold_screen / zoom;
+    let threshold_graph = DragThreshold {
+        screen_px: threshold_screen,
+    }
+    .to_canvas_units(zoom);
     let dx = position.x.0 - pending.start_pos.x.0;
     let dy = position.y.0 - pending.start_pos.y.0;
     if threshold_graph > 0.0 && dx * dx + dy * dy < threshold_graph * threshold_graph {

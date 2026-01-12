@@ -3,6 +3,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::Duration;
 
+use fret_canvas::scale::{constant_pixel_stroke_width, effective_scale_factor};
+use fret_canvas::view::PanZoom2D;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
     PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
@@ -833,17 +835,12 @@ impl NodeGraphCanvas {
     }
 
     fn screen_to_canvas(bounds: Rect, screen: Point, pan: CanvasPoint, zoom: f32) -> CanvasPoint {
-        let zoom = if zoom.is_finite() && zoom > 0.0 {
-            zoom
-        } else {
-            1.0
+        let view = PanZoom2D {
+            pan: Point::new(Px(pan.x), Px(pan.y)),
+            zoom,
         };
-        let sx = screen.x.0 - bounds.origin.x.0;
-        let sy = screen.y.0 - bounds.origin.y.0;
-        CanvasPoint {
-            x: sx / zoom - pan.x,
-            y: sy / zoom - pan.y,
-        }
+        let p = view.screen_to_canvas(bounds, screen);
+        CanvasPoint { x: p.x.0, y: p.y.0 }
     }
 
     fn copy_selected_nodes_to_clipboard<H: UiHost>(
@@ -2333,7 +2330,7 @@ impl NodeGraphCanvas {
             max_width: Some(Px(inner_w)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor * zoom,
+            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 
         for (ix, item) in menu.items.iter().enumerate() {
@@ -2477,7 +2474,7 @@ impl NodeGraphCanvas {
             max_width: Some(Px(inner_w)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor * zoom,
+            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 
         let query_rect = Rect::new(
@@ -2590,7 +2587,7 @@ impl NodeGraphCanvas {
             max_width: Some(Px(max_w - 2.0 * pad)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor * zoom,
+            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 
         let (blob, metrics) =
@@ -2675,7 +2672,7 @@ impl NodeGraphCanvas {
             max_width: Some(Px(max_w - 2.0 * pad)),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor * zoom,
+            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
         };
 
         let (blob, metrics) = cx
@@ -2854,10 +2851,10 @@ impl NodeGraphCanvas {
         let (id, _metrics) = services.path().prepare(
             &commands,
             PathStyle::Stroke(StrokeStyle {
-                width: Px(width_px / zoom),
+                width: constant_pixel_stroke_width(Px(width_px), zoom),
             }),
             PathConstraints {
-                scale_factor: scale_factor * zoom,
+                scale_factor: effective_scale_factor(scale_factor, zoom),
             },
         );
 
@@ -2877,24 +2874,20 @@ impl NodeGraphCanvas {
             return;
         }
 
-        let cx = 0.5 * bounds.size.width.0;
-        let cy = 0.5 * bounds.size.height.0;
-        let center_screen = (cx, cy);
-
-        let pan_x = self.cached_pan.x;
-        let pan_y = self.cached_pan.y;
-
-        let g0_x = center_screen.0 / zoom - pan_x;
-        let g0_y = center_screen.1 / zoom - pan_y;
-
-        let new_pan_x = center_screen.0 / new_zoom - g0_x;
-        let new_pan_y = center_screen.1 / new_zoom - g0_y;
-
-        self.cached_pan = CanvasPoint {
-            x: new_pan_x,
-            y: new_pan_y,
+        let mut view = PanZoom2D {
+            pan: Point::new(Px(self.cached_pan.x), Px(self.cached_pan.y)),
+            zoom,
         };
-        self.cached_zoom = new_zoom;
+        let center = Point::new(
+            Px(0.5 * bounds.size.width.0),
+            Px(0.5 * bounds.size.height.0),
+        );
+        view.zoom_about_screen_point(bounds, center, new_zoom);
+        self.cached_pan = CanvasPoint {
+            x: view.pan.x.0,
+            y: view.pan.y.0,
+        };
+        self.cached_zoom = view.zoom;
     }
 }
 
@@ -3152,16 +3145,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
     }
 
     fn render_transform(&self, bounds: Rect) -> Option<Transform2D> {
-        let zoom = self.cached_zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return None;
-        }
-        let pan = Point::new(Px(self.cached_pan.x), Px(self.cached_pan.y));
-        Some(
-            Transform2D::translation(bounds.origin)
-                .compose(Transform2D::scale_uniform(zoom))
-                .compose(Transform2D::translation(pan)),
-        )
+        let view = PanZoom2D {
+            pan: Point::new(Px(self.cached_pan.x), Px(self.cached_pan.y)),
+            zoom: self.cached_zoom,
+        };
+        view.render_transform(bounds)
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
@@ -3743,7 +3731,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         max_width: Some(Px(max_w)),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
-                        scale_factor: cx.scale_factor * zoom,
+                        scale_factor: effective_scale_factor(cx.scale_factor, zoom),
                     };
                     let (blob, metrics) =
                         cx.services
@@ -3919,7 +3907,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
-                    scale_factor: cx.scale_factor * zoom,
+                    scale_factor: effective_scale_factor(cx.scale_factor, zoom),
                 };
                 let (blob, metrics) =
                     cx.services
@@ -3954,7 +3942,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
-                    scale_factor: cx.scale_factor * zoom,
+                    scale_factor: effective_scale_factor(cx.scale_factor, zoom),
                 };
                 let (blob, metrics) =
                     cx.services
@@ -3984,7 +3972,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 max_width: Some(info.max_width),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor * zoom,
+                scale_factor: effective_scale_factor(cx.scale_factor, zoom),
             };
             let (blob, metrics) =
                 cx.services
@@ -4112,7 +4100,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 max_width: Some(Px((rect.size.width.0 - 2.0 * pad).max(0.0))),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor * zoom,
+                scale_factor: effective_scale_factor(cx.scale_factor, zoom),
             };
             let (blob, metrics) = cx
                 .services

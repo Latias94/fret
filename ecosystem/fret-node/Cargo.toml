@@ -10,6 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
+fret-canvas = { path = "../fret-canvas", optional = true }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
@@ -23,7 +24,7 @@ tracing.workspace = true
 default = ["fret-ui", "kit"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
-fret-ui = ["dep:fret-ui", "dep:fret-runtime"]
+fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas"]
 
 # Convenience surfaces (profiles + common recipes) built on top of the substrate.
 #
