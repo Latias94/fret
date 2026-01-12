@@ -1773,7 +1773,7 @@ impl ChartCanvas {
                     width: stroke_width,
                 }),
                 PathConstraints {
-                    scale_factor: cx.scale_factor,
+                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
                 },
             );
 
@@ -1801,7 +1801,7 @@ impl ChartCanvas {
                         &fill_commands,
                         PathStyle::Fill(fret_core::FillStyle::default()),
                         PathConstraints {
-                            scale_factor: cx.scale_factor,
+                            scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
                         },
                     );
                     Some(fill)
@@ -1875,7 +1875,7 @@ impl ChartCanvas {
                 &fill_commands,
                 PathStyle::Fill(fret_core::FillStyle::default()),
                 PathConstraints {
-                    scale_factor: cx.scale_factor,
+                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
                 },
             );
 
