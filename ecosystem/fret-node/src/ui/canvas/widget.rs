@@ -71,6 +71,7 @@ mod context_menu;
 mod cursor;
 mod edge_drag;
 mod edge_insert;
+mod edge_insert_drag;
 mod group_drag;
 mod group_resize;
 mod hover;
@@ -7254,6 +7255,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     || self.interaction.node_resize.is_some()
                     || self.interaction.pending_wire_drag.is_some()
                     || self.interaction.wire_drag.is_some()
+                    || self.interaction.pending_edge_insert_drag.is_some()
+                    || self.interaction.edge_insert_drag.is_some()
                     || self.interaction.edge_drag.is_some();
 
                 if has_left_interaction && !buttons.left {
@@ -7323,6 +7326,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
                     // keep going to sync auto-pan timer
+                } else if edge_insert_drag::handle_pending_edge_insert_drag_move(
+                    self, cx, &snapshot, *position,
+                ) {
+                    // keep going to sync auto-pan timer
                 } else if node_resize::handle_node_resize_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
@@ -7334,6 +7341,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 } else if wire_drag::handle_wire_drag_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
+                    // keep going to sync auto-pan timer
+                } else if edge_insert_drag::handle_edge_insert_drag_move(self, cx, *position) {
                     // keep going to sync auto-pan timer
                 } else if edge_drag::handle_edge_drag_move(self, cx, &snapshot, *position, zoom) {
                     // keep going to sync auto-pan timer
@@ -9817,6 +9826,103 @@ mod tests {
                     ..Modifiers::default()
                 },
                 click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
+        let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
+        assert_eq!(nodes_len, 2);
+        assert_eq!(edges_len, 1);
+
+        let Some(searcher) = canvas.interaction.searcher.as_ref() else {
+            panic!("expected searcher to be open");
+        };
+        assert!(matches!(
+            searcher.target,
+            super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
+        ));
+    }
+
+    #[test]
+    fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
+            make_test_graph_two_nodes_with_ports_spaced_x(420.0);
+        let edge_id = EdgeId::new();
+        graph_value.edges.insert(
+            edge_id,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let graph = host.models.insert(graph_value);
+        let view = host.models.insert(crate::io::NodeGraphViewState::default());
+        let _ = view.update(&mut host, |s, _cx| {
+            s.interaction.edge_insert_on_alt_drag = true;
+        });
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = NullServices::default();
+        let mut cx = event_cx(&mut host, &mut services, bounds);
+
+        let snap = canvas.sync_view_state(cx.app);
+        let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
+        let from = geom.port_center(a_out).expect("from port center");
+        let to = geom.port_center(b_in).expect("to port center");
+        let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
+        let edge_pos = super::cubic_bezier(from, c1, c2, to, 0.5);
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Down {
+                position: edge_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    alt: true,
+                    ..Modifiers::default()
+                },
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
+                buttons: MouseButtons {
+                    left: true,
+                    ..MouseButtons::default()
+                },
+                modifiers: Modifiers {
+                    alt: true,
+                    ..Modifiers::default()
+                },
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        canvas.event(
+            &mut cx,
+            &Event::Pointer(PointerEvent::Up {
+                position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    alt: true,
+                    ..Modifiers::default()
+                },
+                click_count: 1,
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );

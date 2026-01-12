@@ -653,6 +653,9 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - edge menu action: `CMD_NODE_GRAPH_INSERT_REROUTE` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - double-click wire insertion (optional): `NodeGraphInteractionState.reroute_on_edge_double_click` + `NodeGraphCanvas::event` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - alt+double-click wire opens the insert-node picker (searcher UX): `NodeGraphCanvas::event` -> `open_edge_insert_node_picker` in `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - alt+drag wire opens the insert-node picker on release (optional): `NodeGraphInteractionState.edge_insert_on_alt_drag`
+      - start gesture: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
+      - threshold + pointer-up completion: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag.rs`
 
 ---
 

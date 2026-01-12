@@ -400,6 +400,10 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
+    if super::edge_insert_drag::handle_edge_insert_left_up(canvas, cx, position) {
+        return true;
+    }
+
     if super::edge_drag::handle_edge_left_up(canvas, cx) {
         return true;
     }

@@ -45,6 +45,8 @@ impl NodeGraphInteractionPreset {
 
                 // Edge ergonomics: double-click on a wire inserts a reroute (optional, opt-in).
                 s.reroute_on_edge_double_click = true;
+                // ShaderGraph: Alt-drag on a wire to insert a node at the drop position.
+                s.edge_insert_on_alt_drag = true;
 
                 // Avoid conflicts with "double click to insert" workflows.
                 s.zoom_on_double_click = false;
@@ -78,6 +80,7 @@ mod tests {
     fn shadergraph_preset_enables_reroute_double_click_and_middle_mouse_pan() {
         let s = NodeGraphInteractionPreset::ShaderGraph.interaction_state();
         assert!(s.reroute_on_edge_double_click);
+        assert!(s.edge_insert_on_alt_drag);
         assert!(s.pan_on_drag.middle);
         assert!(!s.pan_on_drag.left);
         assert!(!s.space_to_pan);

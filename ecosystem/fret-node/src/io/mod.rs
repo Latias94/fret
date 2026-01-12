@@ -643,6 +643,12 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_reroute_on_edge_double_click")]
     pub reroute_on_edge_double_click: bool,
 
+    /// Whether Alt-dragging a wire opens the insert-node picker on release (ShaderGraph-style).
+    ///
+    /// This is intentionally disabled by default to preserve XyFlow-like semantics.
+    #[serde(default = "default_edge_insert_on_alt_drag")]
+    pub edge_insert_on_alt_drag: bool,
+
     /// Modifier requirement for wheel zoom (XyFlow `zoomActivationKey`).
     #[serde(default)]
     pub zoom_activation_key: NodeGraphZoomActivationKey,
@@ -740,6 +746,7 @@ impl Default for NodeGraphInteractionState {
             zoom_on_pinch_speed: default_zoom_on_pinch_speed(),
             zoom_on_double_click: default_zoom_on_double_click(),
             reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
+            edge_insert_on_alt_drag: default_edge_insert_on_alt_drag(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
             node_drag_threshold: default_node_drag_threshold(),
             node_drag_handle_mode: NodeGraphDragHandleMode::default(),
@@ -818,6 +825,10 @@ fn default_zoom_on_double_click() -> bool {
 }
 
 fn default_reroute_on_edge_double_click() -> bool {
+    false
+}
+
+fn default_edge_insert_on_alt_drag() -> bool {
     false
 }
 

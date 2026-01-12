@@ -66,6 +66,8 @@ pub(crate) struct InteractionState {
     /// When a multi-step connection workflow opens a picker (conversion/search), the active wire
     /// drag is suspended so it can be restored if the picker action is rejected.
     pub(crate) suspended_wire_drag: Option<WireDrag>,
+    pub(crate) pending_edge_insert_drag: Option<PendingEdgeInsertDrag>,
+    pub(crate) edge_insert_drag: Option<EdgeInsertDrag>,
     pub(crate) edge_drag: Option<EdgeDrag>,
     pub(crate) hover_edge: Option<EdgeId>,
     pub(crate) hover_edge_anchor: Option<(EdgeId, EdgeEndpoint)>,
@@ -366,6 +368,18 @@ pub(crate) struct WireDrag {
 pub(crate) struct PendingWireDrag {
     pub(crate) kind: WireDragKind,
     pub(crate) start_pos: Point,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingEdgeInsertDrag {
+    pub(crate) edge: EdgeId,
+    pub(crate) start_pos: Point,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct EdgeInsertDrag {
+    pub(crate) edge: EdgeId,
+    pub(crate) pos: Point,
 }
 
 #[derive(Debug, Clone)]

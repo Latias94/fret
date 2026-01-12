@@ -23,6 +23,12 @@ fn cancel_active_gestures_inner<H: UiHost>(
         );
         canceled = true;
     }
+    if canvas.interaction.edge_insert_drag.take().is_some() {
+        canceled = true;
+    }
+    if canvas.interaction.pending_edge_insert_drag.take().is_some() {
+        canceled = true;
+    }
     if canvas.interaction.edge_drag.take().is_some() {
         canceled = true;
     }
